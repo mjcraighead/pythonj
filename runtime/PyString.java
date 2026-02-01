@@ -1,0 +1,218 @@
+// pythonj (https://github.com/mjcraighead/pythonj)
+// Copyright (c) 2012-2026 Matt Craighead
+// SPDX-License-Identifier: MIT
+
+public final class PyString extends PyObject {
+    public static final PyString empty_singleton = new PyString("");
+
+    private static final PyBuiltinClass iter_class_singleton = new PyBuiltinClass("str_iterator");
+    static final class PyStringIter extends PyIter {
+        private final String s;
+        private int index = 0;
+
+        PyStringIter(PyString _s) { s = _s.value; }
+
+        @Override public PyString next() {
+            if (index >= s.length()) {
+                return null;
+            }
+            var ret = new PyString(s.substring(index, index+1));
+            index++;
+            return ret;
+        }
+        @Override public PyBuiltinClass type() { return iter_class_singleton; }
+    };
+
+    private static class PyStringMethod extends PyTruthyObject {
+        protected final PyString self;
+        PyStringMethod(PyString _self) { self = _self; }
+    }
+    private static final class PyStringMethod_join extends PyStringMethod {
+        PyStringMethod_join(PyString _self) { super(_self); }
+        @Override public PyString call(PyObject[] args, PyDict kwargs) {
+            if (args.length != 1) {
+                throw new RuntimeException("str.join() takes 1 argument");
+            }
+            return self.pymethod_join(args[0]);
+        }
+    }
+    private static final class PyStringMethod_lower extends PyStringMethod {
+        PyStringMethod_lower(PyString _self) { super(_self); }
+        @Override public PyString call(PyObject[] args, PyDict kwargs) {
+            if (args.length != 0) {
+                throw new RuntimeException("str.lower() takes 0 arguments");
+            }
+            return self.pymethod_lower();
+        }
+    }
+    private static final class PyStringMethod_split extends PyStringMethod {
+        PyStringMethod_split(PyString _self) { super(_self); }
+        @Override public PyList call(PyObject[] args, PyDict kwargs) {
+            if (args.length != 1) {
+                throw new RuntimeException("str.split() takes 1 argument");
+            }
+            return self.pymethod_split(args[0]);
+        }
+    }
+    private static final class PyStringMethod_upper extends PyStringMethod {
+        PyStringMethod_upper(PyString _self) { super(_self); }
+        @Override public PyString call(PyObject[] args, PyDict kwargs) {
+            if (args.length != 0) {
+                throw new RuntimeException("str.upper() takes 0 arguments");
+            }
+            return self.pymethod_upper();
+        }
+    }
+
+    public final String value;
+
+    PyString(String _value) { value = _value; }
+
+    @Override public PyString add(PyObject rhs) {
+        return new PyString(value + ((PyString)rhs).value);
+    }
+    @Override public PyString mul(PyObject rhs) {
+        var s = new StringBuilder();
+        long count = rhs.indexValue();
+        for (long i = 0; i < count; i++) {
+            s.append(value);
+        }
+        return new PyString(s.toString());
+    }
+    @Override public PyString mod(PyObject rhs_arg) {
+        var s = new StringBuilder();
+        PyObject[] rhs;
+        if (rhs_arg instanceof PyTuple) {
+            rhs = ((PyTuple)rhs_arg).items;
+        } else {
+            rhs = new PyObject[] {rhs_arg};
+        }
+        int arg_index = 0;
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            if (c == '%') {
+                c = value.charAt(++i);
+                PyObject arg = rhs[arg_index++];
+                if (c == 's') {
+                    s.append(arg.str());
+                } else if (c == 'd') {
+                    s.append(String.format("%d", ((PyInt)arg).value));
+                } else if (c == 'x') {
+                    s.append(String.format("%x", ((PyInt)arg).value));
+                } else if (c == 'X') {
+                    s.append(String.format("%X", ((PyInt)arg).value));
+                } else {
+                    throw new RuntimeException("don't know how to implement format specifier");
+                }
+            } else {
+                s.append(c);
+            }
+        }
+        return new PyString(s.toString());
+    }
+
+    @Override public PyString getItem(PyObject key) {
+        int index = (int)key.indexValue();
+        int length = value.length();
+        if ((index < -length) || (index >= length)) {
+            throw new RuntimeException("str index out of bounds");
+        }
+        if (index < 0) {
+            index += length;
+        }
+        return new PyString(value.substring(index, index+1));
+    }
+
+    @Override public PyStringIter iter() { return new PyStringIter(this); }
+    @Override public PyBuiltinClass type() { return Runtime.pyglobal_str; }
+
+    @Override public boolean boolValue() { return !value.isEmpty(); }
+    @Override public boolean equals(Object rhs) {
+        if (!(rhs instanceof PyString)) {
+            return false;
+        }
+        return value.equals(((PyString)rhs).value);
+    }
+    @Override public String format(String formatSpec) {
+        if (!formatSpec.isEmpty()) {
+            throw new RuntimeException("formatSpec unimplemented");
+        }
+        return value;
+    }
+    @Override public PyObject getAttr(String key) {
+        switch (key) {
+            case "join": return new PyStringMethod_join(this);
+            case "lower": return new PyStringMethod_lower(this);
+            case "split": return new PyStringMethod_split(this);
+            case "upper": return new PyStringMethod_upper(this);
+            default: return super.getAttr(key);
+        }
+    }
+    @Override public int hashCode() { return value.hashCode(); }
+    @Override public long len() { return value.length(); }
+    @Override public String str() { return value; }
+    @Override public String repr() {
+        boolean use_double_quotes = (value.indexOf('\'') >= 0) && (value.indexOf('"') < 0);
+        var s = new StringBuilder(use_double_quotes ? "\"" : "'");
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            if (c == '\n') {
+                s.append("\\n");
+            } else if (c == '\r') {
+                s.append("\\r");
+            } else if (c == '\t') {
+                s.append("\\t");
+            } else if ((c < 0x20) || ((c >= 0x7F) && (c <= 0xA0)) || (c == 0xAD)) { // XXX This logic is incomplete
+                s.append("\\x");
+                s.append("0123456789abcdef".charAt(c >> 4));
+                s.append("0123456789abcdef".charAt(c & 15));
+            } else if (c == '\\') {
+                s.append("\\\\");
+            } else if ((c == '\'') && !use_double_quotes) {
+                s.append("\\'");
+            } else {
+                s.append(c);
+            }
+        }
+        s.append(use_double_quotes ? '"' : '\'');
+        return s.toString();
+    }
+
+    public PyString pymethod_join(PyObject arg) {
+        var s = new StringBuilder();
+        var iter = arg.iter();
+        boolean first = true;
+        for (var item = iter.next(); item != null; item = iter.next()) {
+            if (first) {
+                first = false;
+            } else {
+                s.append(value);
+            }
+            s.append(((PyString)item).value);
+        }
+        return new PyString(s.toString());
+    }
+    public PyString pymethod_lower() { return new PyString(value.toLowerCase()); } // Locale.ROOT?
+    public PyList pymethod_split(PyObject arg) {
+        // XXX Implement zero-args case
+        // XXX Implement delimiters not of length 1
+        if (arg.len() != 1) {
+            throw new RuntimeException("bad argument to str.split()");
+        }
+        char split = ((PyString)arg).value.charAt(0);
+        var ret = new PyList();
+        var s = new StringBuilder();
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            if (c == split) {
+                ret.items.add(new PyString(s.toString()));
+                s = new StringBuilder();
+            } else {
+                s.append(c);
+            }
+        }
+        ret.items.add(new PyString(s.toString()));
+        return ret;
+    }
+    public PyString pymethod_upper() { return new PyString(value.toUpperCase()); } // Locale.ROOT?
+}
