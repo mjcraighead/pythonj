@@ -865,7 +865,7 @@ def main() -> None:
         pyexec_time = time.perf_counter() - start
 
         if j_output == c_output:
-            print(f'{py_name:>10}: jexec_time={jexec_time:5.3f} pyexec_time={pyexec_time:5.3f} ({pyexec_time / jexec_time:5.2f}x)')
+            print(f'{py_name:>15}: jexec_time={jexec_time:5.3f} pyexec_time={pyexec_time:5.3f} ({pyexec_time / jexec_time:5.2f}x)')
         else:
             print()
             print(f'ERROR: output mismatched on test {py_name!r}:')
