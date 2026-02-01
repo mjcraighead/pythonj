@@ -344,6 +344,8 @@ class PythonjVisitor(ast.NodeVisitor):
     def generic_visit(self, node):
         """Print an error for all unknown constructs in translation."""
         self.error(getattr(node, 'lineno', None), f"don't know how to translate {node}")
+        if isinstance(node, ast.expr):
+            return JavaIdentifier('__cannot_translate_expr__') # return placeholder JavaExpr IR node
 
     def visit_Invert(self, node): return 'invert'
     def visit_UAdd(self, node): return 'pos'
