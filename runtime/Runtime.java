@@ -659,7 +659,7 @@ public final class Runtime {
             var iter = args[0].iter();
             long sum = 0;
             for (var item = iter.next(); item != null; item = iter.next()) {
-                sum += ((PyInt)item).value;
+                sum = Math.addExact(sum, ((PyInt)item).value);
             }
             return new PyInt(sum);
         }

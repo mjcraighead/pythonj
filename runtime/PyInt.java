@@ -11,48 +11,67 @@ public final class PyInt extends PyNumber {
 
     PyInt(long _value) { value = _value; }
 
+    // XXX Make sure that all of these throw an exception if the value wraps/overflows/etc.
     @Override public PyInt invert() { return new PyInt(~value); }
     @Override public PyInt pos() { return this; }
-    @Override public PyInt neg() { return new PyInt(-value); }
-    @Override public PyInt abs() { return (value >= 0) ? this : new PyInt(-value); }
+    @Override public PyInt neg() { return new PyInt(Math.negateExact(value)); }
+    @Override public PyInt abs() { return (value >= 0) ? this : new PyInt(Math.negateExact(value)); }
 
-    // XXX Maybe we should use Math.addExact and similar
     @Override public PyInt add(PyObject rhs) {
-        return new PyInt(value + ((PyInt)rhs).value);
+        return new PyInt(Math.addExact(value, ((PyInt)rhs).value));
     }
     @Override public PyInt and(PyObject rhs) {
         return new PyInt(value & ((PyInt)rhs).value);
     }
     @Override public PyInt floordiv(PyObject rhs) {
-        return new PyInt(Math.floorDiv(value, ((PyInt)rhs).value));
+        long rhs_value = ((PyInt)rhs).value;
+        if ((value == Long.MIN_VALUE) && (rhs_value == -1)) {
+            throw new ArithmeticException("integer overflow");
+        }
+        return new PyInt(Math.floorDiv(value, rhs_value));
     }
     @Override public PyInt lshift(PyObject rhs) {
-        // XXX Do we need to check for rhs_value >= 64?
         long rhs_value = ((PyInt)rhs).value;
         if (rhs_value < 0) {
-            throw new RuntimeException("negative shift count");
+            throw new ArithmeticException("negative shift count");
         }
-        return new PyInt(value << rhs_value);
+        if (rhs_value >= 64) {
+            if (value == 0) {
+                return this; // 0 << N -> 0 for any N >= 0
+            }
+            throw new ArithmeticException("shift count too large");
+        }
+        long ret = value << rhs_value;
+        if ((ret >> rhs_value) != value) {
+            throw new ArithmeticException("integer overflow");
+        }
+        return new PyInt(ret);
     }
     @Override public PyInt mod(PyObject rhs) {
-        return new PyInt(Math.floorMod(value, ((PyInt)rhs).value));
+        long rhs_value = ((PyInt)rhs).value;
+        if ((value == Long.MIN_VALUE) && (rhs_value == -1)) {
+            throw new ArithmeticException("integer overflow");
+        }
+        return new PyInt(Math.floorMod(value, rhs_value));
     }
     @Override public PyInt mul(PyObject rhs) {
-        return new PyInt(value * ((PyInt)rhs).value);
+        return new PyInt(Math.multiplyExact(value, ((PyInt)rhs).value));
     }
     @Override public PyInt or(PyObject rhs) {
         return new PyInt(value | ((PyInt)rhs).value);
     }
     @Override public PyInt rshift(PyObject rhs) {
-        // XXX Do we need to check for rhs_value >= 64?
         long rhs_value = ((PyInt)rhs).value;
         if (rhs_value < 0) {
-            throw new RuntimeException("negative shift count");
+            throw new ArithmeticException("negative shift count");
+        }
+        if (rhs_value > 63) {
+            rhs_value = 63; // for all longs, rshift of >=63 yields the sign bit replicated into all bits
         }
         return new PyInt(value >> rhs_value);
     }
     @Override public PyInt sub(PyObject rhs) {
-        return new PyInt(value - ((PyInt)rhs).value);
+        return new PyInt(Math.subtractExact(value, ((PyInt)rhs).value));
     }
     @Override public PyInt xor(PyObject rhs) {
         return new PyInt(value ^ ((PyInt)rhs).value);
