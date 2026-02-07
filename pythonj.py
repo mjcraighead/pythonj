@@ -469,15 +469,22 @@ class PythonjVisitor(ast.NodeVisitor):
                 vals.append(JavaStrLiteral(val.value))
             else:
                 assert isinstance(val, ast.FormattedValue), val
-                if val.conversion != -1:
-                    self.error(val.lineno, f'unsupported f string conversion type {val.conversion}')
+                # XXX Need to double check evaluation order here
                 if val.format_spec is not None:
                     # Need to extract the String back out of the PyString
                     assert isinstance(val.format_spec, ast.JoinedStr), val.format_spec
                     format_spec = JavaField(self.visit(val.format_spec), 'value')
                 else:
                     format_spec = JavaStrLiteral("")
-                vals.append(JavaMethodCall(self.visit(val.value), 'format', [format_spec]))
+                expr = self.visit(val.value)
+                # XXX !a is unsupported; should call the ascii() builtin, as there is no __ascii__ dunder
+                if val.conversion == ord('s'):
+                    expr = JavaCreateObject('PyString', [JavaMethodCall(expr, 'str', [])])
+                elif val.conversion == ord('r'):
+                    expr = JavaCreateObject('PyString', [JavaMethodCall(expr, 'repr', [])])
+                elif val.conversion != -1:
+                    self.error(val.lineno, f'unsupported f string conversion type {val.conversion}')
+                vals.append(JavaMethodCall(expr, 'format', [format_spec]))
         return JavaCreateObject('PyString', [chained_binary_op('+', vals)])
 
     def emit_star_expanded(self, nodes: list, *, array_list_allowed: bool = False) -> JavaExpr:
