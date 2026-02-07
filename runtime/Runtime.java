@@ -364,7 +364,40 @@ public final class Runtime {
             if (kwargs != null) {
                 throw new RuntimeException("isinstance() does not accept kwargs");
             }
-            throw new RuntimeException("isinstance() is unimplemented"); // XXX
+            var obj = args[0];
+            var type = args[1];
+            if (type == pyglobal_bool) {
+                return PyBool.create(obj instanceof PyBool);
+            } else if (type == pyglobal_bytearray) {
+                return PyBool.create(obj instanceof PyByteArray);
+            } else if (type == pyglobal_bytes) {
+                return PyBool.create(obj instanceof PyBytes);
+            } else if (type == pyglobal_dict) {
+                return PyBool.create(obj instanceof PyDict);
+            } else if (type == pyglobal_enumerate) {
+                return PyBool.create(obj instanceof PyEnumerate);
+            } else if (type == pyglobal_int) {
+                return PyBool.create(obj instanceof PyInt); // Note intentional compatibility break for "bool"
+            } else if (type == pyglobal_list) {
+                return PyBool.create(obj instanceof PyList);
+            } else if (type == pyglobal_range) {
+                return PyBool.create(obj instanceof PyRange);
+            } else if (type == pyglobal_reversed) {
+                return PyBool.create(obj instanceof PyReversed);
+            } else if (type == pyglobal_set) {
+                return PyBool.create(obj instanceof PySet);
+            } else if (type == pyglobal_slice) {
+                return PyBool.create(obj instanceof PySlice);
+            } else if (type == pyglobal_str) {
+                return PyBool.create(obj instanceof PyString);
+            } else if (type == pyglobal_tuple) {
+                return PyBool.create(obj instanceof PyTuple);
+            } else if (type == pyglobal_type) {
+                return PyBool.create(obj instanceof PyType);
+            } else if (type == pyglobal_zip) {
+                return PyBool.create(obj instanceof PyZip);
+            }
+            throw new RuntimeException(String.format("isinstance() is unimplemented for type %s", type.repr()));
         }
     }
     public static final pyfunc_isinstance pyglobal_isinstance = new pyfunc_isinstance();
