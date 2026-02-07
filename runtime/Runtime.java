@@ -204,11 +204,10 @@ public final class Runtime {
             if (args.length != 0) {
                 var iter = args[0].iter();
                 for (var item = iter.next(); item != null; item = iter.next()) {
-                    if (item.len() != 2) {
-                        throw new RuntimeException("dictionary update sequence must have length 2");
-                    }
-                    PyObject key = item.getItem(PyInt.singleton_0);
-                    PyObject value = item.getItem(PyInt.singleton_1);
+                    var itemIter = item.iter();
+                    PyObject key = Runtime.nextRequireNonNull(itemIter);
+                    PyObject value = Runtime.nextRequireNonNull(itemIter);
+                    Runtime.nextRequireNull(itemIter);
                     ret.setItem(key, value);
                 }
             }
@@ -734,5 +733,18 @@ public final class Runtime {
         var array = new PyObject[list.size()];
         list.toArray(array);
         return array;
+    }
+    public static PyObject nextRequireNonNull(PyIter iter) {
+        PyObject obj = iter.next();
+        if (obj == null) {
+            throw new RuntimeException("iterator fully consumed too early");
+        }
+        return obj;
+    }
+    public static void nextRequireNull(PyIter iter) {
+        PyObject obj = iter.next();
+        if (obj != null) {
+            throw new RuntimeException("iterator not fully consumed");
+        }
     }
 }
