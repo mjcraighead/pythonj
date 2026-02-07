@@ -89,20 +89,37 @@ public final class PyString extends PyObject {
         } else {
             rhs = new PyObject[] {rhs_arg};
         }
-        int arg_index = 0;
+        int argIndex = 0;
         for (int i = 0; i < value.length(); i++) {
             char c = value.charAt(i);
             if (c == '%') {
                 c = value.charAt(++i);
-                PyObject arg = rhs[arg_index++];
+                boolean hasLeadingZero = false;
+                while (c == '0') {
+                    hasLeadingZero = true;
+                    c = value.charAt(++i);
+                }
+                int width = 0;
+                if ((c >= '1') && (c <= '9')) {
+                    // XXX We only allow 1 width character right now
+                    width = c - '0';
+                    c = value.charAt(++i);
+                }
+                PyObject arg = rhs[argIndex++];
                 if (c == 's') {
+                    if (hasLeadingZero || (width != 0)) {
+                        throw new RuntimeException("width for %s is unimplemented");
+                    }
                     s.append(arg.str());
-                } else if (c == 'd') {
-                    s.append(String.format("%d", ((PyInt)arg).value));
-                } else if (c == 'x') {
-                    s.append(String.format("%x", ((PyInt)arg).value));
-                } else if (c == 'X') {
-                    s.append(String.format("%X", ((PyInt)arg).value));
+                } else if (c == 'r') {
+                    if (hasLeadingZero || (width != 0)) {
+                        throw new RuntimeException("width for %r is unimplemented");
+                    }
+                    s.append(arg.repr());
+                } else if ((c == 'd') || (c == 'x') || (c == 'X')) {
+                    // XXX Negative hex values are being printed wrong
+                    String fmt = "%" + (hasLeadingZero ? "0" : "") + ((width != 0) ? width : "") + c;
+                    s.append(String.format(fmt, ((PyInt)arg).value));
                 } else {
                     throw new RuntimeException("don't know how to implement format specifier");
                 }
@@ -137,7 +154,7 @@ public final class PyString extends PyObject {
     }
     @Override public String format(String formatSpec) {
         if (!formatSpec.isEmpty()) {
-            throw new RuntimeException("formatSpec unimplemented");
+            throw new RuntimeException(String.format("formatSpec='%s' unimplemented", formatSpec));
         }
         return value;
     }

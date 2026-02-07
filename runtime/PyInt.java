@@ -100,6 +100,12 @@ public final class PyInt extends PyNumber {
         return value == ((PyInt)rhs).value;
     }
     @Override public double floatValue() { return value; }
+    @Override public String format(String formatSpec) {
+        if (!formatSpec.isEmpty()) {
+            throw new RuntimeException(String.format("formatSpec='%s' unimplemented", formatSpec));
+        }
+        return String.valueOf(value);
+    }
     @Override public int hashCode() { return (int)(value ^ (value >>> 32)); }
     @Override public long indexValue() { return value; }
     @Override public long intValue() { return value; }
