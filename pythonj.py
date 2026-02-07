@@ -194,8 +194,9 @@ class JavaExprStatement(JavaStatement):
 
 @dataclass(slots=True)
 class JavaBreakStatement(JavaStatement):
+    name: Optional[str]
     def emit_java(self) -> Iterator[str]:
-        yield 'break;'
+        yield f'break {self.name};' if self.name else 'break;'
 
 @dataclass(slots=True)
 class JavaContinueStatement(JavaStatement):
@@ -268,6 +269,16 @@ class JavaTryFinallyStatement(JavaStatement):
             yield from s.emit_java()
         yield '}'
 
+@dataclass(slots=True)
+class JavaLabeledBlock(JavaStatement):
+    name: str
+    body: list[JavaStatement]
+    def emit_java(self) -> Iterator[str]:
+        yield f'{self.name}: {{'
+        for s in self.body:
+            yield from s.emit_java()
+        yield '}'
+
 def bool_value(expr: JavaExpr) -> JavaExpr:
     return JavaMethodCall(expr, 'boolValue', [])
 
@@ -315,6 +326,7 @@ class PythonjVisitor(ast.NodeVisitor):
     in_function: bool
     has_returns: bool
     used_expr_discard: bool
+    break_name: Optional[str]
     functions: dict[str, list[str]]
 
     def __init__(self, path: str):
@@ -331,6 +343,7 @@ class PythonjVisitor(ast.NodeVisitor):
         self.in_function = False
         self.has_returns = False
         self.used_expr_discard = False
+        self.break_name = None
         self.functions = {}
 
     # Note: if n_errors > 0, the generated Java code is not expected to be valid or executable.
@@ -679,45 +692,53 @@ class PythonjVisitor(ast.NodeVisitor):
 
     def visit_While(self, node):
         cond = bool_value(self.visit(node.test))
+
+        block_name = self.make_temp() if node.orelse else None
+        saved_break_name = self.break_name
+        self.break_name = block_name
         with self.new_block() as body:
             for statement in node.body:
                 self.visit(statement)
-        self.code.append(JavaWhileStatement(cond, body))
+        self.break_name = saved_break_name
 
+        loop = JavaWhileStatement(cond, body)
         if node.orelse:
-            self.error(node.lineno, "'else:' clauses on 'while' statements are unsupported")
-            for statement in node.orelse:
-                self.visit(statement) # recursively visit to find all errors
+            with self.new_block() as orelse:
+                for statement in node.orelse:
+                    self.visit(statement)
+            assert block_name is not None
+            loop = JavaLabeledBlock(block_name, [loop, *orelse])
+        self.code.append(loop)
 
     def visit_For(self, node):
-        if not isinstance(node.target, ast.Name):
-            self.error(node.lineno, f"'for' statement target is unsupported: {node.target}")
-            return
-        target = node.target.id
-        self.names.add(target)
-
+        block_name = self.make_temp() if node.orelse else None
         temp_name0 = self.make_temp()
         temp_name1 = self.make_temp()
         self.code.append(JavaVariableDecl('var', temp_name0, JavaMethodCall(self.visit(node.iter), 'iter', [])))
 
+        saved_break_name = self.break_name
+        self.break_name = block_name
         with self.new_block() as body:
             for statement in node.body:
                 self.visit(statement)
+        self.break_name = saved_break_name
 
-        self.code.append(JavaForStatement(
+        loop = JavaForStatement(
             'var', temp_name1, JavaMethodCall(JavaIdentifier(temp_name0), 'next', []),
             JavaBinaryOp('!=', JavaIdentifier(temp_name1), JavaIdentifier('null')),
             temp_name1, JavaMethodCall(JavaIdentifier(temp_name0), 'next', []),
             [
-                JavaAssignStatement(self.ident_expr(target), JavaIdentifier(temp_name1)),
+                *self.emit_bind(node.target, JavaIdentifier(temp_name1)),
                 *body,
             ]
-        ))
-
+        )
         if node.orelse:
-            self.error(node.lineno, "'else:' clauses on 'for' statements are unsupported")
-            for statement in node.orelse:
-                self.visit(statement) # recursively visit to find all errors
+            with self.new_block() as orelse:
+                for statement in node.orelse:
+                    self.visit(statement)
+            assert block_name is not None
+            loop = JavaLabeledBlock(block_name, [loop, *orelse])
+        self.code.append(loop)
 
     def visit_With(self, node):
         # node.type_comment is ignored; we only plan to support "real" type annotations.
@@ -741,7 +762,7 @@ class PythonjVisitor(ast.NodeVisitor):
         ]))
 
     def visit_Break(self, node):
-        self.code.append(JavaBreakStatement())
+        self.code.append(JavaBreakStatement(self.break_name))
 
     def visit_Continue(self, node):
         self.code.append(JavaContinueStatement())
