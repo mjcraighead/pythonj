@@ -703,9 +703,6 @@ public final class Runtime {
     static final class pyfunc_zip extends PyBuiltinClass {
         pyfunc_zip() { super("zip"); }
         @Override public PyZip call(PyObject[] args, PyDict kwargs) {
-            if (args.length == 0) {
-                throw new RuntimeException("zip() takes 1 or more arguments");
-            }
             if (kwargs != null) {
                 throw new RuntimeException("zip() does not accept kwargs");
             }

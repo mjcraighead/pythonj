@@ -12,16 +12,18 @@ public final class PyZip extends PyIter {
     }
 
     @Override public PyTuple next() {
-        // XXX Might be nice for this to use PyObject[], but no PyTuple constructor for that
-        var list = new ArrayList<PyObject>();
+        if (iters.length == 0) {
+            return null; // special case: zip of no iterators yields nothing
+        }
+        var array = new PyObject[iters.length];
         for (int i = 0; i < iters.length; i++) {
             var item = iters[i].next();
             if (item == null) {
                 return null; // XXX understand corner cases with iterators of different lengths
             }
-            list.add(item);
+            array[i] = item;
         }
-        return new PyTuple(list);
+        return new PyTuple(array);
     }
     @Override public PyBuiltinClass type() { return Runtime.pyglobal_zip; }
 }
