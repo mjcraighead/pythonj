@@ -290,11 +290,11 @@ public final class Runtime {
             }
             PyObject arg0 = args[0];
             // XXX should always call intValue when length is 1
-            if (arg0 instanceof PyInt) {
+            if (arg0 instanceof PyInt arg0_int) {
                 if (args.length > 1) {
                     throw new RuntimeException("int() cannot accept a base when passed an int");
                 }
-                return (PyInt)arg0;
+                return arg0_int;
             }
             if (arg0 instanceof PyBool) {
                 if (args.length > 1) {
@@ -302,14 +302,15 @@ public final class Runtime {
                 }
                 return new PyInt(arg0.intValue());
             }
-            if (arg0 instanceof PyString) {
+            if (arg0 instanceof PyString arg0_str) {
                 long base = 10;
                 if (args.length > 1) {
                     PyObject arg1 = args[1];
-                    if (!(arg1 instanceof PyInt)) {
+                    if (arg1 instanceof PyInt arg1_int) {
+                        base = arg1_int.value;
+                    } else {
                         throw new RuntimeException("base must be an int");
                     }
-                    base = ((PyInt)arg1).value;
                     if ((base < 0) || (base == 1) || (base > 36)) {
                         throw new RuntimeException("base must be 0 or 2-36");
                     }
@@ -317,7 +318,7 @@ public final class Runtime {
                         throw new RuntimeException("base 0 unsupported at present");
                     }
                 }
-                String s = ((PyString)arg0).value;
+                String s = arg0_str.value;
                 int i = 0;
                 while (s.charAt(i) == ' ') {
                     i++;
