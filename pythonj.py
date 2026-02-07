@@ -440,6 +440,8 @@ class PythonjVisitor(ast.NodeVisitor):
             self.all_ints.add(value)
             return JavaIdentifier(int_name(value))
         elif isinstance(value, str):
+            if not value:
+                return JavaField(JavaIdentifier('PyString'), 'empty_singleton')
             if value not in self.all_strings:
                 self.all_strings[value] = len(self.all_strings)
             return JavaIdentifier(f'str_singleton_{self.all_strings[value]}')
@@ -457,7 +459,7 @@ class PythonjVisitor(ast.NodeVisitor):
 
     def visit_JoinedStr(self, node) -> JavaExpr:
         if not node.values:
-            return JavaField(JavaIdentifier('PyString'), 'empty_singleton')
+            return self.emit_constant('')
         vals: list[JavaExpr] = []
         for val in node.values:
             if isinstance(val, ast.Constant):
