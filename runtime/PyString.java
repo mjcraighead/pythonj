@@ -2,6 +2,8 @@
 // Copyright (c) 2012-2026 Matt Craighead
 // SPDX-License-Identifier: MIT
 
+import java.util.Locale;
+
 public final class PyString extends PyObject {
     public static final PyString empty_singleton = new PyString("");
 
@@ -192,7 +194,7 @@ public final class PyString extends PyObject {
         }
         return new PyString(s.toString());
     }
-    public PyString pymethod_lower() { return new PyString(value.toLowerCase()); } // Locale.ROOT?
+    public PyString pymethod_lower() { return new PyString(value.toLowerCase(Locale.ROOT)); }
     public PyList pymethod_split(PyObject arg) {
         // XXX Implement zero-args case
         // XXX Implement delimiters not of length 1
@@ -214,5 +216,5 @@ public final class PyString extends PyObject {
         ret.items.add(new PyString(s.toString()));
         return ret;
     }
-    public PyString pymethod_upper() { return new PyString(value.toUpperCase()); } // Locale.ROOT?
+    public PyString pymethod_upper() { return new PyString(value.toUpperCase(Locale.ROOT)); }
 }
