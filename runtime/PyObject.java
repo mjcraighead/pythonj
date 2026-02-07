@@ -63,6 +63,9 @@ public abstract class PyObject implements Comparable<PyObject> {
     public PyObject next() { throw new RuntimeException("'next' unimplemented"); }
     public PyType type() { throw new RuntimeException("'type' unimplemented"); }
 
+    public PyObject enter() { throw new RuntimeException("'enter' unimplemented"); }
+    public void exit() { throw new RuntimeException("'exit' unimplemented"); }
+
     // These take and/or return unboxed values
     // Note: any subclass that overrides equals() must also override hashCode(), unless it is intentionally 
     // unhashable.  If a.equals(b) is true, then a.hashCode() == b.hashCode() must also be true.

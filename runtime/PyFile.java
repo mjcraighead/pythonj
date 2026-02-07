@@ -57,6 +57,9 @@ public final class PyFile extends PyIter {
         }
     }
 
+    @Override public PyFile enter() { return this; }
+    @Override public void exit() { pymethod_close(); }
+
     @Override public PyObject getAttr(String key) {
         switch (key) {
             case "close": return new PyFileMethod_close(this);

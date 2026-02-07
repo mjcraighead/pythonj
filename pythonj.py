@@ -255,6 +255,19 @@ class JavaForStatement(JavaStatement):
             yield from s.emit_java()
         yield '}'
 
+@dataclass(slots=True)
+class JavaTryFinallyStatement(JavaStatement):
+    try_body: list[JavaStatement]
+    finally_body: list[JavaStatement]
+    def emit_java(self) -> Iterator[str]:
+        yield 'try {'
+        for s in self.try_body:
+            yield from s.emit_java()
+        yield '} finally {'
+        for s in self.finally_body:
+            yield from s.emit_java()
+        yield '}'
+
 def bool_value(expr: JavaExpr) -> JavaExpr:
     return JavaMethodCall(expr, 'boolValue', [])
 
@@ -705,6 +718,27 @@ class PythonjVisitor(ast.NodeVisitor):
             self.error(node.lineno, "'else:' clauses on 'for' statements are unsupported")
             for statement in node.orelse:
                 self.visit(statement) # recursively visit to find all errors
+
+    def visit_With(self, node):
+        # node.type_comment is ignored; we only plan to support "real" type annotations.
+        if len(node.items) != 1:
+            self.error(node.lineno, "multiple-item 'with' statements are unsupported")
+        item = node.items[0]
+
+        temp_name = self.make_temp()
+        self.code.append(JavaVariableDecl('var', temp_name, self.visit(item.context_expr)))
+        if item.optional_vars is None:
+            self.code.append(JavaExprStatement(JavaMethodCall(JavaIdentifier(temp_name), 'enter', [])))
+        else:
+            self.code.extend(self.emit_bind(item.optional_vars, JavaMethodCall(JavaIdentifier(temp_name), 'enter', [])))
+
+        with self.new_block() as body:
+            for statement in node.body:
+                self.visit(statement)
+
+        self.code.append(JavaTryFinallyStatement(body, [
+            JavaExprStatement(JavaMethodCall(JavaIdentifier(temp_name), 'exit', [])),
+        ]))
 
     def visit_Break(self, node):
         self.code.append(JavaBreakStatement())
