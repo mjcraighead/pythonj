@@ -255,9 +255,6 @@ class JavaForStatement(JavaStatement):
             yield from s.emit_java()
         yield '}'
 
-def py_none() -> JavaExpr:
-    return JavaField(JavaIdentifier('PyNone'), 'singleton')
-
 def bool_value(expr: JavaExpr) -> JavaExpr:
     return JavaMethodCall(expr, 'boolValue', [])
 
@@ -433,26 +430,30 @@ class PythonjVisitor(ast.NodeVisitor):
     def visit_IfExp(self, node) -> JavaExpr:
         return JavaCondOp(bool_value(self.visit(node.test)), self.visit(node.body), self.visit(node.orelse))
 
-    # XXX Note that we never actually get negative integers here in the AST
-    def visit_Constant(self, node) -> JavaExpr:
-        if node.value is None:
-            return py_none()
-        elif node.value is False or node.value is True:
-            return JavaField(JavaIdentifier('PyBool'), f'{str(node.value).lower()}_singleton')
-        elif isinstance(node.value, int):
-            self.all_ints.add(node.value)
-            return JavaIdentifier(int_name(node.value))
-        elif isinstance(node.value, str):
-            if node.value not in self.all_strings:
-                self.all_strings[node.value] = len(self.all_strings)
-            return JavaIdentifier(f'str_singleton_{self.all_strings[node.value]}')
-        elif isinstance(node.value, bytes):
-            if node.value not in self.all_bytes:
-                self.all_bytes[node.value] = len(self.all_bytes)
-            return JavaIdentifier(f'bytes_singleton_{self.all_bytes[node.value]}')
+    def emit_constant(self, value, lineno: Optional[int] = None) -> JavaExpr:
+        """Lower a Python literal value into a JavaExpr and record any required singletons."""
+        if value is None:
+            return JavaField(JavaIdentifier('PyNone'), 'singleton')
+        elif value is False or value is True:
+            return JavaField(JavaIdentifier('PyBool'), f'{str(value).lower()}_singleton')
+        elif isinstance(value, int):
+            self.all_ints.add(value)
+            return JavaIdentifier(int_name(value))
+        elif isinstance(value, str):
+            if value not in self.all_strings:
+                self.all_strings[value] = len(self.all_strings)
+            return JavaIdentifier(f'str_singleton_{self.all_strings[value]}')
+        elif isinstance(value, bytes):
+            if value not in self.all_bytes:
+                self.all_bytes[value] = len(self.all_bytes)
+            return JavaIdentifier(f'bytes_singleton_{self.all_bytes[value]}')
         else:
-            self.error(node.lineno, f'literal {node.value!r} of type {type(node.value).__name__!r} is unsupported')
+            self.error(lineno, f'literal {value!r} of type {type(value).__name__!r} is unsupported')
             return JavaIdentifier('__cannot_translate_constant__')
+
+    # Note that we never actually get negative integers here in the AST
+    def visit_Constant(self, node) -> JavaExpr:
+        return self.emit_constant(node.value, node.lineno)
 
     def visit_JoinedStr(self, node) -> JavaExpr:
         if not node.values:
@@ -537,9 +538,9 @@ class PythonjVisitor(ast.NodeVisitor):
         return JavaMethodCall(self.visit(node.value), 'getAttr', [JavaStrLiteral(node.attr)])
 
     def visit_Slice(self, node) -> JavaExpr:
-        lower = self.visit(node.lower) if node.lower else py_none()
-        upper = self.visit(node.upper) if node.upper else py_none()
-        step = self.visit(node.step) if node.step else py_none()
+        lower = self.visit(node.lower) if node.lower else self.emit_constant(None)
+        upper = self.visit(node.upper) if node.upper else self.emit_constant(None)
+        step = self.visit(node.step) if node.step else self.emit_constant(None)
         return JavaCreateObject('PySlice', [lower, upper, step])
 
     # XXX Change all statements to -> Iterator[JavaStatement] and yield statements?
@@ -624,7 +625,7 @@ class PythonjVisitor(ast.NodeVisitor):
     def visit_Return(self, node):
         assert self.in_function, node
         self.has_returns = True
-        value = self.visit(node.value) if node.value else py_none()
+        value = self.visit(node.value) if node.value else self.emit_constant(None)
         self.code.append(JavaReturnStatement(value))
 
     @contextmanager
@@ -772,7 +773,7 @@ class PythonjVisitor(ast.NodeVisitor):
         ]
         # XXX need this in some, but not all, cases with has_returns (avoid "unreachable statement" javac errors)
         if not self.has_returns:
-            func_code.append(JavaReturnStatement(py_none()))
+            func_code.append(JavaReturnStatement(self.emit_constant(None)))
 
         self.functions[node.name] = [
             f'private static final class pyfunc_{node.name} extends PyTruthyObject {{',
