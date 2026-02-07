@@ -9,26 +9,7 @@ import java.io.FileReader;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
-public final class PyFile extends PyTruthyObject {
-    static final class PyFileIter extends PyIter {
-        private final PyFile f;
-
-        PyFileIter(PyFile _f) { f = _f; }
-
-        @Override public PyString next() {
-            // XXX Java readLine chops trailing newline, which is not what we want...
-            try {
-                String s = f.reader.readLine();
-                if (s == null) {
-                    return null;
-                }
-                return new PyString(s + "\n");
-            } catch (IOException e) {
-                throw new RuntimeException(e.toString());
-            }
-        }
-    };
-
+public final class PyFile extends PyIter {
     private static class PyFileMethod extends PyTruthyObject {
         protected final PyFile self;
         PyFileMethod(PyFile _self) { self = _self; }
@@ -62,7 +43,18 @@ public final class PyFile extends PyTruthyObject {
         }
     }
 
-    @Override public PyFileIter iter() { return new PyFileIter(this); }
+    @Override public PyString next() {
+        // XXX Java readLine chops trailing newline, which is not what we want...
+        try {
+            String s = reader.readLine();
+            if (s == null) {
+                return null;
+            }
+            return new PyString(s + "\n");
+        } catch (IOException e) {
+            throw new RuntimeException(e.toString());
+        }
+    }
 
     @Override public PyObject getAttr(String key) {
         switch (key) {
