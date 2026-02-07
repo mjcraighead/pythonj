@@ -508,10 +508,8 @@ class PythonjVisitor(ast.NodeVisitor):
 
     def visit_Dict(self, node) -> JavaExpr:
         assert len(node.keys) == len(node.values), node
-        if any(k is None for k in node.keys):
-            self.error(node.lineno, 'dictionary packing is unsupported')
         kv_iter = itertools.chain.from_iterable(zip(node.keys, node.values))
-        return JavaCreateObject('PyDict', [JavaIdentifier('__dict_unpack_unsupported__') if x is None else self.visit(x) for x in kv_iter])
+        return JavaCreateObject('PyDict', [JavaIdentifier('null') if x is None else self.visit(x) for x in kv_iter])
 
     def visit_Call(self, node) -> JavaExpr:
         func = self.visit(node.func)
@@ -519,13 +517,12 @@ class PythonjVisitor(ast.NodeVisitor):
         if node.keywords:
             kv_list: list[JavaExpr] = []
             for kwarg in node.keywords:
-                if kwarg.arg is None:
-                    self.error(node.lineno, 'dictionary packing is unsupported')
-                    self.visit(kwarg.value) # recurse to find more errors
+                if kwarg.arg is None: # **kwargs
+                    kv_list.append(JavaIdentifier('null'))
+                    kv_list.append(self.visit(kwarg.value))
                 else:
                     assert isinstance(kwarg.arg, str), kwarg.arg
-                    # XXX These should be stored in all_strings
-                    kv_list.append(JavaCreateObject('PyString', [JavaStrLiteral(kwarg.arg)]))
+                    kv_list.append(self.emit_constant(kwarg.arg))
                     kv_list.append(self.visit(kwarg.value))
             kwargs = JavaCreateObject('PyDict', kv_list)
         else:

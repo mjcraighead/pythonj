@@ -202,6 +202,7 @@ public final class Runtime {
             }
             var ret = new PyDict();
             if (args.length != 0) {
+                // XXX Handle case where the argument is a mapping
                 var iter = args[0].iter();
                 for (var item = iter.next(); item != null; item = iter.next()) {
                     var itemIter = item.iter();

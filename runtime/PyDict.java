@@ -165,7 +165,15 @@ public final class PyDict extends PyObject {
     PyDict(PyObject... args) {
         items = new LinkedHashMap<>();
         for (int i = 0; i < args.length; i += 2) {
-            items.put(args[i], args[i+1]);
+            PyObject k = args[i];
+            PyObject v = args[i+1];
+            if (k == null) { // used to encode dictionary unpacking -- XXX support arbitrary mappings here
+                for (var x: ((PyDict)v).items.entrySet()) {
+                    items.put(x.getKey(), x.getValue());
+                }
+            } else {
+                items.put(k, v);
+            }
         }
     }
 
