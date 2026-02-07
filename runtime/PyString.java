@@ -18,7 +18,7 @@ public final class PyString extends PyObject {
             if (index >= s.length()) {
                 return null;
             }
-            var ret = new PyString(s.substring(index, index+1));
+            var ret = new PyString(String.valueOf(s.charAt(index)));
             index++;
             return ret;
         }
@@ -122,7 +122,7 @@ public final class PyString extends PyObject {
         if (index < 0) {
             index += length;
         }
-        return new PyString(value.substring(index, index+1));
+        return new PyString(String.valueOf(value.charAt(index)));
     }
 
     @Override public PyStringIter iter() { return new PyStringIter(this); }
