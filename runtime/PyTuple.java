@@ -50,6 +50,7 @@ public final class PyTuple extends PyObject {
     }
 
     @Override public PyTupleIter iter() { return new PyTupleIter(this); }
+    @Override public PyReversed reversed() { return new PyReversed(this); }
     @Override public PyBuiltinClass type() { return Runtime.pyglobal_tuple; }
 
     @Override public boolean boolValue() { return items.length != 0; }

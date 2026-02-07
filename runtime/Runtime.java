@@ -552,14 +552,14 @@ public final class Runtime {
 
     static final class pyfunc_reversed extends PyBuiltinClass {
         pyfunc_reversed() { super("reversed"); }
-        @Override public PyReversed call(PyObject[] args, PyDict kwargs) {
+        @Override public PyIter call(PyObject[] args, PyDict kwargs) {
             if (args.length != 1) {
                 throw new RuntimeException("reversed() takes 1 argument");
             }
             if (kwargs != null) {
                 throw new RuntimeException("reversed() does not accept kwargs");
             }
-            return new PyReversed(args[0]);
+            return args[0].reversed();
         }
     }
     public static final pyfunc_reversed pyglobal_reversed = new pyfunc_reversed();

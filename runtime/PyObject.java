@@ -59,6 +59,7 @@ public abstract class PyObject implements Comparable<PyObject> {
     public PyObject call(PyObject args[], PyDict kwargs) { throw new RuntimeException("'call' unimplemented"); }
 
     public PyIter iter() { throw new RuntimeException("'iter' unimplemented"); }
+    public PyIter reversed() { throw new RuntimeException("'reversed' unimplemented"); }
     public PyObject next() { throw new RuntimeException("'next' unimplemented"); }
     public PyType type() { throw new RuntimeException("'type' unimplemented"); }
 
