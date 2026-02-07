@@ -799,6 +799,9 @@ class PythonjVisitor(ast.NodeVisitor):
             '@Override public PyObject call(PyObject[] args, PyDict kwargs) {',
             *itertools.chain.from_iterable(s.emit_java() for s in func_code),
             '}',
+            '@Override public String repr() {',
+            *JavaThrowStatement(JavaCreateObject('RuntimeException', [JavaStrLiteral("'repr' unimplemented")])).emit_java(),
+            '}',
             '}',
         ]
 

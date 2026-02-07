@@ -13,6 +13,7 @@ public final class PyFile extends PyIter {
     private static class PyFileMethod extends PyTruthyObject {
         protected final PyFile self;
         PyFileMethod(PyFile _self) { self = _self; }
+        @Override public String repr() { throw new RuntimeException("'repr' unimplemented"); }
     }
     private static final class PyFileMethod_close extends PyFileMethod {
         PyFileMethod_close(PyFile _self) { super(_self); }
@@ -63,6 +64,7 @@ public final class PyFile extends PyIter {
             default: return super.getAttr(key);
         }
     }
+    @Override public String repr() { throw new RuntimeException("'repr' unimplemented"); }
 
     public PyNone pymethod_close() {
         try {

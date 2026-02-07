@@ -83,7 +83,7 @@ public abstract class PyObject implements Comparable<PyObject> {
     public long indexValue() { throw new RuntimeException("'indexValue' unimplemented"); }
     public long intValue() { throw new RuntimeException("'intValue' unimplemented"); }
     public long len() { throw new RuntimeException("'len' unimplemented"); }
-    public String repr() { throw new RuntimeException("'repr' unimplemented"); }
+    public abstract String repr();
     public String str() { return repr(); }
 
     // Wrapper that reverses the order of evaluation vs. "contains" to assist translator

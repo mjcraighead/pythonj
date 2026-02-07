@@ -122,6 +122,7 @@ public final class PyDict extends PyObject {
     private static class PyDictMethod extends PyTruthyObject {
         protected final PyDict self;
         PyDictMethod(PyDict _self) { self = _self; }
+        @Override public String repr() { throw new RuntimeException("'repr' unimplemented"); }
     }
     private static final class PyDictMethod_get extends PyDictMethod {
         PyDictMethod_get(PyDict _self) { super(_self); }

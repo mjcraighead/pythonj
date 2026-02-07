@@ -20,6 +20,7 @@ public final class PyList extends PyObject {
     private static class PyListMethod extends PyTruthyObject {
         protected final PyList self;
         PyListMethod(PyList _self) { self = _self; }
+        @Override public String repr() { throw new RuntimeException("'repr' unimplemented"); }
     }
     private static final class PyListMethod_append extends PyListMethod {
         PyListMethod_append(PyList _self) { super(_self); }
