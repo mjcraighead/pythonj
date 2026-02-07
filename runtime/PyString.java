@@ -112,7 +112,7 @@ public final class PyString extends PyObject {
     }
 
     @Override public PyString getItem(PyObject key) {
-        int index = (int)key.indexValue();
+        int index = Math.toIntExact(key.indexValue());
         int length = value.length();
         if ((index < -length) || (index >= length)) {
             throw new RuntimeException("str index out of bounds");

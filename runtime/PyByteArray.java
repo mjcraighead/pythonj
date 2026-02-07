@@ -26,14 +26,14 @@ public final class PyByteArray extends PyObject {
     PyByteArray(byte[] _value) { value = _value; }
 
     @Override public PyInt getItem(PyObject key) {
-        int index = (int)key.indexValue();
+        int index = Math.toIntExact(key.indexValue());
         if (index < 0) {
             index += value.length;
         }
         return new PyInt(value[index] & 0xFF);
     }
     @Override public void setItem(PyObject key, PyObject val) {
-        int index = (int)key.indexValue();
+        int index = Math.toIntExact(key.indexValue());
         if (index < 0) {
             index += value.length;
         }

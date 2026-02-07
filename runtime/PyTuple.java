@@ -42,7 +42,7 @@ public final class PyTuple extends PyObject {
     }
 
     @Override public PyObject getItem(PyObject key) {
-        int index = (int)key.indexValue();
+        int index = Math.toIntExact(key.indexValue());
         if (index < 0) {
             index += items.length;
         }

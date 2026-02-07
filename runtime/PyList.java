@@ -83,14 +83,14 @@ public final class PyList extends PyObject {
     }
 
     @Override public PyObject getItem(PyObject key) {
-        int index = (int)key.indexValue();
+        int index = Math.toIntExact(key.indexValue());
         if (index < 0) {
             index += items.size();
         }
         return items.get(index);
     }
     @Override public void setItem(PyObject key, PyObject value) {
-        int index = (int)key.indexValue();
+        int index = Math.toIntExact(key.indexValue());
         if (index < 0) {
             index += items.size();
         }

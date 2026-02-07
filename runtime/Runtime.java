@@ -130,7 +130,7 @@ public final class Runtime {
             }
             PyObject arg = args[0];
             if ((arg instanceof PyInt) || (arg instanceof PyBool)) {
-                return new PyByteArray(new byte[(int)arg.indexValue()]);
+                return new PyByteArray(new byte[Math.toIntExact(arg.indexValue())]);
             }
             var b = new ByteArrayOutputStream();
             var iter = arg.iter();
@@ -160,7 +160,7 @@ public final class Runtime {
             }
             PyObject arg = args[0];
             if ((arg instanceof PyInt) || (arg instanceof PyBool)) {
-                return new PyBytes(new byte[(int)arg.indexValue()]);
+                return new PyBytes(new byte[Math.toIntExact(arg.indexValue())]);
             }
             var b = new ByteArrayOutputStream();
             var iter = arg.iter();

@@ -26,7 +26,7 @@ public final class PyBytes extends PyObject {
     PyBytes(byte[] _value) { value = _value; }
 
     @Override public PyInt getItem(PyObject key) {
-        int index = (int)key.indexValue();
+        int index = Math.toIntExact(key.indexValue());
         if (index < 0) {
             index += value.length;
         }
