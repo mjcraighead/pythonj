@@ -207,8 +207,8 @@ public final class Runtime {
                     if (item.len() != 2) {
                         throw new RuntimeException("dictionary update sequence must have length 2");
                     }
-                    PyObject key = item.getItem(new PyInt(0));
-                    PyObject value = item.getItem(new PyInt(1));
+                    PyObject key = item.getItem(PyInt.singleton_0);
+                    PyObject value = item.getItem(PyInt.singleton_1);
                     ret.setItem(key, value);
                 }
             }
@@ -279,7 +279,7 @@ public final class Runtime {
                 throw new RuntimeException("int() does not accept kwargs");
             }
             if (args.length == 0) {
-                return new PyInt(0);
+                return PyInt.singleton_0;
             }
             PyObject arg0 = args[0];
             // XXX should always call intValue when length is 1

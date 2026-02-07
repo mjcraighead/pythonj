@@ -4,6 +4,9 @@
 
 // XXX Should probably pre-intern [-5,256] to match CPython
 public final class PyInt extends PyNumber {
+    public static final PyInt singleton_0 = new PyInt(0);
+    public static final PyInt singleton_1 = new PyInt(1);
+
     public final long value;
 
     PyInt(long _value) { value = _value; }

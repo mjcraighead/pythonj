@@ -437,6 +437,8 @@ class PythonjVisitor(ast.NodeVisitor):
         elif value is False or value is True:
             return JavaField(JavaIdentifier('PyBool'), f'{str(value).lower()}_singleton')
         elif isinstance(value, int):
+            if 0 <= value <= 1:
+                return JavaField(JavaIdentifier('PyInt'), f'singleton_{value}')
             self.all_ints.add(value)
             return JavaIdentifier(int_name(value))
         elif isinstance(value, str):
