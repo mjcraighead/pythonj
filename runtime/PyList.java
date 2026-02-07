@@ -63,13 +63,13 @@ public final class PyList extends PyObject {
     }
 
     @Override public PyList add(PyObject rhs_arg) {
-        if (!(rhs_arg instanceof PyList)) {
-            throw new RuntimeException("list add error");
+        if (rhs_arg instanceof PyList rhs) {
+            var ret = new PyList();
+            ret.items.addAll(items);
+            ret.items.addAll(rhs.items);
+            return ret;
         }
-        var ret = new PyList();
-        ret.items.addAll(items);
-        ret.items.addAll(((PyList)rhs_arg).items);
-        return ret;
+        throw new RuntimeException("list add error");
     }
     @Override public PyList mul(PyObject rhs) {
         var ret = new PyList();
@@ -110,11 +110,11 @@ public final class PyList extends PyObject {
         }
         return false;
     }
-    @Override public boolean equals(Object rhs) {
-        if (!(rhs instanceof PyList)) {
-            return false;
+    @Override public boolean equals(Object rhs_arg) {
+        if (rhs_arg instanceof PyList rhs) {
+            return items.equals(rhs.items);
         }
-        return items.equals(((PyList)rhs).items);
+        return false;
     }
     @Override public PyObject getAttr(String key) {
         switch (key) {

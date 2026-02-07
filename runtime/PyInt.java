@@ -93,11 +93,11 @@ public final class PyInt extends PyNumber {
     @Override public PyBuiltinClass type() { return Runtime.pyglobal_int; }
 
     @Override public boolean boolValue() { return value != 0; }
-    @Override public boolean equals(Object rhs) {
-        if (!(rhs instanceof PyInt)) {
-            return false;
+    @Override public boolean equals(Object rhs_arg) {
+        if (rhs_arg instanceof PyInt rhs) {
+            return value == rhs.value;
         }
-        return value == ((PyInt)rhs).value;
+        return false;
     }
     @Override public double floatValue() { return value; }
     @Override public String format(String formatSpec) {

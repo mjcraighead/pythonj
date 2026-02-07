@@ -49,11 +49,10 @@ public final class PyByteArray extends PyObject {
 
     @Override public boolean boolValue() { return value.length != 0; }
     @Override public boolean equals(Object rhs_arg) {
-        if (!(rhs_arg instanceof PyByteArray)) {
-            return false;
+        if (rhs_arg instanceof PyByteArray rhs) {
+            return Arrays.equals(value, rhs.value);
         }
-        PyByteArray rhs = (PyByteArray)rhs_arg;
-        return Arrays.equals(value, rhs.value);
+        return false;
     }
     @Override public long len() { return value.length; }
     @Override public String repr() {

@@ -61,11 +61,11 @@ public final class PyTuple extends PyObject {
         }
         return false;
     }
-    @Override public boolean equals(Object rhs) {
-        if (!(rhs instanceof PyTuple)) {
-            return false;
+    @Override public boolean equals(Object rhs_arg) {
+        if (rhs_arg instanceof PyTuple rhs) {
+            return Arrays.equals(items, rhs.items);
         }
-        return Arrays.equals(items, ((PyTuple)rhs).items);
+        return false;
     }
     @Override public long len() { return items.length; }
     @Override public String repr() {

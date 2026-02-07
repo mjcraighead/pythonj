@@ -85,8 +85,8 @@ public final class PyString extends PyObject {
     @Override public PyString mod(PyObject rhs_arg) {
         var s = new StringBuilder();
         PyObject[] rhs;
-        if (rhs_arg instanceof PyTuple) {
-            rhs = ((PyTuple)rhs_arg).items;
+        if (rhs_arg instanceof PyTuple rhs_tuple) {
+            rhs = rhs_tuple.items;
         } else {
             rhs = new PyObject[] {rhs_arg};
         }
@@ -147,11 +147,11 @@ public final class PyString extends PyObject {
     @Override public PyBuiltinClass type() { return Runtime.pyglobal_str; }
 
     @Override public boolean boolValue() { return !value.isEmpty(); }
-    @Override public boolean equals(Object rhs) {
-        if (!(rhs instanceof PyString)) {
-            return false;
+    @Override public boolean equals(Object rhs_arg) {
+        if (rhs_arg instanceof PyString rhs) {
+            return value.equals(rhs.value);
         }
-        return value.equals(((PyString)rhs).value);
+        return false;
     }
     @Override public String format(String formatSpec) {
         if (!formatSpec.isEmpty()) {

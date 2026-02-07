@@ -38,11 +38,10 @@ public final class PyBytes extends PyObject {
 
     @Override public boolean boolValue() { return value.length != 0; }
     @Override public boolean equals(Object rhs_arg) {
-        if (!(rhs_arg instanceof PyBytes)) {
-            return false;
+        if (rhs_arg instanceof PyBytes rhs) {
+            return Arrays.equals(value, rhs.value);
         }
-        PyBytes rhs = (PyBytes)rhs_arg;
-        return Arrays.equals(value, rhs.value);
+        return false;
     }
     @Override public long len() { return value.length; }
     @Override public String repr() {
