@@ -203,14 +203,20 @@ public final class Runtime {
             }
             var ret = new PyDict();
             if (args.length != 0) {
-                // XXX Handle case where the argument is a mapping
-                var iter = args[0].iter();
-                for (var item = iter.next(); item != null; item = iter.next()) {
-                    var itemIter = item.iter();
-                    PyObject key = Runtime.nextRequireNonNull(itemIter);
-                    PyObject value = Runtime.nextRequireNonNull(itemIter);
-                    Runtime.nextRequireNull(itemIter);
-                    ret.setItem(key, value);
+                PyObject arg = args[0];
+                if (arg instanceof PyDict dict) { // XXX support arbitrary mappings here
+                    for (var x: dict.items.entrySet()) {
+                        ret.setItem(x.getKey(), x.getValue());
+                    }
+                } else {
+                    var iter = arg.iter();
+                    for (var item = iter.next(); item != null; item = iter.next()) {
+                        var itemIter = item.iter();
+                        PyObject key = Runtime.nextRequireNonNull(itemIter);
+                        PyObject value = Runtime.nextRequireNonNull(itemIter);
+                        Runtime.nextRequireNull(itemIter);
+                        ret.setItem(key, value);
+                    }
                 }
             }
             if (kwargs != null) {
