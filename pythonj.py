@@ -555,25 +555,36 @@ class PythonjVisitor(ast.NodeVisitor):
     def visit_Pass(self, node):
         pass
 
-    def visit_Assign(self, node):
-        if len(node.targets) != 1:
-            self.generic_visit(node) # error
-            self.visit(node.value) # recurse to find more errors
-            return
-        target = node.targets[0] 
-
+    def emit_bind(self, target: ast.expr, value: JavaExpr) -> Iterator[JavaStatement]:
         if isinstance(target, ast.Name):
             self.names.add(target.id)
-            code = JavaAssignStatement(self.visit(target), self.visit(node.value))
+            yield JavaAssignStatement(self.visit(target), value)
         elif isinstance(target, ast.Attribute):
-            code = JavaExprStatement(JavaMethodCall(self.visit(target.value), 'setAttr', [JavaStrLiteral(target.attr), self.visit(node.value)]))
+            temp_name = self.make_temp()
+            yield JavaVariableDecl('var', temp_name, value)
+            yield JavaExprStatement(JavaMethodCall(self.visit(target.value), 'setAttr', [JavaStrLiteral(target.attr), JavaIdentifier(temp_name)]))
         elif isinstance(target, ast.Subscript):
-            code = JavaExprStatement(JavaMethodCall(self.visit(target.value), 'setItem', [self.visit(target.slice), self.visit(node.value)]))
+            temp_name = self.make_temp()
+            yield JavaVariableDecl('var', temp_name, value)
+            yield JavaExprStatement(JavaMethodCall(self.visit(target.value), 'setItem', [self.visit(target.slice), JavaIdentifier(temp_name)]))
+        elif isinstance(target, (ast.Tuple, ast.List)):
+            temp_name = self.make_temp()
+            yield JavaVariableDecl('var', temp_name, JavaMethodCall(value, 'iter', []))
+            # XXX This is not atomic if an exception is thrown; a subset of LHS's will be left assigned
+            for subtarget in target.elts:
+                if not isinstance(subtarget, ast.Name):
+                    self.error(subtarget.lineno, 'only simple names are supported in unpacking assignments')
+                    continue
+                yield from self.emit_bind(subtarget, JavaMethodCall(JavaIdentifier('Runtime'), 'nextRequireNonNull', [JavaIdentifier(temp_name)]))
+            yield JavaExprStatement(JavaMethodCall(JavaIdentifier('Runtime'), 'nextRequireNull', [JavaIdentifier(temp_name)]))
         else:
-            self.generic_visit(node) # error
-            self.visit(node.value) # recurse to find more errors
-            return
-        self.code.append(code)
+            self.error(target.lineno, f'binding to {type(target).__name__} is unsupported')
+
+    def visit_Assign(self, node):
+        if len(node.targets) != 1:
+            self.error(node.lineno, 'chained assignment (a = b = c) is unsupported')
+        target = node.targets[0]
+        self.code.extend(self.emit_bind(target, self.visit(node.value)))
 
     def visit_AugAssign(self, node):
         op = f'{self.visit(node.op)}InPlace'
