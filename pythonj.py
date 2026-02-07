@@ -804,9 +804,9 @@ class PythonjVisitor(ast.NodeVisitor):
                 writer.write(line)
             writer.write('')
 
-        # XXX This can allow "null" to leak out in to the runtime, which is very bad
+        # XXX Initializing all globals to None is weird, but we don't have a better option yet
         for name in sorted(self.global_names):
-            writer.write(f'private static PyObject pyglobal_{name} = null;')
+            writer.write(f'private static PyObject pyglobal_{name} = PyNone.singleton;')
         writer.write('')
 
         writer.write('public static void main(String[] args) {')
