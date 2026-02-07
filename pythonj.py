@@ -323,8 +323,12 @@ class PythonjVisitor(ast.NodeVisitor):
         self.used_expr_discard = False
         self.functions = {}
 
-    def error(self, lineno: int | None, msg: str) -> None:
-        print(f'ERROR: {self.path}:{lineno}: {msg}')
+    # Note: if n_errors > 0, the generated Java code is not expected to be valid or executable.
+    def error(self, lineno: Optional[int], msg: str) -> None:
+        if lineno is None:
+            print(f'ERROR: {self.path}: {msg}')
+        else:
+            print(f'ERROR: {self.path}:{lineno}: {msg}')
         self.n_errors += 1
 
     def make_temp(self) -> str:
@@ -343,7 +347,7 @@ class PythonjVisitor(ast.NodeVisitor):
 
     def generic_visit(self, node):
         """Print an error for all unknown constructs in translation."""
-        self.error(getattr(node, 'lineno', None), f"don't know how to translate {node}")
+        self.error(getattr(node, 'lineno', None), f'unsupported Python construct: {type(node).__name__}')
         if isinstance(node, ast.expr):
             return JavaIdentifier('__cannot_translate_expr__') # return placeholder JavaExpr IR node
 
@@ -447,7 +451,7 @@ class PythonjVisitor(ast.NodeVisitor):
                 self.all_bytes[node.value] = len(self.all_bytes)
             return JavaIdentifier(f'bytes_singleton_{self.all_bytes[node.value]}')
         else:
-            self.generic_visit(node) # error
+            self.error(node.lineno, f'literal {node.value!r} of type {type(node.value).__name__!r} is unsupported')
             return JavaIdentifier('__cannot_translate_constant__')
 
     def visit_JoinedStr(self, node) -> JavaExpr:
@@ -592,7 +596,7 @@ class PythonjVisitor(ast.NodeVisitor):
                 )
             ]))
         else:
-            self.generic_visit(node) # error
+            self.error(node.lineno, f'augmented assignment to {type(node.target).__name__} is unsupported')
             self.visit(node.value) # recurse to find more errors
             return
         self.code.append(code)
@@ -613,7 +617,7 @@ class PythonjVisitor(ast.NodeVisitor):
             elif isinstance(target, ast.Subscript):
                 code = JavaExprStatement(JavaMethodCall(self.visit(target.value), 'delItem', [self.visit(target.slice)]))
             else:
-                self.generic_visit(node) # error
+                self.error(node.lineno, f"'del' of {type(target).__name__} is unsupported")
                 continue
             self.code.append(code)
 
