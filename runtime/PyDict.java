@@ -181,9 +181,13 @@ public final class PyDict extends PyObject {
         for (int i = 0; i < args.length; i += 2) {
             PyObject k = args[i];
             PyObject v = args[i+1];
-            if (k == null) { // used to encode dictionary unpacking -- XXX support arbitrary mappings here
-                for (var x: ((PyDict)v).items.entrySet()) {
-                    items.put(x.getKey(), x.getValue());
+            if (k == null) { // used to encode dictionary unpacking
+                if (v instanceof PyDict dict) {
+                    for (var x: dict.items.entrySet()) {
+                        items.put(x.getKey(), x.getValue());
+                    }
+                } else {
+                    throw new UnsupportedOperationException("dictionary unpacking only implemented for dict");
                 }
             } else {
                 items.put(k, v);
