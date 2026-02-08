@@ -776,14 +776,14 @@ public final class Runtime {
     public static PyObject nextRequireNonNull(PyIter iter) {
         PyObject obj = iter.next();
         if (obj == null) {
-            throw new RuntimeException("iterator fully consumed too early");
+            throw new IllegalStateException("not enough values to unpack");
         }
         return obj;
     }
     public static void nextRequireNull(PyIter iter) {
         PyObject obj = iter.next();
         if (obj != null) {
-            throw new RuntimeException("iterator not fully consumed");
+            throw new IllegalStateException("too many values to unpack");
         }
     }
 }

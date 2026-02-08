@@ -2,6 +2,8 @@
 // Copyright (c) 2012-2026 Matt Craighead
 // SPDX-License-Identifier: MIT
 
+import java.util.NoSuchElementException;
+
 public abstract class PyObject implements Comparable<PyObject> {
     // These all take and/or return boxed PyObjects
     public PyObject invert() { throw new UnsupportedOperationException("'invert' unimplemented"); }
@@ -50,7 +52,7 @@ public abstract class PyObject implements Comparable<PyObject> {
     public PyObject getAttr(String key) {
         switch (key) {
             case "__class__": return type();
-            default: throw new RuntimeException(String.format("object does not have attribute '%s'", key));
+            default: throw new NoSuchElementException(String.format("object does not have attribute '%s'", key));
         }
     }
     public void setAttr(String key, PyObject value) { throw new UnsupportedOperationException("'setAttr' unimplemented"); }
