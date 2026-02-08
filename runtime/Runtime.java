@@ -306,8 +306,8 @@ public final class Runtime {
                 long base = 10;
                 if (args.length > 1) {
                     PyObject arg1 = args[1];
-                    if (arg1 instanceof PyInt arg1_int) {
-                        base = arg1_int.value;
+                    if ((arg1 instanceof PyInt) || (arg1 instanceof PyBool)) {
+                        base = arg1.indexValue();
                     } else {
                         throw new IllegalArgumentException("base must be an int");
                     }
