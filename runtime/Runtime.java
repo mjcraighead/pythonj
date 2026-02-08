@@ -701,7 +701,11 @@ public final class Runtime {
             var iter = args[0].iter();
             long sum = 0;
             for (var item = iter.next(); item != null; item = iter.next()) {
-                sum = Math.addExact(sum, ((PyInt)item).value);
+                if ((item instanceof PyInt) || (item instanceof PyBool)) {
+                    sum = Math.addExact(sum, item.indexValue());
+                } else {
+                    throw new IllegalArgumentException("item must be an int or bool");
+                }
             }
             return new PyInt(sum);
         }
