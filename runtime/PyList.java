@@ -114,14 +114,7 @@ public final class PyList extends PyObject {
     @Override public PyBuiltinClass type() { return Runtime.pyglobal_list; }
 
     @Override public boolean boolValue() { return !items.isEmpty(); }
-    @Override public boolean contains(PyObject rhs) {
-        for (var x: items) {
-            if (x.equals(rhs)) {
-                return true;
-            }
-        }
-        return false;
-    }
+    @Override public boolean contains(PyObject rhs) { return items.contains(rhs); }
     @Override public boolean equals(Object rhs_arg) {
         if (rhs_arg instanceof PyList rhs) {
             return items.equals(rhs.items);
