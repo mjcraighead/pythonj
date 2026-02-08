@@ -5,6 +5,7 @@
 import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 
 public final class PyList extends PyObject {
     private static final PyBuiltinClass iter_class_singleton = new PyBuiltinClass("list_iterator");
@@ -34,6 +35,18 @@ public final class PyList extends PyObject {
             return self.pymethod_append(args[0]);
         }
     }
+    private static final class PyListMethod_clear extends PyListMethod {
+        PyListMethod_clear(PyList _self) { super(_self); }
+        @Override public PyNone call(PyObject[] args, PyDict kwargs) {
+            if (args.length != 0) {
+                throw new IllegalArgumentException("list.clear() takes 0 arguments");
+            }
+            if (kwargs != null) {
+                throw new IllegalArgumentException("list.clear() does not accept kwargs");
+            }
+            return self.pymethod_clear();
+        }
+    }
     private static final class PyListMethod_count extends PyListMethod {
         PyListMethod_count(PyList _self) { super(_self); }
         @Override public PyInt call(PyObject[] args, PyDict kwargs) {
@@ -56,6 +69,18 @@ public final class PyList extends PyObject {
                 throw new IllegalArgumentException("list.extend() does not accept kwargs");
             }
             return self.pymethod_extend(args[0]);
+        }
+    }
+    private static final class PyListMethod_index extends PyListMethod {
+        PyListMethod_index(PyList _self) { super(_self); }
+        @Override public PyInt call(PyObject[] args, PyDict kwargs) {
+            if (args.length != 1) {
+                throw new IllegalArgumentException("list.index() takes 1 argument");
+            }
+            if (kwargs != null) {
+                throw new IllegalArgumentException("list.index() does not accept kwargs");
+            }
+            return self.pymethod_index(args[0]);
         }
     }
 
@@ -124,8 +149,10 @@ public final class PyList extends PyObject {
     @Override public PyObject getAttr(String key) {
         switch (key) {
             case "append": return new PyListMethod_append(this);
+            case "clear": return new PyListMethod_clear(this);
             case "count": return new PyListMethod_count(this);
             case "extend": return new PyListMethod_extend(this);
+            case "index": return new PyListMethod_index(this);
             default: return super.getAttr(key);
         }
     }
@@ -147,6 +174,10 @@ public final class PyList extends PyObject {
         items.add(arg);
         return PyNone.singleton;
     }
+    public PyNone pymethod_clear() {
+        items.clear();
+        return PyNone.singleton;
+    }
     public PyInt pymethod_count(PyObject arg) {
         long n = 0;
         for (var x: items) {
@@ -162,5 +193,12 @@ public final class PyList extends PyObject {
             items.add(item);
         }
         return PyNone.singleton;
+    }
+    public PyInt pymethod_index(PyObject arg) {
+        int index = items.indexOf(arg);
+        if (index == -1) {
+            throw new NoSuchElementException("cannot find item in list");
+        }
+        return new PyInt(index);
     }
 }
