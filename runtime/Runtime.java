@@ -381,6 +381,8 @@ public final class Runtime {
                 return PyBool.create(obj instanceof PyInt); // Note intentional compatibility break for "bool"
             } else if (type == pyglobal_list) {
                 return PyBool.create(obj instanceof PyList);
+            } else if (type == pyglobal_object) {
+                return PyBool.true_singleton;
             } else if (type == pyglobal_range) {
                 return PyBool.create(obj instanceof PyRange);
             } else if (type == pyglobal_reversed) {
@@ -500,6 +502,11 @@ public final class Runtime {
         }
     }
     public static final pyfunc_min pyglobal_min = new pyfunc_min();
+
+    static final class pyfunc_object extends PyBuiltinClass {
+        pyfunc_object() { super("object"); }
+    }
+    public static final pyfunc_object pyglobal_object = new pyfunc_object();
 
     static final class pyfunc_open extends PyBuiltinFunction {
         pyfunc_open() { super("open"); }
