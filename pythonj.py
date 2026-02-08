@@ -855,7 +855,7 @@ class PythonjVisitor(ast.NodeVisitor):
             *itertools.chain.from_iterable(s.emit_java() for s in func_code),
             '}',
             '@Override public String repr() {',
-            *JavaThrowStatement(JavaCreateObject('RuntimeException', [JavaStrLiteral("'repr' unimplemented")])).emit_java(),
+            *JavaThrowStatement(JavaCreateObject('UnsupportedOperationException', [JavaStrLiteral("'repr' unimplemented")])).emit_java(),
             '}',
             '}',
         ]
