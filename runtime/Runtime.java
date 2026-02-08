@@ -50,10 +50,10 @@ public final class Runtime {
         pyfunc_abs() { super("abs"); }
         @Override public PyObject call(PyObject[] args, PyDict kwargs) {
             if (args.length != 1) {
-                throw new RuntimeException("abs() takes 1 argument");
+                throw new IllegalArgumentException("abs() takes 1 argument");
             }
             if (kwargs != null) {
-                throw new RuntimeException("abs() does not accept kwargs");
+                throw new IllegalArgumentException("abs() does not accept kwargs");
             }
             return args[0].abs();
         }
@@ -64,10 +64,10 @@ public final class Runtime {
         pyfunc_all() { super("all"); }
         @Override public PyBool call(PyObject[] args, PyDict kwargs) {
             if (args.length != 1) {
-                throw new RuntimeException("all() takes 1 argument");
+                throw new IllegalArgumentException("all() takes 1 argument");
             }
             if (kwargs != null) {
-                throw new RuntimeException("all() does not accept kwargs");
+                throw new IllegalArgumentException("all() does not accept kwargs");
             }
             var iter = args[0].iter();
             for (var item = iter.next(); item != null; item = iter.next()) {
@@ -84,10 +84,10 @@ public final class Runtime {
         pyfunc_any() { super("any"); }
         @Override public PyBool call(PyObject[] args, PyDict kwargs) {
             if (args.length != 1) {
-                throw new RuntimeException("any() takes 1 argument");
+                throw new IllegalArgumentException("any() takes 1 argument");
             }
             if (kwargs != null) {
-                throw new RuntimeException("any() does not accept kwargs");
+                throw new IllegalArgumentException("any() does not accept kwargs");
             }
             var iter = args[0].iter();
             for (var item = iter.next(); item != null; item = iter.next()) {
@@ -104,10 +104,10 @@ public final class Runtime {
         pyfunc_bool() { super("bool"); }
         @Override public PyBool call(PyObject[] args, PyDict kwargs) {
             if (args.length > 1) {
-                throw new RuntimeException("bool() takes 0 or 1 arguments");
+                throw new IllegalArgumentException("bool() takes 0 or 1 arguments");
             }
             if (kwargs != null) {
-                throw new RuntimeException("bool() does not accept kwargs");
+                throw new IllegalArgumentException("bool() does not accept kwargs");
             }
             if (args.length == 1) {
                 return PyBool.create(args[0].boolValue());
@@ -121,10 +121,10 @@ public final class Runtime {
         pyfunc_bytearray() { super("bytearray"); }
         @Override public PyByteArray call(PyObject[] args, PyDict kwargs) {
             if (args.length > 1) {
-                throw new RuntimeException("bytearray() takes 0 or 1 arguments");
+                throw new IllegalArgumentException("bytearray() takes 0 or 1 arguments");
             }
             if (kwargs != null) {
-                throw new RuntimeException("bytearray() does not accept kwargs");
+                throw new IllegalArgumentException("bytearray() does not accept kwargs");
             }
             if (args.length == 0) {
                 return new PyByteArray(new byte[0]);
@@ -138,7 +138,7 @@ public final class Runtime {
             for (var item = iter.next(); item != null; item = iter.next()) {
                 long i = item.indexValue();
                 if ((i < 0) || (i >= 256)) {
-                    throw new RuntimeException("invalid byte value");
+                    throw new IllegalArgumentException("invalid byte value");
                 }
                 b.write((int)i);
             }
@@ -151,10 +151,10 @@ public final class Runtime {
         pyfunc_bytes() { super("bytes"); }
         @Override public PyBytes call(PyObject[] args, PyDict kwargs) {
             if (args.length > 1) {
-                throw new RuntimeException("bytes() takes 0 or 1 arguments");
+                throw new IllegalArgumentException("bytes() takes 0 or 1 arguments");
             }
             if (kwargs != null) {
-                throw new RuntimeException("bytes() does not accept kwargs");
+                throw new IllegalArgumentException("bytes() does not accept kwargs");
             }
             if (args.length == 0) {
                 return new PyBytes(new byte[0]);
@@ -168,7 +168,7 @@ public final class Runtime {
             for (var item = iter.next(); item != null; item = iter.next()) {
                 long i = item.indexValue();
                 if ((i < 0) || (i >= 256)) {
-                    throw new RuntimeException("invalid byte value");
+                    throw new IllegalArgumentException("invalid byte value");
                 }
                 b.write((int)i);
             }
@@ -181,14 +181,14 @@ public final class Runtime {
         pyfunc_chr() { super("chr"); }
         @Override public PyString call(PyObject[] args, PyDict kwargs) {
             if (args.length != 1) {
-                throw new RuntimeException("chr() takes 1 argument");
+                throw new IllegalArgumentException("chr() takes 1 argument");
             }
             if (kwargs != null) {
-                throw new RuntimeException("chr() does not accept kwargs");
+                throw new IllegalArgumentException("chr() does not accept kwargs");
             }
             long arg = args[0].indexValue();
             if ((arg < 0) || (arg > 65535)) {
-                throw new RuntimeException("chr() argument out of range");
+                throw new IllegalArgumentException("chr() argument out of range");
             }
             return new PyString(String.valueOf((char)arg));
         }
@@ -199,7 +199,7 @@ public final class Runtime {
         pyfunc_dict() { super("dict"); }
         @Override public PyDict call(PyObject[] args, PyDict kwargs) {
             if (args.length > 1) {
-                throw new RuntimeException("dict() takes 0 or 1 arguments");
+                throw new IllegalArgumentException("dict() takes 0 or 1 arguments");
             }
             var ret = new PyDict();
             if (args.length != 0) {
@@ -233,10 +233,10 @@ public final class Runtime {
         pyfunc_enumerate() { super("enumerate"); }
         @Override public PyEnumerate call(PyObject[] args, PyDict kwargs) {
             if (args.length != 1) {
-                throw new RuntimeException("enumerate() takes 1 argument");
+                throw new IllegalArgumentException("enumerate() takes 1 argument");
             }
             if (kwargs != null) {
-                throw new RuntimeException("enumerate() does not accept kwargs");
+                throw new IllegalArgumentException("enumerate() does not accept kwargs");
             }
             return new PyEnumerate(args[0].iter());
         }
@@ -247,10 +247,10 @@ public final class Runtime {
         pyfunc_hash() { super("hash"); }
         @Override public PyInt call(PyObject[] args, PyDict kwargs) {
             if (args.length != 1) {
-                throw new RuntimeException("hash() takes 1 argument");
+                throw new IllegalArgumentException("hash() takes 1 argument");
             }
             if (kwargs != null) {
-                throw new RuntimeException("hash() does not accept kwargs");
+                throw new IllegalArgumentException("hash() does not accept kwargs");
             }
             return new PyInt(args[0].hashCode());
         }
@@ -261,10 +261,10 @@ public final class Runtime {
         pyfunc_hex() { super("hex"); }
         @Override public PyString call(PyObject[] args, PyDict kwargs) {
             if (args.length != 1) {
-                throw new RuntimeException("hex() takes 1 argument");
+                throw new IllegalArgumentException("hex() takes 1 argument");
             }
             if (kwargs != null) {
-                throw new RuntimeException("hex() does not accept kwargs");
+                throw new IllegalArgumentException("hex() does not accept kwargs");
             }
             long arg = args[0].indexValue();
             if (arg < 0) {
@@ -280,10 +280,10 @@ public final class Runtime {
         pyfunc_int() { super("int"); }
         @Override public PyInt call(PyObject[] args, PyDict kwargs) {
             if (args.length > 2) {
-                throw new RuntimeException("int() takes 0 to 2 arguments");
+                throw new IllegalArgumentException("int() takes 0 to 2 arguments");
             }
             if (kwargs != null) {
-                throw new RuntimeException("int() does not accept kwargs");
+                throw new IllegalArgumentException("int() does not accept kwargs");
             }
             if (args.length == 0) {
                 return PyInt.singleton_0;
@@ -292,13 +292,13 @@ public final class Runtime {
             // XXX should always call intValue when length is 1
             if (arg0 instanceof PyInt arg0_int) {
                 if (args.length > 1) {
-                    throw new RuntimeException("int() cannot accept a base when passed an int");
+                    throw new IllegalArgumentException("int() cannot accept a base when passed an int");
                 }
                 return arg0_int;
             }
             if (arg0 instanceof PyBool) {
                 if (args.length > 1) {
-                    throw new RuntimeException("int() cannot accept a base when passed a bool");
+                    throw new IllegalArgumentException("int() cannot accept a base when passed a bool");
                 }
                 return new PyInt(arg0.intValue());
             }
@@ -309,10 +309,10 @@ public final class Runtime {
                     if (arg1 instanceof PyInt arg1_int) {
                         base = arg1_int.value;
                     } else {
-                        throw new RuntimeException("base must be an int");
+                        throw new IllegalArgumentException("base must be an int");
                     }
                     if ((base < 0) || (base == 1) || (base > 36)) {
-                        throw new RuntimeException("base must be 0 or 2-36");
+                        throw new IllegalArgumentException("base must be 0 or 2-36");
                     }
                     if (base == 0) {
                         throw new UnsupportedOperationException("base 0 unsupported at present");
@@ -341,10 +341,10 @@ public final class Runtime {
                     } else if ((c >= 'A') && (c <= 'Z')) {
                         digit = c - 'A' + 10;
                     } else {
-                        throw new RuntimeException("unexpected digit");
+                        throw new IllegalArgumentException("unexpected digit");
                     }
                     if (digit >= base) {
-                        throw new RuntimeException("digit not valid in base");
+                        throw new IllegalArgumentException("digit not valid in base");
                     }
                     value = value*base + digit;
                 }
@@ -359,10 +359,10 @@ public final class Runtime {
         pyfunc_isinstance() { super("isinstance"); }
         @Override public PyBool call(PyObject[] args, PyDict kwargs) {
             if (args.length != 2) {
-                throw new RuntimeException("isinstance() takes 2 arguments");
+                throw new IllegalArgumentException("isinstance() takes 2 arguments");
             }
             if (kwargs != null) {
-                throw new RuntimeException("isinstance() does not accept kwargs");
+                throw new IllegalArgumentException("isinstance() does not accept kwargs");
             }
             var obj = args[0];
             var type = args[1];
@@ -406,10 +406,10 @@ public final class Runtime {
         pyfunc_iter() { super("iter"); }
         @Override public PyIter call(PyObject[] args, PyDict kwargs) {
             if (args.length != 1) {
-                throw new RuntimeException("iter() takes 1 argument");
+                throw new IllegalArgumentException("iter() takes 1 argument");
             }
             if (kwargs != null) {
-                throw new RuntimeException("iter() does not accept kwargs");
+                throw new IllegalArgumentException("iter() does not accept kwargs");
             }
             return args[0].iter();
         }
@@ -420,10 +420,10 @@ public final class Runtime {
         pyfunc_len() { super("len"); }
         @Override public PyInt call(PyObject[] args, PyDict kwargs) {
             if (args.length != 1) {
-                throw new RuntimeException("len() takes 1 argument");
+                throw new IllegalArgumentException("len() takes 1 argument");
             }
             if (kwargs != null) {
-                throw new RuntimeException("len() does not accept kwargs");
+                throw new IllegalArgumentException("len() does not accept kwargs");
             }
             return new PyInt(args[0].len());
         }
@@ -434,10 +434,10 @@ public final class Runtime {
         pyfunc_list() { super("list"); }
         @Override public PyList call(PyObject[] args, PyDict kwargs) {
             if (args.length > 1) {
-                throw new RuntimeException("list() takes 0 or 1 arguments");
+                throw new IllegalArgumentException("list() takes 0 or 1 arguments");
             }
             if (kwargs != null) {
-                throw new RuntimeException("list() does not accept kwargs");
+                throw new IllegalArgumentException("list() does not accept kwargs");
             }
             var ret = new PyList();
             if (args.length == 0) {
@@ -456,15 +456,15 @@ public final class Runtime {
         pyfunc_max() { super("max"); }
         @Override public PyObject call(PyObject[] args, PyDict kwargs) {
             if (args.length != 1) {
-                throw new RuntimeException("max() takes 1 argument");
+                throw new IllegalArgumentException("max() takes 1 argument");
             }
             if (kwargs != null) {
-                throw new RuntimeException("max() does not accept kwargs");
+                throw new IllegalArgumentException("max() does not accept kwargs");
             }
             var iter = args[0].iter();
             PyObject ret = iter.next();
             if (ret == null) {
-                throw new RuntimeException("max() expects non-empty iterable");
+                throw new IllegalArgumentException("max() expects non-empty iterable");
             }
             for (var item = iter.next(); item != null; item = iter.next()) {
                 if (item.gt(ret)) {
@@ -480,15 +480,15 @@ public final class Runtime {
         pyfunc_min() { super("min"); }
         @Override public PyObject call(PyObject[] args, PyDict kwargs) {
             if (args.length != 1) {
-                throw new RuntimeException("min() takes 1 argument");
+                throw new IllegalArgumentException("min() takes 1 argument");
             }
             if (kwargs != null) {
-                throw new RuntimeException("min() does not accept kwargs");
+                throw new IllegalArgumentException("min() does not accept kwargs");
             }
             var iter = args[0].iter();
             PyObject ret = iter.next();
             if (ret == null) {
-                throw new RuntimeException("min() expects non-empty iterable");
+                throw new IllegalArgumentException("min() expects non-empty iterable");
             }
             for (var item = iter.next(); item != null; item = iter.next()) {
                 if (item.lt(ret)) {
@@ -504,10 +504,10 @@ public final class Runtime {
         pyfunc_open() { super("open"); }
         @Override public PyFile call(PyObject[] args, PyDict kwargs) {
             if (args.length != 1) {
-                throw new RuntimeException("open() takes 1 argument");
+                throw new IllegalArgumentException("open() takes 1 argument");
             }
             if (kwargs != null) {
-                throw new RuntimeException("open() does not accept kwargs");
+                throw new IllegalArgumentException("open() does not accept kwargs");
             }
             return new PyFile(((PyString)args[0]).value);
         }
@@ -518,14 +518,14 @@ public final class Runtime {
         pyfunc_ord() { super("ord"); }
         @Override public PyInt call(PyObject[] args, PyDict kwargs) {
             if (args.length != 1) {
-                throw new RuntimeException("ord() takes 1 argument");
+                throw new IllegalArgumentException("ord() takes 1 argument");
             }
             if (kwargs != null) {
-                throw new RuntimeException("ord() does not accept kwargs");
+                throw new IllegalArgumentException("ord() does not accept kwargs");
             }
             PyString arg = (PyString)args[0];
             if (arg.len() != 1) {
-                throw new RuntimeException("argument to ord() must be string of length 1");
+                throw new IllegalArgumentException("argument to ord() must be string of length 1");
             }
             return new PyInt(arg.value.charAt(0));
         }
@@ -536,7 +536,7 @@ public final class Runtime {
         pyfunc_print() { super("print"); }
         @Override public PyNone call(PyObject[] args, PyDict kwargs) {
             if (kwargs != null) {
-                throw new RuntimeException("print() does not accept kwargs");
+                throw new IllegalArgumentException("print() does not accept kwargs");
             }
             boolean first = true;
             for (var arg: args) {
@@ -556,10 +556,10 @@ public final class Runtime {
         pyfunc_range() { super("range"); }
         @Override public PyRange call(PyObject[] args, PyDict kwargs) {
             if ((args.length < 1) || (args.length > 3)) {
-                throw new RuntimeException("range() takes 1 to 3 arguments");
+                throw new IllegalArgumentException("range() takes 1 to 3 arguments");
             }
             if (kwargs != null) {
-                throw new RuntimeException("range() does not accept kwargs");
+                throw new IllegalArgumentException("range() does not accept kwargs");
             }
             long start = 0, end, step = 1;
             if (args.length == 1) {
@@ -580,10 +580,10 @@ public final class Runtime {
         pyfunc_repr() { super("repr"); }
         @Override public PyString call(PyObject[] args, PyDict kwargs) {
             if (args.length != 1) {
-                throw new RuntimeException("repr() takes 1 argument");
+                throw new IllegalArgumentException("repr() takes 1 argument");
             }
             if (kwargs != null) {
-                throw new RuntimeException("repr() does not accept kwargs");
+                throw new IllegalArgumentException("repr() does not accept kwargs");
             }
             return new PyString(args[0].repr());
         }
@@ -594,10 +594,10 @@ public final class Runtime {
         pyfunc_reversed() { super("reversed"); }
         @Override public PyIter call(PyObject[] args, PyDict kwargs) {
             if (args.length != 1) {
-                throw new RuntimeException("reversed() takes 1 argument");
+                throw new IllegalArgumentException("reversed() takes 1 argument");
             }
             if (kwargs != null) {
-                throw new RuntimeException("reversed() does not accept kwargs");
+                throw new IllegalArgumentException("reversed() does not accept kwargs");
             }
             return args[0].reversed();
         }
@@ -608,10 +608,10 @@ public final class Runtime {
         pyfunc_set() { super("set"); }
         @Override public PySet call(PyObject[] args, PyDict kwargs) {
             if (args.length > 1) {
-                throw new RuntimeException("set() takes 0 or 1 arguments");
+                throw new IllegalArgumentException("set() takes 0 or 1 arguments");
             }
             if (kwargs != null) {
-                throw new RuntimeException("set() does not accept kwargs");
+                throw new IllegalArgumentException("set() does not accept kwargs");
             }
             var ret = new PySet();
             if (args.length == 0) {
@@ -630,10 +630,10 @@ public final class Runtime {
         pyfunc_slice() { super("slice"); }
         @Override public PySlice call(PyObject[] args, PyDict kwargs) {
             if ((args.length < 1) || (args.length > 3)) {
-                throw new RuntimeException("slice() takes 1 to 3 arguments");
+                throw new IllegalArgumentException("slice() takes 1 to 3 arguments");
             }
             if (kwargs != null) {
-                throw new RuntimeException("slice() does not accept kwargs");
+                throw new IllegalArgumentException("slice() does not accept kwargs");
             }
             PyObject start = PyNone.singleton;
             PyObject end;
@@ -656,10 +656,10 @@ public final class Runtime {
         pyfunc_sorted() { super("sorted"); }
         @Override public PyList call(PyObject[] args, PyDict kwargs) {
             if (args.length != 1) {
-                throw new RuntimeException("sorted() takes 1 argument");
+                throw new IllegalArgumentException("sorted() takes 1 argument");
             }
             if (kwargs != null) {
-                throw new RuntimeException("sorted() does not accept kwargs");
+                throw new IllegalArgumentException("sorted() does not accept kwargs");
             }
             var ret = new PyList();
             var iter = args[0].iter();
@@ -676,10 +676,10 @@ public final class Runtime {
         pyfunc_str() { super("str"); }
         @Override public PyString call(PyObject[] args, PyDict kwargs) {
             if (args.length > 1) {
-                throw new RuntimeException("str() takes 0 or 1 arguments");
+                throw new IllegalArgumentException("str() takes 0 or 1 arguments");
             }
             if (kwargs != null) {
-                throw new RuntimeException("str() does not accept kwargs");
+                throw new IllegalArgumentException("str() does not accept kwargs");
             }
             if (args.length == 1) {
                 return new PyString(args[0].str());
@@ -693,10 +693,10 @@ public final class Runtime {
         pyfunc_sum() { super("sum"); }
         @Override public PyInt call(PyObject[] args, PyDict kwargs) {
             if (args.length != 1) {
-                throw new RuntimeException("sum() takes 1 argument");
+                throw new IllegalArgumentException("sum() takes 1 argument");
             }
             if (kwargs != null) {
-                throw new RuntimeException("sum() does not accept kwargs");
+                throw new IllegalArgumentException("sum() does not accept kwargs");
             }
             var iter = args[0].iter();
             long sum = 0;
@@ -712,10 +712,10 @@ public final class Runtime {
         pyfunc_tuple() { super("tuple"); }
         @Override public PyTuple call(PyObject[] args, PyDict kwargs) {
             if (args.length > 1) {
-                throw new RuntimeException("tuple() takes 0 or 1 arguments");
+                throw new IllegalArgumentException("tuple() takes 0 or 1 arguments");
             }
             if (kwargs != null) {
-                throw new RuntimeException("tuple() does not accept kwargs");
+                throw new IllegalArgumentException("tuple() does not accept kwargs");
             }
             if (args.length == 0) {
                 return new PyTuple();
@@ -732,10 +732,10 @@ public final class Runtime {
         pyfunc_type() { super("type"); }
         @Override public PyType call(PyObject[] args, PyDict kwargs) {
             if (args.length != 1) {
-                throw new RuntimeException("type() takes 1 argument");
+                throw new IllegalArgumentException("type() takes 1 argument");
             }
             if (kwargs != null) {
-                throw new RuntimeException("type() does not accept kwargs");
+                throw new IllegalArgumentException("type() does not accept kwargs");
             }
             return args[0].type();
         }
@@ -746,7 +746,7 @@ public final class Runtime {
         pyfunc_zip() { super("zip"); }
         @Override public PyZip call(PyObject[] args, PyDict kwargs) {
             if (kwargs != null) {
-                throw new RuntimeException("zip() does not accept kwargs");
+                throw new IllegalArgumentException("zip() does not accept kwargs");
             }
             PyIter iters[] = new PyIter[args.length];
             for (int i = 0; i < args.length; i++) {

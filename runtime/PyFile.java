@@ -20,7 +20,7 @@ public final class PyFile extends PyIter {
         PyFileMethod_close(PyFile _self) { super(_self); }
         @Override public PyNone call(PyObject[] args, PyDict kwargs) {
             if (args.length != 0) {
-                throw new RuntimeException("file.close() takes no arguments");
+                throw new IllegalArgumentException("file.close() takes no arguments");
             }
             return self.pymethod_close();
         }
@@ -29,7 +29,7 @@ public final class PyFile extends PyIter {
         PyFileMethod_readline(PyFile _self) { super(_self); }
         @Override public PyString call(PyObject[] args, PyDict kwargs) {
             if (args.length != 0) {
-                throw new RuntimeException("file.readline() takes no arguments");
+                throw new IllegalArgumentException("file.readline() takes no arguments");
             }
             return self.pymethod_readline();
         }

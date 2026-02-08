@@ -128,7 +128,7 @@ public final class PyDict extends PyObject {
         PyDictMethod_get(PyDict _self) { super(_self); }
         @Override public PyObject call(PyObject[] args, PyDict kwargs) {
             if (args.length != 2) {
-                throw new RuntimeException("dict.get() takes 2 arguments");
+                throw new IllegalArgumentException("dict.get() takes 2 arguments");
             }
             return self.pymethod_get(args[0], args[1]);
         }
@@ -137,7 +137,7 @@ public final class PyDict extends PyObject {
         PyDictMethod_items(PyDict _self) { super(_self); }
         @Override public PyDictItems call(PyObject[] args, PyDict kwargs) {
             if (args.length != 0) {
-                throw new RuntimeException("dict.items() takes no arguments");
+                throw new IllegalArgumentException("dict.items() takes no arguments");
             }
             return self.pymethod_items();
         }
@@ -146,7 +146,7 @@ public final class PyDict extends PyObject {
         PyDictMethod_keys(PyDict _self) { super(_self); }
         @Override public PyDictKeys call(PyObject[] args, PyDict kwargs) {
             if (args.length != 0) {
-                throw new RuntimeException("dict.keys() takes no arguments");
+                throw new IllegalArgumentException("dict.keys() takes no arguments");
             }
             return self.pymethod_keys();
         }
@@ -155,7 +155,7 @@ public final class PyDict extends PyObject {
         PyDictMethod_values(PyDict _self) { super(_self); }
         @Override public PyDictValues call(PyObject[] args, PyDict kwargs) {
             if (args.length != 0) {
-                throw new RuntimeException("dict.values() takes no arguments");
+                throw new IllegalArgumentException("dict.values() takes no arguments");
             }
             return self.pymethod_values();
         }

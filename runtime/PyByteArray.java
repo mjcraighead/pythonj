@@ -39,7 +39,7 @@ public final class PyByteArray extends PyObject {
         }
         long new_val = val.indexValue();
         if ((new_val < 0) || (new_val > 255)) {
-            throw new RuntimeException("cannot set bytearray element to value outside 0-255");
+            throw new IllegalArgumentException("cannot set bytearray element to value outside 0-255");
         }
         value[index] = (byte)new_val;
     }

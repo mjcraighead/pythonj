@@ -34,7 +34,7 @@ public final class PyString extends PyObject {
         PyStringMethod_join(PyString _self) { super(_self); }
         @Override public PyString call(PyObject[] args, PyDict kwargs) {
             if (args.length != 1) {
-                throw new RuntimeException("str.join() takes 1 argument");
+                throw new IllegalArgumentException("str.join() takes 1 argument");
             }
             return self.pymethod_join(args[0]);
         }
@@ -43,7 +43,7 @@ public final class PyString extends PyObject {
         PyStringMethod_lower(PyString _self) { super(_self); }
         @Override public PyString call(PyObject[] args, PyDict kwargs) {
             if (args.length != 0) {
-                throw new RuntimeException("str.lower() takes 0 arguments");
+                throw new IllegalArgumentException("str.lower() takes 0 arguments");
             }
             return self.pymethod_lower();
         }
@@ -52,7 +52,7 @@ public final class PyString extends PyObject {
         PyStringMethod_split(PyString _self) { super(_self); }
         @Override public PyList call(PyObject[] args, PyDict kwargs) {
             if (args.length != 1) {
-                throw new RuntimeException("str.split() takes 1 argument");
+                throw new IllegalArgumentException("str.split() takes 1 argument");
             }
             return self.pymethod_split(args[0]);
         }
@@ -61,7 +61,7 @@ public final class PyString extends PyObject {
         PyStringMethod_upper(PyString _self) { super(_self); }
         @Override public PyString call(PyObject[] args, PyDict kwargs) {
             if (args.length != 0) {
-                throw new RuntimeException("str.upper() takes 0 arguments");
+                throw new IllegalArgumentException("str.upper() takes 0 arguments");
             }
             return self.pymethod_upper();
         }

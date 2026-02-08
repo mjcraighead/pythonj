@@ -829,12 +829,12 @@ class PythonjVisitor(ast.NodeVisitor):
         func_code: list[JavaStatement] = [
             JavaIfStatement(
                 JavaBinaryOp('!=', JavaField(JavaIdentifier('args'), 'length'), JavaIntLiteral(n_args, '')),
-                [JavaThrowStatement(JavaCreateObject('RuntimeException', [JavaStrLiteral(f'{node.name}() takes {n_args} arguments')]))],
+                [JavaThrowStatement(JavaCreateObject('IllegalArgumentException', [JavaStrLiteral(f'{node.name}() takes {n_args} arguments')]))],
                 [],
             ),
             JavaIfStatement(
                 JavaBinaryOp('!=', JavaIdentifier('kwargs'), JavaIdentifier('null')),
-                [JavaThrowStatement(JavaCreateObject('RuntimeException', [JavaStrLiteral(f'{node.name}() does not accept kwargs')]))],
+                [JavaThrowStatement(JavaCreateObject('IllegalArgumentException', [JavaStrLiteral(f'{node.name}() does not accept kwargs')]))],
                 [],
             ),
             *(JavaVariableDecl(

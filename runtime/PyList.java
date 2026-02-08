@@ -26,7 +26,7 @@ public final class PyList extends PyObject {
         PyListMethod_append(PyList _self) { super(_self); }
         @Override public PyNone call(PyObject[] args, PyDict kwargs) {
             if (args.length != 1) {
-                throw new RuntimeException("list.append() takes 1 argument");
+                throw new IllegalArgumentException("list.append() takes 1 argument");
             }
             return self.pymethod_append(args[0]);
         }
@@ -35,7 +35,7 @@ public final class PyList extends PyObject {
         PyListMethod_count(PyList _self) { super(_self); }
         @Override public PyInt call(PyObject[] args, PyDict kwargs) {
             if (args.length != 1) {
-                throw new RuntimeException("list.count() takes 1 argument");
+                throw new IllegalArgumentException("list.count() takes 1 argument");
             }
             return self.pymethod_count(args[0]);
         }
@@ -44,7 +44,7 @@ public final class PyList extends PyObject {
         PyListMethod_extend(PyList _self) { super(_self); }
         @Override public PyNone call(PyObject[] args, PyDict kwargs) {
             if (args.length != 1) {
-                throw new RuntimeException("list.extend() takes 1 argument");
+                throw new IllegalArgumentException("list.extend() takes 1 argument");
             }
             return self.pymethod_extend(args[0]);
         }
