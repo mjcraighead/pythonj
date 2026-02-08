@@ -34,6 +34,18 @@ public final class PySet extends PyObject {
             return self.pymethod_add(args[0]);
         }
     }
+    private static final class PySetMethod_clear extends PySetMethod {
+        PySetMethod_clear(PySet _self) { super(_self); }
+        @Override public PyNone call(PyObject[] args, PyDict kwargs) {
+            if (args.length != 0) {
+                throw new IllegalArgumentException("set.clear() takes 0 arguments");
+            }
+            if (kwargs != null) {
+                throw new IllegalArgumentException("set.clear() does not accept kwargs");
+            }
+            return self.pymethod_clear();
+        }
+    }
     private static final class PySetMethod_discard extends PySetMethod {
         PySetMethod_discard(PySet _self) { super(_self); }
         @Override public PyNone call(PyObject[] args, PyDict kwargs) {
@@ -88,6 +100,7 @@ public final class PySet extends PyObject {
     @Override public PyObject getAttr(String key) {
         switch (key) {
             case "add": return new PySetMethod_add(this);
+            case "clear": return new PySetMethod_clear(this);
             case "discard": return new PySetMethod_discard(this);
             case "update": return new PySetMethod_update(this);
             default: return super.getAttr(key);
@@ -112,6 +125,10 @@ public final class PySet extends PyObject {
 
     public PyNone pymethod_add(PyObject arg) {
         items.add(arg);
+        return PyNone.singleton;
+    }
+    public PyNone pymethod_clear() {
+        items.clear();
         return PyNone.singleton;
     }
     public PyNone pymethod_discard(PyObject arg) {
