@@ -16,7 +16,7 @@ import sys
 import time
 from typing import Iterator, Optional, TextIO
 
-builtins = {
+BUILTINS = {
     'abs', 'all', 'any', 'bool', 'bytearray', 'bytes', 'chr', 'dict', 'enumerate', 'hash', 'hex', 'int', 'isinstance', 'iter', 'len', 'list',
     'max', 'min', 'open', 'ord', 'print', 'range', 'repr', 'reversed', 'set', 'slice', 'sorted', 'str', 'sum', 'tuple', 'type', 'zip',
 }
@@ -361,7 +361,7 @@ class PythonjVisitor(ast.NodeVisitor):
         return temp_name
 
     def ident_expr(self, name: str) -> JavaExpr:
-        if name in builtins:
+        if name in BUILTINS:
             return JavaField(JavaIdentifier('Runtime'), f'pyglobal_{name}')
         elif self.in_function and name not in self.global_names:
             return JavaIdentifier(f'pylocal_{name}')
