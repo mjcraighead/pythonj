@@ -37,7 +37,7 @@ public final class PyBool extends PyNumber {
     @Override public Runtime.pyfunc_bool type() { return Runtime.pyglobal_bool; }
 
     @Override public boolean boolValue() { return value; }
-    @Override public boolean equals(Object rhs) { return this == rhs; } // always works because these are singletons
+    @Override public boolean equals(Object rhs) { return value == ((PyBool)rhs).value; }
     @Override public double floatValue() { return asInt(); }
     @Override public int hashCode() { return value ? 1 : 0; }
     @Override public long indexValue() { return asInt(); }
