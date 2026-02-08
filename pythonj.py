@@ -578,7 +578,7 @@ class PythonjVisitor(ast.NodeVisitor):
         return JavaCreateObject('PySlice', [lower, upper, step])
 
     # XXX Change all statements to -> Iterator[JavaStatement] and yield statements?
-    def visit_Pass(self, node):
+    def visit_Pass(self, node) -> None:
         pass
 
     def emit_bind(self, target: ast.expr, value: JavaExpr) -> Iterator[JavaStatement]:
@@ -606,13 +606,13 @@ class PythonjVisitor(ast.NodeVisitor):
         else:
             self.error(target.lineno, f'binding to {type(target).__name__} is unsupported')
 
-    def visit_Assign(self, node):
+    def visit_Assign(self, node) -> None:
         if len(node.targets) != 1:
             self.error(node.lineno, 'chained assignment (a = b = c) is unsupported')
         target = node.targets[0]
         self.code.extend(self.emit_bind(target, self.visit(node.value)))
 
-    def visit_AugAssign(self, node):
+    def visit_AugAssign(self, node) -> None:
         op = f'{self.visit(node.op)}InPlace'
 
         if isinstance(node.target, ast.Name):
@@ -647,7 +647,7 @@ class PythonjVisitor(ast.NodeVisitor):
             return
         self.code.append(code)
 
-    def visit_Assert(self, node):
+    def visit_Assert(self, node) -> None:
         cond = JavaUnaryOp('!', bool_value(self.visit(node.test)))
         msg = JavaStrLiteral(self.path + f':{node.lineno}: assertion failure')
         if node.msg:
@@ -656,7 +656,7 @@ class PythonjVisitor(ast.NodeVisitor):
         exception = JavaCreateObject('AssertionError', [msg])
         self.code.append(JavaIfStatement(cond, [JavaThrowStatement(exception)], []))
 
-    def visit_Delete(self, node):
+    def visit_Delete(self, node) -> None:
         for target in node.targets:
             if isinstance(target, ast.Attribute):
                 code = JavaExprStatement(JavaMethodCall(self.visit(target.value), 'delAttr', [JavaStrLiteral(target.attr)]))
@@ -667,20 +667,20 @@ class PythonjVisitor(ast.NodeVisitor):
                 continue
             self.code.append(code)
 
-    def visit_Return(self, node):
+    def visit_Return(self, node) -> None:
         assert self.in_function, node
         self.has_returns = True
         value = self.visit(node.value) if node.value else self.emit_constant(None)
         self.code.append(JavaReturnStatement(value))
 
     @contextmanager
-    def new_block(self):
+    def new_block(self) -> Iterator[list[JavaStatement]]:
         saved_code = self.code
         self.code = []
         yield self.code
         self.code = saved_code
 
-    def visit_If(self, node):
+    def visit_If(self, node) -> None:
         cond = bool_value(self.visit(node.test))
         with self.new_block() as body:
             for statement in node.body:
@@ -690,7 +690,7 @@ class PythonjVisitor(ast.NodeVisitor):
                 self.visit(statement)
         self.code.append(JavaIfStatement(cond, body, orelse))
 
-    def visit_While(self, node):
+    def visit_While(self, node) -> None:
         cond = bool_value(self.visit(node.test))
 
         block_name = self.make_temp() if node.orelse else None
@@ -710,7 +710,7 @@ class PythonjVisitor(ast.NodeVisitor):
             loop = JavaLabeledBlock(block_name, [loop, *orelse])
         self.code.append(loop)
 
-    def visit_For(self, node):
+    def visit_For(self, node) -> None:
         block_name = self.make_temp() if node.orelse else None
         temp_name0 = self.make_temp()
         temp_name1 = self.make_temp()
@@ -740,7 +740,7 @@ class PythonjVisitor(ast.NodeVisitor):
             loop = JavaLabeledBlock(block_name, [loop, *orelse])
         self.code.append(loop)
 
-    def visit_With(self, node):
+    def visit_With(self, node) -> None:
         # node.type_comment is ignored; we only plan to support "real" type annotations.
         if len(node.items) != 1:
             self.error(node.lineno, "multiple-item 'with' statements are unsupported")
@@ -761,13 +761,13 @@ class PythonjVisitor(ast.NodeVisitor):
             JavaExprStatement(JavaMethodCall(JavaIdentifier(temp_name), 'exit', [])),
         ]))
 
-    def visit_Break(self, node):
+    def visit_Break(self, node) -> None:
         self.code.append(JavaBreakStatement(self.break_name))
 
-    def visit_Continue(self, node):
+    def visit_Continue(self, node) -> None:
         self.code.append(JavaContinueStatement())
 
-    def visit_Expr(self, node):
+    def visit_Expr(self, node) -> None:
         value = self.visit(node.value)
         if isinstance(value, (JavaMethodCall, JavaCreateObject)): # allowed by Java grammar as statements
             self.code.append(JavaExprStatement(value))
@@ -778,7 +778,7 @@ class PythonjVisitor(ast.NodeVisitor):
             self.code.append(JavaAssignStatement(JavaIdentifier('expr_discard'), value))
             self.used_expr_discard = True
 
-    def visit_FunctionDef(self, node):
+    def visit_FunctionDef(self, node) -> None:
         if self.in_function:
             self.error(node.lineno, 'nested function definitions are unsupported')
             return
@@ -863,11 +863,11 @@ class PythonjVisitor(ast.NodeVisitor):
         self.in_function = False
         self.names = self.global_names
 
-    def visit_Module(self, node):
+    def visit_Module(self, node) -> None:
         for statement in node.body:
             self.visit(statement)
 
-    def write_java(self, f: TextIO, py_name: str):
+    def write_java(self, f: TextIO, py_name: str) -> None:
         writer = IndentedWriter(f, 0)
         writer.write(f'public final class {py_name} {{')
         for i in sorted(self.all_ints):
