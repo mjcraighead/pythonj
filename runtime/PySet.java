@@ -20,6 +20,7 @@ public final class PySet extends PyObject {
     private static class PySetMethod extends PyTruthyObject {
         protected final PySet self;
         PySetMethod(PySet _self) { self = _self; }
+        @Override public PyType type() { return Runtime.pytype_builtin_function_or_method; }
         @Override public String repr() { throw new UnsupportedOperationException("'repr' unimplemented"); }
     }
     private static final class PySetMethod_add extends PySetMethod {

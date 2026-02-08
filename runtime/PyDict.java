@@ -123,6 +123,7 @@ public final class PyDict extends PyObject {
     private static class PyDictMethod extends PyTruthyObject {
         protected final PyDict self;
         PyDictMethod(PyDict _self) { self = _self; }
+        @Override public PyType type() { return Runtime.pytype_builtin_function_or_method; }
         @Override public String repr() { throw new UnsupportedOperationException("'repr' unimplemented"); }
     }
     private static final class PyDictMethod_get extends PyDictMethod {

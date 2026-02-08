@@ -14,6 +14,7 @@ public final class PyFile extends PyIter {
     private static class PyFileMethod extends PyTruthyObject {
         protected final PyFile self;
         PyFileMethod(PyFile _self) { self = _self; }
+        @Override public PyType type() { return Runtime.pytype_builtin_function_or_method; }
         @Override public String repr() { throw new UnsupportedOperationException("'repr' unimplemented"); }
     }
     private static final class PyFileMethod_close extends PyFileMethod {

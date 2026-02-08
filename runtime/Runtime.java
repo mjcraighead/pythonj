@@ -44,7 +44,7 @@ public final class Runtime {
     private static final class PyBuiltinFunctionOrMethod extends PyBuiltinClass {
         PyBuiltinFunctionOrMethod() { super("builtin_function_or_method"); }
     }
-    private static final PyBuiltinFunctionOrMethod pytype_builtin_function_or_method = new PyBuiltinFunctionOrMethod();
+    public static final PyBuiltinFunctionOrMethod pytype_builtin_function_or_method = new PyBuiltinFunctionOrMethod();
 
     static final class pyfunc_abs extends PyBuiltinFunction {
         pyfunc_abs() { super("abs"); }

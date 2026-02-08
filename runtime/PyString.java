@@ -28,6 +28,7 @@ public final class PyString extends PyObject {
     private static class PyStringMethod extends PyTruthyObject {
         protected final PyString self;
         PyStringMethod(PyString _self) { self = _self; }
+        @Override public PyType type() { return Runtime.pytype_builtin_function_or_method; }
         @Override public String repr() { throw new UnsupportedOperationException("'repr' unimplemented"); }
     }
     private static final class PyStringMethod_join extends PyStringMethod {
