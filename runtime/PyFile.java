@@ -53,13 +53,27 @@ public final class PyFile extends PyIter {
     }
 
     @Override public PyString next() {
-        // XXX Java readLine chops trailing newline, which is not what we want...
         try {
-            String s = reader.readLine();
-            if (s == null) {
-                return null;
+            StringBuilder s = new StringBuilder();
+            for (;;) {
+                int c = reader.read();
+                if (c == -1) { // EOF
+                    if (s.length() == 0) {
+                        return null;
+                    }
+                    break; // last line, no newline
+                }
+                if (c == '\n') {
+                    int len = s.length();
+                    if ((len != 0) && (s.charAt(len - 1) == '\r')) {
+                        s.deleteCharAt(len - 1);
+                    }
+                    s.append((char)c);
+                    break; // full line
+                }
+                s.append((char)c);
             }
-            return new PyString(s + "\n");
+            return new PyString(s.toString());
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
@@ -86,15 +100,7 @@ public final class PyFile extends PyIter {
         return PyNone.singleton;
     }
     public PyString pymethod_readline() {
-        // XXX Java readLine chops trailing newline, which is not what we want...
-        try {
-            String s = reader.readLine();
-            if (s == null) {
-                return PyString.empty_singleton;
-            }
-            return new PyString(s + "\n");
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
+        PyString ret = next();
+        return (ret != null) ? ret : PyString.empty_singleton;
     }
 }
