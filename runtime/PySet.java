@@ -28,6 +28,9 @@ public final class PySet extends PyObject {
             if (args.length != 1) {
                 throw new IllegalArgumentException("set.add() takes 1 argument");
             }
+            if (kwargs != null) {
+                throw new IllegalArgumentException("set.add() does not accept kwargs");
+            }
             return self.pymethod_add(args[0]);
         }
     }
@@ -37,6 +40,9 @@ public final class PySet extends PyObject {
             if (args.length != 1) {
                 throw new IllegalArgumentException("set.discard() takes 1 argument");
             }
+            if (kwargs != null) {
+                throw new IllegalArgumentException("set.discard() does not accept kwargs");
+            }
             return self.pymethod_discard(args[0]);
         }
     }
@@ -45,6 +51,9 @@ public final class PySet extends PyObject {
         @Override public PyNone call(PyObject[] args, PyDict kwargs) {
             if (args.length != 1) {
                 throw new IllegalArgumentException("set.update() takes 1 argument");
+            }
+            if (kwargs != null) {
+                throw new IllegalArgumentException("set.update() does not accept kwargs");
             }
             return self.pymethod_update(args[0]);
         }

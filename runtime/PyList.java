@@ -28,6 +28,9 @@ public final class PyList extends PyObject {
             if (args.length != 1) {
                 throw new IllegalArgumentException("list.append() takes 1 argument");
             }
+            if (kwargs != null) {
+                throw new IllegalArgumentException("list.append() does not accept kwargs");
+            }
             return self.pymethod_append(args[0]);
         }
     }
@@ -37,6 +40,9 @@ public final class PyList extends PyObject {
             if (args.length != 1) {
                 throw new IllegalArgumentException("list.count() takes 1 argument");
             }
+            if (kwargs != null) {
+                throw new IllegalArgumentException("list.count() does not accept kwargs");
+            }
             return self.pymethod_count(args[0]);
         }
     }
@@ -45,6 +51,9 @@ public final class PyList extends PyObject {
         @Override public PyNone call(PyObject[] args, PyDict kwargs) {
             if (args.length != 1) {
                 throw new IllegalArgumentException("list.extend() takes 1 argument");
+            }
+            if (kwargs != null) {
+                throw new IllegalArgumentException("list.extend() does not accept kwargs");
             }
             return self.pymethod_extend(args[0]);
         }
