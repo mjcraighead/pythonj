@@ -63,8 +63,7 @@ public abstract class PyObject implements Comparable<PyObject> {
     public PyIter iter() { throw new UnsupportedOperationException("'iter' unimplemented"); }
     public PyIter reversed() { throw new UnsupportedOperationException("'reversed' unimplemented"); }
     public PyObject next() { throw new UnsupportedOperationException("'next' unimplemented"); }
-    // XXX Make type() abstract; every PyObject should have a type and type() should never throw
-    public PyType type() { throw new UnsupportedOperationException("'type' unimplemented"); }
+    public abstract PyType type();
 
     public PyObject enter() { throw new UnsupportedOperationException("'enter' unimplemented"); }
     public void exit() { throw new UnsupportedOperationException("'exit' unimplemented"); }

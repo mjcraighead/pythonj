@@ -17,10 +17,9 @@ public final class PyList extends PyObject {
         @Override public PyBuiltinClass type() { return iter_class_singleton; }
     };
 
-    private static class PyListMethod extends PyTruthyObject {
+    private static class PyListMethod extends PyBuiltinFunctionOrMethod {
         protected final PyList self;
         PyListMethod(PyList _self) { self = _self; }
-        @Override public PyType type() { return Runtime.pytype_builtin_function_or_method; }
         @Override public String repr() { throw new UnsupportedOperationException("'repr' unimplemented"); }
     }
     private static final class PyListMethod_append extends PyListMethod {

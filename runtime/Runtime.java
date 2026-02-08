@@ -34,17 +34,25 @@ class PyBuiltinClass extends PyType {
     @Override public final Runtime.pyfunc_type type() { return Runtime.pyglobal_type; }
 }
 
+abstract class PyBuiltinFunctionOrMethod extends PyTruthyObject {
+    @Override public final PyBuiltinClass type() { return Runtime.pytype_builtin_function_or_method; }
+}
+
+abstract class PyUserFunction extends PyTruthyObject {
+    private final String funcName;
+    protected PyUserFunction(String name) { funcName = name; }
+    @Override public PyBuiltinClass type() { return Runtime.pytype_function; }
+    @Override public String repr() { return "<function " + funcName + ">"; }
+}
+
 public final class Runtime {
-    abstract static class PyBuiltinFunction extends PyTruthyObject {
+    abstract static class PyBuiltinFunction extends PyBuiltinFunctionOrMethod {
         private final String funcName;
         protected PyBuiltinFunction(String name) { funcName = name; }
         @Override public final String repr() { return "<built-in function " + funcName + ">"; }
-        @Override public final PyBuiltinFunctionOrMethod type() { return pytype_builtin_function_or_method; }
     }
-    private static final class PyBuiltinFunctionOrMethod extends PyBuiltinClass {
-        PyBuiltinFunctionOrMethod() { super("builtin_function_or_method"); }
-    }
-    public static final PyBuiltinFunctionOrMethod pytype_builtin_function_or_method = new PyBuiltinFunctionOrMethod();
+    public static final PyBuiltinClass pytype_builtin_function_or_method = new PyBuiltinClass("builtin_function_or_method");
+    public static final PyBuiltinClass pytype_function = new PyBuiltinClass("function");
     public static final PyBuiltinClass pytype_io_TextIOWrapper = new PyBuiltinClass("_io.TextIOWrapper");
 
     static final class pyfunc_abs extends PyBuiltinFunction {

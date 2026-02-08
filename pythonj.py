@@ -850,12 +850,12 @@ class PythonjVisitor(ast.NodeVisitor):
             func_code.append(JavaReturnStatement(self.emit_constant(None)))
 
         self.functions[node.name] = [
-            f'private static final class pyfunc_{node.name} extends PyTruthyObject {{',
+            f'private static final class pyfunc_{node.name} extends PyUserFunction {{',
+            f'pyfunc_{node.name}() {{',
+            f'super({java_string_literal(node.name)});',
+            '}',
             '@Override public PyObject call(PyObject[] args, PyDict kwargs) {',
             *itertools.chain.from_iterable(s.emit_java() for s in func_code),
-            '}',
-            '@Override public String repr() {',
-            *JavaThrowStatement(JavaCreateObject('UnsupportedOperationException', [JavaStrLiteral("'repr' unimplemented")])).emit_java(),
             '}',
             '}',
         ]

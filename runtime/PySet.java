@@ -17,10 +17,9 @@ public final class PySet extends PyObject {
         @Override public PyBuiltinClass type() { return iter_class_singleton; }
     };
 
-    private static class PySetMethod extends PyTruthyObject {
+    private static class PySetMethod extends PyBuiltinFunctionOrMethod {
         protected final PySet self;
         PySetMethod(PySet _self) { self = _self; }
-        @Override public PyType type() { return Runtime.pytype_builtin_function_or_method; }
         @Override public String repr() { throw new UnsupportedOperationException("'repr' unimplemented"); }
     }
     private static final class PySetMethod_add extends PySetMethod {

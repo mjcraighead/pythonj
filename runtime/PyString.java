@@ -25,10 +25,9 @@ public final class PyString extends PyObject {
         @Override public PyBuiltinClass type() { return iter_class_singleton; }
     };
 
-    private static class PyStringMethod extends PyTruthyObject {
+    private static class PyStringMethod extends PyBuiltinFunctionOrMethod {
         protected final PyString self;
         PyStringMethod(PyString _self) { self = _self; }
-        @Override public PyType type() { return Runtime.pytype_builtin_function_or_method; }
         @Override public String repr() { throw new UnsupportedOperationException("'repr' unimplemented"); }
     }
     private static final class PyStringMethod_join extends PyStringMethod {
