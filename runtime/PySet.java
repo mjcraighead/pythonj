@@ -71,10 +71,7 @@ public final class PySet extends PyObject {
         }
     }
     PySet(ArrayList<PyObject> list) {
-        items = new HashSet<>();
-        for (var x: list) {
-            items.add(x);
-        }
+        items = new HashSet<>(list);
     }
 
     @Override public PySetIter iter() { return new PySetIter(items.iterator()); }
