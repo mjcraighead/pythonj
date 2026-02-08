@@ -912,7 +912,7 @@ def main() -> None:
     for path in glob.glob('runtime/*.class'):
         os.unlink(path)
     subprocess.check_call(['javac', *RUNTIME_JAVA_FILES], cwd='runtime')
-    subprocess.check_call(['jar', 'cf', '../tests/pythonj.jar', '*.class'], cwd='runtime')
+    subprocess.check_call(['jar', 'cf', 'tests/pythonj.jar', '-C', 'runtime', '.'])
     for path in glob.glob('runtime/*.class'):
         os.unlink(path)
     initial_javac_time = time.perf_counter() - start
