@@ -8,6 +8,7 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 
 public final class PyFile extends PyIter {
     private static class PyFileMethod extends PyTruthyObject {
@@ -40,7 +41,7 @@ public final class PyFile extends PyIter {
         try {
             reader = new BufferedReader(new FileReader(path));
         } catch (FileNotFoundException e) {
-            throw new RuntimeException(e.toString());
+            throw new UncheckedIOException(e);
         }
     }
 
@@ -53,7 +54,7 @@ public final class PyFile extends PyIter {
             }
             return new PyString(s + "\n");
         } catch (IOException e) {
-            throw new RuntimeException(e.toString());
+            throw new UncheckedIOException(e);
         }
     }
 
@@ -73,7 +74,7 @@ public final class PyFile extends PyIter {
         try {
             reader.close();
         } catch (IOException e) {
-            throw new RuntimeException(e.toString());
+            throw new UncheckedIOException(e);
         }
         return PyNone.singleton;
     }
@@ -86,7 +87,7 @@ public final class PyFile extends PyIter {
             }
             return new PyString(s + "\n");
         } catch (IOException e) {
-            throw new RuntimeException(e.toString());
+            throw new UncheckedIOException(e);
         }
     }
 }
