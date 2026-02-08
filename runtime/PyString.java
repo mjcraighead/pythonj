@@ -109,12 +109,12 @@ public final class PyString extends PyObject {
                 PyObject arg = rhs[argIndex++];
                 if (c == 's') {
                     if (hasLeadingZero || (width != 0)) {
-                        throw new RuntimeException("width for %s is unimplemented");
+                        throw new UnsupportedOperationException("width for %s is unimplemented");
                     }
                     s.append(arg.str());
                 } else if (c == 'r') {
                     if (hasLeadingZero || (width != 0)) {
-                        throw new RuntimeException("width for %r is unimplemented");
+                        throw new UnsupportedOperationException("width for %r is unimplemented");
                     }
                     s.append(arg.repr());
                 } else if ((c == 'd') || (c == 'x') || (c == 'X')) {
@@ -122,7 +122,7 @@ public final class PyString extends PyObject {
                     String fmt = "%" + (hasLeadingZero ? "0" : "") + ((width != 0) ? width : "") + c;
                     s.append(String.format(fmt, ((PyInt)arg).value));
                 } else {
-                    throw new RuntimeException("don't know how to implement format specifier");
+                    throw new UnsupportedOperationException("don't know how to implement format specifier");
                 }
             } else {
                 s.append(c);
@@ -155,7 +155,7 @@ public final class PyString extends PyObject {
     }
     @Override public String format(String formatSpec) {
         if (!formatSpec.isEmpty()) {
-            throw new RuntimeException(String.format("formatSpec='%s' unimplemented", formatSpec));
+            throw new UnsupportedOperationException(String.format("formatSpec='%s' unimplemented", formatSpec));
         }
         return value;
     }
@@ -217,7 +217,7 @@ public final class PyString extends PyObject {
         // XXX Implement zero-args case
         // XXX Implement delimiters not of length 1
         if (arg.len() != 1) {
-            throw new RuntimeException("bad argument to str.split()");
+            throw new UnsupportedOperationException("multi-character split tokens unsupported");
         }
         char split = ((PyString)arg).value.charAt(0);
         var ret = new PyList();

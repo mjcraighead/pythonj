@@ -102,7 +102,7 @@ public final class PyInt extends PyNumber {
     @Override public double floatValue() { return value; }
     @Override public String format(String formatSpec) {
         if (!formatSpec.isEmpty()) {
-            throw new RuntimeException(String.format("formatSpec='%s' unimplemented", formatSpec));
+            throw new UnsupportedOperationException(String.format("formatSpec='%s' unimplemented", formatSpec));
         }
         return String.valueOf(value);
     }

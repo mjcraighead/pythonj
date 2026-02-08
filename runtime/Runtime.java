@@ -315,7 +315,7 @@ public final class Runtime {
                         throw new RuntimeException("base must be 0 or 2-36");
                     }
                     if (base == 0) {
-                        throw new RuntimeException("base 0 unsupported at present");
+                        throw new UnsupportedOperationException("base 0 unsupported at present");
                     }
                 }
                 String s = arg0_str.value;
@@ -350,7 +350,7 @@ public final class Runtime {
                 }
                 return new PyInt(sign*value);
             }
-            throw new RuntimeException("don't know how to handle argument to int()");
+            throw new UnsupportedOperationException("don't know how to handle argument to int()");
         }
     }
     public static final pyfunc_int pyglobal_int = new pyfunc_int();
@@ -397,7 +397,7 @@ public final class Runtime {
             } else if (type == pyglobal_zip) {
                 return PyBool.create(obj instanceof PyZip);
             }
-            throw new RuntimeException(String.format("isinstance() is unimplemented for type %s", type.repr()));
+            throw new UnsupportedOperationException(String.format("isinstance() is unimplemented for type %s", type.repr()));
         }
     }
     public static final pyfunc_isinstance pyglobal_isinstance = new pyfunc_isinstance();

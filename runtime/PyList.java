@@ -69,7 +69,7 @@ public final class PyList extends PyObject {
             ret.items.addAll(rhs.items);
             return ret;
         }
-        throw new RuntimeException("list add error");
+        throw new UnsupportedOperationException("unsupported operand type for list addition");
     }
     @Override public PyList mul(PyObject rhs) {
         var ret = new PyList();
