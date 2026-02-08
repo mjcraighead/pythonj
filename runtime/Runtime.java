@@ -45,6 +45,7 @@ public final class Runtime {
         PyBuiltinFunctionOrMethod() { super("builtin_function_or_method"); }
     }
     public static final PyBuiltinFunctionOrMethod pytype_builtin_function_or_method = new PyBuiltinFunctionOrMethod();
+    public static final PyBuiltinClass pytype_io_TextIOWrapper = new PyBuiltinClass("_io.TextIOWrapper");
 
     static final class pyfunc_abs extends PyBuiltinFunction {
         pyfunc_abs() { super("abs"); }

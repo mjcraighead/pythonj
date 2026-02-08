@@ -78,6 +78,7 @@ public final class PyFile extends PyIter {
             throw new UncheckedIOException(e);
         }
     }
+    @Override public PyType type() { return Runtime.pytype_io_TextIOWrapper; }
 
     @Override public PyFile enter() { return this; }
     @Override public void exit() { pymethod_close(); }
