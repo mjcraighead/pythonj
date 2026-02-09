@@ -466,23 +466,34 @@ public final class Runtime {
     static final class pyfunc_max extends PyBuiltinFunction {
         pyfunc_max() { super("max"); }
         @Override public PyObject call(PyObject[] args, PyDict kwargs) {
-            if (args.length != 1) {
-                throw new IllegalArgumentException("max() takes 1 argument");
+            if (args.length < 1) {
+                throw new IllegalArgumentException("max() takes at least 1 argument");
             }
             if (kwargs != null) {
                 throw new IllegalArgumentException("max() does not accept kwargs");
             }
-            var iter = args[0].iter();
-            PyObject ret = iter.next();
-            if (ret == null) {
-                throw new IllegalArgumentException("max() expects non-empty iterable");
-            }
-            for (var item = iter.next(); item != null; item = iter.next()) {
-                if (item.gt(ret)) {
-                    ret = item;
+            if (args.length == 1) {
+                var iter = args[0].iter();
+                PyObject ret = iter.next();
+                if (ret == null) {
+                    throw new IllegalArgumentException("max() expects non-empty iterable");
                 }
+                for (var item = iter.next(); item != null; item = iter.next()) {
+                    if (item.gt(ret)) {
+                        ret = item;
+                    }
+                }
+                return ret;
+            } else {
+                PyObject ret = args[0];
+                for (int i = 1; i < args.length; i++) {
+                    PyObject item = args[i];
+                    if (item.gt(ret)) {
+                        ret = item;
+                    }
+                }
+                return ret;
             }
-            return ret;
         }
     }
     public static final pyfunc_max pyglobal_max = new pyfunc_max();
@@ -490,23 +501,34 @@ public final class Runtime {
     static final class pyfunc_min extends PyBuiltinFunction {
         pyfunc_min() { super("min"); }
         @Override public PyObject call(PyObject[] args, PyDict kwargs) {
-            if (args.length != 1) {
-                throw new IllegalArgumentException("min() takes 1 argument");
+            if (args.length < 1) {
+                throw new IllegalArgumentException("min() takes at least 1 argument");
             }
             if (kwargs != null) {
                 throw new IllegalArgumentException("min() does not accept kwargs");
             }
-            var iter = args[0].iter();
-            PyObject ret = iter.next();
-            if (ret == null) {
-                throw new IllegalArgumentException("min() expects non-empty iterable");
-            }
-            for (var item = iter.next(); item != null; item = iter.next()) {
-                if (item.lt(ret)) {
-                    ret = item;
+            if (args.length == 1) {
+                var iter = args[0].iter();
+                PyObject ret = iter.next();
+                if (ret == null) {
+                    throw new IllegalArgumentException("min() expects non-empty iterable");
                 }
+                for (var item = iter.next(); item != null; item = iter.next()) {
+                    if (item.lt(ret)) {
+                        ret = item;
+                    }
+                }
+                return ret;
+            } else {
+                PyObject ret = args[0];
+                for (int i = 1; i < args.length; i++) {
+                    PyObject item = args[i];
+                    if (item.lt(ret)) {
+                        ret = item;
+                    }
+                }
+                return ret;
             }
-            return ret;
         }
     }
     public static final pyfunc_min pyglobal_min = new pyfunc_min();
