@@ -57,7 +57,7 @@ public final class Runtime {
         protected PyObject exactlyOneArg(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, funcName);
             if (args.length != 1) {
-                throw new PyRaise(new PyTypeError(new PyString(String.format("%s() takes exactly one argument (%d given)", funcName, args.length))));
+                throw PyTypeError.raiseFormat("%s() takes exactly one argument (%d given)", funcName, args.length);
             }
             return args[0];
         }
@@ -250,7 +250,7 @@ public final class Runtime {
             if (args[1] instanceof PyString name) {
                 return args[0].getAttr(name.value);
             } else {
-                throw new PyRaise(new PyTypeError(new PyString(String.format("attribute name must be string, not '%s'", args[1].type().name()))));
+                throw PyTypeError.raiseFormat("attribute name must be string, not '%s'", args[1].type().name());
             }
         }
     }
@@ -371,7 +371,7 @@ public final class Runtime {
             } else if (type instanceof PyType) {
                 throw new UnsupportedOperationException(String.format("isinstance() is unimplemented for type %s", type.repr()));
             } else {
-                throw new PyRaise(new PyTypeError(new PyString(String.format("isinstance() arg 2 must be a type, a tuple of types, or a union"))));
+                throw PyTypeError.raise("isinstance() arg 2 must be a type, a tuple of types, or a union");
             }
         }
         @Override public PyBool call(PyObject[] args, PyDict kwargs) {
@@ -801,20 +801,20 @@ public final class Runtime {
     // Helper functions used by the builtins and code generator
     public static void requireNoKwArgs(PyDict kwargs, String name) {
         if ((kwargs != null) && kwargs.boolValue()) {
-            throw new PyRaise(new PyTypeError(new PyString(String.format("%s() takes no keyword arguments", name))));
+            throw PyTypeError.raiseFormat("%s() takes no keyword arguments", name);
         }
     }
     public static void requireExactArgs(PyObject[] args, int n, String name) {
         if (args.length != n) {
-            throw new PyRaise(new PyTypeError(new PyString(String.format("%s expected %d argument%s, got %d", name, n, (n == 1) ? "" : "s", args.length))));
+            throw PyTypeError.raiseFormat("%s expected %d argument%s, got %d", name, n, (n == 1) ? "" : "s", args.length);
         }
     }
     public static void requireExactArgsAlt(PyObject[] args, int n, String name) {
         if (args.length != n) {
             if (n == 0) {
-                throw new PyRaise(new PyTypeError(new PyString(String.format("%s() takes no arguments (%d given)", name, args.length))));
+                throw PyTypeError.raiseFormat("%s() takes no arguments (%d given)", name, args.length);
             } else if (n == 1) {
-                throw new PyRaise(new PyTypeError(new PyString(String.format("%s() takes exactly one argument (%d given)", name, args.length))));
+                throw PyTypeError.raiseFormat("%s() takes exactly one argument (%d given)", name, args.length);
             } else { // XXX Figure out what to do in this case
                 throw new IllegalArgumentException(String.format("%s expected %d argument%s, got %d", name, n, (n == 1) ? "" : "s", args.length));
             }
@@ -822,9 +822,8 @@ public final class Runtime {
     }
     public static PyRaise throwUserExactArgs(PyObject[] args, int n, String name, String... argNames) {
         if (args.length > n) {
-            String s = String.format("%s() takes %d positional argument%s but %d %s given",
+            return PyTypeError.raiseFormat("%s() takes %d positional argument%s but %d %s given",
                 name, n, (n == 1) ? "" : "s", args.length, (args.length == 1) ? "was" : "were");
-            return new PyRaise(new PyTypeError(new PyString(s)));
         } else {
             int missing = n - args.length;
             StringBuilder s = new StringBuilder(String.format("%s() missing %d required positional argument%s:", name, missing, (missing == 1) ? "" : "s"));
@@ -837,23 +836,23 @@ public final class Runtime {
                     s.append(" and");
                 }
             }
-            return new PyRaise(new PyTypeError(new PyString(s.toString())));
+            return PyTypeError.raise(s.toString());
         }
     }
     public static void requireMinArgs(PyObject[] args, int min, String name) {
         if (args.length < min) {
-            throw new PyRaise(new PyTypeError(new PyString(String.format("%s expected at least %d argument%s, got %d", name, min, (min == 1) ? "" : "s", args.length))));
+            throw PyTypeError.raiseFormat("%s expected at least %d argument%s, got %d", name, min, (min == 1) ? "" : "s", args.length);
         }
     }
     public static void requireMaxArgs(PyObject[] args, int max, String name) {
         if (args.length > max) {
-            throw new PyRaise(new PyTypeError(new PyString(String.format("%s expected at most %d argument%s, got %d", name, max, (max == 1) ? "" : "s", args.length))));
+            throw PyTypeError.raiseFormat("%s expected at most %d argument%s, got %d", name, max, (max == 1) ? "" : "s", args.length);
         }
     }
     public static PyDict requireKwStrings(PyDict dict) {
         for (var x: dict.items.keySet()) {
             if (!(x instanceof PyString)) {
-                throw new PyRaise(new PyTypeError(new PyString("keywords must be strings")));
+                throw PyTypeError.raise("keywords must be strings");
             }
         }
         return dict;

@@ -38,6 +38,13 @@ final class PyStopIteration extends PyException {
 final class PyTypeError extends PyException {
     PyTypeError(PyObject... _args) { super(_args); }
     @Override public PyBuiltinClass type() { return Runtime.pyglobal_TypeError; }
+
+    static PyRaise raise(String msg) {
+        return new PyRaise(new PyTypeError(new PyString(msg)));
+    }
+    static PyRaise raiseFormat(String fmt, Object... args) {
+        return new PyRaise(new PyTypeError(new PyString(String.format(fmt, args))));
+    }
 }
 
 final class PyRaise extends RuntimeException {
