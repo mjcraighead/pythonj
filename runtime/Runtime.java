@@ -380,6 +380,12 @@ public final class Runtime {
                 return PyBool.create(obj instanceof PyType);
             } else if (type == pyglobal_zip) {
                 return PyBool.create(obj instanceof PyZip);
+            } else if (type == pyglobal_AssertionError) {
+                return PyBool.create(obj instanceof PyAssertionError);
+            } else if (type == pyglobal_StopIteration) {
+                return PyBool.create(obj instanceof PyStopIteration);
+            } else if (type == pyglobal_TypeError) {
+                return PyBool.create(obj instanceof PyTypeError);
             }
             throw new UnsupportedOperationException(String.format("isinstance() is unimplemented for type %s", type.repr()));
         }
