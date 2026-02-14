@@ -64,7 +64,9 @@ public abstract class PyObject implements Comparable<PyObject> {
         throw new PyRaise(new PyTypeError(new PyString(String.format("'%s' object is not iterable", type().name()))));
     }
     public PyIter reversed() { throw new UnsupportedOperationException("'reversed' unimplemented"); }
-    public PyObject next() { throw new UnsupportedOperationException("'next' unimplemented"); }
+    public PyObject next() {
+        throw new PyRaise(new PyTypeError(new PyString(String.format("'%s' object is not an iterator", type().name()))));
+    }
     public abstract PyType type();
 
     public PyObject enter() { throw new UnsupportedOperationException("'enter' unimplemented"); }
