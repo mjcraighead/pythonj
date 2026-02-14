@@ -785,6 +785,30 @@ class PythonjVisitor(ast.NodeVisitor):
             JavaExprStatement(JavaMethodCall(JavaIdentifier(temp_name), 'exit', [])),
         ]))
 
+    def visit_Try(self, node) -> None:
+        if len(node.handlers) != 1:
+            self.error(node.lineno, "exactly 1 'except' clause is supported in 'try' statements")
+        if node.orelse:
+            self.error(node.lineno, "'else' clauses in 'try' statements are unsupported")
+        if node.finalbody:
+            self.error(node.lineno, "'finally' clauses in 'try' statements are unsupported")
+        handler = node.handlers[0]
+        if handler.type and not (isinstance(handler.type, ast.Name) and handler.type.id == 'BaseException'):
+            self.error(node.lineno, "only catch-all 'except:' or 'except BaseException [as e]:' clauses in 'try' statements are supported")
+
+        temp_name = self.make_temp()
+        with self.new_block() as try_body:
+            for statement in node.body:
+                self.visit(statement)
+        with self.new_block() as catch_body:
+            if handler.name is not None:
+                self.names.add(handler.name)
+                catch_body.append(JavaAssignStatement(self.ident_expr(handler.name), JavaField(JavaIdentifier(temp_name), 'exc')))
+            for statement in handler.body:
+                self.visit(statement)
+
+        self.code.append(JavaTryStatement(try_body, 'PyRaise', temp_name, catch_body, []))
+
     def visit_Break(self, node) -> None:
         self.code.append(JavaBreakStatement(self.break_name))
 
