@@ -27,6 +27,7 @@ RUNTIME_JAVA_FILES = (
     'PyBytes.java',
     'PyDict.java',
     'PyEnumerate.java',
+    'PyExceptions.java',
     'PyFile.java',
     'PyInt.java',
     'PyList.java',
