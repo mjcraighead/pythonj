@@ -227,7 +227,7 @@ public final class Runtime {
                     }
                 }
             }
-            if ((kwargs != null) && kwargs.boolValue()) {
+            if (kwargs != null) {
                 for (var x: kwargs.items.entrySet()) {
                     ret.setItem(x.getKey(), x.getValue());
                 }
