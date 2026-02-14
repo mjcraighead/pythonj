@@ -26,11 +26,9 @@ public final class PyList extends PyObject {
     private static final class PyListMethod_append extends PyListMethod {
         PyListMethod_append(PyList _self) { super(_self); }
         @Override public PyNone call(PyObject[] args, PyDict kwargs) {
+            Runtime.requireNoKwArgs(kwargs, "list.append");
             if (args.length != 1) {
                 throw new IllegalArgumentException("list.append() takes 1 argument");
-            }
-            if ((kwargs != null) && kwargs.boolValue()) {
-                throw new IllegalArgumentException("list.append() does not accept kwargs");
             }
             return self.pymethod_append(args[0]);
         }
@@ -38,11 +36,9 @@ public final class PyList extends PyObject {
     private static final class PyListMethod_clear extends PyListMethod {
         PyListMethod_clear(PyList _self) { super(_self); }
         @Override public PyNone call(PyObject[] args, PyDict kwargs) {
+            Runtime.requireNoKwArgs(kwargs, "list.clear");
             if (args.length != 0) {
                 throw new IllegalArgumentException("list.clear() takes 0 arguments");
-            }
-            if ((kwargs != null) && kwargs.boolValue()) {
-                throw new IllegalArgumentException("list.clear() does not accept kwargs");
             }
             return self.pymethod_clear();
         }
@@ -50,11 +46,9 @@ public final class PyList extends PyObject {
     private static final class PyListMethod_count extends PyListMethod {
         PyListMethod_count(PyList _self) { super(_self); }
         @Override public PyInt call(PyObject[] args, PyDict kwargs) {
+            Runtime.requireNoKwArgs(kwargs, "list.count");
             if (args.length != 1) {
                 throw new IllegalArgumentException("list.count() takes 1 argument");
-            }
-            if ((kwargs != null) && kwargs.boolValue()) {
-                throw new IllegalArgumentException("list.count() does not accept kwargs");
             }
             return self.pymethod_count(args[0]);
         }
@@ -62,11 +56,9 @@ public final class PyList extends PyObject {
     private static final class PyListMethod_extend extends PyListMethod {
         PyListMethod_extend(PyList _self) { super(_self); }
         @Override public PyNone call(PyObject[] args, PyDict kwargs) {
+            Runtime.requireNoKwArgs(kwargs, "list.extend");
             if (args.length != 1) {
                 throw new IllegalArgumentException("list.extend() takes 1 argument");
-            }
-            if ((kwargs != null) && kwargs.boolValue()) {
-                throw new IllegalArgumentException("list.extend() does not accept kwargs");
             }
             return self.pymethod_extend(args[0]);
         }
@@ -74,11 +66,9 @@ public final class PyList extends PyObject {
     private static final class PyListMethod_index extends PyListMethod {
         PyListMethod_index(PyList _self) { super(_self); }
         @Override public PyInt call(PyObject[] args, PyDict kwargs) {
+            Runtime.requireNoKwArgs(kwargs, "list.index");
             if (args.length != 1) {
                 throw new IllegalArgumentException("list.index() takes 1 argument");
-            }
-            if ((kwargs != null) && kwargs.boolValue()) {
-                throw new IllegalArgumentException("list.index() does not accept kwargs");
             }
             return self.pymethod_index(args[0]);
         }

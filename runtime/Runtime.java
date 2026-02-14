@@ -831,7 +831,12 @@ public final class Runtime {
     }
     public static final pyfunc_TypeError pyglobal_TypeError = new pyfunc_TypeError();
 
-    // Helper functions used by the code generator
+    // Helper functions used by the builtins and code generator
+    public static void requireNoKwArgs(PyDict kwargs, String name) {
+        if ((kwargs != null) && kwargs.boolValue()) {
+            throw new PyRaise(new PyTypeError(new PyString(String.format("%s() takes no keyword arguments", name))));
+        }
+    }
     public static ArrayList<PyObject> addPyObjectToArrayList(ArrayList<PyObject> list, PyObject obj) {
         list.add(obj);
         return list;

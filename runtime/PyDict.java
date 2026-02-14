@@ -128,11 +128,9 @@ public final class PyDict extends PyObject {
     private static final class PyDictMethod_get extends PyDictMethod {
         PyDictMethod_get(PyDict _self) { super(_self); }
         @Override public PyObject call(PyObject[] args, PyDict kwargs) {
+            Runtime.requireNoKwArgs(kwargs, "dict.get");
             if (args.length != 2) {
                 throw new IllegalArgumentException("dict.get() takes 2 arguments");
-            }
-            if ((kwargs != null) && kwargs.boolValue()) {
-                throw new IllegalArgumentException("dict.get() does not accept kwargs");
             }
             return self.pymethod_get(args[0], args[1]);
         }
@@ -140,11 +138,9 @@ public final class PyDict extends PyObject {
     private static final class PyDictMethod_items extends PyDictMethod {
         PyDictMethod_items(PyDict _self) { super(_self); }
         @Override public PyDictItems call(PyObject[] args, PyDict kwargs) {
+            Runtime.requireNoKwArgs(kwargs, "dict.items");
             if (args.length != 0) {
                 throw new IllegalArgumentException("dict.items() takes no arguments");
-            }
-            if ((kwargs != null) && kwargs.boolValue()) {
-                throw new IllegalArgumentException("dict.items() does not accept kwargs");
             }
             return self.pymethod_items();
         }
@@ -152,11 +148,9 @@ public final class PyDict extends PyObject {
     private static final class PyDictMethod_keys extends PyDictMethod {
         PyDictMethod_keys(PyDict _self) { super(_self); }
         @Override public PyDictKeys call(PyObject[] args, PyDict kwargs) {
+            Runtime.requireNoKwArgs(kwargs, "dict.keys");
             if (args.length != 0) {
                 throw new IllegalArgumentException("dict.keys() takes no arguments");
-            }
-            if ((kwargs != null) && kwargs.boolValue()) {
-                throw new IllegalArgumentException("dict.keys() does not accept kwargs");
             }
             return self.pymethod_keys();
         }
@@ -164,11 +158,9 @@ public final class PyDict extends PyObject {
     private static final class PyDictMethod_values extends PyDictMethod {
         PyDictMethod_values(PyDict _self) { super(_self); }
         @Override public PyDictValues call(PyObject[] args, PyDict kwargs) {
+            Runtime.requireNoKwArgs(kwargs, "dict.values");
             if (args.length != 0) {
                 throw new IllegalArgumentException("dict.values() takes no arguments");
-            }
-            if ((kwargs != null) && kwargs.boolValue()) {
-                throw new IllegalArgumentException("dict.values() does not accept kwargs");
             }
             return self.pymethod_values();
         }

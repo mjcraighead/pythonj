@@ -19,11 +19,9 @@ public final class PyFile extends PyIter {
     private static final class PyFileMethod_close extends PyFileMethod {
         PyFileMethod_close(PyFile _self) { super(_self); }
         @Override public PyNone call(PyObject[] args, PyDict kwargs) {
+            Runtime.requireNoKwArgs(kwargs, "TextIOWrapper.close");
             if (args.length != 0) {
                 throw new IllegalArgumentException("file.close() takes no arguments");
-            }
-            if ((kwargs != null) && kwargs.boolValue()) {
-                throw new IllegalArgumentException("file.close() does not accept kwargs");
             }
             return self.pymethod_close();
         }
@@ -31,11 +29,9 @@ public final class PyFile extends PyIter {
     private static final class PyFileMethod_readline extends PyFileMethod {
         PyFileMethod_readline(PyFile _self) { super(_self); }
         @Override public PyString call(PyObject[] args, PyDict kwargs) {
+            Runtime.requireNoKwArgs(kwargs, "TextIOWrapper.readline");
             if (args.length != 0) {
                 throw new IllegalArgumentException("file.readline() takes no arguments");
-            }
-            if ((kwargs != null) && kwargs.boolValue()) {
-                throw new IllegalArgumentException("file.readline() does not accept kwargs");
             }
             return self.pymethod_readline();
         }

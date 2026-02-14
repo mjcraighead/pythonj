@@ -33,11 +33,9 @@ public final class PyString extends PyObject {
     private static final class PyStringMethod_join extends PyStringMethod {
         PyStringMethod_join(PyString _self) { super(_self); }
         @Override public PyString call(PyObject[] args, PyDict kwargs) {
+            Runtime.requireNoKwArgs(kwargs, "str.join");
             if (args.length != 1) {
                 throw new IllegalArgumentException("str.join() takes 1 argument");
-            }
-            if ((kwargs != null) && kwargs.boolValue()) {
-                throw new IllegalArgumentException("str.join() does not accept kwargs");
             }
             return self.pymethod_join(args[0]);
         }
@@ -45,11 +43,9 @@ public final class PyString extends PyObject {
     private static final class PyStringMethod_lower extends PyStringMethod {
         PyStringMethod_lower(PyString _self) { super(_self); }
         @Override public PyString call(PyObject[] args, PyDict kwargs) {
+            Runtime.requireNoKwArgs(kwargs, "str.lower");
             if (args.length != 0) {
                 throw new IllegalArgumentException("str.lower() takes 0 arguments");
-            }
-            if ((kwargs != null) && kwargs.boolValue()) {
-                throw new IllegalArgumentException("str.lower() does not accept kwargs");
             }
             return self.pymethod_lower();
         }
@@ -69,11 +65,9 @@ public final class PyString extends PyObject {
     private static final class PyStringMethod_upper extends PyStringMethod {
         PyStringMethod_upper(PyString _self) { super(_self); }
         @Override public PyString call(PyObject[] args, PyDict kwargs) {
+            Runtime.requireNoKwArgs(kwargs, "str.upper");
             if (args.length != 0) {
                 throw new IllegalArgumentException("str.upper() takes 0 arguments");
-            }
-            if ((kwargs != null) && kwargs.boolValue()) {
-                throw new IllegalArgumentException("str.upper() does not accept kwargs");
             }
             return self.pymethod_upper();
         }
