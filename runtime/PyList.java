@@ -95,6 +95,13 @@ public final class PyList extends PyObject {
         }
         throw new UnsupportedOperationException("unsupported operand type for list addition");
     }
+    @Override public PyList addInPlace(PyObject rhs_arg) {
+        if (rhs_arg instanceof PyList rhs) {
+            items.addAll(rhs.items);
+            return this;
+        }
+        throw new UnsupportedOperationException("unsupported operand type for list addition");
+    }
     @Override public PyList mul(PyObject rhs) {
         var ret = new PyList();
         long count = rhs.indexValue();
@@ -105,6 +112,18 @@ public final class PyList extends PyObject {
             ret.items.addAll(items);
         }
         return ret;
+    }
+    @Override public PyList mulInPlace(PyObject rhs) {
+        long count = rhs.indexValue();
+        if (count <= 0) {
+            items.clear();
+            return this;
+        }
+        var original = new ArrayList<>(items);
+        for (long i = 1; i < count; i++) {
+            items.addAll(original);
+        }
+        return this;
     }
 
     @Override public PyObject getItem(PyObject key) {
