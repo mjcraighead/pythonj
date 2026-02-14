@@ -30,7 +30,11 @@ public final class PyBytes extends PyObject {
         if (index < 0) {
             index += value.length;
         }
-        return new PyInt(value[index] & 0xFF);
+        try {
+            return new PyInt(value[index] & 0xFF);
+        } catch (ArrayIndexOutOfBoundsException e) {
+            throw new PyRaise(new PyIndexError(new PyString("index out of range")));
+        }
     }
 
     @Override public PyBytesIter iter() { return new PyBytesIter(this); }

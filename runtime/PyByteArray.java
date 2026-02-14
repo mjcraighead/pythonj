@@ -30,7 +30,11 @@ public final class PyByteArray extends PyObject {
         if (index < 0) {
             index += value.length;
         }
-        return new PyInt(value[index] & 0xFF);
+        try {
+            return new PyInt(value[index] & 0xFF);
+        } catch (ArrayIndexOutOfBoundsException e) {
+            throw new PyRaise(new PyIndexError(new PyString("bytearray index out of range")));
+        }
     }
     @Override public void setItem(PyObject key, PyObject val) {
         int index = Math.toIntExact(key.indexValue());
@@ -39,9 +43,13 @@ public final class PyByteArray extends PyObject {
         }
         long new_val = val.indexValue();
         if ((new_val < 0) || (new_val > 255)) {
-            throw new IllegalArgumentException("cannot set bytearray element to value outside 0-255");
+            throw new PyRaise(new PyValueError(new PyString("byte must be in range(0, 256)")));
         }
-        value[index] = (byte)new_val;
+        try {
+            value[index] = (byte)new_val;
+        } catch (ArrayIndexOutOfBoundsException e) {
+            throw new PyRaise(new PyIndexError(new PyString("bytearray index out of range")));
+        }
     }
 
     @Override public PyByteArrayIter iter() { return new PyByteArrayIter(this); }
