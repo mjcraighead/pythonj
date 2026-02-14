@@ -343,9 +343,7 @@ public final class Runtime {
         pyfunc_isinstance() { super("isinstance"); }
         @Override public PyBool call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, funcName);
-            if (args.length != 2) {
-                throw new IllegalArgumentException("isinstance() takes 2 arguments");
-            }
+            requireExactArgs(args, 2, funcName);
             var obj = args[0];
             var type = args[1];
             if (type == pyglobal_bool) {
@@ -589,9 +587,7 @@ public final class Runtime {
         pyfunc_reversed() { super("reversed"); }
         @Override public PyIter call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, typeName);
-            if (args.length != 1) {
-                throw new IllegalArgumentException("reversed() takes 1 argument");
-            }
+            requireExactArgs(args, 1, typeName);
             return args[0].reversed();
         }
     }
@@ -779,6 +775,11 @@ public final class Runtime {
     public static void requireNoKwArgs(PyDict kwargs, String name) {
         if ((kwargs != null) && kwargs.boolValue()) {
             throw new PyRaise(new PyTypeError(new PyString(String.format("%s() takes no keyword arguments", name))));
+        }
+    }
+    public static void requireExactArgs(PyObject[] args, int n, String name) {
+        if (args.length != n) {
+            throw new PyRaise(new PyTypeError(new PyString(String.format("%s expected %d argument%s, got %d", name, n, (n == 1) ? "" : "s", args.length))));
         }
     }
     public static ArrayList<PyObject> addPyObjectToArrayList(ArrayList<PyObject> list, PyObject obj) {
