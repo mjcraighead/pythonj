@@ -19,6 +19,7 @@ from typing import Iterator, Optional, TextIO
 BUILTINS = {
     'abs', 'all', 'any', 'bool', 'bytearray', 'bytes', 'chr', 'dict', 'enumerate', 'hash', 'hex', 'int', 'isinstance', 'iter', 'len', 'list',
     'max', 'min', 'object', 'open', 'ord', 'print', 'range', 'repr', 'reversed', 'set', 'slice', 'sorted', 'str', 'sum', 'tuple', 'type', 'zip',
+    'AssertionError', 'StopIteration', 'TypeError',
 }
 
 RUNTIME_JAVA_FILES = (

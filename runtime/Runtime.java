@@ -798,6 +798,39 @@ public final class Runtime {
     }
     public static final pyfunc_zip pyglobal_zip = new pyfunc_zip();
 
+    static final class pyfunc_AssertionError extends PyBuiltinClass {
+        pyfunc_AssertionError() { super("AssertionError"); }
+        @Override public PyAssertionError call(PyObject[] args, PyDict kwargs) {
+            if ((kwargs != null) && kwargs.boolValue()) {
+                throw new IllegalArgumentException("AssertionError() does not accept kwargs");
+            }
+            return new PyAssertionError(args);
+        }
+    }
+    public static final pyfunc_AssertionError pyglobal_AssertionError = new pyfunc_AssertionError();
+
+    static final class pyfunc_StopIteration extends PyBuiltinClass {
+        pyfunc_StopIteration() { super("StopIteration"); }
+        @Override public PyStopIteration call(PyObject[] args, PyDict kwargs) {
+            if ((kwargs != null) && kwargs.boolValue()) {
+                throw new IllegalArgumentException("StopIteration() does not accept kwargs");
+            }
+            return new PyStopIteration(args);
+        }
+    }
+    public static final pyfunc_StopIteration pyglobal_StopIteration = new pyfunc_StopIteration();
+
+    static final class pyfunc_TypeError extends PyBuiltinClass {
+        pyfunc_TypeError() { super("TypeError"); }
+        @Override public PyTypeError call(PyObject[] args, PyDict kwargs) {
+            if ((kwargs != null) && kwargs.boolValue()) {
+                throw new IllegalArgumentException("TypeError() does not accept kwargs");
+            }
+            return new PyTypeError(args);
+        }
+    }
+    public static final pyfunc_TypeError pyglobal_TypeError = new pyfunc_TypeError();
+
     // Helper functions used by the code generator
     public static ArrayList<PyObject> addPyObjectToArrayList(ArrayList<PyObject> list, PyObject obj) {
         list.add(obj);

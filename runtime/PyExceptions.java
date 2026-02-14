@@ -25,6 +25,21 @@ abstract class PyException extends PyBaseException {
     PyException(PyObject[] _args) { super(_args); }
 }
 
+final class PyAssertionError extends PyException {
+    PyAssertionError(PyObject... _args) { super(_args); }
+    @Override public PyBuiltinClass type() { return Runtime.pyglobal_AssertionError; }
+}
+
+final class PyStopIteration extends PyException {
+    PyStopIteration(PyObject... _args) { super(_args); }
+    @Override public PyBuiltinClass type() { return Runtime.pyglobal_StopIteration; }
+}
+
+final class PyTypeError extends PyException {
+    PyTypeError(PyObject... _args) { super(_args); }
+    @Override public PyBuiltinClass type() { return Runtime.pyglobal_TypeError; }
+}
+
 final class PyRaise extends RuntimeException {
     final PyBaseException exc;
     PyRaise(PyBaseException _exc) { exc = _exc; }
