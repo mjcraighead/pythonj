@@ -131,7 +131,7 @@ public final class PyDict extends PyObject {
             if (args.length != 2) {
                 throw new IllegalArgumentException("dict.get() takes 2 arguments");
             }
-            if (kwargs != null) {
+            if ((kwargs != null) && kwargs.boolValue()) {
                 throw new IllegalArgumentException("dict.get() does not accept kwargs");
             }
             return self.pymethod_get(args[0], args[1]);
@@ -143,7 +143,7 @@ public final class PyDict extends PyObject {
             if (args.length != 0) {
                 throw new IllegalArgumentException("dict.items() takes no arguments");
             }
-            if (kwargs != null) {
+            if ((kwargs != null) && kwargs.boolValue()) {
                 throw new IllegalArgumentException("dict.items() does not accept kwargs");
             }
             return self.pymethod_items();
@@ -155,7 +155,7 @@ public final class PyDict extends PyObject {
             if (args.length != 0) {
                 throw new IllegalArgumentException("dict.keys() takes no arguments");
             }
-            if (kwargs != null) {
+            if ((kwargs != null) && kwargs.boolValue()) {
                 throw new IllegalArgumentException("dict.keys() does not accept kwargs");
             }
             return self.pymethod_keys();
@@ -167,7 +167,7 @@ public final class PyDict extends PyObject {
             if (args.length != 0) {
                 throw new IllegalArgumentException("dict.values() takes no arguments");
             }
-            if (kwargs != null) {
+            if ((kwargs != null) && kwargs.boolValue()) {
                 throw new IllegalArgumentException("dict.values() does not accept kwargs");
             }
             return self.pymethod_values();

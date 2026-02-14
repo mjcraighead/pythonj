@@ -36,7 +36,7 @@ public final class PyString extends PyObject {
             if (args.length != 1) {
                 throw new IllegalArgumentException("str.join() takes 1 argument");
             }
-            if (kwargs != null) {
+            if ((kwargs != null) && kwargs.boolValue()) {
                 throw new IllegalArgumentException("str.join() does not accept kwargs");
             }
             return self.pymethod_join(args[0]);
@@ -48,7 +48,7 @@ public final class PyString extends PyObject {
             if (args.length != 0) {
                 throw new IllegalArgumentException("str.lower() takes 0 arguments");
             }
-            if (kwargs != null) {
+            if ((kwargs != null) && kwargs.boolValue()) {
                 throw new IllegalArgumentException("str.lower() does not accept kwargs");
             }
             return self.pymethod_lower();
@@ -60,7 +60,7 @@ public final class PyString extends PyObject {
             if (args.length != 1) {
                 throw new IllegalArgumentException("str.split() takes 1 argument");
             }
-            if (kwargs != null) {
+            if ((kwargs != null) && kwargs.boolValue()) {
                 throw new IllegalArgumentException("str.split() does not accept kwargs");
             }
             return self.pymethod_split(args[0]);
@@ -72,7 +72,7 @@ public final class PyString extends PyObject {
             if (args.length != 0) {
                 throw new IllegalArgumentException("str.upper() takes 0 arguments");
             }
-            if (kwargs != null) {
+            if ((kwargs != null) && kwargs.boolValue()) {
                 throw new IllegalArgumentException("str.upper() does not accept kwargs");
             }
             return self.pymethod_upper();

@@ -61,7 +61,7 @@ public final class Runtime {
             if (args.length != 1) {
                 throw new IllegalArgumentException("abs() takes 1 argument");
             }
-            if (kwargs != null) {
+            if ((kwargs != null) && kwargs.boolValue()) {
                 throw new IllegalArgumentException("abs() does not accept kwargs");
             }
             return args[0].abs();
@@ -75,7 +75,7 @@ public final class Runtime {
             if (args.length != 1) {
                 throw new IllegalArgumentException("all() takes 1 argument");
             }
-            if (kwargs != null) {
+            if ((kwargs != null) && kwargs.boolValue()) {
                 throw new IllegalArgumentException("all() does not accept kwargs");
             }
             var iter = args[0].iter();
@@ -95,7 +95,7 @@ public final class Runtime {
             if (args.length != 1) {
                 throw new IllegalArgumentException("any() takes 1 argument");
             }
-            if (kwargs != null) {
+            if ((kwargs != null) && kwargs.boolValue()) {
                 throw new IllegalArgumentException("any() does not accept kwargs");
             }
             var iter = args[0].iter();
@@ -115,7 +115,7 @@ public final class Runtime {
             if (args.length > 1) {
                 throw new IllegalArgumentException("bool() takes 0 or 1 arguments");
             }
-            if (kwargs != null) {
+            if ((kwargs != null) && kwargs.boolValue()) {
                 throw new IllegalArgumentException("bool() does not accept kwargs");
             }
             if (args.length == 1) {
@@ -132,7 +132,7 @@ public final class Runtime {
             if (args.length > 1) {
                 throw new IllegalArgumentException("bytearray() takes 0 or 1 arguments");
             }
-            if (kwargs != null) {
+            if ((kwargs != null) && kwargs.boolValue()) {
                 throw new IllegalArgumentException("bytearray() does not accept kwargs");
             }
             if (args.length == 0) {
@@ -162,7 +162,7 @@ public final class Runtime {
             if (args.length > 1) {
                 throw new IllegalArgumentException("bytes() takes 0 or 1 arguments");
             }
-            if (kwargs != null) {
+            if ((kwargs != null) && kwargs.boolValue()) {
                 throw new IllegalArgumentException("bytes() does not accept kwargs");
             }
             if (args.length == 0) {
@@ -192,7 +192,7 @@ public final class Runtime {
             if (args.length != 1) {
                 throw new IllegalArgumentException("chr() takes 1 argument");
             }
-            if (kwargs != null) {
+            if ((kwargs != null) && kwargs.boolValue()) {
                 throw new IllegalArgumentException("chr() does not accept kwargs");
             }
             long arg = args[0].indexValue();
@@ -228,7 +228,7 @@ public final class Runtime {
                     }
                 }
             }
-            if (kwargs != null) {
+            if ((kwargs != null) && kwargs.boolValue()) {
                 for (var x: kwargs.items.entrySet()) {
                     ret.setItem(x.getKey(), x.getValue());
                 }
@@ -244,7 +244,7 @@ public final class Runtime {
             if (args.length != 1) {
                 throw new IllegalArgumentException("enumerate() takes 1 argument");
             }
-            if (kwargs != null) {
+            if ((kwargs != null) && kwargs.boolValue()) {
                 throw new IllegalArgumentException("enumerate() does not accept kwargs");
             }
             return new PyEnumerate(args[0].iter());
@@ -258,7 +258,7 @@ public final class Runtime {
             if (args.length != 1) {
                 throw new IllegalArgumentException("hash() takes 1 argument");
             }
-            if (kwargs != null) {
+            if ((kwargs != null) && kwargs.boolValue()) {
                 throw new IllegalArgumentException("hash() does not accept kwargs");
             }
             return new PyInt(args[0].hashCode());
@@ -272,7 +272,7 @@ public final class Runtime {
             if (args.length != 1) {
                 throw new IllegalArgumentException("hex() takes 1 argument");
             }
-            if (kwargs != null) {
+            if ((kwargs != null) && kwargs.boolValue()) {
                 throw new IllegalArgumentException("hex() does not accept kwargs");
             }
             long arg = args[0].indexValue();
@@ -291,7 +291,7 @@ public final class Runtime {
             if (args.length > 2) {
                 throw new IllegalArgumentException("int() takes 0 to 2 arguments");
             }
-            if (kwargs != null) {
+            if ((kwargs != null) && kwargs.boolValue()) {
                 throw new IllegalArgumentException("int() does not accept kwargs");
             }
             if (args.length == 0) {
@@ -370,7 +370,7 @@ public final class Runtime {
             if (args.length != 2) {
                 throw new IllegalArgumentException("isinstance() takes 2 arguments");
             }
-            if (kwargs != null) {
+            if ((kwargs != null) && kwargs.boolValue()) {
                 throw new IllegalArgumentException("isinstance() does not accept kwargs");
             }
             var obj = args[0];
@@ -419,7 +419,7 @@ public final class Runtime {
             if (args.length != 1) {
                 throw new IllegalArgumentException("iter() takes 1 argument");
             }
-            if (kwargs != null) {
+            if ((kwargs != null) && kwargs.boolValue()) {
                 throw new IllegalArgumentException("iter() does not accept kwargs");
             }
             return args[0].iter();
@@ -433,7 +433,7 @@ public final class Runtime {
             if (args.length != 1) {
                 throw new IllegalArgumentException("len() takes 1 argument");
             }
-            if (kwargs != null) {
+            if ((kwargs != null) && kwargs.boolValue()) {
                 throw new IllegalArgumentException("len() does not accept kwargs");
             }
             return new PyInt(args[0].len());
@@ -447,7 +447,7 @@ public final class Runtime {
             if (args.length > 1) {
                 throw new IllegalArgumentException("list() takes 0 or 1 arguments");
             }
-            if (kwargs != null) {
+            if ((kwargs != null) && kwargs.boolValue()) {
                 throw new IllegalArgumentException("list() does not accept kwargs");
             }
             var ret = new PyList();
@@ -469,7 +469,7 @@ public final class Runtime {
             if (args.length < 1) {
                 throw new IllegalArgumentException("max() takes at least 1 argument");
             }
-            if (kwargs != null) {
+            if ((kwargs != null) && kwargs.boolValue()) {
                 throw new IllegalArgumentException("max() does not accept kwargs");
             }
             if (args.length == 1) {
@@ -504,7 +504,7 @@ public final class Runtime {
             if (args.length < 1) {
                 throw new IllegalArgumentException("min() takes at least 1 argument");
             }
-            if (kwargs != null) {
+            if ((kwargs != null) && kwargs.boolValue()) {
                 throw new IllegalArgumentException("min() does not accept kwargs");
             }
             if (args.length == 1) {
@@ -544,7 +544,7 @@ public final class Runtime {
             if (args.length != 1) {
                 throw new IllegalArgumentException("open() takes 1 argument");
             }
-            if (kwargs != null) {
+            if ((kwargs != null) && kwargs.boolValue()) {
                 throw new IllegalArgumentException("open() does not accept kwargs");
             }
             return new PyFile(((PyString)args[0]).value);
@@ -558,7 +558,7 @@ public final class Runtime {
             if (args.length != 1) {
                 throw new IllegalArgumentException("ord() takes 1 argument");
             }
-            if (kwargs != null) {
+            if ((kwargs != null) && kwargs.boolValue()) {
                 throw new IllegalArgumentException("ord() does not accept kwargs");
             }
             PyString arg = (PyString)args[0];
@@ -573,7 +573,7 @@ public final class Runtime {
     static final class pyfunc_print extends PyBuiltinFunction {
         pyfunc_print() { super("print"); }
         @Override public PyNone call(PyObject[] args, PyDict kwargs) {
-            if (kwargs != null) {
+            if ((kwargs != null) && kwargs.boolValue()) {
                 throw new IllegalArgumentException("print() does not accept kwargs");
             }
             boolean first = true;
@@ -596,7 +596,7 @@ public final class Runtime {
             if ((args.length < 1) || (args.length > 3)) {
                 throw new IllegalArgumentException("range() takes 1 to 3 arguments");
             }
-            if (kwargs != null) {
+            if ((kwargs != null) && kwargs.boolValue()) {
                 throw new IllegalArgumentException("range() does not accept kwargs");
             }
             long start = 0, end, step = 1;
@@ -620,7 +620,7 @@ public final class Runtime {
             if (args.length != 1) {
                 throw new IllegalArgumentException("repr() takes 1 argument");
             }
-            if (kwargs != null) {
+            if ((kwargs != null) && kwargs.boolValue()) {
                 throw new IllegalArgumentException("repr() does not accept kwargs");
             }
             return new PyString(args[0].repr());
@@ -634,7 +634,7 @@ public final class Runtime {
             if (args.length != 1) {
                 throw new IllegalArgumentException("reversed() takes 1 argument");
             }
-            if (kwargs != null) {
+            if ((kwargs != null) && kwargs.boolValue()) {
                 throw new IllegalArgumentException("reversed() does not accept kwargs");
             }
             return args[0].reversed();
@@ -648,7 +648,7 @@ public final class Runtime {
             if (args.length > 1) {
                 throw new IllegalArgumentException("set() takes 0 or 1 arguments");
             }
-            if (kwargs != null) {
+            if ((kwargs != null) && kwargs.boolValue()) {
                 throw new IllegalArgumentException("set() does not accept kwargs");
             }
             var ret = new PySet();
@@ -670,7 +670,7 @@ public final class Runtime {
             if ((args.length < 1) || (args.length > 3)) {
                 throw new IllegalArgumentException("slice() takes 1 to 3 arguments");
             }
-            if (kwargs != null) {
+            if ((kwargs != null) && kwargs.boolValue()) {
                 throw new IllegalArgumentException("slice() does not accept kwargs");
             }
             PyObject start = PyNone.singleton;
@@ -696,7 +696,7 @@ public final class Runtime {
             if (args.length != 1) {
                 throw new IllegalArgumentException("sorted() takes 1 argument");
             }
-            if (kwargs != null) {
+            if ((kwargs != null) && kwargs.boolValue()) {
                 throw new IllegalArgumentException("sorted() does not accept kwargs");
             }
             var ret = new PyList();
@@ -716,7 +716,7 @@ public final class Runtime {
             if (args.length > 1) {
                 throw new IllegalArgumentException("str() takes 0 or 1 arguments");
             }
-            if (kwargs != null) {
+            if ((kwargs != null) && kwargs.boolValue()) {
                 throw new IllegalArgumentException("str() does not accept kwargs");
             }
             if (args.length == 1) {
@@ -733,7 +733,7 @@ public final class Runtime {
             if (args.length != 1) {
                 throw new IllegalArgumentException("sum() takes 1 argument");
             }
-            if (kwargs != null) {
+            if ((kwargs != null) && kwargs.boolValue()) {
                 throw new IllegalArgumentException("sum() does not accept kwargs");
             }
             var iter = args[0].iter();
@@ -756,7 +756,7 @@ public final class Runtime {
             if (args.length > 1) {
                 throw new IllegalArgumentException("tuple() takes 0 or 1 arguments");
             }
-            if (kwargs != null) {
+            if ((kwargs != null) && kwargs.boolValue()) {
                 throw new IllegalArgumentException("tuple() does not accept kwargs");
             }
             if (args.length == 0) {
@@ -776,7 +776,7 @@ public final class Runtime {
             if (args.length != 1) {
                 throw new IllegalArgumentException("type() takes 1 argument");
             }
-            if (kwargs != null) {
+            if ((kwargs != null) && kwargs.boolValue()) {
                 throw new IllegalArgumentException("type() does not accept kwargs");
             }
             return args[0].type();
@@ -787,7 +787,7 @@ public final class Runtime {
     static final class pyfunc_zip extends PyBuiltinClass {
         pyfunc_zip() { super("zip"); }
         @Override public PyZip call(PyObject[] args, PyDict kwargs) {
-            if (kwargs != null) {
+            if ((kwargs != null) && kwargs.boolValue()) {
                 throw new IllegalArgumentException("zip() does not accept kwargs");
             }
             PyIter iters[] = new PyIter[args.length];

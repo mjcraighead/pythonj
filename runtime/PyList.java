@@ -29,7 +29,7 @@ public final class PyList extends PyObject {
             if (args.length != 1) {
                 throw new IllegalArgumentException("list.append() takes 1 argument");
             }
-            if (kwargs != null) {
+            if ((kwargs != null) && kwargs.boolValue()) {
                 throw new IllegalArgumentException("list.append() does not accept kwargs");
             }
             return self.pymethod_append(args[0]);
@@ -41,7 +41,7 @@ public final class PyList extends PyObject {
             if (args.length != 0) {
                 throw new IllegalArgumentException("list.clear() takes 0 arguments");
             }
-            if (kwargs != null) {
+            if ((kwargs != null) && kwargs.boolValue()) {
                 throw new IllegalArgumentException("list.clear() does not accept kwargs");
             }
             return self.pymethod_clear();
@@ -53,7 +53,7 @@ public final class PyList extends PyObject {
             if (args.length != 1) {
                 throw new IllegalArgumentException("list.count() takes 1 argument");
             }
-            if (kwargs != null) {
+            if ((kwargs != null) && kwargs.boolValue()) {
                 throw new IllegalArgumentException("list.count() does not accept kwargs");
             }
             return self.pymethod_count(args[0]);
@@ -65,7 +65,7 @@ public final class PyList extends PyObject {
             if (args.length != 1) {
                 throw new IllegalArgumentException("list.extend() takes 1 argument");
             }
-            if (kwargs != null) {
+            if ((kwargs != null) && kwargs.boolValue()) {
                 throw new IllegalArgumentException("list.extend() does not accept kwargs");
             }
             return self.pymethod_extend(args[0]);
@@ -77,7 +77,7 @@ public final class PyList extends PyObject {
             if (args.length != 1) {
                 throw new IllegalArgumentException("list.index() takes 1 argument");
             }
-            if (kwargs != null) {
+            if ((kwargs != null) && kwargs.boolValue()) {
                 throw new IllegalArgumentException("list.index() does not accept kwargs");
             }
             return self.pymethod_index(args[0]);

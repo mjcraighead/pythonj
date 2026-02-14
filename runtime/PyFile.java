@@ -22,7 +22,7 @@ public final class PyFile extends PyIter {
             if (args.length != 0) {
                 throw new IllegalArgumentException("file.close() takes no arguments");
             }
-            if (kwargs != null) {
+            if ((kwargs != null) && kwargs.boolValue()) {
                 throw new IllegalArgumentException("file.close() does not accept kwargs");
             }
             return self.pymethod_close();
@@ -34,7 +34,7 @@ public final class PyFile extends PyIter {
             if (args.length != 0) {
                 throw new IllegalArgumentException("file.readline() takes no arguments");
             }
-            if (kwargs != null) {
+            if ((kwargs != null) && kwargs.boolValue()) {
                 throw new IllegalArgumentException("file.readline() does not accept kwargs");
             }
             return self.pymethod_readline();
