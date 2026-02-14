@@ -495,6 +495,24 @@ public final class Runtime {
     }
     public static final pyfunc_min pyglobal_min = new pyfunc_min();
 
+    static final class pyfunc_next extends PyBuiltinFunction {
+        pyfunc_next() { super("next"); }
+        @Override public PyObject call(PyObject[] args, PyDict kwargs) {
+            requireNoKwArgs(kwargs, funcName);
+            requireMinArgs(args, 1, funcName);
+            requireMaxArgs(args, 2, funcName);
+            if (args.length == 2) {
+                throw new UnsupportedOperationException("'default' argument to next() is unsupported");
+            }
+            PyObject ret = args[0].next();
+            if (ret == null) {
+                throw new PyRaise(new PyStopIteration());
+            }
+            return ret;
+        }
+    }
+    public static final pyfunc_next pyglobal_next = new pyfunc_next();
+
     static final class pyfunc_object extends PyBuiltinClass {
         pyfunc_object() { super("object"); }
     }
