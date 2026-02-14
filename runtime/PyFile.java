@@ -28,8 +28,9 @@ public final class PyFile extends PyIter {
         PyFileMethod_readline(PyFile _self) { super(_self); }
         @Override public PyString call(PyObject[] args, PyDict kwargs) {
             Runtime.requireNoKwArgs(kwargs, "TextIOWrapper.readline");
+            Runtime.requireMaxArgs(args, 1, "readline");
             if (args.length != 0) {
-                throw new IllegalArgumentException("file.readline() takes no arguments");
+                throw new UnsupportedOperationException("'size' argument to TextIOWrapper.readline() is not supported");
             }
             return self.pymethod_readline();
         }

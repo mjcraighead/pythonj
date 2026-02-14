@@ -105,9 +105,7 @@ public final class Runtime {
         pyfunc_bool() { super("bool"); }
         @Override public PyBool call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, typeName);
-            if (args.length > 1) {
-                throw new IllegalArgumentException("bool() takes 0 or 1 arguments");
-            }
+            requireMaxArgs(args, 1, typeName);
             if (args.length == 1) {
                 return PyBool.create(args[0].boolValue());
             }
@@ -263,9 +261,7 @@ public final class Runtime {
     static final class pyfunc_int extends PyBuiltinClass {
         pyfunc_int() { super("int"); }
         @Override public PyInt call(PyObject[] args, PyDict kwargs) {
-            if (args.length > 2) {
-                throw new IllegalArgumentException("int() takes 0 to 2 arguments");
-            }
+            requireMaxArgs(args, 2, typeName);
             if ((kwargs != null) && kwargs.boolValue()) {
                 throw new IllegalArgumentException("int() does not accept kwargs");
             }
@@ -415,9 +411,7 @@ public final class Runtime {
         pyfunc_list() { super("list"); }
         @Override public PyList call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, typeName);
-            if (args.length > 1) {
-                throw new IllegalArgumentException("list() takes 0 or 1 arguments");
-            }
+            requireMaxArgs(args, 1, typeName);
             var ret = new PyList();
             if (args.length == 0) {
                 return ret;
@@ -556,9 +550,8 @@ public final class Runtime {
         pyfunc_range() { super("range"); }
         @Override public PyRange call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, typeName);
-            if ((args.length < 1) || (args.length > 3)) {
-                throw new IllegalArgumentException("range() takes 1 to 3 arguments");
-            }
+            requireMinArgs(args, 1, typeName);
+            requireMaxArgs(args, 3, typeName);
             long start = 0, end, step = 1;
             if (args.length == 1) {
                 end = args[0].indexValue();
@@ -597,9 +590,7 @@ public final class Runtime {
         pyfunc_set() { super("set"); }
         @Override public PySet call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, typeName);
-            if (args.length > 1) {
-                throw new IllegalArgumentException("set() takes 0 or 1 arguments");
-            }
+            requireMaxArgs(args, 1, typeName);
             var ret = new PySet();
             if (args.length == 0) {
                 return ret;
@@ -617,9 +608,8 @@ public final class Runtime {
         pyfunc_slice() { super("slice"); }
         @Override public PySlice call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, typeName);
-            if ((args.length < 1) || (args.length > 3)) {
-                throw new IllegalArgumentException("slice() takes 1 to 3 arguments");
-            }
+            requireMinArgs(args, 1, typeName);
+            requireMaxArgs(args, 3, typeName);
             PyObject start = PyNone.singleton;
             PyObject end;
             PyObject step = PyNone.singleton;
@@ -701,9 +691,7 @@ public final class Runtime {
         pyfunc_tuple() { super("tuple"); }
         @Override public PyTuple call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, typeName);
-            if (args.length > 1) {
-                throw new IllegalArgumentException("tuple() takes 0 or 1 arguments");
-            }
+            requireMaxArgs(args, 1, typeName);
             if (args.length == 0) {
                 return new PyTuple();
             }
@@ -811,6 +799,16 @@ public final class Runtime {
                 }
             }
             return new PyRaise(new PyTypeError(new PyString(s.toString())));
+        }
+    }
+    public static void requireMinArgs(PyObject[] args, int min, String name) {
+        if (args.length < min) {
+            throw new PyRaise(new PyTypeError(new PyString(String.format("%s expected at least %d argument%s, got %d", name, min, (min == 1) ? "" : "s", args.length))));
+        }
+    }
+    public static void requireMaxArgs(PyObject[] args, int max, String name) {
+        if (args.length > max) {
+            throw new PyRaise(new PyTypeError(new PyString(String.format("%s expected at most %d argument%s, got %d", name, max, (max == 1) ? "" : "s", args.length))));
         }
     }
     public static ArrayList<PyObject> addPyObjectToArrayList(ArrayList<PyObject> list, PyObject obj) {
