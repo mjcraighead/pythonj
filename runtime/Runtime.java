@@ -382,6 +382,31 @@ public final class Runtime {
     }
     public static final pyfunc_isinstance pyglobal_isinstance = new pyfunc_isinstance();
 
+    static final class pyfunc_issubclass extends PyBuiltinFunction {
+        pyfunc_issubclass() { super("issubclass"); }
+        private static boolean isSubclassImpl(PyObject obj, PyObject type) {
+            if (type instanceof PyTuple type_tuple) {
+                for (var x: type_tuple.items) {
+                    if (isSubclassImpl(obj, x)) {
+                        return true;
+                    }
+                }
+                return false;
+            } else if (obj instanceof PyBuiltinClass obj_class &&
+                       type instanceof PyBuiltinClass type_class) {
+                return type_class.instanceClass.isAssignableFrom(obj_class.instanceClass);
+            } else {
+                throw new UnsupportedOperationException(String.format("issubclass() is unimplemented for types %s and %s", obj.repr(), type.repr()));
+            }
+        }
+        @Override public PyBool call(PyObject[] args, PyDict kwargs) {
+            requireNoKwArgs(kwargs, funcName);
+            requireExactArgs(args, 2, funcName);
+            return PyBool.create(isSubclassImpl(args[0], args[1]));
+        }
+    }
+    public static final pyfunc_issubclass pyglobal_issubclass = new pyfunc_issubclass();
+
     static final class pyfunc_iter extends PyBuiltinFunction {
         pyfunc_iter() { super("iter"); }
         @Override public PyIter call(PyObject[] args, PyDict kwargs) {
