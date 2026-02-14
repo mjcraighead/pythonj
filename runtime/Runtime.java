@@ -793,6 +793,26 @@ public final class Runtime {
             }
         }
     }
+    public static PyRaise throwUserExactArgs(PyObject[] args, int n, String name, String... argNames) {
+        if (args.length > n) {
+            String s = String.format("%s() takes %d positional argument%s but %d %s given",
+                name, n, (n == 1) ? "" : "s", args.length, (args.length == 1) ? "was" : "were");
+            return new PyRaise(new PyTypeError(new PyString(s)));
+        } else {
+            int missing = n - args.length;
+            StringBuilder s = new StringBuilder(String.format("%s() missing %d required positional argument%s:", name, missing, (missing == 1) ? "" : "s"));
+            for (int i = args.length; i < n; i++) {
+                s.append(" '").append(argNames[i]).append("'");
+                if ((missing >= 3) && (i != n - 1)) {
+                    s.append(",");
+                }
+                if (i == n - 2) {
+                    s.append(" and");
+                }
+            }
+            return new PyRaise(new PyTypeError(new PyString(s.toString())));
+        }
+    }
     public static ArrayList<PyObject> addPyObjectToArrayList(ArrayList<PyObject> list, PyObject obj) {
         list.add(obj);
         return list;

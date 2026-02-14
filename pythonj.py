@@ -837,7 +837,10 @@ class PythonjVisitor(ast.NodeVisitor):
             ),
             JavaIfStatement(
                 JavaBinaryOp('!=', JavaField(JavaIdentifier('args'), 'length'), JavaIntLiteral(n_args, '')),
-                [JavaThrowStatement(JavaCreateObject('IllegalArgumentException', [JavaStrLiteral(f'{node.name}() takes {n_args} arguments')]))],
+                [JavaThrowStatement(JavaMethodCall(JavaIdentifier('Runtime'), 'throwUserExactArgs', [
+                    JavaIdentifier('args'), JavaIntLiteral(n_args, ''), JavaStrLiteral(node.name),
+                    *(JavaStrLiteral(arg.arg) for arg in node.args.args),
+                ]))],
                 [],
             ),
             *(JavaVariableDecl(
