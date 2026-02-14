@@ -40,6 +40,7 @@ public final class PyBool extends PyObject {
     @Override public boolean equals(Object rhs) { return value == ((PyBool)rhs).value; }
     @Override public double floatValue() { return asInt(); }
     @Override public int hashCode() { return value ? 1 : 0; }
+    @Override public boolean hasIndex() { return true; }
     @Override public long indexValue() { return asInt(); }
     @Override public long intValue() { return asInt(); }
     @Override public String repr() { return value ? "True" : "False"; }

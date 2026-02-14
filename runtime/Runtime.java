@@ -138,7 +138,7 @@ public final class Runtime {
                 return new PyByteArray(new byte[0]);
             }
             PyObject arg = args[0];
-            if ((arg instanceof PyInt) || (arg instanceof PyBool)) {
+            if (arg.hasIndex()) {
                 return new PyByteArray(new byte[Math.toIntExact(arg.indexValue())]);
             }
             var b = new ByteArrayOutputStream();
@@ -168,7 +168,7 @@ public final class Runtime {
                 return new PyBytes(new byte[0]);
             }
             PyObject arg = args[0];
-            if ((arg instanceof PyInt) || (arg instanceof PyBool)) {
+            if (arg.hasIndex()) {
                 return new PyBytes(new byte[Math.toIntExact(arg.indexValue())]);
             }
             var b = new ByteArrayOutputStream();
@@ -314,7 +314,7 @@ public final class Runtime {
                 long base = 10;
                 if (args.length > 1) {
                     PyObject arg1 = args[1];
-                    if ((arg1 instanceof PyInt) || (arg1 instanceof PyBool)) {
+                    if (arg1.hasIndex()) {
                         base = arg1.indexValue();
                     } else {
                         throw new IllegalArgumentException("base must be an int");
@@ -738,7 +738,7 @@ public final class Runtime {
             var iter = args[0].iter();
             long sum = 0;
             for (var item = iter.next(); item != null; item = iter.next()) {
-                if ((item instanceof PyInt) || (item instanceof PyBool)) {
+                if (item.hasIndex()) {
                     sum = Math.addExact(sum, item.indexValue());
                 } else {
                     throw new IllegalArgumentException("item must be an int or bool");

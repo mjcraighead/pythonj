@@ -86,6 +86,7 @@ public abstract class PyObject implements Comparable<PyObject> {
     public double floatValue() { throw new UnsupportedOperationException("'floatValue' unimplemented"); }
     public String format(String formatSpec) { throw new UnsupportedOperationException("'format' unimplemented"); }
     @Override public int hashCode() { throw new UnsupportedOperationException("'hashCode' unimplemented"); }
+    public boolean hasIndex() { return false; }
     public long indexValue() { throw new UnsupportedOperationException("'indexValue' unimplemented"); }
     public long intValue() { throw new UnsupportedOperationException("'intValue' unimplemented"); }
     public long len() { throw new UnsupportedOperationException("'len' unimplemented"); }
