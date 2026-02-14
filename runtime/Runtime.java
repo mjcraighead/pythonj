@@ -49,7 +49,15 @@ public final class Runtime {
         private final String funcName;
         protected PyBuiltinFunction(String name) { funcName = name; }
         @Override public final String repr() { return "<built-in function " + funcName + ">"; }
+        protected PyObject exactlyOneArg(PyObject[] args, PyDict kwargs) {
+            requireNoKwArgs(kwargs, funcName);
+            if (args.length != 1) {
+                throw new PyRaise(new PyTypeError(new PyString(String.format("%s() takes exactly one argument (%d given)", funcName, args.length))));
+            }
+            return args[0];
+        }
     }
+
     public static final PyBuiltinClass pytype_builtin_function_or_method = new PyBuiltinClass("builtin_function_or_method");
     public static final PyBuiltinClass pytype_function = new PyBuiltinClass("function");
     public static final PyBuiltinClass pytype_io_TextIOWrapper = new PyBuiltinClass("_io.TextIOWrapper");
@@ -57,13 +65,8 @@ public final class Runtime {
     static final class pyfunc_abs extends PyBuiltinFunction {
         pyfunc_abs() { super("abs"); }
         @Override public PyObject call(PyObject[] args, PyDict kwargs) {
-            if (args.length != 1) {
-                throw new IllegalArgumentException("abs() takes 1 argument");
-            }
-            if ((kwargs != null) && kwargs.boolValue()) {
-                throw new IllegalArgumentException("abs() does not accept kwargs");
-            }
-            return args[0].abs();
+            var arg = exactlyOneArg(args, kwargs);
+            return arg.abs();
         }
     }
     public static final pyfunc_abs pyglobal_abs = new pyfunc_abs();
@@ -71,13 +74,8 @@ public final class Runtime {
     static final class pyfunc_all extends PyBuiltinFunction {
         pyfunc_all() { super("all"); }
         @Override public PyBool call(PyObject[] args, PyDict kwargs) {
-            if (args.length != 1) {
-                throw new IllegalArgumentException("all() takes 1 argument");
-            }
-            if ((kwargs != null) && kwargs.boolValue()) {
-                throw new IllegalArgumentException("all() does not accept kwargs");
-            }
-            var iter = args[0].iter();
+            var arg = exactlyOneArg(args, kwargs);
+            var iter = arg.iter();
             for (var item = iter.next(); item != null; item = iter.next()) {
                 if (!item.boolValue()) {
                     return PyBool.false_singleton;
@@ -91,13 +89,8 @@ public final class Runtime {
     static final class pyfunc_any extends PyBuiltinFunction {
         pyfunc_any() { super("any"); }
         @Override public PyBool call(PyObject[] args, PyDict kwargs) {
-            if (args.length != 1) {
-                throw new IllegalArgumentException("any() takes 1 argument");
-            }
-            if ((kwargs != null) && kwargs.boolValue()) {
-                throw new IllegalArgumentException("any() does not accept kwargs");
-            }
-            var iter = args[0].iter();
+            var arg = exactlyOneArg(args, kwargs);
+            var iter = arg.iter();
             for (var item = iter.next(); item != null; item = iter.next()) {
                 if (item.boolValue()) {
                     return PyBool.true_singleton;
@@ -188,17 +181,12 @@ public final class Runtime {
     static final class pyfunc_chr extends PyBuiltinFunction {
         pyfunc_chr() { super("chr"); }
         @Override public PyString call(PyObject[] args, PyDict kwargs) {
-            if (args.length != 1) {
-                throw new IllegalArgumentException("chr() takes 1 argument");
-            }
-            if ((kwargs != null) && kwargs.boolValue()) {
-                throw new IllegalArgumentException("chr() does not accept kwargs");
-            }
-            long arg = args[0].indexValue();
-            if ((arg < 0) || (arg > 65535)) {
+            var arg = exactlyOneArg(args, kwargs);
+            long index = arg.indexValue();
+            if ((index < 0) || (index > 65535)) {
                 throw new IllegalArgumentException("chr() argument out of range");
             }
-            return new PyString(String.valueOf((char)arg));
+            return new PyString(String.valueOf((char)index));
         }
     }
     public static final pyfunc_chr pyglobal_chr = new pyfunc_chr();
@@ -254,13 +242,8 @@ public final class Runtime {
     static final class pyfunc_hash extends PyBuiltinFunction {
         pyfunc_hash() { super("hash"); }
         @Override public PyInt call(PyObject[] args, PyDict kwargs) {
-            if (args.length != 1) {
-                throw new IllegalArgumentException("hash() takes 1 argument");
-            }
-            if ((kwargs != null) && kwargs.boolValue()) {
-                throw new IllegalArgumentException("hash() does not accept kwargs");
-            }
-            return new PyInt(args[0].hashCode());
+            var arg = exactlyOneArg(args, kwargs);
+            return new PyInt(arg.hashCode());
         }
     }
     public static final pyfunc_hash pyglobal_hash = new pyfunc_hash();
@@ -268,17 +251,12 @@ public final class Runtime {
     static final class pyfunc_hex extends PyBuiltinFunction {
         pyfunc_hex() { super("hex"); }
         @Override public PyString call(PyObject[] args, PyDict kwargs) {
-            if (args.length != 1) {
-                throw new IllegalArgumentException("hex() takes 1 argument");
-            }
-            if ((kwargs != null) && kwargs.boolValue()) {
-                throw new IllegalArgumentException("hex() does not accept kwargs");
-            }
-            long arg = args[0].indexValue();
-            if (arg < 0) {
-                return new PyString(String.format("-0x%x", -arg));
+            var arg = exactlyOneArg(args, kwargs);
+            long index = arg.indexValue();
+            if (index < 0) {
+                return new PyString(String.format("-0x%x", -index));
             } else {
-                return new PyString(String.format("0x%x", arg));
+                return new PyString(String.format("0x%x", index));
             }
         }
     }
@@ -429,13 +407,8 @@ public final class Runtime {
     static final class pyfunc_len extends PyBuiltinFunction {
         pyfunc_len() { super("len"); }
         @Override public PyInt call(PyObject[] args, PyDict kwargs) {
-            if (args.length != 1) {
-                throw new IllegalArgumentException("len() takes 1 argument");
-            }
-            if ((kwargs != null) && kwargs.boolValue()) {
-                throw new IllegalArgumentException("len() does not accept kwargs");
-            }
-            return new PyInt(args[0].len());
+            var arg = exactlyOneArg(args, kwargs);
+            return new PyInt(arg.len());
         }
     }
     public static final pyfunc_len pyglobal_len = new pyfunc_len();
@@ -554,13 +527,7 @@ public final class Runtime {
     static final class pyfunc_ord extends PyBuiltinFunction {
         pyfunc_ord() { super("ord"); }
         @Override public PyInt call(PyObject[] args, PyDict kwargs) {
-            if (args.length != 1) {
-                throw new IllegalArgumentException("ord() takes 1 argument");
-            }
-            if ((kwargs != null) && kwargs.boolValue()) {
-                throw new IllegalArgumentException("ord() does not accept kwargs");
-            }
-            PyString arg = (PyString)args[0];
+            PyString arg = (PyString)exactlyOneArg(args, kwargs);
             if (arg.len() != 1) {
                 throw new IllegalArgumentException("argument to ord() must be string of length 1");
             }
@@ -616,13 +583,8 @@ public final class Runtime {
     static final class pyfunc_repr extends PyBuiltinFunction {
         pyfunc_repr() { super("repr"); }
         @Override public PyString call(PyObject[] args, PyDict kwargs) {
-            if (args.length != 1) {
-                throw new IllegalArgumentException("repr() takes 1 argument");
-            }
-            if ((kwargs != null) && kwargs.boolValue()) {
-                throw new IllegalArgumentException("repr() does not accept kwargs");
-            }
-            return new PyString(args[0].repr());
+            var arg = exactlyOneArg(args, kwargs);
+            return new PyString(arg.repr());
         }
     }
     public static final pyfunc_repr pyglobal_repr = new pyfunc_repr();
