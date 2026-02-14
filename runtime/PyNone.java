@@ -5,9 +5,22 @@
 public final class PyNone extends PyObject {
     public static final PyNone singleton = new PyNone();
 
+    private static final PyBuiltinClass class_singleton = new PyNoneType();
+    private static final class PyNoneType extends PyBuiltinClass {
+        PyNoneType() { super("NoneType", PyNone.class); }
+        @Override public PyNone call(PyObject[] args, PyDict kwargs) {
+            if ((kwargs != null) && kwargs.boolValue()) {
+                throw PyTypeError.raise("NoneType takes no arguments");
+            }
+            if (args.length != 0) {
+                throw PyTypeError.raise("NoneType takes no arguments");
+            }
+            return PyNone.singleton;
+        }
+    }
+
     private PyNone() {}
 
-    private static final PyBuiltinClass class_singleton = new PyBuiltinClass("NoneType", PyNone.class);
     @Override public PyBuiltinClass type() { return class_singleton; }
 
     @Override public boolean boolValue() { return false; }
