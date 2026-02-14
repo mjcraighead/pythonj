@@ -46,7 +46,7 @@ abstract class PyUserFunction extends PyTruthyObject {
 
 public final class Runtime {
     abstract static class PyBuiltinFunction extends PyBuiltinFunctionOrMethod {
-        private final String funcName;
+        protected final String funcName;
         protected PyBuiltinFunction(String name) { funcName = name; }
         @Override public final String repr() { return "<built-in function " + funcName + ">"; }
         protected PyObject exactlyOneArg(PyObject[] args, PyDict kwargs) {
@@ -104,11 +104,9 @@ public final class Runtime {
     static final class pyfunc_bool extends PyBuiltinClass {
         pyfunc_bool() { super("bool"); }
         @Override public PyBool call(PyObject[] args, PyDict kwargs) {
+            requireNoKwArgs(kwargs, typeName);
             if (args.length > 1) {
                 throw new IllegalArgumentException("bool() takes 0 or 1 arguments");
-            }
-            if ((kwargs != null) && kwargs.boolValue()) {
-                throw new IllegalArgumentException("bool() does not accept kwargs");
             }
             if (args.length == 1) {
                 return PyBool.create(args[0].boolValue());
@@ -344,11 +342,9 @@ public final class Runtime {
     static final class pyfunc_isinstance extends PyBuiltinFunction {
         pyfunc_isinstance() { super("isinstance"); }
         @Override public PyBool call(PyObject[] args, PyDict kwargs) {
+            requireNoKwArgs(kwargs, funcName);
             if (args.length != 2) {
                 throw new IllegalArgumentException("isinstance() takes 2 arguments");
-            }
-            if ((kwargs != null) && kwargs.boolValue()) {
-                throw new IllegalArgumentException("isinstance() does not accept kwargs");
             }
             var obj = args[0];
             var type = args[1];
@@ -393,11 +389,9 @@ public final class Runtime {
     static final class pyfunc_iter extends PyBuiltinFunction {
         pyfunc_iter() { super("iter"); }
         @Override public PyIter call(PyObject[] args, PyDict kwargs) {
+            requireNoKwArgs(kwargs, funcName);
             if (args.length != 1) {
                 throw new IllegalArgumentException("iter() takes 1 argument");
-            }
-            if ((kwargs != null) && kwargs.boolValue()) {
-                throw new IllegalArgumentException("iter() does not accept kwargs");
             }
             return args[0].iter();
         }
@@ -416,11 +410,9 @@ public final class Runtime {
     static final class pyfunc_list extends PyBuiltinClass {
         pyfunc_list() { super("list"); }
         @Override public PyList call(PyObject[] args, PyDict kwargs) {
+            requireNoKwArgs(kwargs, typeName);
             if (args.length > 1) {
                 throw new IllegalArgumentException("list() takes 0 or 1 arguments");
-            }
-            if ((kwargs != null) && kwargs.boolValue()) {
-                throw new IllegalArgumentException("list() does not accept kwargs");
             }
             var ret = new PyList();
             if (args.length == 0) {
@@ -559,11 +551,9 @@ public final class Runtime {
     static final class pyfunc_range extends PyBuiltinClass {
         pyfunc_range() { super("range"); }
         @Override public PyRange call(PyObject[] args, PyDict kwargs) {
+            requireNoKwArgs(kwargs, typeName);
             if ((args.length < 1) || (args.length > 3)) {
                 throw new IllegalArgumentException("range() takes 1 to 3 arguments");
-            }
-            if ((kwargs != null) && kwargs.boolValue()) {
-                throw new IllegalArgumentException("range() does not accept kwargs");
             }
             long start = 0, end, step = 1;
             if (args.length == 1) {
@@ -592,11 +582,9 @@ public final class Runtime {
     static final class pyfunc_reversed extends PyBuiltinClass {
         pyfunc_reversed() { super("reversed"); }
         @Override public PyIter call(PyObject[] args, PyDict kwargs) {
+            requireNoKwArgs(kwargs, typeName);
             if (args.length != 1) {
                 throw new IllegalArgumentException("reversed() takes 1 argument");
-            }
-            if ((kwargs != null) && kwargs.boolValue()) {
-                throw new IllegalArgumentException("reversed() does not accept kwargs");
             }
             return args[0].reversed();
         }
@@ -606,11 +594,9 @@ public final class Runtime {
     static final class pyfunc_set extends PyBuiltinClass {
         pyfunc_set() { super("set"); }
         @Override public PySet call(PyObject[] args, PyDict kwargs) {
+            requireNoKwArgs(kwargs, typeName);
             if (args.length > 1) {
                 throw new IllegalArgumentException("set() takes 0 or 1 arguments");
-            }
-            if ((kwargs != null) && kwargs.boolValue()) {
-                throw new IllegalArgumentException("set() does not accept kwargs");
             }
             var ret = new PySet();
             if (args.length == 0) {
@@ -628,11 +614,9 @@ public final class Runtime {
     static final class pyfunc_slice extends PyBuiltinClass {
         pyfunc_slice() { super("slice"); }
         @Override public PySlice call(PyObject[] args, PyDict kwargs) {
+            requireNoKwArgs(kwargs, typeName);
             if ((args.length < 1) || (args.length > 3)) {
                 throw new IllegalArgumentException("slice() takes 1 to 3 arguments");
-            }
-            if ((kwargs != null) && kwargs.boolValue()) {
-                throw new IllegalArgumentException("slice() does not accept kwargs");
             }
             PyObject start = PyNone.singleton;
             PyObject end;
@@ -714,11 +698,9 @@ public final class Runtime {
     static final class pyfunc_tuple extends PyBuiltinClass {
         pyfunc_tuple() { super("tuple"); }
         @Override public PyTuple call(PyObject[] args, PyDict kwargs) {
+            requireNoKwArgs(kwargs, typeName);
             if (args.length > 1) {
                 throw new IllegalArgumentException("tuple() takes 0 or 1 arguments");
-            }
-            if ((kwargs != null) && kwargs.boolValue()) {
-                throw new IllegalArgumentException("tuple() does not accept kwargs");
             }
             if (args.length == 0) {
                 return new PyTuple();
@@ -763,9 +745,7 @@ public final class Runtime {
     static final class pyfunc_AssertionError extends PyBuiltinClass {
         pyfunc_AssertionError() { super("AssertionError"); }
         @Override public PyAssertionError call(PyObject[] args, PyDict kwargs) {
-            if ((kwargs != null) && kwargs.boolValue()) {
-                throw new IllegalArgumentException("AssertionError() does not accept kwargs");
-            }
+            requireNoKwArgs(kwargs, typeName);
             return new PyAssertionError(args);
         }
     }
@@ -774,9 +754,7 @@ public final class Runtime {
     static final class pyfunc_StopIteration extends PyBuiltinClass {
         pyfunc_StopIteration() { super("StopIteration"); }
         @Override public PyStopIteration call(PyObject[] args, PyDict kwargs) {
-            if ((kwargs != null) && kwargs.boolValue()) {
-                throw new IllegalArgumentException("StopIteration() does not accept kwargs");
-            }
+            requireNoKwArgs(kwargs, typeName);
             return new PyStopIteration(args);
         }
     }
@@ -785,9 +763,7 @@ public final class Runtime {
     static final class pyfunc_TypeError extends PyBuiltinClass {
         pyfunc_TypeError() { super("TypeError"); }
         @Override public PyTypeError call(PyObject[] args, PyDict kwargs) {
-            if ((kwargs != null) && kwargs.boolValue()) {
-                throw new IllegalArgumentException("TypeError() does not accept kwargs");
-            }
+            requireNoKwArgs(kwargs, typeName);
             return new PyTypeError(args);
         }
     }
