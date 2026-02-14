@@ -559,7 +559,7 @@ class PythonjVisitor(ast.NodeVisitor):
                     assert isinstance(kwarg.arg, str), kwarg.arg
                     kv_list.append(self.emit_constant(kwarg.arg))
                     kv_list.append(self.visit(kwarg.value))
-            kwargs = JavaCreateObject('PyDict', kv_list)
+            kwargs = JavaMethodCall(JavaIdentifier('Runtime'), 'requireKwStrings', [JavaCreateObject('PyDict', kv_list)])
         else:
             kwargs = JavaIdentifier('null')
         return JavaMethodCall(func, 'call', [args, kwargs])

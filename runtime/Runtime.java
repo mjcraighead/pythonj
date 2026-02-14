@@ -811,6 +811,14 @@ public final class Runtime {
             throw new PyRaise(new PyTypeError(new PyString(String.format("%s expected at most %d argument%s, got %d", name, max, (max == 1) ? "" : "s", args.length))));
         }
     }
+    public static PyDict requireKwStrings(PyDict dict) {
+        for (var x: dict.items.keySet()) {
+            if (!(x instanceof PyString)) {
+                throw new PyRaise(new PyTypeError(new PyString("keywords must be strings")));
+            }
+        }
+        return dict;
+    }
     public static ArrayList<PyObject> addPyObjectToArrayList(ArrayList<PyObject> list, PyObject obj) {
         list.add(obj);
         return list;
