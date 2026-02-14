@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 
 public final class PyTuple extends PyObject {
-    private static final PyBuiltinClass iter_class_singleton = new PyBuiltinClass("tuple_iterator");
+    private static final PyBuiltinClass iter_class_singleton = new PyBuiltinClass("tuple_iterator", PyTupleIter.class);
     static final class PyTupleIter extends PyIter {
         private final PyObject[] items;
         private int index = 0;

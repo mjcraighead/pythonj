@@ -7,7 +7,7 @@ import java.util.Locale;
 public final class PyString extends PyObject {
     public static final PyString empty_singleton = new PyString("");
 
-    private static final PyBuiltinClass iter_class_singleton = new PyBuiltinClass("str_iterator");
+    private static final PyBuiltinClass iter_class_singleton = new PyBuiltinClass("str_iterator", PyStringIter.class);
     static final class PyStringIter extends PyIter {
         private final String s;
         private int index = 0;

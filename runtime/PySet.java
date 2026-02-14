@@ -7,7 +7,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 
 public final class PySet extends PyObject {
-    private static final PyBuiltinClass iter_class_singleton = new PyBuiltinClass("set_iterator");
+    private static final PyBuiltinClass iter_class_singleton = new PyBuiltinClass("set_iterator", PySetIter.class);
     static final class PySetIter extends PyIter {
         private final Iterator<PyObject> it;
 

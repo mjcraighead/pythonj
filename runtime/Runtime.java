@@ -21,7 +21,12 @@ abstract class PyType extends PyTruthyObject {
 
 class PyBuiltinClass extends PyType {
     protected final String typeName;
-    protected PyBuiltinClass(String name) { typeName = name; }
+    protected final Class<? extends PyObject> instanceClass;
+
+    protected PyBuiltinClass(String name, Class<? extends PyObject> _instanceClass) {
+        typeName = name;
+        instanceClass = _instanceClass;
+    }
     @Override public final PyObject getAttr(String key) {
         switch (key) {
             case "__name__": return new PyString(typeName);
@@ -58,9 +63,9 @@ public final class Runtime {
         }
     }
 
-    public static final PyBuiltinClass pytype_builtin_function_or_method = new PyBuiltinClass("builtin_function_or_method");
-    public static final PyBuiltinClass pytype_function = new PyBuiltinClass("function");
-    public static final PyBuiltinClass pytype_io_TextIOWrapper = new PyBuiltinClass("_io.TextIOWrapper");
+    public static final PyBuiltinClass pytype_builtin_function_or_method = new PyBuiltinClass("builtin_function_or_method", PyBuiltinFunctionOrMethod.class);
+    public static final PyBuiltinClass pytype_function = new PyBuiltinClass("function", PyUserFunction.class);
+    public static final PyBuiltinClass pytype_io_TextIOWrapper = new PyBuiltinClass("_io.TextIOWrapper", PyFile.class);
 
     static final class pyfunc_abs extends PyBuiltinFunction {
         pyfunc_abs() { super("abs"); }
@@ -102,7 +107,7 @@ public final class Runtime {
     public static final pyfunc_any pyglobal_any = new pyfunc_any();
 
     static final class pyfunc_bool extends PyBuiltinClass {
-        pyfunc_bool() { super("bool"); }
+        pyfunc_bool() { super("bool", PyBool.class); }
         @Override public PyBool call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, typeName);
             requireMaxArgs(args, 1, typeName);
@@ -115,7 +120,7 @@ public final class Runtime {
     public static final pyfunc_bool pyglobal_bool = new pyfunc_bool();
 
     static final class pyfunc_bytearray extends PyBuiltinClass {
-        pyfunc_bytearray() { super("bytearray"); }
+        pyfunc_bytearray() { super("bytearray", PyByteArray.class); }
         @Override public PyByteArray call(PyObject[] args, PyDict kwargs) {
             if (args.length > 1) {
                 throw new IllegalArgumentException("bytearray() takes 0 or 1 arguments");
@@ -145,7 +150,7 @@ public final class Runtime {
     public static final pyfunc_bytearray pyglobal_bytearray = new pyfunc_bytearray();
 
     static final class pyfunc_bytes extends PyBuiltinClass {
-        pyfunc_bytes() { super("bytes"); }
+        pyfunc_bytes() { super("bytes", PyBytes.class); }
         @Override public PyBytes call(PyObject[] args, PyDict kwargs) {
             if (args.length > 1) {
                 throw new IllegalArgumentException("bytes() takes 0 or 1 arguments");
@@ -188,7 +193,7 @@ public final class Runtime {
     public static final pyfunc_chr pyglobal_chr = new pyfunc_chr();
 
     static final class pyfunc_dict extends PyBuiltinClass {
-        pyfunc_dict() { super("dict"); }
+        pyfunc_dict() { super("dict", PyDict.class); }
         @Override public PyDict call(PyObject[] args, PyDict kwargs) {
             if (args.length > 1) {
                 throw new IllegalArgumentException("dict() takes 0 or 1 arguments");
@@ -222,7 +227,7 @@ public final class Runtime {
     public static final pyfunc_dict pyglobal_dict = new pyfunc_dict();
 
     static final class pyfunc_enumerate extends PyBuiltinClass {
-        pyfunc_enumerate() { super("enumerate"); }
+        pyfunc_enumerate() { super("enumerate", PyEnumerate.class); }
         @Override public PyEnumerate call(PyObject[] args, PyDict kwargs) {
             if (args.length != 1) {
                 throw new IllegalArgumentException("enumerate() takes 1 argument");
@@ -275,7 +280,7 @@ public final class Runtime {
     public static final pyfunc_hex pyglobal_hex = new pyfunc_hex();
 
     static final class pyfunc_int extends PyBuiltinClass {
-        pyfunc_int() { super("int"); }
+        pyfunc_int() { super("int", PyInt.class); }
         @Override public PyInt call(PyObject[] args, PyDict kwargs) {
             requireMaxArgs(args, 2, typeName);
             if ((kwargs != null) && kwargs.boolValue()) {
@@ -353,51 +358,26 @@ public final class Runtime {
 
     static final class pyfunc_isinstance extends PyBuiltinFunction {
         pyfunc_isinstance() { super("isinstance"); }
+        private static boolean isInstanceImpl(PyObject obj, PyObject type) {
+            if (type instanceof PyTuple type_tuple) {
+                for (var x: type_tuple.items) {
+                    if (isInstanceImpl(obj, x)) {
+                        return true;
+                    }
+                }
+                return false;
+            } else if (type instanceof PyBuiltinClass type_class) {
+                return type_class.instanceClass.isInstance(obj);
+            } else if (type instanceof PyType) {
+                throw new UnsupportedOperationException(String.format("isinstance() is unimplemented for type %s", type.repr()));
+            } else {
+                throw new PyRaise(new PyTypeError(new PyString(String.format("isinstance() arg 2 must be a type, a tuple of types, or a union"))));
+            }
+        }
         @Override public PyBool call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, funcName);
             requireExactArgs(args, 2, funcName);
-            var obj = args[0];
-            var type = args[1];
-            if (type == pyglobal_bool) {
-                return PyBool.create(obj instanceof PyBool);
-            } else if (type == pyglobal_bytearray) {
-                return PyBool.create(obj instanceof PyByteArray);
-            } else if (type == pyglobal_bytes) {
-                return PyBool.create(obj instanceof PyBytes);
-            } else if (type == pyglobal_dict) {
-                return PyBool.create(obj instanceof PyDict);
-            } else if (type == pyglobal_enumerate) {
-                return PyBool.create(obj instanceof PyEnumerate);
-            } else if (type == pyglobal_int) {
-                return PyBool.create(obj instanceof PyInt); // Note intentional compatibility break for "bool"
-            } else if (type == pyglobal_list) {
-                return PyBool.create(obj instanceof PyList);
-            } else if (type == pyglobal_object) {
-                return PyBool.true_singleton;
-            } else if (type == pyglobal_range) {
-                return PyBool.create(obj instanceof PyRange);
-            } else if (type == pyglobal_reversed) {
-                return PyBool.create(obj instanceof PyReversed);
-            } else if (type == pyglobal_set) {
-                return PyBool.create(obj instanceof PySet);
-            } else if (type == pyglobal_slice) {
-                return PyBool.create(obj instanceof PySlice);
-            } else if (type == pyglobal_str) {
-                return PyBool.create(obj instanceof PyString);
-            } else if (type == pyglobal_tuple) {
-                return PyBool.create(obj instanceof PyTuple);
-            } else if (type == pyglobal_type) {
-                return PyBool.create(obj instanceof PyType);
-            } else if (type == pyglobal_zip) {
-                return PyBool.create(obj instanceof PyZip);
-            } else if (type == pyglobal_AssertionError) {
-                return PyBool.create(obj instanceof PyAssertionError);
-            } else if (type == pyglobal_StopIteration) {
-                return PyBool.create(obj instanceof PyStopIteration);
-            } else if (type == pyglobal_TypeError) {
-                return PyBool.create(obj instanceof PyTypeError);
-            }
-            throw new UnsupportedOperationException(String.format("isinstance() is unimplemented for type %s", type.repr()));
+            return PyBool.create(isInstanceImpl(args[0], args[1]));
         }
     }
     public static final pyfunc_isinstance pyglobal_isinstance = new pyfunc_isinstance();
@@ -424,7 +404,7 @@ public final class Runtime {
     public static final pyfunc_len pyglobal_len = new pyfunc_len();
 
     static final class pyfunc_list extends PyBuiltinClass {
-        pyfunc_list() { super("list"); }
+        pyfunc_list() { super("list", PyList.class); }
         @Override public PyList call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, typeName);
             requireMaxArgs(args, 1, typeName);
@@ -530,7 +510,7 @@ public final class Runtime {
     public static final pyfunc_next pyglobal_next = new pyfunc_next();
 
     static final class pyfunc_object extends PyBuiltinClass {
-        pyfunc_object() { super("object"); }
+        pyfunc_object() { super("object", PyObject.class); }
     }
     public static final pyfunc_object pyglobal_object = new pyfunc_object();
 
@@ -581,7 +561,7 @@ public final class Runtime {
     public static final pyfunc_print pyglobal_print = new pyfunc_print();
 
     static final class pyfunc_range extends PyBuiltinClass {
-        pyfunc_range() { super("range"); }
+        pyfunc_range() { super("range", PyRange.class); }
         @Override public PyRange call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, typeName);
             requireMinArgs(args, 1, typeName);
@@ -611,7 +591,7 @@ public final class Runtime {
     public static final pyfunc_repr pyglobal_repr = new pyfunc_repr();
 
     static final class pyfunc_reversed extends PyBuiltinClass {
-        pyfunc_reversed() { super("reversed"); }
+        pyfunc_reversed() { super("reversed", PyReversed.class); }
         @Override public PyIter call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, typeName);
             requireExactArgs(args, 1, typeName);
@@ -621,7 +601,7 @@ public final class Runtime {
     public static final pyfunc_reversed pyglobal_reversed = new pyfunc_reversed();
 
     static final class pyfunc_set extends PyBuiltinClass {
-        pyfunc_set() { super("set"); }
+        pyfunc_set() { super("set", PySet.class); }
         @Override public PySet call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, typeName);
             requireMaxArgs(args, 1, typeName);
@@ -639,7 +619,7 @@ public final class Runtime {
     public static final pyfunc_set pyglobal_set = new pyfunc_set();
 
     static final class pyfunc_slice extends PyBuiltinClass {
-        pyfunc_slice() { super("slice"); }
+        pyfunc_slice() { super("slice", PySlice.class); }
         @Override public PySlice call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, typeName);
             requireMinArgs(args, 1, typeName);
@@ -682,7 +662,7 @@ public final class Runtime {
     public static final pyfunc_sorted pyglobal_sorted = new pyfunc_sorted();
 
     static final class pyfunc_str extends PyBuiltinClass {
-        pyfunc_str() { super("str"); }
+        pyfunc_str() { super("str", PyString.class); }
         @Override public PyString call(PyObject[] args, PyDict kwargs) {
             if (args.length > 1) {
                 throw new IllegalArgumentException("str() takes 0 or 1 arguments");
@@ -722,7 +702,7 @@ public final class Runtime {
     public static final pyfunc_sum pyglobal_sum = new pyfunc_sum();
 
     static final class pyfunc_tuple extends PyBuiltinClass {
-        pyfunc_tuple() { super("tuple"); }
+        pyfunc_tuple() { super("tuple", PyTuple.class); }
         @Override public PyTuple call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, typeName);
             requireMaxArgs(args, 1, typeName);
@@ -738,7 +718,7 @@ public final class Runtime {
     public static final pyfunc_tuple pyglobal_tuple = new pyfunc_tuple();
 
     static final class pyfunc_type extends PyBuiltinClass {
-        pyfunc_type() { super("type"); }
+        pyfunc_type() { super("type", PyType.class); }
         @Override public PyType call(PyObject[] args, PyDict kwargs) {
             if (args.length != 1) {
                 throw new IllegalArgumentException("type() takes 1 argument");
@@ -752,7 +732,7 @@ public final class Runtime {
     public static final pyfunc_type pyglobal_type = new pyfunc_type();
 
     static final class pyfunc_zip extends PyBuiltinClass {
-        pyfunc_zip() { super("zip"); }
+        pyfunc_zip() { super("zip", PyZip.class); }
         @Override public PyZip call(PyObject[] args, PyDict kwargs) {
             if ((kwargs != null) && kwargs.boolValue()) {
                 throw new IllegalArgumentException("zip() does not accept kwargs");
@@ -767,7 +747,7 @@ public final class Runtime {
     public static final pyfunc_zip pyglobal_zip = new pyfunc_zip();
 
     static final class pyfunc_AssertionError extends PyBuiltinClass {
-        pyfunc_AssertionError() { super("AssertionError"); }
+        pyfunc_AssertionError() { super("AssertionError", PyAssertionError.class); }
         @Override public PyAssertionError call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, typeName);
             return new PyAssertionError(args);
@@ -776,7 +756,7 @@ public final class Runtime {
     public static final pyfunc_AssertionError pyglobal_AssertionError = new pyfunc_AssertionError();
 
     static final class pyfunc_StopIteration extends PyBuiltinClass {
-        pyfunc_StopIteration() { super("StopIteration"); }
+        pyfunc_StopIteration() { super("StopIteration", PyStopIteration.class); }
         @Override public PyStopIteration call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, typeName);
             return new PyStopIteration(args);
@@ -785,7 +765,7 @@ public final class Runtime {
     public static final pyfunc_StopIteration pyglobal_StopIteration = new pyfunc_StopIteration();
 
     static final class pyfunc_TypeError extends PyBuiltinClass {
-        pyfunc_TypeError() { super("TypeError"); }
+        pyfunc_TypeError() { super("TypeError", PyTypeError.class); }
         @Override public PyTypeError call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, typeName);
             return new PyTypeError(args);

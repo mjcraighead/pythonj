@@ -5,7 +5,7 @@
 import java.util.Arrays;
 
 public final class PyByteArray extends PyObject {
-    private static final PyBuiltinClass iter_class_singleton = new PyBuiltinClass("bytearray_iterator");
+    private static final PyBuiltinClass iter_class_singleton = new PyBuiltinClass("bytearray_iterator", PyByteArrayIter.class);
     static final class PyByteArrayIter extends PyIter {
         private byte[] b;
         private int index = 0;

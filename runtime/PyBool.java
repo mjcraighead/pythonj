@@ -2,6 +2,9 @@
 // Copyright (c) 2012-2026 Matt Craighead
 // SPDX-License-Identifier: MIT
 
+// Note intentional compatibility break: this is not a subclass of PyInt, so:
+// isinstance(False, int) -> False
+// issubclass(bool, int) -> False
 public final class PyBool extends PyObject {
     public static final PyBool false_singleton = new PyBool(false);
     public static final PyBool true_singleton = new PyBool(true);

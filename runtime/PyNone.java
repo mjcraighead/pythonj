@@ -7,7 +7,7 @@ public final class PyNone extends PyObject {
 
     private PyNone() {}
 
-    private static final PyBuiltinClass class_singleton = new PyBuiltinClass("NoneType");
+    private static final PyBuiltinClass class_singleton = new PyBuiltinClass("NoneType", PyNone.class);
     @Override public PyBuiltinClass type() { return class_singleton; }
 
     @Override public boolean boolValue() { return false; }

@@ -8,7 +8,7 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 public final class PyDict extends PyObject {
-    private static final PyBuiltinClass iter_class_singleton = new PyBuiltinClass("dict_keyiterator");
+    private static final PyBuiltinClass iter_class_singleton = new PyBuiltinClass("dict_keyiterator", PyDictIter.class);
     static final class PyDictIter extends PyIter {
         private final Iterator<PyObject> it;
 
@@ -18,7 +18,7 @@ public final class PyDict extends PyObject {
         @Override public PyBuiltinClass type() { return iter_class_singleton; }
     };
 
-    private static final PyBuiltinClass itemiter_class_singleton = new PyBuiltinClass("dict_itemiterator");
+    private static final PyBuiltinClass itemiter_class_singleton = new PyBuiltinClass("dict_itemiterator", PyDictItemIter.class);
     static final class PyDictItemIter extends PyIter {
         private final Iterator<Map.Entry<PyObject, PyObject>> it;
 
@@ -34,7 +34,7 @@ public final class PyDict extends PyObject {
         @Override public PyBuiltinClass type() { return itemiter_class_singleton; }
     };
 
-    private static final PyBuiltinClass valueiter_class_singleton = new PyBuiltinClass("dict_valueiterator");
+    private static final PyBuiltinClass valueiter_class_singleton = new PyBuiltinClass("dict_valueiterator", PyDictValueIter.class);
     static final class PyDictValueIter extends PyIter {
         private final Iterator<Map.Entry<PyObject, PyObject>> it;
 
@@ -44,7 +44,7 @@ public final class PyDict extends PyObject {
         @Override public PyBuiltinClass type() { return valueiter_class_singleton; }
     };
 
-    private static final PyBuiltinClass items_class_singleton = new PyBuiltinClass("dict_items");
+    private static final PyBuiltinClass items_class_singleton = new PyBuiltinClass("dict_items", PyDictItems.class);
     private static final class PyDictItems extends PyObject {
         private final LinkedHashMap<PyObject, PyObject> items;
 
@@ -72,7 +72,7 @@ public final class PyDict extends PyObject {
         @Override public PyBuiltinClass type() { return items_class_singleton; }
     };
 
-    private static final PyBuiltinClass keys_class_singleton = new PyBuiltinClass("dict_keys");
+    private static final PyBuiltinClass keys_class_singleton = new PyBuiltinClass("dict_keys", PyDictKeys.class);
     private static final class PyDictKeys extends PyObject {
         private final LinkedHashMap<PyObject, PyObject> items;
 
@@ -96,7 +96,7 @@ public final class PyDict extends PyObject {
         @Override public PyBuiltinClass type() { return keys_class_singleton; }
     };
 
-    private static final PyBuiltinClass values_class_singleton = new PyBuiltinClass("dict_values");
+    private static final PyBuiltinClass values_class_singleton = new PyBuiltinClass("dict_values", PyDictValues.class);
     private static final class PyDictValues extends PyObject {
         private final LinkedHashMap<PyObject, PyObject> items;
 

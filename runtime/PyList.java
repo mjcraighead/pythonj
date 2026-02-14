@@ -8,7 +8,7 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 public final class PyList extends PyObject {
-    private static final PyBuiltinClass iter_class_singleton = new PyBuiltinClass("list_iterator");
+    private static final PyBuiltinClass iter_class_singleton = new PyBuiltinClass("list_iterator", PyListIter.class);
     static final class PyListIter extends PyIter {
         private final Iterator<PyObject> it;
 
