@@ -314,7 +314,8 @@ class IndentedWriter:
 # XXX "invokedynamic" might help us a lot, but there is no way to access it from Java source
 class PythonjVisitor(ast.NodeVisitor):
     __slots__ = ('path', 'n_errors', 'n_temps', 'global_names', 'global_code', 'names', 'code',
-                 'all_ints', 'all_strings', 'all_bytes', 'in_function', 'has_returns', 'functions')
+                 'all_ints', 'all_strings', 'all_bytes', 'in_function', 'has_returns', 'functions',
+                 'allow_intrinsics')
     path: str
     n_errors: int
     n_temps: int
@@ -330,6 +331,7 @@ class PythonjVisitor(ast.NodeVisitor):
     used_expr_discard: bool
     break_name: Optional[str]
     functions: dict[str, list[str]]
+    allow_intrinsics: bool # enables special internal-only codegen features for builtins
 
     def __init__(self, path: str):
         self.path = path
@@ -347,6 +349,7 @@ class PythonjVisitor(ast.NodeVisitor):
         self.used_expr_discard = False
         self.break_name = None
         self.functions = {}
+        self.allow_intrinsics = False
 
     # Note: if n_errors > 0, the generated Java code is not expected to be valid or executable.
     def error(self, lineno: Optional[int], msg: str) -> None:
@@ -363,7 +366,9 @@ class PythonjVisitor(ast.NodeVisitor):
         return temp_name
 
     def ident_expr(self, name: str) -> JavaExpr:
-        if name in BUILTINS:
+        if self.allow_intrinsics and name == '__pythonj_null__':
+            return JavaIdentifier('null')
+        elif name in BUILTINS:
             return JavaField(JavaIdentifier('Runtime'), f'pyglobal_{name}')
         elif self.in_function and name not in self.global_names:
             return JavaIdentifier(f'pylocal_{name}')
@@ -547,6 +552,11 @@ class PythonjVisitor(ast.NodeVisitor):
         return JavaCreateObject('PyDict', [JavaIdentifier('null') if x is None else self.visit(x) for x in kv_iter])
 
     def visit_Call(self, node) -> JavaExpr:
+        if self.allow_intrinsics and isinstance(node.func, ast.Name):
+            if node.func.id == '__pythonj_next__':
+                assert len(node.args) == 1 and not node.keywords, node.args
+                return JavaMethodCall(self.visit(node.args[0]), 'next', [])
+
         func = self.visit(node.func)
         args = self.emit_star_expanded(node.args)
         if node.keywords:
