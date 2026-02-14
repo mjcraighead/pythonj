@@ -30,8 +30,9 @@ final class PyAssertionError extends PyException {
     @Override public PyBuiltinClass type() { return Runtime.pyglobal_AssertionError; }
 }
 
-abstract class PyLookupError extends PyException {
-    PyLookupError(PyObject[] _args) { super(_args); }
+class PyLookupError extends PyException {
+    PyLookupError(PyObject... _args) { super(_args); }
+    @Override public PyBuiltinClass type() { return Runtime.pyglobal_LookupError; }
 }
 final class PyIndexError extends PyLookupError {
     PyIndexError(PyObject... _args) { super(_args); }

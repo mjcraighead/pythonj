@@ -798,6 +798,15 @@ public final class Runtime {
     }
     public static final pyfunc_KeyError pyglobal_KeyError = new pyfunc_KeyError();
 
+    static final class pyfunc_LookupError extends PyBuiltinClass {
+        pyfunc_LookupError() { super("LookupError", PyLookupError.class); }
+        @Override public PyLookupError call(PyObject[] args, PyDict kwargs) {
+            requireNoKwArgs(kwargs, typeName);
+            return new PyLookupError(args);
+        }
+    }
+    public static final pyfunc_LookupError pyglobal_LookupError = new pyfunc_LookupError();
+
     static final class pyfunc_StopIteration extends PyBuiltinClass {
         pyfunc_StopIteration() { super("StopIteration", PyStopIteration.class); }
         @Override public PyStopIteration call(PyObject[] args, PyDict kwargs) {
