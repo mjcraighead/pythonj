@@ -259,16 +259,27 @@ class JavaForStatement(JavaStatement):
         yield '}'
 
 @dataclass(slots=True)
-class JavaTryFinallyStatement(JavaStatement):
+class JavaTryStatement(JavaStatement):
     try_body: list[JavaStatement]
+    exc_type: Optional[str]
+    exc_name: Optional[str]
+    catch_body: list[JavaStatement]
     finally_body: list[JavaStatement]
     def emit_java(self) -> Iterator[str]:
         yield 'try {'
         for s in self.try_body:
             yield from s.emit_java()
-        yield '} finally {'
-        for s in self.finally_body:
-            yield from s.emit_java()
+        if self.exc_type is not None:
+            yield f'}} catch ({self.exc_type} {self.exc_name}) {{'
+            for s in self.catch_body:
+                yield from s.emit_java()
+        else: # if no exception type, should not have an exception name or catch block either
+            assert self.exc_name is None, self.exc_name
+            assert not self.catch_body, self.catch_body
+        if self.finally_body:
+            yield '} finally {'
+            for s in self.finally_body:
+                yield from s.emit_java()
         yield '}'
 
 @dataclass(slots=True)
@@ -770,7 +781,7 @@ class PythonjVisitor(ast.NodeVisitor):
             for statement in node.body:
                 self.visit(statement)
 
-        self.code.append(JavaTryFinallyStatement(body, [
+        self.code.append(JavaTryStatement(body, None, None, [], [
             JavaExprStatement(JavaMethodCall(JavaIdentifier(temp_name), 'exit', [])),
         ]))
 
