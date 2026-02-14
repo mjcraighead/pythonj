@@ -16,6 +16,7 @@ abstract class PyIter extends PyTruthyObject {
 }
 
 abstract class PyType extends PyTruthyObject {
+    public abstract String name();
 }
 
 class PyBuiltinClass extends PyType {
@@ -29,6 +30,7 @@ class PyBuiltinClass extends PyType {
     }
     @Override public final String repr() { return "<class '" + typeName + "'>"; }
     @Override public final Runtime.pyfunc_type type() { return Runtime.pyglobal_type; }
+    @Override public String name() { return typeName; }
 }
 
 abstract class PyBuiltinFunctionOrMethod extends PyTruthyObject {

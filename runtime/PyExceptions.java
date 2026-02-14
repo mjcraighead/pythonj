@@ -5,6 +5,20 @@
 abstract class PyBaseException extends PyTruthyObject {
     protected final PyObject[] args;
     PyBaseException(PyObject[] _args) { args = _args; }
+
+    @Override public String repr() {
+        String typeName = type().name();
+        StringBuilder s = new StringBuilder();
+        s.append(typeName).append("(");
+        for (int i = 0; i < args.length; i++) {
+            if (i != 0) {
+                s.append(", ");
+            }
+            s.append(args[i].repr());
+        }
+        s.append(")");
+        return s.toString();
+    }
 }
 
 abstract class PyException extends PyBaseException {
