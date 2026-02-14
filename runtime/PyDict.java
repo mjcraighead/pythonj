@@ -5,7 +5,6 @@
 import java.util.Map;
 import java.util.LinkedHashMap;
 import java.util.Iterator;
-import java.util.NoSuchElementException;
 
 public final class PyDict extends PyObject {
     private static final PyBuiltinClass iter_class_singleton = new PyBuiltinClass("dict_keyiterator", PyDictIter.class);
@@ -226,7 +225,7 @@ public final class PyDict extends PyObject {
     @Override public PyObject getItem(PyObject key) {
         PyObject value = items.get(key);
         if (value == null) {
-            throw new NoSuchElementException("cannot find key in dict");
+            throw new PyRaise(new PyKeyError(key));
         }
         return value;
     }
@@ -234,7 +233,7 @@ public final class PyDict extends PyObject {
     @Override public void delItem(PyObject key) {
         PyObject value = items.remove(key);
         if (value == null) {
-            throw new NoSuchElementException("cannot find key in dict");
+            throw new PyRaise(new PyKeyError(key));
         }
     }
 

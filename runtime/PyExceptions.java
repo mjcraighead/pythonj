@@ -30,6 +30,18 @@ final class PyAssertionError extends PyException {
     @Override public PyBuiltinClass type() { return Runtime.pyglobal_AssertionError; }
 }
 
+abstract class PyLookupError extends PyException {
+    PyLookupError(PyObject[] _args) { super(_args); }
+}
+final class PyIndexError extends PyLookupError {
+    PyIndexError(PyObject... _args) { super(_args); }
+    @Override public PyBuiltinClass type() { return Runtime.pyglobal_IndexError; }
+}
+final class PyKeyError extends PyLookupError {
+    PyKeyError(PyObject... _args) { super(_args); }
+    @Override public PyBuiltinClass type() { return Runtime.pyglobal_KeyError; }
+}
+
 final class PyStopIteration extends PyException {
     PyStopIteration(PyObject... _args) { super(_args); }
     @Override public PyBuiltinClass type() { return Runtime.pyglobal_StopIteration; }
@@ -45,6 +57,11 @@ final class PyTypeError extends PyException {
     static PyRaise raiseFormat(String fmt, Object... args) {
         return new PyRaise(new PyTypeError(new PyString(String.format(fmt, args))));
     }
+}
+
+final class PyValueError extends PyException {
+    PyValueError(PyObject... _args) { super(_args); }
+    @Override public PyBuiltinClass type() { return Runtime.pyglobal_ValueError; }
 }
 
 final class PyRaise extends RuntimeException {

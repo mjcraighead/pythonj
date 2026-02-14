@@ -780,6 +780,24 @@ public final class Runtime {
     }
     public static final pyfunc_AssertionError pyglobal_AssertionError = new pyfunc_AssertionError();
 
+    static final class pyfunc_IndexError extends PyBuiltinClass {
+        pyfunc_IndexError() { super("IndexError", PyIndexError.class); }
+        @Override public PyIndexError call(PyObject[] args, PyDict kwargs) {
+            requireNoKwArgs(kwargs, typeName);
+            return new PyIndexError(args);
+        }
+    }
+    public static final pyfunc_IndexError pyglobal_IndexError = new pyfunc_IndexError();
+
+    static final class pyfunc_KeyError extends PyBuiltinClass {
+        pyfunc_KeyError() { super("KeyError", PyKeyError.class); }
+        @Override public PyKeyError call(PyObject[] args, PyDict kwargs) {
+            requireNoKwArgs(kwargs, typeName);
+            return new PyKeyError(args);
+        }
+    }
+    public static final pyfunc_KeyError pyglobal_KeyError = new pyfunc_KeyError();
+
     static final class pyfunc_StopIteration extends PyBuiltinClass {
         pyfunc_StopIteration() { super("StopIteration", PyStopIteration.class); }
         @Override public PyStopIteration call(PyObject[] args, PyDict kwargs) {
@@ -797,6 +815,15 @@ public final class Runtime {
         }
     }
     public static final pyfunc_TypeError pyglobal_TypeError = new pyfunc_TypeError();
+
+    static final class pyfunc_ValueError extends PyBuiltinClass {
+        pyfunc_ValueError() { super("ValueError", PyValueError.class); }
+        @Override public PyValueError call(PyObject[] args, PyDict kwargs) {
+            requireNoKwArgs(kwargs, typeName);
+            return new PyValueError(args);
+        }
+    }
+    public static final pyfunc_ValueError pyglobal_ValueError = new pyfunc_ValueError();
 
     // Helper functions used by the builtins and code generator
     public static void requireNoKwArgs(PyDict kwargs, String name) {

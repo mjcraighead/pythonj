@@ -5,7 +5,6 @@
 import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.NoSuchElementException;
 
 public final class PyList extends PyObject {
     private static final PyBuiltinClass iter_class_singleton = new PyBuiltinClass("list_iterator", PyListIter.class);
@@ -131,14 +130,22 @@ public final class PyList extends PyObject {
         if (index < 0) {
             index += items.size();
         }
-        return items.get(index);
+        try {
+            return items.get(index);
+        } catch (IndexOutOfBoundsException e) {
+            throw new PyRaise(new PyIndexError(new PyString("list index out of range")));
+        }
     }
     @Override public void setItem(PyObject key, PyObject value) {
         int index = Math.toIntExact(key.indexValue());
         if (index < 0) {
             index += items.size();
         }
-        items.set(index, value);
+        try {
+            items.set(index, value);
+        } catch (IndexOutOfBoundsException e) {
+            throw new PyRaise(new PyIndexError(new PyString("list assignment index out of range")));
+        }
     }
 
     // NOTE: CPython returns a specialized list_reverseiterator.
@@ -206,7 +213,7 @@ public final class PyList extends PyObject {
     public PyInt pymethod_index(PyObject arg) {
         int index = items.indexOf(arg);
         if (index == -1) {
-            throw new NoSuchElementException("cannot find item in list");
+            throw new PyRaise(new PyValueError(new PyString("list.index(x): x not in list")));
         }
         return new PyInt(index);
     }
