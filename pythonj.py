@@ -882,7 +882,7 @@ class PythonjVisitor(ast.NodeVisitor):
             ),
             JavaIfStatement(
                 JavaBinaryOp('!=', JavaField(JavaIdentifier('args'), 'length'), JavaIntLiteral(n_args, '')),
-                [JavaThrowStatement(JavaMethodCall(JavaIdentifier('Runtime'), 'throwUserExactArgs', [
+                [JavaThrowStatement(JavaMethodCall(JavaIdentifier('Runtime'), 'raiseUserExactArgs', [
                     JavaIdentifier('args'), JavaIntLiteral(n_args, ''), JavaStrLiteral(node.name),
                     *(JavaStrLiteral(arg.arg) for arg in node.args.args),
                 ]))],

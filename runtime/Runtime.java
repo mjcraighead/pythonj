@@ -820,7 +820,7 @@ public final class Runtime {
             }
         }
     }
-    public static PyRaise throwUserExactArgs(PyObject[] args, int n, String name, String... argNames) {
+    public static PyRaise raiseUserExactArgs(PyObject[] args, int n, String name, String... argNames) {
         if (args.length > n) {
             return PyTypeError.raiseFormat("%s() takes %d positional argument%s but %d %s given",
                 name, n, (n == 1) ? "" : "s", args.length, (args.length == 1) ? "was" : "were");
