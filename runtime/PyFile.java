@@ -20,9 +20,7 @@ public final class PyFile extends PyIter {
         PyFileMethod_close(PyFile _self) { super(_self); }
         @Override public PyNone call(PyObject[] args, PyDict kwargs) {
             Runtime.requireNoKwArgs(kwargs, "TextIOWrapper.close");
-            if (args.length != 0) {
-                throw new IllegalArgumentException("file.close() takes no arguments");
-            }
+            Runtime.requireExactArgsAlt(args, 0, "TextIOWrapper.close");
             return self.pymethod_close();
         }
     }

@@ -782,6 +782,17 @@ public final class Runtime {
             throw new PyRaise(new PyTypeError(new PyString(String.format("%s expected %d argument%s, got %d", name, n, (n == 1) ? "" : "s", args.length))));
         }
     }
+    public static void requireExactArgsAlt(PyObject[] args, int n, String name) {
+        if (args.length != n) {
+            if (n == 0) {
+                throw new PyRaise(new PyTypeError(new PyString(String.format("%s() takes no arguments (%d given)", name, args.length))));
+            } else if (n == 1) {
+                throw new PyRaise(new PyTypeError(new PyString(String.format("%s() takes exactly one argument (%d given)", name, args.length))));
+            } else { // XXX Figure out what to do in this case
+                throw new IllegalArgumentException(String.format("%s expected %d argument%s, got %d", name, n, (n == 1) ? "" : "s", args.length));
+            }
+        }
+    }
     public static ArrayList<PyObject> addPyObjectToArrayList(ArrayList<PyObject> list, PyObject obj) {
         list.add(obj);
         return list;

@@ -26,9 +26,7 @@ public final class PySet extends PyObject {
         PySetMethod_add(PySet _self) { super(_self); }
         @Override public PyNone call(PyObject[] args, PyDict kwargs) {
             Runtime.requireNoKwArgs(kwargs, "set.add");
-            if (args.length != 1) {
-                throw new IllegalArgumentException("set.add() takes 1 argument");
-            }
+            Runtime.requireExactArgsAlt(args, 1, "set.add");
             return self.pymethod_add(args[0]);
         }
     }
@@ -36,9 +34,7 @@ public final class PySet extends PyObject {
         PySetMethod_clear(PySet _self) { super(_self); }
         @Override public PyNone call(PyObject[] args, PyDict kwargs) {
             Runtime.requireNoKwArgs(kwargs, "set.clear");
-            if (args.length != 0) {
-                throw new IllegalArgumentException("set.clear() takes 0 arguments");
-            }
+            Runtime.requireExactArgsAlt(args, 0, "set.clear");
             return self.pymethod_clear();
         }
     }
@@ -46,9 +42,7 @@ public final class PySet extends PyObject {
         PySetMethod_discard(PySet _self) { super(_self); }
         @Override public PyNone call(PyObject[] args, PyDict kwargs) {
             Runtime.requireNoKwArgs(kwargs, "set.discard");
-            if (args.length != 1) {
-                throw new IllegalArgumentException("set.discard() takes 1 argument");
-            }
+            Runtime.requireExactArgsAlt(args, 1, "set.discard");
             return self.pymethod_discard(args[0]);
         }
     }
