@@ -235,6 +235,22 @@ public final class Runtime {
     }
     public static final pyfunc_enumerate pyglobal_enumerate = new pyfunc_enumerate();
 
+    static final class pyfunc_getattr extends PyBuiltinFunction {
+        pyfunc_getattr() { super("getattr"); }
+        @Override public PyObject call(PyObject[] args, PyDict kwargs) {
+            requireNoKwArgs(kwargs, funcName);
+            requireMinArgs(args, 2, funcName);
+            requireMaxArgs(args, 3, funcName);
+            // Currently we never use args[2] (default) because this will throw a Java exception
+            if (args[1] instanceof PyString name) {
+                return args[0].getAttr(name.value);
+            } else {
+                throw new PyRaise(new PyTypeError(new PyString(String.format("attribute name must be string, not '%s'", args[1].type().name()))));
+            }
+        }
+    }
+    public static final pyfunc_getattr pyglobal_getattr = new pyfunc_getattr();
+
     static final class pyfunc_hash extends PyBuiltinFunction {
         pyfunc_hash() { super("hash"); }
         @Override public PyInt call(PyObject[] args, PyDict kwargs) {
