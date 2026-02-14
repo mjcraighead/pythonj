@@ -18,9 +18,6 @@ abstract class PyIter extends PyTruthyObject {
 abstract class PyType extends PyTruthyObject {
 }
 
-abstract class PyNumber extends PyObject {
-}
-
 class PyBuiltinClass extends PyType {
     protected final String typeName;
     protected PyBuiltinClass(String name) { typeName = name; }

@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: MIT
 
 // XXX Should probably pre-intern [-5,256] to match CPython
-public final class PyInt extends PyNumber {
+public final class PyInt extends PyObject {
     public static final PyInt singleton_0 = new PyInt(0);
     public static final PyInt singleton_1 = new PyInt(1);
 

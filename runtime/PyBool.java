@@ -2,7 +2,7 @@
 // Copyright (c) 2012-2026 Matt Craighead
 // SPDX-License-Identifier: MIT
 
-public final class PyBool extends PyNumber {
+public final class PyBool extends PyObject {
     public static final PyBool false_singleton = new PyBool(false);
     public static final PyBool true_singleton = new PyBool(true);
 
