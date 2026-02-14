@@ -205,6 +205,7 @@ public final class PyString extends PyObject {
     }
 
     public PyString pymethod_join(PyObject arg) {
+        // XXX consider special casing value.isEmpty() for performance
         var s = new StringBuilder();
         var iter = arg.iter();
         boolean first = true;
