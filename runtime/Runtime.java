@@ -552,11 +552,11 @@ public final class Runtime {
             requireNoKwArgs(kwargs, funcName);
             requireMinArgs(args, 1, funcName);
             requireMaxArgs(args, 2, funcName);
-            if (args.length == 2) {
-                throw new UnsupportedOperationException("'default' argument to next() is unsupported");
-            }
             PyObject ret = args[0].next();
             if (ret == null) {
+                if (args.length == 2) {
+                    return args[1];
+                }
                 throw new PyRaise(new PyStopIteration());
             }
             return ret;
