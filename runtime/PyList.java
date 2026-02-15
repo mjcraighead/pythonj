@@ -133,7 +133,7 @@ public final class PyList extends PyObject {
         try {
             return items.get(index);
         } catch (IndexOutOfBoundsException e) {
-            throw new PyRaise(new PyIndexError(new PyString("list index out of range")));
+            throw PyIndexError.raise("list index out of range");
         }
     }
     @Override public void setItem(PyObject key, PyObject value) {
@@ -144,7 +144,7 @@ public final class PyList extends PyObject {
         try {
             items.set(index, value);
         } catch (IndexOutOfBoundsException e) {
-            throw new PyRaise(new PyIndexError(new PyString("list assignment index out of range")));
+            throw PyIndexError.raise("list assignment index out of range");
         }
     }
 
@@ -213,7 +213,7 @@ public final class PyList extends PyObject {
     public PyInt pymethod_index(PyObject arg) {
         int index = items.indexOf(arg);
         if (index == -1) {
-            throw new PyRaise(new PyValueError(new PyString("list.index(x): x not in list")));
+            throw PyValueError.raise("list.index(x): x not in list");
         }
         return new PyInt(index);
     }

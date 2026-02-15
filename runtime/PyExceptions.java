@@ -37,6 +37,10 @@ class PyLookupError extends PyException {
 final class PyIndexError extends PyLookupError {
     PyIndexError(PyObject... _args) { super(_args); }
     @Override public PyBuiltinClass type() { return Runtime.pyglobal_IndexError; }
+
+    static PyRaise raise(String msg) {
+        return new PyRaise(new PyIndexError(new PyString(msg)));
+    }
 }
 final class PyKeyError extends PyLookupError {
     PyKeyError(PyObject... _args) { super(_args); }
@@ -63,6 +67,10 @@ final class PyTypeError extends PyException {
 final class PyValueError extends PyException {
     PyValueError(PyObject... _args) { super(_args); }
     @Override public PyBuiltinClass type() { return Runtime.pyglobal_ValueError; }
+
+    static PyRaise raise(String msg) {
+        return new PyRaise(new PyValueError(new PyString(msg)));
+    }
 }
 
 final class PyRaise extends RuntimeException {

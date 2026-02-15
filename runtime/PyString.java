@@ -141,7 +141,7 @@ public final class PyString extends PyObject {
         int index = Math.toIntExact(key.indexValue());
         int length = value.length();
         if ((index < -length) || (index >= length)) {
-            throw new PyRaise(new PyIndexError(new PyString("string index out of range")));
+            throw PyIndexError.raise("string index out of range");
         }
         if (index < 0) {
             index += length;

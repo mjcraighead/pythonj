@@ -49,7 +49,7 @@ public final class PyTuple extends PyObject {
         try {
             return items[index];
         } catch (ArrayIndexOutOfBoundsException e) {
-            throw new PyRaise(new PyIndexError(new PyString("tuple index out of range")));
+            throw PyIndexError.raise("tuple index out of range");
         }
     }
 
