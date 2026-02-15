@@ -460,12 +460,10 @@ public final class Runtime {
     static final class pyfunc_max extends PyBuiltinFunction {
         pyfunc_max() { super("max"); }
         @Override public PyObject call(PyObject[] args, PyDict kwargs) {
-            if (args.length < 1) {
-                throw new IllegalArgumentException("max() takes at least 1 argument");
-            }
             if ((kwargs != null) && kwargs.boolValue()) {
                 throw new IllegalArgumentException("max() does not accept kwargs");
             }
+            requireMinArgs(args, 1, funcName);
             if (args.length == 1) {
                 var iter = args[0].iter();
                 PyObject ret = iter.next();
@@ -495,12 +493,10 @@ public final class Runtime {
     static final class pyfunc_min extends PyBuiltinFunction {
         pyfunc_min() { super("min"); }
         @Override public PyObject call(PyObject[] args, PyDict kwargs) {
-            if (args.length < 1) {
-                throw new IllegalArgumentException("min() takes at least 1 argument");
-            }
             if ((kwargs != null) && kwargs.boolValue()) {
                 throw new IllegalArgumentException("min() does not accept kwargs");
             }
+            requireMinArgs(args, 1, funcName);
             if (args.length == 1) {
                 var iter = args[0].iter();
                 PyObject ret = iter.next();
