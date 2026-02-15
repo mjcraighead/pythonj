@@ -210,6 +210,9 @@ public final class Runtime {
                     var iter = arg.iter();
                     long index = 0;
                     for (var item = iter.next(); item != null; item = iter.next(), index++) {
+                        if (!item.hasIter()) {
+                            throw PyTypeError.raise("object is not iterable");
+                        }
                         var itemIter = item.iter();
                         PyObject key = itemIter.next();
                         if (key == null) {
