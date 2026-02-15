@@ -42,6 +42,7 @@ public final class PyRange extends PyObject {
         step = _step;
     }
 
+    @Override public final boolean hasIter() { return true; }
     @Override public PyRangeIter iter() { return new PyRangeIter(this); }
     @Override public PyBuiltinClass type() { return Runtime.pyglobal_range; }
 

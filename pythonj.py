@@ -536,7 +536,7 @@ class PythonjVisitor(ast.NodeVisitor):
             args = JavaCreateObject('java.util.ArrayList<PyObject>', [])
             for arg in nodes:
                 if isinstance(arg, ast.Starred):
-                    args = JavaMethodCall(JavaIdentifier('Runtime'), 'addPyIterToArrayList', [args, JavaMethodCall(self.visit(arg.value), 'iter', [])])
+                    args = JavaMethodCall(JavaIdentifier('Runtime'), 'addStarToArrayList', [args, self.visit(arg.value)])
                 else:
                     args = JavaMethodCall(JavaIdentifier('Runtime'), 'addPyObjectToArrayList', [args, self.visit(arg)])
             if not array_list_allowed:

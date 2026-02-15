@@ -50,6 +50,7 @@ public final class PyDict extends PyObject {
         PyDictItems(LinkedHashMap<PyObject, PyObject> _items) { items = _items; }
 
         @Override public boolean boolValue() { return !items.isEmpty(); }
+        @Override public final boolean hasIter() { return true; }
         @Override public PyDictItemIter iter() { return new PyDictItemIter(items.entrySet().iterator()); }
         @Override public long len() { return items.size(); }
         @Override public String repr() {
@@ -78,6 +79,7 @@ public final class PyDict extends PyObject {
         PyDictKeys(LinkedHashMap<PyObject, PyObject> _items) { items = _items; }
 
         @Override public boolean boolValue() { return !items.isEmpty(); }
+        @Override public final boolean hasIter() { return true; }
         @Override public PyDictIter iter() { return new PyDictIter(items.keySet().iterator()); }
         @Override public long len() { return items.size(); }
         @Override public String repr() {
@@ -102,6 +104,7 @@ public final class PyDict extends PyObject {
         PyDictValues(LinkedHashMap<PyObject, PyObject> _items) { items = _items; }
 
         @Override public boolean boolValue() { return !items.isEmpty(); }
+        @Override public final boolean hasIter() { return true; }
         @Override public PyDictValueIter iter() { return new PyDictValueIter(items.entrySet().iterator()); }
         @Override public long len() { return items.size(); }
         @Override public String repr() {
@@ -186,6 +189,7 @@ public final class PyDict extends PyObject {
         }
     }
 
+    @Override public final boolean hasIter() { return true; }
     @Override public PyDictIter iter() { return new PyDictIter(items.keySet().iterator()); }
     @Override public PyBuiltinClass type() { return Runtime.pyglobal_dict; }
 

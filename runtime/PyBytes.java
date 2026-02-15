@@ -37,6 +37,7 @@ public final class PyBytes extends PyObject {
         }
     }
 
+    @Override public final boolean hasIter() { return true; }
     @Override public PyBytesIter iter() { return new PyBytesIter(this); }
     @Override public PyBuiltinClass type() { return Runtime.pyglobal_bytes; }
 

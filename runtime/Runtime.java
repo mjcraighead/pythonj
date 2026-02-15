@@ -11,6 +11,7 @@ abstract class PyTruthyObject extends PyObject {
 }
 
 abstract class PyIter extends PyTruthyObject {
+    @Override public final boolean hasIter() { return true; }
     @Override public final PyIter iter() { return this; }
     @Override public String repr() { throw new UnsupportedOperationException("'repr' unimplemented"); }
 }
@@ -909,6 +910,13 @@ public final class Runtime {
             list.add(item);
         }
         return list;
+    }
+    public static ArrayList<PyObject> addStarToArrayList(ArrayList<PyObject> list, PyObject iterable) {
+        if (iterable.hasIter()) {
+            return addPyIterToArrayList(list, iterable.iter());
+        } else {
+            throw PyTypeError.raiseFormat("Value after * must be an iterable, not %s", iterable.type().name());
+        }
     }
     public static PyObject[] arrayListToArray(ArrayList<PyObject> list) {
         var array = new PyObject[list.size()];

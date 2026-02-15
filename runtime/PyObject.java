@@ -60,6 +60,7 @@ public abstract class PyObject implements Comparable<PyObject> {
 
     public PyObject call(PyObject args[], PyDict kwargs) { throw new UnsupportedOperationException("'call' unimplemented"); }
 
+    public boolean hasIter() { return false; }
     public PyIter iter() {
         throw PyTypeError.raiseFormat("'%s' object is not iterable", type().name());
     }

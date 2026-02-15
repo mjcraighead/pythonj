@@ -72,6 +72,7 @@ public final class PySet extends PyObject {
         items = new HashSet<>(list);
     }
 
+    @Override public final boolean hasIter() { return true; }
     @Override public PySetIter iter() { return new PySetIter(items.iterator()); }
     @Override public PyBuiltinClass type() { return Runtime.pyglobal_set; }
 

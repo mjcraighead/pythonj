@@ -150,6 +150,7 @@ public final class PyList extends PyObject {
 
     // NOTE: CPython returns a specialized list_reverseiterator.
     // pythonj intentionally uses the generic reversed iterator, at least for now.
+    @Override public final boolean hasIter() { return true; }
     @Override public PyListIter iter() { return new PyListIter(items.iterator()); }
     @Override public PyReversed reversed() { return new PyReversed(this); }
     @Override public PyBuiltinClass type() { return Runtime.pyglobal_list; }

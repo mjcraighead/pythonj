@@ -149,6 +149,7 @@ public final class PyString extends PyObject {
         return new PyString(String.valueOf(value.charAt(index)));
     }
 
+    @Override public final boolean hasIter() { return true; }
     @Override public PyStringIter iter() { return new PyStringIter(this); }
     @Override public PyBuiltinClass type() { return Runtime.pyglobal_str; }
 
