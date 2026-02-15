@@ -293,6 +293,9 @@ class JavaLabeledBlock(JavaStatement):
         yield '}'
 
 def bool_value(expr: JavaExpr) -> JavaExpr:
+    if (isinstance(expr, JavaMethodCall) and isinstance(expr.obj, JavaIdentifier) and
+        expr.obj.name == 'PyBool' and expr.method == 'create' and len(expr.args) == 1):
+        return expr.args[0] # return the raw boolean instead of box/unbox
     return JavaMethodCall(expr, 'boolValue', [])
 
 def chained_binary_op(op: str, exprs: list[JavaExpr]) -> JavaExpr:
