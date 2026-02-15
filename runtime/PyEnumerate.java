@@ -6,7 +6,10 @@ public final class PyEnumerate extends PyIter {
     public final PyObject iter;
     public long i = 0;
 
-    PyEnumerate(PyObject _iter) { iter = _iter; }
+    PyEnumerate(PyObject _iter, long start) {
+        iter = _iter;
+        i = start;
+    }
 
     @Override public PyTuple next() {
         var item = iter.next();

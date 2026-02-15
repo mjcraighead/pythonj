@@ -240,13 +240,17 @@ public final class Runtime {
     static final class pyfunc_enumerate extends PyBuiltinClass {
         pyfunc_enumerate() { super("enumerate", PyEnumerate.class); }
         @Override public PyEnumerate call(PyObject[] args, PyDict kwargs) {
-            if (args.length != 1) {
-                throw new IllegalArgumentException("enumerate() takes 1 argument");
-            }
             if ((kwargs != null) && kwargs.boolValue()) {
                 throw new IllegalArgumentException("enumerate() does not accept kwargs");
             }
-            return new PyEnumerate(args[0].iter());
+            if (args.length < 1) {
+                throw PyTypeError.raise("enumerate() missing required argument 'iterable'");
+            }
+            if (args.length > 2) {
+                throw PyTypeError.raiseFormat("enumerate() takes at most 2 arguments (%d given)", args.length);
+            }
+            long start = (args.length == 2) ? args[1].indexValue() : 0;
+            return new PyEnumerate(args[0].iter(), start);
         }
     }
     public static final pyfunc_enumerate pyglobal_enumerate = new pyfunc_enumerate();
