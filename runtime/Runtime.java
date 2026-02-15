@@ -470,7 +470,7 @@ public final class Runtime {
                 var iter = args[0].iter();
                 PyObject ret = iter.next();
                 if (ret == null) {
-                    throw new IllegalArgumentException("max() expects non-empty iterable");
+                    throw PyValueError.raise("max() iterable argument is empty");
                 }
                 for (var item = iter.next(); item != null; item = iter.next()) {
                     if (item.gt(ret)) {
@@ -505,7 +505,7 @@ public final class Runtime {
                 var iter = args[0].iter();
                 PyObject ret = iter.next();
                 if (ret == null) {
-                    throw new IllegalArgumentException("min() expects non-empty iterable");
+                    throw PyValueError.raise("min() iterable argument is empty");
                 }
                 for (var item = iter.next(); item != null; item = iter.next()) {
                     if (item.lt(ret)) {
