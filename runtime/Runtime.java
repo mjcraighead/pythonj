@@ -801,6 +801,15 @@ public final class Runtime {
     }
     public static final pyfunc_zip pyglobal_zip = new pyfunc_zip();
 
+    static final class pyfunc_ArithmeticError extends PyBuiltinClass {
+        pyfunc_ArithmeticError() { super("ArithmeticError", PyArithmeticError.class); }
+        @Override public PyArithmeticError call(PyObject[] args, PyDict kwargs) {
+            requireNoKwArgs(kwargs, typeName);
+            return new PyArithmeticError(args);
+        }
+    }
+    public static final pyfunc_ArithmeticError pyglobal_ArithmeticError = new pyfunc_ArithmeticError();
+
     static final class pyfunc_AssertionError extends PyBuiltinClass {
         pyfunc_AssertionError() { super("AssertionError", PyAssertionError.class); }
         @Override public PyAssertionError call(PyObject[] args, PyDict kwargs) {
@@ -863,6 +872,15 @@ public final class Runtime {
         }
     }
     public static final pyfunc_ValueError pyglobal_ValueError = new pyfunc_ValueError();
+
+    static final class pyfunc_ZeroDivisionError extends PyBuiltinClass {
+        pyfunc_ZeroDivisionError() { super("ZeroDivisionError", PyZeroDivisionError.class); }
+        @Override public PyZeroDivisionError call(PyObject[] args, PyDict kwargs) {
+            requireNoKwArgs(kwargs, typeName);
+            return new PyZeroDivisionError(args);
+        }
+    }
+    public static final pyfunc_ZeroDivisionError pyglobal_ZeroDivisionError = new pyfunc_ZeroDivisionError();
 
     // Helper functions used by the builtins and code generator
     public static void requireNoKwArgs(PyDict kwargs, String name) {

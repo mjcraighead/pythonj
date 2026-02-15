@@ -30,6 +30,19 @@ final class PyAssertionError extends PyException {
     @Override public PyBuiltinClass type() { return Runtime.pyglobal_AssertionError; }
 }
 
+class PyArithmeticError extends PyException {
+    PyArithmeticError(PyObject... _args) { super(_args); }
+    @Override public PyBuiltinClass type() { return Runtime.pyglobal_ArithmeticError; }
+}
+final class PyZeroDivisionError extends PyArithmeticError {
+    PyZeroDivisionError(PyObject... _args) { super(_args); }
+    @Override public PyBuiltinClass type() { return Runtime.pyglobal_ZeroDivisionError; }
+
+    static PyRaise raise(String msg) {
+        return new PyRaise(new PyZeroDivisionError(new PyString(msg)));
+    }
+}
+
 class PyLookupError extends PyException {
     PyLookupError(PyObject... _args) { super(_args); }
     @Override public PyBuiltinClass type() { return Runtime.pyglobal_LookupError; }

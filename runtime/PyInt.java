@@ -28,6 +28,9 @@ public final class PyInt extends PyObject {
         if ((value == Long.MIN_VALUE) && (rhs_value == -1)) {
             throw new ArithmeticException("integer overflow");
         }
+        if (rhs_value == 0) {
+            throw PyZeroDivisionError.raise("division by zero");
+        }
         return new PyInt(Math.floorDiv(value, rhs_value));
     }
     @Override public PyInt lshift(PyObject rhs) {
@@ -51,6 +54,9 @@ public final class PyInt extends PyObject {
         long rhs_value = ((PyInt)rhs).value;
         if ((value == Long.MIN_VALUE) && (rhs_value == -1)) {
             throw new ArithmeticException("integer overflow");
+        }
+        if (rhs_value == 0) {
+            throw PyZeroDivisionError.raise("division by zero");
         }
         return new PyInt(Math.floorMod(value, rhs_value));
     }
