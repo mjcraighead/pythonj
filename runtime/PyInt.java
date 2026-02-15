@@ -60,8 +60,17 @@ public final class PyInt extends PyObject {
         }
         return new PyInt(Math.floorMod(value, rhs_value));
     }
-    @Override public PyInt mul(PyObject rhs) {
-        return new PyInt(Math.multiplyExact(value, ((PyInt)rhs).value));
+    @Override public PyObject mul(PyObject rhs) {
+        if (rhs instanceof PyInt rhs_int) {
+            return new PyInt(Math.multiplyExact(value, rhs_int.value));
+        } else if (rhs instanceof PyBool rhs_bool) {
+            return new PyInt(value * rhs_bool.asInt());
+        } else if ((rhs instanceof PyBytes) || (rhs instanceof PyByteArray) || (rhs instanceof PyList) ||
+                   (rhs instanceof PyString) || (rhs instanceof PyTuple)) {
+            return rhs.mul(this); // remap int * T -> T * int implementation
+        } else {
+            throw new UnsupportedOperationException(String.format("int * %s is not implemented", rhs.type().name()));
+        }
     }
     @Override public PyInt or(PyObject rhs) {
         return new PyInt(value | ((PyInt)rhs).value);

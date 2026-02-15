@@ -16,7 +16,7 @@ public final class PyBool extends PyObject {
         return value ? true_singleton : false_singleton;
     }
 
-    private int asInt() { return value ? 1 : 0; }
+    protected int asInt() { return value ? 1 : 0; }
 
     @Override public PyInt pos() { return new PyInt(asInt()); }
     @Override public PyInt neg() { return new PyInt(value ? -1 : 0); }
@@ -24,6 +24,18 @@ public final class PyBool extends PyObject {
 
     @Override public PyBool and(PyObject rhs) {
         return create(value & ((PyBool)rhs).value);
+    }
+    @Override public PyObject mul(PyObject rhs) {
+        if (rhs instanceof PyInt rhs_int) {
+            return new PyInt(asInt() * rhs_int.value);
+        } else if (rhs instanceof PyBool rhs_bool) {
+            return new PyInt(asInt() * rhs_bool.asInt());
+        } else if ((rhs instanceof PyBytes) || (rhs instanceof PyByteArray) || (rhs instanceof PyList) ||
+                   (rhs instanceof PyString) || (rhs instanceof PyTuple)) {
+            return rhs.mul(this); // remap bool * T -> T * bool implementation
+        } else {
+            throw new UnsupportedOperationException(String.format("bool * %s is not implemented", rhs.type().name()));
+        }
     }
     @Override public PyBool or(PyObject rhs) {
         return create(value | ((PyBool)rhs).value);
