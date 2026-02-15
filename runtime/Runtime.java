@@ -207,10 +207,17 @@ public final class Runtime {
                     }
                 } else {
                     var iter = arg.iter();
-                    for (var item = iter.next(); item != null; item = iter.next()) {
+                    long index = 0;
+                    for (var item = iter.next(); item != null; item = iter.next(), index++) {
                         var itemIter = item.iter();
-                        PyObject key = Runtime.nextRequireNonNull(itemIter);
-                        PyObject value = Runtime.nextRequireNonNull(itemIter);
+                        PyObject key = itemIter.next();
+                        if (key == null) {
+                            throw PyValueError.raiseFormat("dictionary update sequence element #%d has length 0; 2 is required", index);
+                        }
+                        PyObject value = itemIter.next();
+                        if (value == null) {
+                            throw PyValueError.raiseFormat("dictionary update sequence element #%d has length 1; 2 is required", index);
+                        }
                         Runtime.nextRequireNull(itemIter);
                         ret.setItem(key, value);
                     }

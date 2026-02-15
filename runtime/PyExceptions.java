@@ -71,6 +71,9 @@ final class PyValueError extends PyException {
     static PyRaise raise(String msg) {
         return new PyRaise(new PyValueError(new PyString(msg)));
     }
+    static PyRaise raiseFormat(String fmt, Object... args) {
+        return new PyRaise(new PyValueError(new PyString(String.format(fmt, args))));
+    }
 }
 
 final class PyRaise extends RuntimeException {
