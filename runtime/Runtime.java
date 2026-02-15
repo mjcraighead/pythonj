@@ -240,17 +240,36 @@ public final class Runtime {
     static final class pyfunc_enumerate extends PyBuiltinClass {
         pyfunc_enumerate() { super("enumerate", PyEnumerate.class); }
         @Override public PyEnumerate call(PyObject[] args, PyDict kwargs) {
-            if ((kwargs != null) && kwargs.boolValue()) {
-                throw new IllegalArgumentException("enumerate() does not accept kwargs");
+            // This is quirky, but is intended to match corner cases in CPython enumerate()
+            long totalArgs = args.length;
+            if (kwargs != null) {
+                totalArgs += kwargs.items.size();
             }
-            if (args.length < 1) {
+            if ((totalArgs == 1) || (totalArgs == 2)) {
+                PyObject iterable = (args.length >= 1) ? args[0] : null;
+                PyObject start = (args.length >= 2) ? args[1] : null;
+                if (kwargs != null) {
+                    for (var x: kwargs.items.entrySet()) {
+                        PyString key = (PyString)x.getKey(); // PyString validated at call site
+                        if ((key.value.equals("iterable")) && (iterable == null)) {
+                            iterable = x.getValue();
+                        } else if ((totalArgs == 2) && (key.value.equals("start")) && (start == null)) {
+                            start = x.getValue();
+                        } else {
+                            throw PyTypeError.raiseFormat("%s is an invalid keyword argument for enumerate()", key.repr());
+                        }
+                    }
+                }
+                if (iterable == null) {
+                    throw PyTypeError.raise("enumerate() missing required argument 'iterable'");
+                }
+                long startIndex = (start != null) ? start.indexValue() : 0;
+                return new PyEnumerate(iterable.iter(), startIndex);
+            } else if (args.length == 0) {
                 throw PyTypeError.raise("enumerate() missing required argument 'iterable'");
+            } else {
+                throw PyTypeError.raiseFormat("enumerate() takes at most 2 arguments (%d given)", totalArgs);
             }
-            if (args.length > 2) {
-                throw PyTypeError.raiseFormat("enumerate() takes at most 2 arguments (%d given)", args.length);
-            }
-            long start = (args.length == 2) ? args[1].indexValue() : 0;
-            return new PyEnumerate(args[0].iter(), start);
         }
     }
     public static final pyfunc_enumerate pyglobal_enumerate = new pyfunc_enumerate();
