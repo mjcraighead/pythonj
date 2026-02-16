@@ -292,6 +292,14 @@ class JavaLabeledBlock(JavaStatement):
             yield from s.emit_java()
         yield '}'
 
+def unary_op(op: str, operand: JavaExpr) -> JavaExpr:
+    if op == '!' and isinstance(operand, JavaIdentifier):
+        if operand.name == 'false':
+            return JavaIdentifier('true')
+        if operand.name == 'true':
+            return JavaIdentifier('false')
+    return JavaUnaryOp(op, operand)
+
 def bool_value(expr: JavaExpr) -> JavaExpr:
     if (isinstance(expr, JavaMethodCall) and isinstance(expr.obj, JavaIdentifier) and
         expr.obj.name == 'PyBool' and expr.method == 'create' and len(expr.args) == 1):
@@ -405,7 +413,7 @@ class PythonjVisitor(ast.NodeVisitor):
     def visit_USub(self, node): return 'neg'
     def visit_UnaryOp(self, node) -> JavaExpr:
         if isinstance(node.op, ast.Not):
-            return JavaMethodCall(JavaIdentifier('PyBool'), 'create', [JavaUnaryOp('!', bool_value(self.visit(node.operand)))])
+            return JavaMethodCall(JavaIdentifier('PyBool'), 'create', [unary_op('!', bool_value(self.visit(node.operand)))])
         return JavaMethodCall(self.visit(node.operand), self.visit(node.op), [])
 
     def visit_Add(self, node): return 'add'
@@ -450,11 +458,11 @@ class PythonjVisitor(ast.NodeVisitor):
             elif isinstance(op, ast.In):
                 term = JavaMethodCall(lhs, 'in', [rhs])
             elif isinstance(op, ast.NotIn):
-                term = JavaUnaryOp('!', JavaMethodCall(lhs, 'in', [rhs]))
+                term = unary_op('!', JavaMethodCall(lhs, 'in', [rhs]))
             elif isinstance(op, ast.Eq):
                 term = JavaMethodCall(lhs, 'equals', [rhs])
             elif isinstance(op, ast.NotEq):
-                term = JavaUnaryOp('!', JavaMethodCall(lhs, 'equals', [rhs]))
+                term = unary_op('!', JavaMethodCall(lhs, 'equals', [rhs]))
             else:
                 term = JavaMethodCall(lhs, self.visit(op), [rhs])
             exprs.append(term)
@@ -679,7 +687,7 @@ class PythonjVisitor(ast.NodeVisitor):
         self.code.append(code)
 
     def visit_Assert(self, node) -> None:
-        cond = JavaUnaryOp('!', bool_value(self.visit(node.test)))
+        cond = unary_op('!', bool_value(self.visit(node.test)))
         msg = JavaStrLiteral(self.path + f':{node.lineno}: assertion failure')
         if node.msg:
             msg.s += ': '
