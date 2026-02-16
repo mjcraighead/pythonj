@@ -522,8 +522,10 @@ class PythonjVisitor(ast.NodeVisitor):
             return JavaMethodCall(JavaIdentifier('PyBool'), 'create', [unary_op('!', bool_value(self.visit(node.operand)))])
         op = self.visit(node.op)
         operand = self.visit(node.operand)
-        if isinstance(operand, JavaPyConstant) and isinstance(operand.value, int) and op == 'neg':
-            return JavaPyConstant(-operand.value)
+        if isinstance(operand, JavaPyConstant) and isinstance(operand.value, int):
+            match op:
+                case 'pos': return JavaPyConstant(+operand.value)
+                case 'neg': return JavaPyConstant(-operand.value)
         return JavaMethodCall(operand, op, [])
 
     def visit_Add(self, node): return 'add'
