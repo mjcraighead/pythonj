@@ -90,119 +90,135 @@ class EmitContext:
     def emit_java(self) -> Iterator[str]:
         for i in sorted(self.all_ints):
             value = JavaCreateObject('PyInt', [JavaIntLiteral(i, 'L')])
-            yield f'private static final PyInt {int_name(i)} = {value.emit_java()};'
+            yield f'private static final PyInt {int_name(i)} = {value.emit_java(self)};'
         for (k, v) in sorted(self.all_strings.items()):
             value = JavaCreateObject('PyString', [JavaStrLiteral(k)])
-            yield f'private static final PyString str_singleton_{v} = {value.emit_java()};'
+            yield f'private static final PyString str_singleton_{v} = {value.emit_java(self)};'
         for (k, v) in sorted(self.all_bytes.items()):
             value = JavaCreateObject('PyBytes', [JavaCreateArray('byte', [JavaIntLiteral(((x + 0x80) & 0xFF) - 0x80, '') for x in k])])
-            yield f'private static final PyBytes bytes_singleton_{v} = {value.emit_java()};'
+            yield f'private static final PyBytes bytes_singleton_{v} = {value.emit_java(self)};'
 
 class JavaExpr(ABC):
     @abstractmethod
-    def emit_java(self) -> str:
+    def emit_java(self, ctx: EmitContext) -> str:
         raise NotImplementedError()
 
 @dataclass(slots=True)
 class JavaIntLiteral(JavaExpr):
     value: int
     suffix: str
-    def emit_java(self) -> str:
+    def emit_java(self, ctx: EmitContext) -> str:
         return f'{self.value}{self.suffix}'
 
 @dataclass(slots=True)
 class JavaStrLiteral(JavaExpr):
     s: str
-    def emit_java(self) -> str:
+    def emit_java(self, ctx: EmitContext) -> str:
         return java_string_literal(self.s)
 
 @dataclass(slots=True)
 class JavaIdentifier(JavaExpr):
     name: str
-    def emit_java(self) -> str:
+    def emit_java(self, ctx: EmitContext) -> str:
         return self.name
 
 @dataclass(slots=True)
 class JavaField(JavaExpr):
     obj: JavaExpr
     field: str
-    def emit_java(self) -> str:
-        return f'{self.obj.emit_java()}.{self.field}'
+    def emit_java(self, ctx: EmitContext) -> str:
+        return f'{self.obj.emit_java(ctx)}.{self.field}'
 
 @dataclass(slots=True)
 class JavaArrayAccess(JavaExpr):
     obj: JavaExpr
     index: JavaExpr
-    def emit_java(self) -> str:
-        return f'{self.obj.emit_java()}[{self.index.emit_java()}]'
+    def emit_java(self, ctx: EmitContext) -> str:
+        return f'{self.obj.emit_java(ctx)}[{self.index.emit_java(ctx)}]'
 
 @dataclass(slots=True)
 class JavaUnaryOp(JavaExpr):
     op: str
     operand: JavaExpr
-    def emit_java(self) -> str:
-        return f'({self.op}{self.operand.emit_java()})'
+    def emit_java(self, ctx: EmitContext) -> str:
+        return f'({self.op}{self.operand.emit_java(ctx)})'
 
 @dataclass(slots=True)
 class JavaBinaryOp(JavaExpr):
     op: str
     lhs: JavaExpr
     rhs: JavaExpr
-    def emit_java(self) -> str:
-        return f'({self.lhs.emit_java()} {self.op} {self.rhs.emit_java()})'
+    def emit_java(self, ctx: EmitContext) -> str:
+        return f'({self.lhs.emit_java(ctx)} {self.op} {self.rhs.emit_java(ctx)})'
 
 @dataclass(slots=True)
 class JavaCondOp(JavaExpr):
     cond: JavaExpr
     true: JavaExpr
     false: JavaExpr
-    def emit_java(self) -> str:
-        return f'({self.cond.emit_java()} ? {self.true.emit_java()} : {self.false.emit_java()})'
+    def emit_java(self, ctx: EmitContext) -> str:
+        return f'({self.cond.emit_java(ctx)} ? {self.true.emit_java(ctx)} : {self.false.emit_java(ctx)})'
 
 @dataclass(slots=True)
 class JavaCreateObject(JavaExpr):
     type: str
     args: list[JavaExpr]
-    def emit_java(self) -> str:
-        return f"new {self.type}({', '.join(arg.emit_java() for arg in self.args)})"
+    def emit_java(self, ctx: EmitContext) -> str:
+        return f"new {self.type}({', '.join(arg.emit_java(ctx) for arg in self.args)})"
 
 @dataclass(slots=True)
 class JavaCreateArray(JavaExpr):
     type: str
     elts: list[JavaExpr]
-    def emit_java(self) -> str:
-        return f"new {self.type}[] {{{', '.join(x.emit_java() for x in self.elts)}}}"
+    def emit_java(self, ctx: EmitContext) -> str:
+        return f"new {self.type}[] {{{', '.join(x.emit_java(ctx) for x in self.elts)}}}"
 
 @dataclass(slots=True)
 class JavaMethodCall(JavaExpr):
     obj: JavaExpr
     method: str
     args: list[JavaExpr]
-    def emit_java(self) -> str:
-        return f"{self.obj.emit_java()}.{self.method}({', '.join(arg.emit_java() for arg in self.args)})"
+    def emit_java(self, ctx: EmitContext) -> str:
+        return f"{self.obj.emit_java(ctx)}.{self.method}({', '.join(arg.emit_java(ctx) for arg in self.args)})"
 
 @dataclass(slots=True)
 class JavaAssignExpr(JavaExpr):
     lhs: JavaExpr
     rhs: JavaExpr
-    def emit_java(self) -> str:
-        return f'({self.lhs.emit_java()} = {self.rhs.emit_java()})'
+    def emit_java(self, ctx: EmitContext) -> str:
+        return f'({self.lhs.emit_java(ctx)} = {self.rhs.emit_java(ctx)})'
 
 @dataclass(slots=True)
 class JavaPyConstant(JavaExpr):
-    value: None | bool
-    def emit_java(self) -> str:
+    value: None | bool | int | str | bytes
+    def emit_java(self, ctx: EmitContext) -> str:
         if self.value is None:
             return 'PyNone.singleton'
-        else:
+        elif self.value is False or self.value is True:
             return f'PyBool.{str(self.value).lower()}_singleton'
+        elif isinstance(self.value, int):
+            if 0 <= self.value <= 1:
+                return f'PyInt.singleton_{self.value}'
+            ctx.all_ints.add(self.value)
+            return int_name(self.value)
+        elif isinstance(self.value, str):
+            if not self.value:
+                return 'PyString.empty_singleton'
+            if self.value not in ctx.all_strings:
+                ctx.all_strings[self.value] = len(ctx.all_strings)
+            return f'str_singleton_{ctx.all_strings[self.value]}'
+        else:
+            assert isinstance(self.value, bytes), self.value
+            if self.value not in ctx.all_bytes:
+                ctx.all_bytes[self.value] = len(ctx.all_bytes)
+            return f'bytes_singleton_{ctx.all_bytes[self.value]}'
 
 class JavaStatement(ABC):
     def ends_control_flow(self) -> bool:
         return False
 
     @abstractmethod
-    def emit_java(self) -> Iterator[str]:
+    def emit_java(self, ctx: EmitContext) -> Iterator[str]:
         raise NotImplementedError()
 
 @dataclass(slots=True)
@@ -210,9 +226,9 @@ class JavaVariableDecl(JavaStatement):
     type: str
     name: str
     value: Optional[JavaExpr]
-    def emit_java(self) -> Iterator[str]:
+    def emit_java(self, ctx: EmitContext) -> Iterator[str]:
         if self.value:
-            yield f'{self.type} {self.name} = {self.value.emit_java()};'
+            yield f'{self.type} {self.name} = {self.value.emit_java(ctx)};'
         else:
             yield f'{self.type} {self.name};'
 
@@ -220,28 +236,28 @@ class JavaVariableDecl(JavaStatement):
 class JavaAssignStatement(JavaStatement):
     lhs: JavaExpr
     rhs: JavaExpr
-    def emit_java(self) -> Iterator[str]:
-        yield f'{self.lhs.emit_java()} = {self.rhs.emit_java()};'
+    def emit_java(self, ctx: EmitContext) -> Iterator[str]:
+        yield f'{self.lhs.emit_java(ctx)} = {self.rhs.emit_java(ctx)};'
 
 @dataclass(slots=True)
 class JavaExprStatement(JavaStatement):
     call: JavaCreateObject | JavaMethodCall # only limited types of expressions allowed by Java grammar
-    def emit_java(self) -> Iterator[str]:
-        yield f'{self.call.emit_java()};'
+    def emit_java(self, ctx: EmitContext) -> Iterator[str]:
+        yield f'{self.call.emit_java(ctx)};'
 
 @dataclass(slots=True)
 class JavaBreakStatement(JavaStatement):
     name: Optional[str]
     def ends_control_flow(self) -> bool:
         return True
-    def emit_java(self) -> Iterator[str]:
+    def emit_java(self, ctx: EmitContext) -> Iterator[str]:
         yield f'break {self.name};' if self.name else 'break;'
 
 @dataclass(slots=True)
 class JavaContinueStatement(JavaStatement):
     def ends_control_flow(self) -> bool:
         return True
-    def emit_java(self) -> Iterator[str]:
+    def emit_java(self, ctx: EmitContext) -> Iterator[str]:
         yield 'continue;'
 
 @dataclass(slots=True)
@@ -249,16 +265,16 @@ class JavaReturnStatement(JavaStatement):
     expr: JavaExpr
     def ends_control_flow(self) -> bool:
         return True
-    def emit_java(self) -> Iterator[str]:
-        yield f'return {self.expr.emit_java()};'
+    def emit_java(self, ctx: EmitContext) -> Iterator[str]:
+        yield f'return {self.expr.emit_java(ctx)};'
 
 @dataclass(slots=True)
 class JavaThrowStatement(JavaStatement):
     expr: JavaExpr
     def ends_control_flow(self) -> bool:
         return True
-    def emit_java(self) -> Iterator[str]:
-        yield f'throw {self.expr.emit_java()};'
+    def emit_java(self, ctx: EmitContext) -> Iterator[str]:
+        yield f'throw {self.expr.emit_java(ctx)};'
 
 def block_simplify(block: list[JavaStatement]) -> list[JavaStatement]:
     ret = []
@@ -268,9 +284,9 @@ def block_simplify(block: list[JavaStatement]) -> list[JavaStatement]:
             break
     return ret
 
-def block_emit_java(block: list[JavaStatement]) -> Iterator[str]:
+def block_emit_java(block: list[JavaStatement], ctx: EmitContext) -> Iterator[str]:
     for s in block:
-        yield from s.emit_java()
+        yield from s.emit_java(ctx)
 
 def block_ends_control_flow(block: list[JavaStatement]) -> bool:
     return bool(block) and block[-1].ends_control_flow()
@@ -288,12 +304,12 @@ class JavaIfStatement(JavaStatement):
     def ends_control_flow(self) -> bool:
         return block_ends_control_flow(self.body) and block_ends_control_flow(self.orelse)
 
-    def emit_java(self) -> Iterator[str]:
-        yield f'if ({self.cond.emit_java()}) {{'
-        yield from block_emit_java(self.body)
+    def emit_java(self, ctx: EmitContext) -> Iterator[str]:
+        yield f'if ({self.cond.emit_java(ctx)}) {{'
+        yield from block_emit_java(self.body, ctx)
         if self.orelse:
             yield '} else {'
-            yield from block_emit_java(self.orelse)
+            yield from block_emit_java(self.orelse, ctx)
         yield '}'
 
 @dataclass(slots=True)
@@ -304,9 +320,9 @@ class JavaWhileStatement(JavaStatement):
     def __post_init__(self):
         self.body = block_simplify(self.body)
 
-    def emit_java(self) -> Iterator[str]:
-        yield f'while ({self.cond.emit_java()}) {{'
-        yield from block_emit_java(self.body)
+    def emit_java(self, ctx: EmitContext) -> Iterator[str]:
+        yield f'while ({self.cond.emit_java(ctx)}) {{'
+        yield from block_emit_java(self.body, ctx)
         yield '}'
 
 # simplified; init/incr are weird because of semicolons/parens if we try to map them to statement or expr
@@ -323,9 +339,9 @@ class JavaForStatement(JavaStatement):
     def __post_init__(self):
         self.body = block_simplify(self.body)
 
-    def emit_java(self) -> Iterator[str]:
-        yield f'for ({self.init_type} {self.init_name} = {self.init_value.emit_java()}; {self.cond.emit_java()}; {self.incr_name} = {self.incr_value.emit_java()}) {{'
-        yield from block_emit_java(self.body)
+    def emit_java(self, ctx: EmitContext) -> Iterator[str]:
+        yield f'for ({self.init_type} {self.init_name} = {self.init_value.emit_java(ctx)}; {self.cond.emit_java(ctx)}; {self.incr_name} = {self.incr_value.emit_java(ctx)}) {{'
+        yield from block_emit_java(self.body, ctx)
         yield '}'
 
 @dataclass(slots=True)
@@ -349,18 +365,18 @@ class JavaTryStatement(JavaStatement):
         else:
             return block_ends_control_flow(self.try_body)
 
-    def emit_java(self) -> Iterator[str]:
+    def emit_java(self, ctx: EmitContext) -> Iterator[str]:
         yield 'try {'
-        yield from block_emit_java(self.try_body)
+        yield from block_emit_java(self.try_body, ctx)
         if self.exc_type is not None:
             yield f'}} catch ({self.exc_type} {self.exc_name}) {{'
-            yield from block_emit_java(self.catch_body)
+            yield from block_emit_java(self.catch_body, ctx)
         else: # if no exception type, should not have an exception name or catch block either
             assert self.exc_name is None, self.exc_name
             assert not self.catch_body, self.catch_body
         if self.finally_body:
             yield '} finally {'
-            yield from block_emit_java(self.finally_body)
+            yield from block_emit_java(self.finally_body, ctx)
         yield '}'
 
 @dataclass(slots=True)
@@ -371,31 +387,10 @@ class JavaLabeledBlock(JavaStatement):
     def __post_init__(self):
         self.body = block_simplify(self.body)
 
-    def emit_java(self) -> Iterator[str]:
+    def emit_java(self, ctx: EmitContext) -> Iterator[str]:
         yield f'{self.name}: {{'
-        yield from block_emit_java(self.body)
+        yield from block_emit_java(self.body, ctx)
         yield '}'
-
-def py_constant(emit_ctx: EmitContext, value: None | bool | int | str | bytes) -> JavaExpr:
-    """Lower a Python literal value into a JavaExpr and record any required singletons."""
-    if value is None or value is False or value is True:
-        return JavaPyConstant(value)
-    elif isinstance(value, int):
-        if 0 <= value <= 1:
-            return JavaField(JavaIdentifier('PyInt'), f'singleton_{value}')
-        emit_ctx.all_ints.add(value)
-        return JavaIdentifier(int_name(value))
-    elif isinstance(value, str):
-        if not value:
-            return JavaField(JavaIdentifier('PyString'), 'empty_singleton')
-        if value not in emit_ctx.all_strings:
-            emit_ctx.all_strings[value] = len(emit_ctx.all_strings)
-        return JavaIdentifier(f'str_singleton_{emit_ctx.all_strings[value]}')
-    else:
-        assert isinstance(value, bytes), value
-        if value not in emit_ctx.all_bytes:
-            emit_ctx.all_bytes[value] = len(emit_ctx.all_bytes)
-        return JavaIdentifier(f'bytes_singleton_{emit_ctx.all_bytes[value]}')
 
 def unary_op(op: str, operand: JavaExpr) -> JavaExpr:
     if op == '!' and isinstance(operand, JavaIdentifier):
@@ -607,14 +602,14 @@ class PythonjVisitor(ast.NodeVisitor):
     # Note that we never actually get negative integers here in the AST
     def visit_Constant(self, node) -> JavaExpr:
         if isinstance(node.value, (NoneType, bool, int, str, bytes)):
-            return py_constant(self.emit_ctx, node.value)
+            return JavaPyConstant(node.value)
         else:
             self.error(node.lineno, f'literal {node.value!r} of type {type(node.value).__name__!r} is unsupported')
             return JavaIdentifier('__cannot_translate_constant__')
 
     def visit_JoinedStr(self, node) -> JavaExpr:
         if not node.values:
-            return py_constant(self.emit_ctx, '')
+            return JavaPyConstant('')
         vals: list[JavaExpr] = []
         for val in node.values:
             if isinstance(val, ast.Constant):
@@ -687,7 +682,7 @@ class PythonjVisitor(ast.NodeVisitor):
                     kv_list.append(self.visit(kwarg.value))
                 else:
                     assert isinstance(kwarg.arg, str), kwarg.arg
-                    kv_list.append(py_constant(self.emit_ctx, kwarg.arg))
+                    kv_list.append(JavaPyConstant(kwarg.arg))
                     kv_list.append(self.visit(kwarg.value))
             kwargs = JavaMethodCall(JavaIdentifier('Runtime'), 'requireKwStrings', [JavaCreateObject('PyDict', kv_list)])
         else:
@@ -704,9 +699,9 @@ class PythonjVisitor(ast.NodeVisitor):
         return JavaMethodCall(self.visit(node.value), 'getAttr', [JavaStrLiteral(node.attr)])
 
     def visit_Slice(self, node) -> JavaExpr:
-        lower = self.visit(node.lower) if node.lower else py_constant(self.emit_ctx, None)
-        upper = self.visit(node.upper) if node.upper else py_constant(self.emit_ctx, None)
-        step = self.visit(node.step) if node.step else py_constant(self.emit_ctx, None)
+        lower = self.visit(node.lower) if node.lower else JavaPyConstant(None)
+        upper = self.visit(node.upper) if node.upper else JavaPyConstant(None)
+        step = self.visit(node.step) if node.step else JavaPyConstant(None)
         return JavaCreateObject('PySlice', [lower, upper, step])
 
     # XXX Change all statements to -> Iterator[JavaStatement] and yield statements?
@@ -808,7 +803,7 @@ class PythonjVisitor(ast.NodeVisitor):
 
     def visit_Return(self, node) -> None:
         assert self.in_function, node
-        value = self.visit(node.value) if node.value else py_constant(self.emit_ctx, None)
+        value = self.visit(node.value) if node.value else JavaPyConstant(None)
         self.code.append(JavaReturnStatement(value))
 
     @contextmanager
@@ -1018,7 +1013,7 @@ class PythonjVisitor(ast.NodeVisitor):
             # XXX It's tempting to assign Java null here, but this makes it far too easy for null to leak out into the runtime
             *(JavaVariableDecl('PyObject', f'pylocal_{name}', None) for name in sorted(self.names)),
             *body,
-            JavaReturnStatement(py_constant(self.emit_ctx, None)),
+            JavaReturnStatement(JavaPyConstant(None)),
         ]
         func_code = block_simplify(func_code)
 
@@ -1028,7 +1023,7 @@ class PythonjVisitor(ast.NodeVisitor):
             f'super({java_string_literal(node.name)});',
             '}',
             '@Override public PyObject call(PyObject[] args, PyDict kwargs) {',
-            *block_emit_java(func_code),
+            *block_emit_java(func_code, self.emit_ctx),
             '}',
             '}',
         ]
@@ -1043,10 +1038,6 @@ class PythonjVisitor(ast.NodeVisitor):
     def write_java(self, f: TextIO, py_name: str) -> None:
         writer = IndentedWriter(f, 0)
         writer.write(f'public final class {py_name} {{')
-        for line in self.emit_ctx.emit_java():
-            writer.write(line)
-        writer.write('')
-
         for (name, code) in sorted(self.functions.items()):
             for line in code:
                 writer.write(line)
@@ -1054,13 +1045,17 @@ class PythonjVisitor(ast.NodeVisitor):
 
         # XXX Initializing all globals to None is weird, but we don't have a better option yet
         for name in sorted(self.global_names):
-            writer.write(f'private static PyObject pyglobal_{name} = {JavaPyConstant(None).emit_java()};')
+            writer.write(f'private static PyObject pyglobal_{name} = {JavaPyConstant(None).emit_java(self.emit_ctx)};')
         writer.write('')
 
         writer.write('public static void main(String[] args) {')
-        for line in block_emit_java(block_simplify(self.global_code)):
+        for line in block_emit_java(block_simplify(self.global_code), self.emit_ctx):
             writer.write(line)
         writer.write('}')
+
+        writer.write('')
+        for line in self.emit_ctx.emit_java():
+            writer.write(line)
         writer.write('}')
         assert writer.indent == 0, writer.indent
 
