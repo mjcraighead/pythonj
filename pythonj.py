@@ -296,6 +296,11 @@ def bool_value(expr: JavaExpr) -> JavaExpr:
     if (isinstance(expr, JavaMethodCall) and isinstance(expr.obj, JavaIdentifier) and
         expr.obj.name == 'PyBool' and expr.method == 'create' and len(expr.args) == 1):
         return expr.args[0] # return the raw boolean instead of box/unbox
+    if isinstance(expr, JavaField) and isinstance(expr.obj, JavaIdentifier) and expr.obj.name == 'PyBool':
+        if expr.field == 'false_singleton':
+            return JavaIdentifier('false')
+        if expr.field == 'true_singleton':
+            return JavaIdentifier('true')
     return JavaMethodCall(expr, 'boolValue', [])
 
 def chained_binary_op(op: str, exprs: list[JavaExpr]) -> JavaExpr:
