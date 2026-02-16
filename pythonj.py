@@ -367,6 +367,29 @@ class JavaLabeledBlock(JavaStatement):
         yield from block_emit_java(self.body)
         yield '}'
 
+def py_constant(emit_ctx: EmitContext, value: None | bool | int | str | bytes) -> JavaExpr:
+    """Lower a Python literal value into a JavaExpr and record any required singletons."""
+    if value is None:
+        return JavaField(JavaIdentifier('PyNone'), 'singleton')
+    elif value is False or value is True:
+        return JavaField(JavaIdentifier('PyBool'), f'{str(value).lower()}_singleton')
+    elif isinstance(value, int):
+        if 0 <= value <= 1:
+            return JavaField(JavaIdentifier('PyInt'), f'singleton_{value}')
+        emit_ctx.all_ints.add(value)
+        return JavaIdentifier(int_name(value))
+    elif isinstance(value, str):
+        if not value:
+            return JavaField(JavaIdentifier('PyString'), 'empty_singleton')
+        if value not in emit_ctx.all_strings:
+            emit_ctx.all_strings[value] = len(emit_ctx.all_strings)
+        return JavaIdentifier(f'str_singleton_{emit_ctx.all_strings[value]}')
+    else:
+        assert isinstance(value, bytes), value
+        if value not in emit_ctx.all_bytes:
+            emit_ctx.all_bytes[value] = len(emit_ctx.all_bytes)
+        return JavaIdentifier(f'bytes_singleton_{emit_ctx.all_bytes[value]}')
+
 def unary_op(op: str, operand: JavaExpr) -> JavaExpr:
     if op == '!' and isinstance(operand, JavaIdentifier):
         if operand.name == 'false':
@@ -574,40 +597,17 @@ class PythonjVisitor(ast.NodeVisitor):
     def visit_IfExp(self, node) -> JavaExpr:
         return JavaCondOp(bool_value(self.visit(node.test)), self.visit(node.body), self.visit(node.orelse))
 
-    def emit_constant(self, value: None | bool | int | str | bytes) -> JavaExpr:
-        """Lower a Python literal value into a JavaExpr and record any required singletons."""
-        if value is None:
-            return JavaField(JavaIdentifier('PyNone'), 'singleton')
-        elif value is False or value is True:
-            return JavaField(JavaIdentifier('PyBool'), f'{str(value).lower()}_singleton')
-        elif isinstance(value, int):
-            if 0 <= value <= 1:
-                return JavaField(JavaIdentifier('PyInt'), f'singleton_{value}')
-            self.emit_ctx.all_ints.add(value)
-            return JavaIdentifier(int_name(value))
-        elif isinstance(value, str):
-            if not value:
-                return JavaField(JavaIdentifier('PyString'), 'empty_singleton')
-            if value not in self.emit_ctx.all_strings:
-                self.emit_ctx.all_strings[value] = len(self.emit_ctx.all_strings)
-            return JavaIdentifier(f'str_singleton_{self.emit_ctx.all_strings[value]}')
-        else:
-            assert isinstance(value, bytes), value
-            if value not in self.emit_ctx.all_bytes:
-                self.emit_ctx.all_bytes[value] = len(self.emit_ctx.all_bytes)
-            return JavaIdentifier(f'bytes_singleton_{self.emit_ctx.all_bytes[value]}')
-
     # Note that we never actually get negative integers here in the AST
     def visit_Constant(self, node) -> JavaExpr:
         if isinstance(node.value, (NoneType, bool, int, str, bytes)):
-            return self.emit_constant(node.value)
+            return py_constant(self.emit_ctx, node.value)
         else:
             self.error(node.lineno, f'literal {node.value!r} of type {type(node.value).__name__!r} is unsupported')
             return JavaIdentifier('__cannot_translate_constant__')
 
     def visit_JoinedStr(self, node) -> JavaExpr:
         if not node.values:
-            return self.emit_constant('')
+            return py_constant(self.emit_ctx, '')
         vals: list[JavaExpr] = []
         for val in node.values:
             if isinstance(val, ast.Constant):
@@ -680,7 +680,7 @@ class PythonjVisitor(ast.NodeVisitor):
                     kv_list.append(self.visit(kwarg.value))
                 else:
                     assert isinstance(kwarg.arg, str), kwarg.arg
-                    kv_list.append(self.emit_constant(kwarg.arg))
+                    kv_list.append(py_constant(self.emit_ctx, kwarg.arg))
                     kv_list.append(self.visit(kwarg.value))
             kwargs = JavaMethodCall(JavaIdentifier('Runtime'), 'requireKwStrings', [JavaCreateObject('PyDict', kv_list)])
         else:
@@ -697,9 +697,9 @@ class PythonjVisitor(ast.NodeVisitor):
         return JavaMethodCall(self.visit(node.value), 'getAttr', [JavaStrLiteral(node.attr)])
 
     def visit_Slice(self, node) -> JavaExpr:
-        lower = self.visit(node.lower) if node.lower else self.emit_constant(None)
-        upper = self.visit(node.upper) if node.upper else self.emit_constant(None)
-        step = self.visit(node.step) if node.step else self.emit_constant(None)
+        lower = self.visit(node.lower) if node.lower else py_constant(self.emit_ctx, None)
+        upper = self.visit(node.upper) if node.upper else py_constant(self.emit_ctx, None)
+        step = self.visit(node.step) if node.step else py_constant(self.emit_ctx, None)
         return JavaCreateObject('PySlice', [lower, upper, step])
 
     # XXX Change all statements to -> Iterator[JavaStatement] and yield statements?
@@ -801,7 +801,7 @@ class PythonjVisitor(ast.NodeVisitor):
 
     def visit_Return(self, node) -> None:
         assert self.in_function, node
-        value = self.visit(node.value) if node.value else self.emit_constant(None)
+        value = self.visit(node.value) if node.value else py_constant(self.emit_ctx, None)
         self.code.append(JavaReturnStatement(value))
 
     @contextmanager
@@ -1011,7 +1011,7 @@ class PythonjVisitor(ast.NodeVisitor):
             # XXX It's tempting to assign Java null here, but this makes it far too easy for null to leak out into the runtime
             *(JavaVariableDecl('PyObject', f'pylocal_{name}', None) for name in sorted(self.names)),
             *body,
-            JavaReturnStatement(self.emit_constant(None)),
+            JavaReturnStatement(py_constant(self.emit_ctx, None)),
         ]
         func_code = block_simplify(func_code)
 
