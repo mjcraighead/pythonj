@@ -240,6 +240,9 @@ def block_emit_java(block: list[JavaStatement]) -> Iterator[str]:
     for s in block:
         yield from s.emit_java()
 
+def block_ends_control_flow(block: list[JavaStatement]) -> bool:
+    return bool(block) and block[-1].ends_control_flow()
+
 @dataclass(slots=True)
 class JavaIfStatement(JavaStatement):
     cond: JavaExpr
@@ -249,6 +252,9 @@ class JavaIfStatement(JavaStatement):
     def __post_init__(self):
         self.body = block_simplify(self.body)
         self.orelse = block_simplify(self.orelse)
+
+    def ends_control_flow(self) -> bool:
+        return block_ends_control_flow(self.body) and block_ends_control_flow(self.orelse)
 
     def emit_java(self) -> Iterator[str]:
         yield f'if ({self.cond.emit_java()}) {{'
@@ -302,6 +308,14 @@ class JavaTryStatement(JavaStatement):
         self.try_body = block_simplify(self.try_body)
         self.catch_body = block_simplify(self.catch_body)
         self.finally_body = block_simplify(self.finally_body)
+
+    def ends_control_flow(self) -> bool:
+        if block_ends_control_flow(self.finally_body):
+            return True
+        if self.exc_type is not None:
+            return block_ends_control_flow(self.try_body) and block_ends_control_flow(self.catch_body)
+        else:
+            return block_ends_control_flow(self.try_body)
 
     def emit_java(self) -> Iterator[str]:
         yield 'try {'
@@ -387,8 +401,7 @@ class IndentedWriter:
 # XXX "invokedynamic" might help us a lot, but there is no way to access it from Java source
 class PythonjVisitor(ast.NodeVisitor):
     __slots__ = ('path', 'n_errors', 'n_temps', 'global_names', 'global_code', 'names', 'explicit_globals', 'code',
-                 'all_ints', 'all_strings', 'all_bytes', 'in_function', 'has_returns', 'functions',
-                 'allow_intrinsics')
+                 'all_ints', 'all_strings', 'all_bytes', 'in_function', 'functions', 'allow_intrinsics')
     path: str
     n_errors: int
     n_temps: int
@@ -401,7 +414,6 @@ class PythonjVisitor(ast.NodeVisitor):
     all_strings: dict[str, int]
     all_bytes: dict[bytes, int]
     in_function: bool
-    has_returns: bool
     used_expr_discard: bool
     break_name: Optional[str]
     functions: dict[str, list[str]]
@@ -420,7 +432,6 @@ class PythonjVisitor(ast.NodeVisitor):
         self.all_strings = {}
         self.all_bytes = {}
         self.in_function = False
-        self.has_returns = False
         self.used_expr_discard = False
         self.break_name = None
         self.functions = {}
@@ -763,7 +774,6 @@ class PythonjVisitor(ast.NodeVisitor):
 
     def visit_Return(self, node) -> None:
         assert self.in_function, node
-        self.has_returns = True
         value = self.visit(node.value) if node.value else self.emit_constant(None)
         self.code.append(JavaReturnStatement(value))
 
@@ -941,7 +951,6 @@ class PythonjVisitor(ast.NodeVisitor):
         self.global_code.append(JavaAssignStatement(JavaIdentifier(f'pyglobal_{node.name}'), expr))
 
         self.in_function = True
-        self.has_returns = False
         self.used_expr_discard = False
         self.names = set()
         self.explicit_globals = set()
@@ -975,10 +984,8 @@ class PythonjVisitor(ast.NodeVisitor):
             # XXX It's tempting to assign Java null here, but this makes it far too easy for null to leak out into the runtime
             *(JavaVariableDecl('PyObject', f'pylocal_{name}', None) for name in sorted(self.names)),
             *body,
+            JavaReturnStatement(self.emit_constant(None)),
         ]
-        # XXX need this in some, but not all, cases with has_returns (avoid "unreachable statement" javac errors)
-        if not self.has_returns:
-            func_code.append(JavaReturnStatement(self.emit_constant(None)))
         func_code = block_simplify(func_code)
 
         self.functions[node.name] = [
