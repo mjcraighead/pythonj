@@ -540,7 +540,31 @@ class PythonjVisitor(ast.NodeVisitor):
     def visit_RShift(self, node): return 'rshift'
     def visit_Sub(self, node): return 'sub'
     def visit_BinOp(self, node) -> JavaExpr:
-        return JavaMethodCall(self.visit(node.left), self.visit(node.op), [self.visit(node.right)])
+        op = self.visit(node.op)
+        lhs = self.visit(node.left)
+        rhs = self.visit(node.right)
+        if (isinstance(lhs, JavaPyConstant) and isinstance(lhs.value, int) and
+            isinstance(rhs, JavaPyConstant) and isinstance(rhs.value, int)):
+            match op: # be careful to not raise an exception here or do anything platform-dependent
+                case 'add':
+                    return JavaPyConstant(lhs.value + rhs.value)
+                case 'and':
+                    return JavaPyConstant(lhs.value & rhs.value)
+                case 'or':
+                    return JavaPyConstant(lhs.value | rhs.value)
+                case 'xor':
+                    return JavaPyConstant(lhs.value ^ rhs.value)
+                case 'lshift':
+                    if rhs.value >= 0:
+                        return JavaPyConstant(lhs.value << rhs.value)
+                case 'mul':
+                    return JavaPyConstant(lhs.value * rhs.value)
+                case 'rshift':
+                    if rhs.value >= 0:
+                        return JavaPyConstant(lhs.value >> rhs.value)
+                case 'sub':
+                    return JavaPyConstant(lhs.value - rhs.value)
+        return JavaMethodCall(lhs, op, [rhs])
 
     def visit_Lt(self, node): return 'lt'
     def visit_LtE(self, node): return 'le'
