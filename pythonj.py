@@ -386,7 +386,7 @@ class IndentedWriter:
 # will compile into.  Partial mitigations are likely to be easier than a total fix.
 # XXX "invokedynamic" might help us a lot, but there is no way to access it from Java source
 class PythonjVisitor(ast.NodeVisitor):
-    __slots__ = ('path', 'n_errors', 'n_temps', 'global_names', 'global_code', 'names', 'code',
+    __slots__ = ('path', 'n_errors', 'n_temps', 'global_names', 'global_code', 'names', 'explicit_globals', 'code',
                  'all_ints', 'all_strings', 'all_bytes', 'in_function', 'has_returns', 'functions',
                  'allow_intrinsics')
     path: str
@@ -395,6 +395,7 @@ class PythonjVisitor(ast.NodeVisitor):
     global_names: set[str]
     global_code: list[JavaStatement]
     names: set[str]
+    explicit_globals: set[str]
     code: list[JavaStatement]
     all_ints: set[int]
     all_strings: dict[str, int]
@@ -413,6 +414,7 @@ class PythonjVisitor(ast.NodeVisitor):
         self.global_names = set()
         self.global_code = [JavaVariableDecl('PyObject', 'expr_discard', None)] # XXX remove this variable if not needed
         self.names = self.global_names
+        self.explicit_globals = set()
         self.code = self.global_code
         self.all_ints = set()
         self.all_strings = {}
@@ -443,7 +445,7 @@ class PythonjVisitor(ast.NodeVisitor):
             return JavaIdentifier('null')
         elif name in BUILTINS:
             return JavaField(JavaIdentifier('Runtime'), f'pyglobal_{name}')
-        elif self.in_function and name not in self.global_names:
+        elif self.in_function and name not in self.global_names and name not in self.explicit_globals:
             return JavaIdentifier(f'pylocal_{name}')
         else:
             return JavaIdentifier(f'pyglobal_{name}')
@@ -665,6 +667,13 @@ class PythonjVisitor(ast.NodeVisitor):
     # XXX Change all statements to -> Iterator[JavaStatement] and yield statements?
     def visit_Pass(self, node) -> None:
         pass
+
+    def visit_Global(self, node) -> None:
+        if not self.in_function:
+            self.error(node.lineno, "'global' at global scope is unsupported")
+            return
+        for name in node.names:
+            self.explicit_globals.add(name)
 
     def emit_bind(self, target: ast.expr, value: JavaExpr) -> Iterator[JavaStatement]:
         if isinstance(target, ast.Name):
@@ -935,6 +944,7 @@ class PythonjVisitor(ast.NodeVisitor):
         self.has_returns = False
         self.used_expr_discard = False
         self.names = set()
+        self.explicit_globals = set()
 
         # Number temps in each function starting from temp0 for improved clarity/stability of generated code
         saved_temps = self.n_temps
