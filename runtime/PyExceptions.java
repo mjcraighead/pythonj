@@ -28,6 +28,10 @@ abstract class PyException extends PyBaseException {
 final class PyAssertionError extends PyException {
     PyAssertionError(PyObject... _args) { super(_args); }
     @Override public PyBuiltinClass type() { return Runtime.pyglobal_AssertionError; }
+
+    static PyRaise raise(String msg) {
+        return new PyRaise(new PyAssertionError(new PyString(msg)));
+    }
 }
 
 class PyArithmeticError extends PyException {

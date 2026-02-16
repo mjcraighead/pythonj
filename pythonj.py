@@ -679,8 +679,7 @@ class PythonjVisitor(ast.NodeVisitor):
         if node.msg:
             msg.s += ': '
             msg = JavaBinaryOp('+', msg, JavaMethodCall(self.visit(node.msg), 'repr', []))
-        msg = JavaCreateObject('PyString', [msg])
-        exception = JavaCreateObject('PyRaise', [JavaCreateObject('PyAssertionError', [msg])])
+        exception = JavaMethodCall(JavaIdentifier('PyAssertionError'), 'raise', [msg])
         self.code.append(JavaIfStatement(cond, [JavaThrowStatement(exception)], []))
 
     def visit_Delete(self, node) -> None:
