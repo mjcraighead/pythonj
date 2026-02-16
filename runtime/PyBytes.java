@@ -25,6 +25,17 @@ public final class PyBytes extends PyObject {
 
     PyBytes(byte[] _value) { value = _value; }
 
+    @Override public PyBytes add(PyObject rhs) {
+        if (rhs instanceof PyBytes rhs_bytes) {
+            int newLength = Math.addExact(value.length, rhs_bytes.value.length);
+            byte[] result = Arrays.copyOf(value, newLength);
+            System.arraycopy(rhs_bytes.value, 0, result, value.length, rhs_bytes.value.length);
+            return new PyBytes(result);
+        } else {
+            throw new UnsupportedOperationException(String.format("bytes + %s is not implemented", rhs.type().name()));
+        }
+    }
+
     @Override public PyInt getItem(PyObject key) {
         int index = Math.toIntExact(key.indexValue());
         if (index < 0) {
@@ -47,6 +58,12 @@ public final class PyBytes extends PyObject {
             return Arrays.equals(value, rhs.value);
         }
         return false;
+    }
+    @Override public String format(String formatSpec) {
+        if (!formatSpec.isEmpty()) {
+            throw new UnsupportedOperationException(String.format("formatSpec='%s' unimplemented", formatSpec));
+        }
+        return repr();
     }
     @Override public long len() { return value.length; }
     @Override public String repr() {
