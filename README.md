@@ -48,8 +48,6 @@ Java (and the JVM) provide:
 
 This allows the project to focus on **semantics and mapping**, not runtime infrastructure.
 
-Java is the current backend because it is practical — not because it is loved, and not because it is permanent.
-
 ## Scope and limitations
 - Many Python features are unsupported or only partially supported
 - Some CPython behaviors are intentionally excluded
