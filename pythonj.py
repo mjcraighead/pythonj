@@ -14,6 +14,7 @@ import os
 import subprocess
 import sys
 import time
+from types import NoneType
 from typing import Iterator, Optional, TextIO
 
 BUILTINS = {
@@ -74,6 +75,28 @@ def java_string_literal(s: str) -> str:
                 out.append(f'\\u{o:04x}')
     out.append('"')
     return ''.join(out)
+
+class EmitContext:
+    __slots__ = ('all_ints', 'all_strings', 'all_bytes')
+    all_ints: set[int]
+    all_strings: dict[str, int]
+    all_bytes: dict[bytes, int]
+
+    def __init__(self):
+        self.all_ints = set()
+        self.all_strings = {}
+        self.all_bytes = {}
+
+    def emit_java(self) -> Iterator[str]:
+        for i in sorted(self.all_ints):
+            value = JavaCreateObject('PyInt', [JavaIntLiteral(i, 'L')])
+            yield f'private static final PyInt {int_name(i)} = {value.emit_java()};'
+        for (k, v) in sorted(self.all_strings.items()):
+            value = JavaCreateObject('PyString', [JavaStrLiteral(k)])
+            yield f'private static final PyString str_singleton_{v} = {value.emit_java()};'
+        for (k, v) in sorted(self.all_bytes.items()):
+            value = JavaCreateObject('PyBytes', [JavaCreateArray('byte', [JavaIntLiteral(((x + 0x80) & 0xFF) - 0x80, '') for x in k])])
+            yield f'private static final PyBytes bytes_singleton_{v} = {value.emit_java()};'
 
 class JavaExpr(ABC):
     @abstractmethod
@@ -407,7 +430,7 @@ class IndentedWriter:
 # XXX "invokedynamic" might help us a lot, but there is no way to access it from Java source
 class PythonjVisitor(ast.NodeVisitor):
     __slots__ = ('path', 'n_errors', 'n_temps', 'global_names', 'global_code', 'names', 'explicit_globals', 'code',
-                 'all_ints', 'all_strings', 'all_bytes', 'in_function', 'functions', 'allow_intrinsics')
+                 'emit_ctx', 'in_function', 'functions', 'allow_intrinsics')
     path: str
     n_errors: int
     n_temps: int
@@ -416,9 +439,7 @@ class PythonjVisitor(ast.NodeVisitor):
     names: set[str]
     explicit_globals: set[str]
     code: list[JavaStatement]
-    all_ints: set[int]
-    all_strings: dict[str, int]
-    all_bytes: dict[bytes, int]
+    emit_ctx: EmitContext
     in_function: bool
     used_expr_discard: bool
     break_name: Optional[str]
@@ -434,9 +455,7 @@ class PythonjVisitor(ast.NodeVisitor):
         self.names = self.global_names
         self.explicit_globals = set()
         self.code = self.global_code
-        self.all_ints = set()
-        self.all_strings = {}
-        self.all_bytes = {}
+        self.emit_ctx = EmitContext()
         self.in_function = False
         self.used_expr_discard = False
         self.break_name = None
@@ -555,7 +574,7 @@ class PythonjVisitor(ast.NodeVisitor):
     def visit_IfExp(self, node) -> JavaExpr:
         return JavaCondOp(bool_value(self.visit(node.test)), self.visit(node.body), self.visit(node.orelse))
 
-    def emit_constant(self, value, lineno: Optional[int] = None) -> JavaExpr:
+    def emit_constant(self, value: None | bool | int | str | bytes) -> JavaExpr:
         """Lower a Python literal value into a JavaExpr and record any required singletons."""
         if value is None:
             return JavaField(JavaIdentifier('PyNone'), 'singleton')
@@ -564,25 +583,27 @@ class PythonjVisitor(ast.NodeVisitor):
         elif isinstance(value, int):
             if 0 <= value <= 1:
                 return JavaField(JavaIdentifier('PyInt'), f'singleton_{value}')
-            self.all_ints.add(value)
+            self.emit_ctx.all_ints.add(value)
             return JavaIdentifier(int_name(value))
         elif isinstance(value, str):
             if not value:
                 return JavaField(JavaIdentifier('PyString'), 'empty_singleton')
-            if value not in self.all_strings:
-                self.all_strings[value] = len(self.all_strings)
-            return JavaIdentifier(f'str_singleton_{self.all_strings[value]}')
-        elif isinstance(value, bytes):
-            if value not in self.all_bytes:
-                self.all_bytes[value] = len(self.all_bytes)
-            return JavaIdentifier(f'bytes_singleton_{self.all_bytes[value]}')
+            if value not in self.emit_ctx.all_strings:
+                self.emit_ctx.all_strings[value] = len(self.emit_ctx.all_strings)
+            return JavaIdentifier(f'str_singleton_{self.emit_ctx.all_strings[value]}')
         else:
-            self.error(lineno, f'literal {value!r} of type {type(value).__name__!r} is unsupported')
-            return JavaIdentifier('__cannot_translate_constant__')
+            assert isinstance(value, bytes), value
+            if value not in self.emit_ctx.all_bytes:
+                self.emit_ctx.all_bytes[value] = len(self.emit_ctx.all_bytes)
+            return JavaIdentifier(f'bytes_singleton_{self.emit_ctx.all_bytes[value]}')
 
     # Note that we never actually get negative integers here in the AST
     def visit_Constant(self, node) -> JavaExpr:
-        return self.emit_constant(node.value, node.lineno)
+        if isinstance(node.value, (NoneType, bool, int, str, bytes)):
+            return self.emit_constant(node.value)
+        else:
+            self.error(node.lineno, f'literal {node.value!r} of type {type(node.value).__name__!r} is unsupported')
+            return JavaIdentifier('__cannot_translate_constant__')
 
     def visit_JoinedStr(self, node) -> JavaExpr:
         if not node.values:
@@ -1015,15 +1036,8 @@ class PythonjVisitor(ast.NodeVisitor):
     def write_java(self, f: TextIO, py_name: str) -> None:
         writer = IndentedWriter(f, 0)
         writer.write(f'public final class {py_name} {{')
-        for i in sorted(self.all_ints):
-            value = JavaCreateObject('PyInt', [JavaIntLiteral(i, 'L')])
-            writer.write(f'private static final PyInt {int_name(i)} = {value.emit_java()};')
-        for (k, v) in sorted(self.all_strings.items()):
-            value = JavaCreateObject('PyString', [JavaStrLiteral(k)])
-            writer.write(f'private static final PyString str_singleton_{v} = {value.emit_java()};')
-        for (k, v) in sorted(self.all_bytes.items()):
-            value = JavaCreateObject('PyBytes', [JavaCreateArray('byte', [JavaIntLiteral(((x + 0x80) & 0xFF) - 0x80, '') for x in k])])
-            writer.write(f'private static final PyBytes bytes_singleton_{v} = {value.emit_java()};')
+        for line in self.emit_ctx.emit_java():
+            writer.write(line)
         writer.write('')
 
         for (name, code) in sorted(self.functions.items()):
