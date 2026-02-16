@@ -228,17 +228,28 @@ class JavaThrowStatement(JavaStatement):
     def emit_java(self) -> Iterator[str]:
         yield f'throw {self.expr.emit_java()};'
 
+def block_simplify(block: list[JavaStatement]) -> list[JavaStatement]:
+    ret = []
+    for s in block:
+        ret.append(s)
+        if s.ends_control_flow():
+            break
+    return ret
+
 def block_emit_java(block: list[JavaStatement]) -> Iterator[str]:
     for s in block:
         yield from s.emit_java()
-        if s.ends_control_flow():
-            break
 
 @dataclass(slots=True)
 class JavaIfStatement(JavaStatement):
     cond: JavaExpr
     body: list[JavaStatement]
     orelse: list[JavaStatement]
+
+    def __post_init__(self):
+        self.body = block_simplify(self.body)
+        self.orelse = block_simplify(self.orelse)
+
     def emit_java(self) -> Iterator[str]:
         yield f'if ({self.cond.emit_java()}) {{'
         yield from block_emit_java(self.body)
@@ -251,6 +262,10 @@ class JavaIfStatement(JavaStatement):
 class JavaWhileStatement(JavaStatement):
     cond: JavaExpr
     body: list[JavaStatement]
+
+    def __post_init__(self):
+        self.body = block_simplify(self.body)
+
     def emit_java(self) -> Iterator[str]:
         yield f'while ({self.cond.emit_java()}) {{'
         yield from block_emit_java(self.body)
@@ -266,6 +281,10 @@ class JavaForStatement(JavaStatement):
     incr_name: str
     incr_value: JavaExpr
     body: list[JavaStatement]
+
+    def __post_init__(self):
+        self.body = block_simplify(self.body)
+
     def emit_java(self) -> Iterator[str]:
         yield f'for ({self.init_type} {self.init_name} = {self.init_value.emit_java()}; {self.cond.emit_java()}; {self.incr_name} = {self.incr_value.emit_java()}) {{'
         yield from block_emit_java(self.body)
@@ -278,6 +297,12 @@ class JavaTryStatement(JavaStatement):
     exc_name: Optional[str]
     catch_body: list[JavaStatement]
     finally_body: list[JavaStatement]
+
+    def __post_init__(self):
+        self.try_body = block_simplify(self.try_body)
+        self.catch_body = block_simplify(self.catch_body)
+        self.finally_body = block_simplify(self.finally_body)
+
     def emit_java(self) -> Iterator[str]:
         yield 'try {'
         yield from block_emit_java(self.try_body)
@@ -296,6 +321,10 @@ class JavaTryStatement(JavaStatement):
 class JavaLabeledBlock(JavaStatement):
     name: str
     body: list[JavaStatement]
+
+    def __post_init__(self):
+        self.body = block_simplify(self.body)
+
     def emit_java(self) -> Iterator[str]:
         yield f'{self.name}: {{'
         yield from block_emit_java(self.body)
@@ -940,6 +969,7 @@ class PythonjVisitor(ast.NodeVisitor):
         # XXX need this in some, but not all, cases with has_returns (avoid "unreachable statement" javac errors)
         if not self.has_returns:
             func_code.append(JavaReturnStatement(self.emit_constant(None)))
+        func_code = block_simplify(func_code)
 
         self.functions[node.name] = [
             f'private static final class pyfunc_{node.name} extends PyUserFunction {{',
@@ -984,7 +1014,7 @@ class PythonjVisitor(ast.NodeVisitor):
         writer.write('')
 
         writer.write('public static void main(String[] args) {')
-        for line in block_emit_java(self.global_code):
+        for line in block_emit_java(block_simplify(self.global_code)):
             writer.write(line)
         writer.write('}')
         writer.write('}')
