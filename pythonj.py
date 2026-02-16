@@ -944,7 +944,7 @@ class PythonjVisitor(ast.NodeVisitor):
             f'super({java_string_literal(node.name)});',
             '}',
             '@Override public PyObject call(PyObject[] args, PyDict kwargs) {',
-            *itertools.chain.from_iterable(s.emit_java() for s in func_code),
+            *block_emit_java(func_code),
             '}',
             '}',
         ]
@@ -981,9 +981,8 @@ class PythonjVisitor(ast.NodeVisitor):
         writer.write('')
 
         writer.write('public static void main(String[] args) {')
-        for s in self.global_code:
-            for line in s.emit_java():
-                writer.write(line)
+        for line in block_emit_java(self.global_code):
+            writer.write(line)
         writer.write('}')
         writer.write('}')
         assert writer.indent == 0, writer.indent
