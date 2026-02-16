@@ -66,6 +66,7 @@ public final class Runtime {
 
     public static final PyBuiltinClass pytype_builtin_function_or_method = new PyBuiltinClass("builtin_function_or_method", PyBuiltinFunctionOrMethod.class);
     public static final PyBuiltinClass pytype_function = new PyBuiltinClass("function", PyUserFunction.class);
+    public static final PyBuiltinClass pytype_io_BufferedReader = new PyBuiltinClass("_io.BufferedReader", PyBufferedReader.class);
     public static final PyBuiltinClass pytype_io_TextIOWrapper = new PyBuiltinClass("_io.TextIOWrapper", PyFile.class);
 
     static final class pyfunc_abs extends PyBuiltinFunction {
@@ -571,14 +572,24 @@ public final class Runtime {
 
     static final class pyfunc_open extends PyBuiltinFunction {
         pyfunc_open() { super("open"); }
-        @Override public PyFile call(PyObject[] args, PyDict kwargs) {
-            if (args.length != 1) {
-                throw new IllegalArgumentException("open() takes 1 argument");
-            }
+        @Override public PyObject call(PyObject[] args, PyDict kwargs) {
             if ((kwargs != null) && kwargs.boolValue()) {
                 throw new IllegalArgumentException("open() does not accept kwargs");
             }
-            return new PyFile(((PyString)args[0]).value);
+            if (args.length == 1) {
+                return new PyFile(((PyString)args[0]).value);
+            } else if (args.length == 2) {
+                if (args[1] instanceof PyString arg1_str) {
+                    if (!arg1_str.value.equals("rb")) {
+                        throw new IllegalArgumentException("open() second argument must be 'rb'");
+                    }
+                    return new PyBufferedReader(((PyString)args[0]).value);
+                } else {
+                    throw new IllegalArgumentException("open() second argument must be a string");
+                }
+            } else {
+                throw new IllegalArgumentException("open() takes 1 or 2 arguments");
+            }
         }
     }
     public static final pyfunc_open pyglobal_open = new pyfunc_open();

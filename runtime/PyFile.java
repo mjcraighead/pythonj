@@ -2,9 +2,9 @@
 // Copyright (c) 2012-2026 Matt Craighead
 // SPDX-License-Identifier: MIT
 
-// XXX This is not even close to supporting fully correct Python IO semantics.  It's
-// just intended to be enough that we can do basic things like "for line in f:".
+import java.io.BufferedInputStream;
 import java.io.BufferedReader;
+import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -97,5 +97,73 @@ public final class PyFile extends PyIter {
     public PyString pymethod_readline() {
         PyString ret = next();
         return (ret != null) ? ret : PyString.empty_singleton;
+    }
+}
+
+final class PyBufferedReader extends PyIter {
+    private static class PyBufferedReaderMethod extends PyBuiltinFunctionOrMethod {
+        protected final PyBufferedReader self;
+        PyBufferedReaderMethod(PyBufferedReader _self) { self = _self; }
+        @Override public String repr() { throw new UnsupportedOperationException("'repr' unimplemented"); }
+    }
+    private static final class PyBufferedReaderMethod_close extends PyBufferedReaderMethod {
+        PyBufferedReaderMethod_close(PyBufferedReader _self) { super(_self); }
+        @Override public PyNone call(PyObject[] args, PyDict kwargs) {
+            Runtime.requireNoKwArgs(kwargs, "BufferedReader.close");
+            Runtime.requireExactArgsAlt(args, 0, "BufferedReader.close");
+            return self.pymethod_close();
+        }
+    }
+    private static final class PyBufferedReaderMethod_read extends PyBufferedReaderMethod {
+        PyBufferedReaderMethod_read(PyBufferedReader _self) { super(_self); }
+        @Override public PyBytes call(PyObject[] args, PyDict kwargs) {
+            Runtime.requireNoKwArgs(kwargs, "BufferedReader.read");
+            Runtime.requireMaxArgs(args, 1, "read");
+            if (args.length != 0) {
+                throw new UnsupportedOperationException("'size' argument to BufferedReader.read() is not supported");
+            }
+            return self.pymethod_read();
+        }
+    }
+
+    public final BufferedInputStream reader;
+
+    PyBufferedReader(String path) {
+        try {
+            reader = new BufferedInputStream(new FileInputStream(path));
+        } catch (FileNotFoundException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    @Override public PyBytes next() { throw new UnsupportedOperationException("iterating over binary files not supported"); }
+    @Override public PyType type() { return Runtime.pytype_io_BufferedReader; }
+
+    @Override public PyBufferedReader enter() { return this; }
+    @Override public void exit() { pymethod_close(); }
+
+    @Override public PyObject getAttr(String key) {
+        switch (key) {
+            case "close": return new PyBufferedReaderMethod_close(this);
+            case "read": return new PyBufferedReaderMethod_read(this);
+            default: return super.getAttr(key);
+        }
+    }
+    @Override public String repr() { throw new UnsupportedOperationException("'repr' unimplemented"); }
+
+    public PyNone pymethod_close() {
+        try {
+            reader.close();
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+        return PyNone.singleton;
+    }
+    public PyBytes pymethod_read() {
+        try {
+            return new PyBytes(reader.readAllBytes());
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 }
