@@ -166,6 +166,9 @@ class JavaAssignExpr(JavaExpr):
         return f'({self.lhs.emit_java()} = {self.rhs.emit_java()})'
 
 class JavaStatement(ABC):
+    def ends_control_flow(self) -> bool:
+        return False
+
     @abstractmethod
     def emit_java(self) -> Iterator[str]:
         raise NotImplementedError()
@@ -197,25 +200,39 @@ class JavaExprStatement(JavaStatement):
 @dataclass(slots=True)
 class JavaBreakStatement(JavaStatement):
     name: Optional[str]
+    def ends_control_flow(self) -> bool:
+        return True
     def emit_java(self) -> Iterator[str]:
         yield f'break {self.name};' if self.name else 'break;'
 
 @dataclass(slots=True)
 class JavaContinueStatement(JavaStatement):
+    def ends_control_flow(self) -> bool:
+        return True
     def emit_java(self) -> Iterator[str]:
         yield 'continue;'
 
 @dataclass(slots=True)
 class JavaReturnStatement(JavaStatement):
     expr: JavaExpr
+    def ends_control_flow(self) -> bool:
+        return True
     def emit_java(self) -> Iterator[str]:
         yield f'return {self.expr.emit_java()};'
 
 @dataclass(slots=True)
 class JavaThrowStatement(JavaStatement):
     expr: JavaExpr
+    def ends_control_flow(self) -> bool:
+        return True
     def emit_java(self) -> Iterator[str]:
         yield f'throw {self.expr.emit_java()};'
+
+def block_emit_java(block: list[JavaStatement]) -> Iterator[str]:
+    for s in block:
+        yield from s.emit_java()
+        if s.ends_control_flow():
+            break
 
 @dataclass(slots=True)
 class JavaIfStatement(JavaStatement):
@@ -224,12 +241,10 @@ class JavaIfStatement(JavaStatement):
     orelse: list[JavaStatement]
     def emit_java(self) -> Iterator[str]:
         yield f'if ({self.cond.emit_java()}) {{'
-        for s in self.body:
-            yield from s.emit_java()
+        yield from block_emit_java(self.body)
         if self.orelse:
             yield '} else {'
-            for s in self.orelse:
-                yield from s.emit_java()
+            yield from block_emit_java(self.orelse)
         yield '}'
 
 @dataclass(slots=True)
@@ -238,8 +253,7 @@ class JavaWhileStatement(JavaStatement):
     body: list[JavaStatement]
     def emit_java(self) -> Iterator[str]:
         yield f'while ({self.cond.emit_java()}) {{'
-        for s in self.body:
-            yield from s.emit_java()
+        yield from block_emit_java(self.body)
         yield '}'
 
 # simplified; init/incr are weird because of semicolons/parens if we try to map them to statement or expr
@@ -254,8 +268,7 @@ class JavaForStatement(JavaStatement):
     body: list[JavaStatement]
     def emit_java(self) -> Iterator[str]:
         yield f'for ({self.init_type} {self.init_name} = {self.init_value.emit_java()}; {self.cond.emit_java()}; {self.incr_name} = {self.incr_value.emit_java()}) {{'
-        for s in self.body:
-            yield from s.emit_java()
+        yield from block_emit_java(self.body)
         yield '}'
 
 @dataclass(slots=True)
@@ -267,19 +280,16 @@ class JavaTryStatement(JavaStatement):
     finally_body: list[JavaStatement]
     def emit_java(self) -> Iterator[str]:
         yield 'try {'
-        for s in self.try_body:
-            yield from s.emit_java()
+        yield from block_emit_java(self.try_body)
         if self.exc_type is not None:
             yield f'}} catch ({self.exc_type} {self.exc_name}) {{'
-            for s in self.catch_body:
-                yield from s.emit_java()
+            yield from block_emit_java(self.catch_body)
         else: # if no exception type, should not have an exception name or catch block either
             assert self.exc_name is None, self.exc_name
             assert not self.catch_body, self.catch_body
         if self.finally_body:
             yield '} finally {'
-            for s in self.finally_body:
-                yield from s.emit_java()
+            yield from block_emit_java(self.finally_body)
         yield '}'
 
 @dataclass(slots=True)
@@ -288,8 +298,7 @@ class JavaLabeledBlock(JavaStatement):
     body: list[JavaStatement]
     def emit_java(self) -> Iterator[str]:
         yield f'{self.name}: {{'
-        for s in self.body:
-            yield from s.emit_java()
+        yield from block_emit_java(self.body)
         yield '}'
 
 def unary_op(op: str, operand: JavaExpr) -> JavaExpr:
