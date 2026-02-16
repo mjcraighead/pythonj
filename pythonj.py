@@ -378,6 +378,12 @@ def if_statement(cond: JavaExpr, body: list[JavaStatement], orelse: list[JavaSta
     else:
         yield JavaIfStatement(cond, body, orelse)
 
+def while_statement(cond: JavaExpr, body: list[JavaStatement]) -> Iterator[JavaStatement]:
+    if isinstance(cond, JavaIdentifier) and cond.name == 'false':
+        pass
+    else:
+        yield JavaWhileStatement(cond, body)
+
 @dataclass(slots=True)
 class IndentedWriter:
     f: TextIO
@@ -805,14 +811,14 @@ class PythonjVisitor(ast.NodeVisitor):
                 self.visit(statement)
         self.break_name = saved_break_name
 
-        loop = JavaWhileStatement(cond, body)
+        loop = list(while_statement(cond, body))
         if node.orelse:
             with self.new_block() as orelse:
                 for statement in node.orelse:
                     self.visit(statement)
             assert block_name is not None
-            loop = JavaLabeledBlock(block_name, [loop, *orelse])
-        self.code.append(loop)
+            loop = [JavaLabeledBlock(block_name, [*loop, *orelse])]
+        self.code.extend(loop)
 
     def visit_For(self, node) -> None:
         block_name = self.make_temp() if node.orelse else None
