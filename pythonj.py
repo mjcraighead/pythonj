@@ -693,7 +693,12 @@ class PythonjVisitor(ast.NodeVisitor):
             msg.s += ': '
             msg = JavaBinaryOp('+', msg, JavaMethodCall(self.visit(node.msg), 'repr', []))
         exception = JavaMethodCall(JavaIdentifier('PyAssertionError'), 'raise', [msg])
-        self.code.append(JavaIfStatement(cond, [JavaThrowStatement(exception)], []))
+        if isinstance(cond, JavaIdentifier) and cond.name == 'true':
+            self.code.append(JavaThrowStatement(exception))
+        elif isinstance(cond, JavaIdentifier) and cond.name == 'false':
+            pass # assertion never fails
+        else:
+            self.code.append(JavaIfStatement(cond, [JavaThrowStatement(exception)], []))
 
     def visit_Delete(self, node) -> None:
         for target in node.targets:
