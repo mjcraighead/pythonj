@@ -306,7 +306,7 @@ public final class Runtime {
             var arg = exactlyOneArg(args, kwargs);
             long index = arg.indexValue();
             if (index < 0) {
-                return new PyString(String.format("-0x%x", -index));
+                return new PyString(String.format("-0x%x", Math.negateExact(index)));
             } else {
                 return new PyString(String.format("0x%x", index));
             }
