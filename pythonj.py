@@ -405,10 +405,7 @@ def bool_value(expr: JavaExpr) -> JavaExpr:
         expr.obj.name == 'PyBool' and expr.method == 'create' and len(expr.args) == 1):
         return expr.args[0] # return the raw boolean instead of box/unbox
     if isinstance(expr, JavaPyConstant):
-        if expr.value is False:
-            return JavaIdentifier('false')
-        if expr.value is True:
-            return JavaIdentifier('true')
+        return JavaIdentifier('true') if expr.value else JavaIdentifier('false')
     return JavaMethodCall(expr, 'boolValue', [])
 
 def chained_binary_op(op: str, exprs: list[JavaExpr]) -> JavaExpr:
