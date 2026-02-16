@@ -188,6 +188,15 @@ class JavaAssignExpr(JavaExpr):
     def emit_java(self) -> str:
         return f'({self.lhs.emit_java()} = {self.rhs.emit_java()})'
 
+@dataclass(slots=True)
+class JavaPyConstant(JavaExpr):
+    value: None | bool
+    def emit_java(self) -> str:
+        if self.value is None:
+            return 'PyNone.singleton'
+        else:
+            return f'PyBool.{str(self.value).lower()}_singleton'
+
 class JavaStatement(ABC):
     def ends_control_flow(self) -> bool:
         return False
@@ -369,10 +378,8 @@ class JavaLabeledBlock(JavaStatement):
 
 def py_constant(emit_ctx: EmitContext, value: None | bool | int | str | bytes) -> JavaExpr:
     """Lower a Python literal value into a JavaExpr and record any required singletons."""
-    if value is None:
-        return JavaField(JavaIdentifier('PyNone'), 'singleton')
-    elif value is False or value is True:
-        return JavaField(JavaIdentifier('PyBool'), f'{str(value).lower()}_singleton')
+    if value is None or value is False or value is True:
+        return JavaPyConstant(value)
     elif isinstance(value, int):
         if 0 <= value <= 1:
             return JavaField(JavaIdentifier('PyInt'), f'singleton_{value}')
@@ -402,10 +409,10 @@ def bool_value(expr: JavaExpr) -> JavaExpr:
     if (isinstance(expr, JavaMethodCall) and isinstance(expr.obj, JavaIdentifier) and
         expr.obj.name == 'PyBool' and expr.method == 'create' and len(expr.args) == 1):
         return expr.args[0] # return the raw boolean instead of box/unbox
-    if isinstance(expr, JavaField) and isinstance(expr.obj, JavaIdentifier) and expr.obj.name == 'PyBool':
-        if expr.field == 'false_singleton':
+    if isinstance(expr, JavaPyConstant):
+        if expr.value is False:
             return JavaIdentifier('false')
-        if expr.field == 'true_singleton':
+        if expr.value is True:
             return JavaIdentifier('true')
     return JavaMethodCall(expr, 'boolValue', [])
 
@@ -1047,7 +1054,7 @@ class PythonjVisitor(ast.NodeVisitor):
 
         # XXX Initializing all globals to None is weird, but we don't have a better option yet
         for name in sorted(self.global_names):
-            writer.write(f'private static PyObject pyglobal_{name} = PyNone.singleton;')
+            writer.write(f'private static PyObject pyglobal_{name} = {JavaPyConstant(None).emit_java()};')
         writer.write('')
 
         writer.write('public static void main(String[] args) {')
