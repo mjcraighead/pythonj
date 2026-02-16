@@ -327,6 +327,14 @@ def chained_binary_op(op: str, exprs: list[JavaExpr]) -> JavaExpr:
         expr = JavaBinaryOp(op, expr, term)
     return expr
 
+def if_statement(cond: JavaExpr, body: list[JavaStatement], orelse: list[JavaStatement]) -> Iterator[JavaStatement]:
+    if isinstance(cond, JavaIdentifier) and cond.name == 'true':
+        yield from body
+    elif isinstance(cond, JavaIdentifier) and cond.name == 'false':
+        yield from orelse
+    else:
+        yield JavaIfStatement(cond, body, orelse)
+
 @dataclass(slots=True)
 class IndentedWriter:
     f: TextIO
@@ -702,12 +710,7 @@ class PythonjVisitor(ast.NodeVisitor):
             msg.s += ': '
             msg = JavaBinaryOp('+', msg, JavaMethodCall(self.visit(node.msg), 'repr', []))
         exception = JavaMethodCall(JavaIdentifier('PyAssertionError'), 'raise', [msg])
-        if isinstance(cond, JavaIdentifier) and cond.name == 'true':
-            self.code.append(JavaThrowStatement(exception))
-        elif isinstance(cond, JavaIdentifier) and cond.name == 'false':
-            pass # assertion never fails
-        else:
-            self.code.append(JavaIfStatement(cond, [JavaThrowStatement(exception)], []))
+        self.code.extend(if_statement(cond, [JavaThrowStatement(exception)], []))
 
     def visit_Delete(self, node) -> None:
         for target in node.targets:
@@ -741,7 +744,7 @@ class PythonjVisitor(ast.NodeVisitor):
         with self.new_block() as orelse:
             for statement in node.orelse:
                 self.visit(statement)
-        self.code.append(JavaIfStatement(cond, body, orelse))
+        self.code.extend(if_statement(cond, body, orelse))
 
     def visit_While(self, node) -> None:
         cond = bool_value(self.visit(node.test))
@@ -913,12 +916,12 @@ class PythonjVisitor(ast.NodeVisitor):
         self.n_temps = saved_temps
 
         func_code: list[JavaStatement] = [
-            JavaIfStatement(
+            *if_statement(
                 JavaBinaryOp('&&', JavaBinaryOp('!=', JavaIdentifier('kwargs'), JavaIdentifier('null')), bool_value(JavaIdentifier('kwargs'))),
                 [JavaThrowStatement(JavaCreateObject('IllegalArgumentException', [JavaStrLiteral(f'{node.name}() does not accept kwargs')]))],
                 [],
             ),
-            JavaIfStatement(
+            *if_statement(
                 JavaBinaryOp('!=', JavaField(JavaIdentifier('args'), 'length'), JavaIntLiteral(n_args, '')),
                 [JavaThrowStatement(JavaMethodCall(JavaIdentifier('Runtime'), 'raiseUserExactArgs', [
                     JavaIdentifier('args'), JavaIntLiteral(n_args, ''), JavaStrLiteral(node.name),
