@@ -647,7 +647,11 @@ class PythonjVisitor(ast.NodeVisitor):
                 if val.format_spec is not None:
                     # Need to extract the String back out of the PyString
                     assert isinstance(val.format_spec, ast.JoinedStr), val.format_spec
-                    format_spec = JavaField(self.visit(val.format_spec), 'value')
+                    expr = self.visit(val.format_spec)
+                    if isinstance(expr, JavaPyConstant) and isinstance(expr.value, str):
+                        format_spec = JavaStrLiteral(expr.value)
+                    else:
+                        format_spec = JavaField(expr, 'value')
                 else:
                     format_spec = JavaStrLiteral("")
                 expr = self.visit(val.value)
@@ -659,7 +663,10 @@ class PythonjVisitor(ast.NodeVisitor):
                 elif val.conversion != -1:
                     self.error(val.lineno, f'unsupported f string conversion type {val.conversion}')
                 vals.append(JavaMethodCall(expr, 'format', [format_spec]))
-        return JavaCreateObject('PyString', [chained_binary_op('+', vals)])
+        expr = chained_binary_op('+', vals)
+        if isinstance(expr, JavaStrLiteral):
+            return JavaPyConstant(expr.s)
+        return JavaCreateObject('PyString', [expr])
 
     def emit_star_expanded(self, nodes: list, *, array_list_allowed: bool = False) -> JavaExpr:
         if any(isinstance(arg, ast.Starred) for arg in nodes):
