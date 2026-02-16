@@ -10,22 +10,22 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 
-public final class PyFile extends PyIter {
-    private static class PyFileMethod extends PyBuiltinFunctionOrMethod {
-        protected final PyFile self;
-        PyFileMethod(PyFile _self) { self = _self; }
+final class PyTextIOWrapper extends PyIter {
+    private static class PyTextIOWrapperMethod extends PyBuiltinFunctionOrMethod {
+        protected final PyTextIOWrapper self;
+        PyTextIOWrapperMethod(PyTextIOWrapper _self) { self = _self; }
         @Override public String repr() { throw new UnsupportedOperationException("'repr' unimplemented"); }
     }
-    private static final class PyFileMethod_close extends PyFileMethod {
-        PyFileMethod_close(PyFile _self) { super(_self); }
+    private static final class PyTextIOWrapperMethod_close extends PyTextIOWrapperMethod {
+        PyTextIOWrapperMethod_close(PyTextIOWrapper _self) { super(_self); }
         @Override public PyNone call(PyObject[] args, PyDict kwargs) {
             Runtime.requireNoKwArgs(kwargs, "TextIOWrapper.close");
             Runtime.requireExactArgsAlt(args, 0, "TextIOWrapper.close");
             return self.pymethod_close();
         }
     }
-    private static final class PyFileMethod_readline extends PyFileMethod {
-        PyFileMethod_readline(PyFile _self) { super(_self); }
+    private static final class PyTextIOWrapperMethod_readline extends PyTextIOWrapperMethod {
+        PyTextIOWrapperMethod_readline(PyTextIOWrapper _self) { super(_self); }
         @Override public PyString call(PyObject[] args, PyDict kwargs) {
             Runtime.requireNoKwArgs(kwargs, "TextIOWrapper.readline");
             Runtime.requireMaxArgs(args, 1, "readline");
@@ -38,7 +38,7 @@ public final class PyFile extends PyIter {
 
     public final BufferedReader reader;
 
-    PyFile(String path) {
+    PyTextIOWrapper(String path) {
         try {
             reader = new BufferedReader(new FileReader(path));
         } catch (FileNotFoundException e) {
@@ -74,13 +74,13 @@ public final class PyFile extends PyIter {
     }
     @Override public PyType type() { return Runtime.pytype_io_TextIOWrapper; }
 
-    @Override public PyFile enter() { return this; }
+    @Override public PyTextIOWrapper enter() { return this; }
     @Override public void exit() { pymethod_close(); }
 
     @Override public PyObject getAttr(String key) {
         switch (key) {
-            case "close": return new PyFileMethod_close(this);
-            case "readline": return new PyFileMethod_readline(this);
+            case "close": return new PyTextIOWrapperMethod_close(this);
+            case "readline": return new PyTextIOWrapperMethod_readline(this);
             default: return super.getAttr(key);
         }
     }

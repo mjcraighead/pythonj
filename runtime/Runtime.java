@@ -67,7 +67,7 @@ public final class Runtime {
     public static final PyBuiltinClass pytype_builtin_function_or_method = new PyBuiltinClass("builtin_function_or_method", PyBuiltinFunctionOrMethod.class);
     public static final PyBuiltinClass pytype_function = new PyBuiltinClass("function", PyUserFunction.class);
     public static final PyBuiltinClass pytype_io_BufferedReader = new PyBuiltinClass("_io.BufferedReader", PyBufferedReader.class);
-    public static final PyBuiltinClass pytype_io_TextIOWrapper = new PyBuiltinClass("_io.TextIOWrapper", PyFile.class);
+    public static final PyBuiltinClass pytype_io_TextIOWrapper = new PyBuiltinClass("_io.TextIOWrapper", PyTextIOWrapper.class);
 
     static final class pyfunc_abs extends PyBuiltinFunction {
         pyfunc_abs() { super("abs"); }
@@ -577,7 +577,7 @@ public final class Runtime {
                 throw new IllegalArgumentException("open() does not accept kwargs");
             }
             if (args.length == 1) {
-                return new PyFile(((PyString)args[0]).value);
+                return new PyTextIOWrapper(((PyString)args[0]).value);
             } else if (args.length == 2) {
                 if (args[1] instanceof PyString arg1_str) {
                     if (!arg1_str.value.equals("rb")) {
