@@ -520,7 +520,11 @@ class PythonjVisitor(ast.NodeVisitor):
     def visit_UnaryOp(self, node) -> JavaExpr:
         if isinstance(node.op, ast.Not):
             return JavaMethodCall(JavaIdentifier('PyBool'), 'create', [unary_op('!', bool_value(self.visit(node.operand)))])
-        return JavaMethodCall(self.visit(node.operand), self.visit(node.op), [])
+        op = self.visit(node.op)
+        operand = self.visit(node.operand)
+        if isinstance(operand, JavaPyConstant) and isinstance(operand.value, int) and op == 'neg':
+            return JavaPyConstant(-operand.value)
+        return JavaMethodCall(operand, op, [])
 
     def visit_Add(self, node): return 'add'
     def visit_BitAnd(self, node): return 'and'
@@ -596,7 +600,6 @@ class PythonjVisitor(ast.NodeVisitor):
     def visit_IfExp(self, node) -> JavaExpr:
         return JavaCondOp(bool_value(self.visit(node.test)), self.visit(node.body), self.visit(node.orelse))
 
-    # Note that we never actually get negative integers here in the AST
     def visit_Constant(self, node) -> JavaExpr:
         if isinstance(node.value, (NoneType, bool, int, str, bytes)):
             return JavaPyConstant(node.value)
