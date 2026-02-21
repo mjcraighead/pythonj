@@ -87,13 +87,13 @@ public final class PyString extends PyObject {
         }
         return new PyString(s.toString());
     }
-    @Override public PyString mod(PyObject rhs_arg) {
+    @Override public PyString mod(PyObject rhsArg) {
         var s = new StringBuilder();
         PyObject[] rhs;
-        if (rhs_arg instanceof PyTuple rhs_tuple) {
-            rhs = rhs_tuple.items;
+        if (rhsArg instanceof PyTuple rhsTuple) {
+            rhs = rhsTuple.items;
         } else {
-            rhs = new PyObject[] {rhs_arg};
+            rhs = new PyObject[] {rhsArg};
         }
         int argIndex = 0;
         for (int i = 0; i < value.length(); i++) {
@@ -153,8 +153,8 @@ public final class PyString extends PyObject {
     @Override public PyBuiltinClass type() { return Runtime.pyglobal_str; }
 
     @Override public boolean boolValue() { return !value.isEmpty(); }
-    @Override public boolean equals(Object rhs_arg) {
-        if (rhs_arg instanceof PyString rhs) {
+    @Override public boolean equals(Object rhsArg) {
+        if (rhsArg instanceof PyString rhs) {
             return value.equals(rhs.value);
         }
         return false;

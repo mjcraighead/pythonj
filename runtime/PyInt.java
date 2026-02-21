@@ -24,47 +24,47 @@ public final class PyInt extends PyObject {
         return new PyInt(value & ((PyInt)rhs).value);
     }
     @Override public PyInt floordiv(PyObject rhs) {
-        long rhs_value = ((PyInt)rhs).value;
-        if ((value == Long.MIN_VALUE) && (rhs_value == -1)) {
+        long rhsValue = ((PyInt)rhs).value;
+        if ((value == Long.MIN_VALUE) && (rhsValue == -1)) {
             throw new ArithmeticException("integer overflow");
         }
-        if (rhs_value == 0) {
+        if (rhsValue == 0) {
             throw PyZeroDivisionError.raise("division by zero");
         }
-        return new PyInt(Math.floorDiv(value, rhs_value));
+        return new PyInt(Math.floorDiv(value, rhsValue));
     }
     @Override public PyInt lshift(PyObject rhs) {
-        long rhs_value = ((PyInt)rhs).value;
-        if (rhs_value < 0) {
+        long rhsValue = ((PyInt)rhs).value;
+        if (rhsValue < 0) {
             throw new ArithmeticException("negative shift count");
         }
-        if (rhs_value >= 64) {
+        if (rhsValue >= 64) {
             if (value == 0) {
                 return this; // 0 << N -> 0 for any N >= 0
             }
             throw new ArithmeticException("shift count too large");
         }
-        long ret = value << rhs_value;
-        if ((ret >> rhs_value) != value) {
+        long ret = value << rhsValue;
+        if ((ret >> rhsValue) != value) {
             throw new ArithmeticException("integer overflow");
         }
         return new PyInt(ret);
     }
     @Override public PyInt mod(PyObject rhs) {
-        long rhs_value = ((PyInt)rhs).value;
-        if ((value == Long.MIN_VALUE) && (rhs_value == -1)) {
+        long rhsValue = ((PyInt)rhs).value;
+        if ((value == Long.MIN_VALUE) && (rhsValue == -1)) {
             throw new ArithmeticException("integer overflow");
         }
-        if (rhs_value == 0) {
+        if (rhsValue == 0) {
             throw PyZeroDivisionError.raise("division by zero");
         }
-        return new PyInt(Math.floorMod(value, rhs_value));
+        return new PyInt(Math.floorMod(value, rhsValue));
     }
     @Override public PyObject mul(PyObject rhs) {
-        if (rhs instanceof PyInt rhs_int) {
-            return new PyInt(Math.multiplyExact(value, rhs_int.value));
-        } else if (rhs instanceof PyBool rhs_bool) {
-            return new PyInt(value * rhs_bool.asInt());
+        if (rhs instanceof PyInt rhsInt) {
+            return new PyInt(Math.multiplyExact(value, rhsInt.value));
+        } else if (rhs instanceof PyBool rhsBool) {
+            return new PyInt(value * rhsBool.asInt());
         } else if ((rhs instanceof PyBytes) || (rhs instanceof PyByteArray) || (rhs instanceof PyList) ||
                    (rhs instanceof PyString) || (rhs instanceof PyTuple)) {
             return rhs.mul(this); // remap int * T -> T * int implementation
@@ -76,14 +76,14 @@ public final class PyInt extends PyObject {
         return new PyInt(value | ((PyInt)rhs).value);
     }
     @Override public PyInt rshift(PyObject rhs) {
-        long rhs_value = ((PyInt)rhs).value;
-        if (rhs_value < 0) {
+        long rhsValue = ((PyInt)rhs).value;
+        if (rhsValue < 0) {
             throw new ArithmeticException("negative shift count");
         }
-        if (rhs_value > 63) {
-            rhs_value = 63; // for all longs, rshift of >=63 yields the sign bit replicated into all bits
+        if (rhsValue > 63) {
+            rhsValue = 63; // for all longs, rshift of >=63 yields the sign bit replicated into all bits
         }
-        return new PyInt(value >> rhs_value);
+        return new PyInt(value >> rhsValue);
     }
     @Override public PyInt sub(PyObject rhs) {
         return new PyInt(Math.subtractExact(value, ((PyInt)rhs).value));
@@ -108,8 +108,8 @@ public final class PyInt extends PyObject {
     @Override public PyBuiltinClass type() { return Runtime.pyglobal_int; }
 
     @Override public boolean boolValue() { return value != 0; }
-    @Override public boolean equals(Object rhs_arg) {
-        if (rhs_arg instanceof PyInt rhs) {
+    @Override public boolean equals(Object rhsArg) {
+        if (rhsArg instanceof PyInt rhs) {
             return value == rhs.value;
         }
         return false;

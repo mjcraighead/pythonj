@@ -26,10 +26,10 @@ public final class PyBytes extends PyObject {
     PyBytes(byte[] _value) { value = _value; }
 
     @Override public PyBytes add(PyObject rhs) {
-        if (rhs instanceof PyBytes rhs_bytes) {
-            int newLength = Math.addExact(value.length, rhs_bytes.value.length);
+        if (rhs instanceof PyBytes rhsBytes) {
+            int newLength = Math.addExact(value.length, rhsBytes.value.length);
             byte[] result = Arrays.copyOf(value, newLength);
-            System.arraycopy(rhs_bytes.value, 0, result, value.length, rhs_bytes.value.length);
+            System.arraycopy(rhsBytes.value, 0, result, value.length, rhsBytes.value.length);
             return new PyBytes(result);
         } else {
             throw new UnsupportedOperationException(String.format("bytes + %s is not implemented", rhs.type().name()));
@@ -53,8 +53,8 @@ public final class PyBytes extends PyObject {
     @Override public PyBuiltinClass type() { return Runtime.pyglobal_bytes; }
 
     @Override public boolean boolValue() { return value.length != 0; }
-    @Override public boolean equals(Object rhs_arg) {
-        if (rhs_arg instanceof PyBytes rhs) {
+    @Override public boolean equals(Object rhsArg) {
+        if (rhsArg instanceof PyBytes rhs) {
             return Arrays.equals(value, rhs.value);
         }
         return false;

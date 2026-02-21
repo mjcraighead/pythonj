@@ -26,10 +26,10 @@ public final class PyBool extends PyObject {
         return create(value & ((PyBool)rhs).value);
     }
     @Override public PyObject mul(PyObject rhs) {
-        if (rhs instanceof PyInt rhs_int) {
-            return new PyInt(asInt() * rhs_int.value);
-        } else if (rhs instanceof PyBool rhs_bool) {
-            return new PyInt(asInt() * rhs_bool.asInt());
+        if (rhs instanceof PyInt rhsInt) {
+            return new PyInt(asInt() * rhsInt.value);
+        } else if (rhs instanceof PyBool rhsBool) {
+            return new PyInt(asInt() * rhsBool.asInt());
         } else if ((rhs instanceof PyBytes) || (rhs instanceof PyByteArray) || (rhs instanceof PyList) ||
                    (rhs instanceof PyString) || (rhs instanceof PyTuple)) {
             return rhs.mul(this); // remap bool * T -> T * bool implementation

@@ -85,8 +85,8 @@ public final class PyList extends PyObject {
         items = _items; // WARNING: takes ownership of _items from caller, does not copy
     }
 
-    @Override public PyList add(PyObject rhs_arg) {
-        if (rhs_arg instanceof PyList rhs) {
+    @Override public PyList add(PyObject rhsArg) {
+        if (rhsArg instanceof PyList rhs) {
             var ret = new PyList();
             ret.items.addAll(items);
             ret.items.addAll(rhs.items);
@@ -94,8 +94,8 @@ public final class PyList extends PyObject {
         }
         throw new UnsupportedOperationException("unsupported operand type for list addition");
     }
-    @Override public PyList addInPlace(PyObject rhs_arg) {
-        if (rhs_arg instanceof PyList rhs) {
+    @Override public PyList addInPlace(PyObject rhsArg) {
+        if (rhsArg instanceof PyList rhs) {
             items.addAll(rhs.items);
             return this;
         }
@@ -157,8 +157,8 @@ public final class PyList extends PyObject {
 
     @Override public boolean boolValue() { return !items.isEmpty(); }
     @Override public boolean contains(PyObject rhs) { return items.contains(rhs); }
-    @Override public boolean equals(Object rhs_arg) {
-        if (rhs_arg instanceof PyList rhs) {
+    @Override public boolean equals(Object rhsArg) {
+        if (rhsArg instanceof PyList rhs) {
             return items.equals(rhs.items);
         }
         return false;

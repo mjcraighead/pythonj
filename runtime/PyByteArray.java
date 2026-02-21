@@ -57,8 +57,8 @@ public final class PyByteArray extends PyObject {
     @Override public PyBuiltinClass type() { return Runtime.pyglobal_bytearray; }
 
     @Override public boolean boolValue() { return value.length != 0; }
-    @Override public boolean equals(Object rhs_arg) {
-        if (rhs_arg instanceof PyByteArray rhs) {
+    @Override public boolean equals(Object rhsArg) {
+        if (rhsArg instanceof PyByteArray rhs) {
             return Arrays.equals(value, rhs.value);
         }
         return false;
