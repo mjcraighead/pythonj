@@ -87,13 +87,13 @@ public final class PyString extends PyObject {
         }
         return new PyString(s.toString());
     }
-    @Override public PyString mod(PyObject rhsArg) {
+    @Override public PyString mod(PyObject rhs) {
         var s = new StringBuilder();
-        PyObject[] rhs;
-        if (rhsArg instanceof PyTuple rhsTuple) {
-            rhs = rhsTuple.items;
+        PyObject[] rhsArray;
+        if (rhs instanceof PyTuple rhsTuple) {
+            rhsArray = rhsTuple.items;
         } else {
-            rhs = new PyObject[] {rhsArg};
+            rhsArray = new PyObject[] {rhs};
         }
         int argIndex = 0;
         for (int i = 0; i < value.length(); i++) {
@@ -111,7 +111,7 @@ public final class PyString extends PyObject {
                     width = c - '0';
                     c = value.charAt(++i);
                 }
-                PyObject arg = rhs[argIndex++];
+                PyObject arg = rhsArray[argIndex++];
                 if (c == 's') {
                     if (hasLeadingZero || (width != 0)) {
                         throw new UnsupportedOperationException("width for %s is unimplemented");
