@@ -159,12 +159,6 @@ public final class PyString extends PyObject {
         }
         return false;
     }
-    @Override public String format(String formatSpec) {
-        if (!formatSpec.isEmpty()) {
-            throw new UnsupportedOperationException(String.format("formatSpec='%s' unimplemented", formatSpec));
-        }
-        return value;
-    }
     @Override public PyObject getAttr(String key) {
         switch (key) {
             case "join": return new PyStringMethod_join(this);

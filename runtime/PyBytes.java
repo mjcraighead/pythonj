@@ -59,12 +59,6 @@ public final class PyBytes extends PyObject {
         }
         return false;
     }
-    @Override public String format(String formatSpec) {
-        if (!formatSpec.isEmpty()) {
-            throw new UnsupportedOperationException(String.format("formatSpec='%s' unimplemented", formatSpec));
-        }
-        return repr();
-    }
     @Override public long len() { return value.length; }
     @Override public String repr() {
         var s = new StringBuilder("b'");

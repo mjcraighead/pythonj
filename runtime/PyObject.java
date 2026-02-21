@@ -89,7 +89,12 @@ public abstract class PyObject implements Comparable<PyObject> {
     public boolean contains(PyObject rhs) { throw new UnsupportedOperationException("'contains' unimplemented"); }
     @Override public boolean equals(Object rhs) { throw new UnsupportedOperationException("'equals' unimplemented"); }
     public double floatValue() { throw new UnsupportedOperationException("'floatValue' unimplemented"); }
-    public String format(String formatSpec) { throw new UnsupportedOperationException("'format' unimplemented"); }
+    public String format(String formatSpec) {
+        if (!formatSpec.isEmpty()) {
+            throw new UnsupportedOperationException(String.format("formatSpec='%s' unimplemented on '%s'", formatSpec, type().name()));
+        }
+        return str();
+    }
     @Override public int hashCode() { throw new UnsupportedOperationException("'hashCode' unimplemented"); }
     public boolean hasIndex() { return false; }
     public long indexValue() { throw new UnsupportedOperationException("'indexValue' unimplemented"); }
