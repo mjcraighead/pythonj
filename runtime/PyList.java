@@ -93,16 +93,16 @@ public final class PyList extends PyObject {
             ret.items.addAll(rhsList.items);
             return ret;
         } else {
-            throw unimplementedBinOp("+", rhs);
+            throw PyTypeError.raise("can only concatenate list (not \"" + rhs.type().name() + "\") to list");
         }
     }
     @Override public PyList addInPlace(PyObject rhs) {
         if (rhs instanceof PyList rhsList) {
             items.addAll(rhsList.items);
-            return this;
         } else {
-            throw unimplementedBinOp("+=", rhs);
+            pymethod_extend(rhs);
         }
+        return this;
     }
     @Override public PyList mul(PyObject rhs) {
         var ret = new PyList();
