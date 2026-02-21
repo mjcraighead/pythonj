@@ -24,14 +24,18 @@ public final class PyInt extends PyObject {
         return new PyInt(value & ((PyInt)rhs).value);
     }
     @Override public PyInt floordiv(PyObject rhs) {
-        long rhsValue = ((PyInt)rhs).value;
-        if ((value == Long.MIN_VALUE) && (rhsValue == -1)) {
-            throw new ArithmeticException("integer overflow");
+        if (rhs instanceof PyInt rhsInt) {
+            long rhsValue = rhsInt.value;
+            if ((value == Long.MIN_VALUE) && (rhsValue == -1)) {
+                throw new ArithmeticException("integer overflow");
+            }
+            if (rhsValue == 0) {
+                throw PyZeroDivisionError.raise("division by zero");
+            }
+            return new PyInt(Math.floorDiv(value, rhsValue));
+        } else {
+            throw unimplementedBinOp("//", rhs);
         }
-        if (rhsValue == 0) {
-            throw PyZeroDivisionError.raise("division by zero");
-        }
-        return new PyInt(Math.floorDiv(value, rhsValue));
     }
     @Override public PyInt lshift(PyObject rhs) {
         long rhsValue = ((PyInt)rhs).value;
@@ -51,14 +55,18 @@ public final class PyInt extends PyObject {
         return new PyInt(ret);
     }
     @Override public PyInt mod(PyObject rhs) {
-        long rhsValue = ((PyInt)rhs).value;
-        if ((value == Long.MIN_VALUE) && (rhsValue == -1)) {
-            throw new ArithmeticException("integer overflow");
+        if (rhs instanceof PyInt rhsInt) {
+            long rhsValue = rhsInt.value;
+            if ((value == Long.MIN_VALUE) && (rhsValue == -1)) {
+                throw new ArithmeticException("integer overflow");
+            }
+            if (rhsValue == 0) {
+                throw PyZeroDivisionError.raise("division by zero");
+            }
+            return new PyInt(Math.floorMod(value, rhsValue));
+        } else {
+            throw unimplementedBinOp("%", rhs);
         }
-        if (rhsValue == 0) {
-            throw PyZeroDivisionError.raise("division by zero");
-        }
-        return new PyInt(Math.floorMod(value, rhsValue));
     }
     @Override public PyObject mul(PyObject rhs) {
         if (rhs instanceof PyInt rhsInt) {
