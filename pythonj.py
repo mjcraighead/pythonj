@@ -556,14 +556,12 @@ class PythonjVisitor(ast.NodeVisitor):
                     return JavaPyConstant(lhs.value | rhs.value)
                 case 'xor':
                     return JavaPyConstant(lhs.value ^ rhs.value)
-                case 'lshift':
-                    if rhs.value >= 0:
-                        return JavaPyConstant(lhs.value << rhs.value)
+                case 'lshift' if rhs.value >= 0:
+                    return JavaPyConstant(lhs.value << rhs.value)
                 case 'mul':
                     return JavaPyConstant(lhs.value * rhs.value)
-                case 'rshift':
-                    if rhs.value >= 0:
-                        return JavaPyConstant(lhs.value >> rhs.value)
+                case 'rshift' if rhs.value >= 0:
+                    return JavaPyConstant(lhs.value >> rhs.value)
                 case 'sub':
                     return JavaPyConstant(lhs.value - rhs.value)
         return JavaMethodCall(lhs, op, [rhs])
