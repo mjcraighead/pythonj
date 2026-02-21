@@ -15,7 +15,7 @@ public abstract class PyObject implements Comparable<PyObject> {
     public PyObject and(PyObject rhs) { throw unimplementedMethod("and"); }
     public PyObject floordiv(PyObject rhs) { throw raiseBinOp("//", rhs); }
     public PyObject lshift(PyObject rhs) { throw unimplementedMethod("lshift"); }
-    public PyObject matmul(PyObject rhs) { throw unimplementedMethod("matmul"); }
+    public PyObject matmul(PyObject rhs) { throw raiseBinOp("@", rhs); }
     public PyObject mod(PyObject rhs) { throw unimplementedMethod("mod"); }
     public PyObject mul(PyObject rhs) {
         if ((rhs instanceof PyBytes) || (rhs instanceof PyByteArray) || (rhs instanceof PyList) ||
