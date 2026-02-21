@@ -25,13 +25,9 @@ public final class PyString extends PyObject {
         @Override public PyBuiltinClass type() { return iter_class_singleton; }
     };
 
-    private static class PyStringMethod extends PyBuiltinFunctionOrMethod {
-        protected final PyString self;
-        PyStringMethod(PyString _self) { self = _self; }
-        @Override public String repr() { throw new UnsupportedOperationException("'repr' unimplemented"); }
-    }
-    private static final class PyStringMethod_join extends PyStringMethod {
+    private static final class PyStringMethod_join extends PyBuiltinMethod<PyString> {
         PyStringMethod_join(PyString _self) { super(_self); }
+        @Override public String methodName() { return "join"; }
         @Override public PyString call(PyObject[] args, PyDict kwargs) {
             Runtime.requireNoKwArgs(kwargs, "str.join");
             if (args.length != 1) {
@@ -40,8 +36,9 @@ public final class PyString extends PyObject {
             return self.pymethod_join(args[0]);
         }
     }
-    private static final class PyStringMethod_lower extends PyStringMethod {
+    private static final class PyStringMethod_lower extends PyBuiltinMethod<PyString> {
         PyStringMethod_lower(PyString _self) { super(_self); }
+        @Override public String methodName() { return "lower"; }
         @Override public PyString call(PyObject[] args, PyDict kwargs) {
             Runtime.requireNoKwArgs(kwargs, "str.lower");
             if (args.length != 0) {
@@ -50,8 +47,9 @@ public final class PyString extends PyObject {
             return self.pymethod_lower();
         }
     }
-    private static final class PyStringMethod_split extends PyStringMethod {
+    private static final class PyStringMethod_split extends PyBuiltinMethod<PyString> {
         PyStringMethod_split(PyString _self) { super(_self); }
+        @Override public String methodName() { return "split"; }
         @Override public PyList call(PyObject[] args, PyDict kwargs) {
             if (args.length != 1) {
                 throw new IllegalArgumentException("str.split() takes 1 argument");
@@ -62,8 +60,9 @@ public final class PyString extends PyObject {
             return self.pymethod_split(args[0]);
         }
     }
-    private static final class PyStringMethod_upper extends PyStringMethod {
+    private static final class PyStringMethod_upper extends PyBuiltinMethod<PyString> {
         PyStringMethod_upper(PyString _self) { super(_self); }
+        @Override public String methodName() { return "upper"; }
         @Override public PyString call(PyObject[] args, PyDict kwargs) {
             Runtime.requireNoKwArgs(kwargs, "str.upper");
             if (args.length != 0) {

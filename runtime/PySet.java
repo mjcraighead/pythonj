@@ -17,37 +17,36 @@ public final class PySet extends PyObject {
         @Override public PyBuiltinClass type() { return iter_class_singleton; }
     };
 
-    private static class PySetMethod extends PyBuiltinFunctionOrMethod {
-        protected final PySet self;
-        PySetMethod(PySet _self) { self = _self; }
-        @Override public String repr() { throw new UnsupportedOperationException("'repr' unimplemented"); }
-    }
-    private static final class PySetMethod_add extends PySetMethod {
+    private static final class PySetMethod_add extends PyBuiltinMethod<PySet> {
         PySetMethod_add(PySet _self) { super(_self); }
+        @Override public String methodName() { return "add"; }
         @Override public PyNone call(PyObject[] args, PyDict kwargs) {
             Runtime.requireNoKwArgs(kwargs, "set.add");
             Runtime.requireExactArgsAlt(args, 1, "set.add");
             return self.pymethod_add(args[0]);
         }
     }
-    private static final class PySetMethod_clear extends PySetMethod {
+    private static final class PySetMethod_clear extends PyBuiltinMethod<PySet> {
         PySetMethod_clear(PySet _self) { super(_self); }
+        @Override public String methodName() { return "clear"; }
         @Override public PyNone call(PyObject[] args, PyDict kwargs) {
             Runtime.requireNoKwArgs(kwargs, "set.clear");
             Runtime.requireExactArgsAlt(args, 0, "set.clear");
             return self.pymethod_clear();
         }
     }
-    private static final class PySetMethod_discard extends PySetMethod {
+    private static final class PySetMethod_discard extends PyBuiltinMethod<PySet> {
         PySetMethod_discard(PySet _self) { super(_self); }
+        @Override public String methodName() { return "discard"; }
         @Override public PyNone call(PyObject[] args, PyDict kwargs) {
             Runtime.requireNoKwArgs(kwargs, "set.discard");
             Runtime.requireExactArgsAlt(args, 1, "set.discard");
             return self.pymethod_discard(args[0]);
         }
     }
-    private static final class PySetMethod_update extends PySetMethod {
+    private static final class PySetMethod_update extends PyBuiltinMethod<PySet> {
         PySetMethod_update(PySet _self) { super(_self); }
+        @Override public String methodName() { return "update"; }
         @Override public PyNone call(PyObject[] args, PyDict kwargs) {
             Runtime.requireNoKwArgs(kwargs, "set.update");
             if (args.length != 1) {

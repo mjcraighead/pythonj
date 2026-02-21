@@ -43,6 +43,15 @@ abstract class PyBuiltinFunctionOrMethod extends PyTruthyObject {
     @Override public final PyBuiltinClass type() { return Runtime.pytype_builtin_function_or_method; }
 }
 
+abstract class PyBuiltinMethod<T extends PyObject> extends PyBuiltinFunctionOrMethod {
+    protected final T self;
+    PyBuiltinMethod(T _self) { self = _self; }
+    @Override public String repr() {
+        return "<built-in method " + methodName() + " of " + self.type().name() + " object>";
+    }
+    public abstract String methodName();
+}
+
 abstract class PyUserFunction extends PyTruthyObject {
     private final String funcName;
     protected PyUserFunction(String name) { funcName = name; }

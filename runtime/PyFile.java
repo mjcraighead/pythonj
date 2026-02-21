@@ -11,21 +11,18 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 
 final class PyTextIOWrapper extends PyIter {
-    private static class PyTextIOWrapperMethod extends PyBuiltinFunctionOrMethod {
-        protected final PyTextIOWrapper self;
-        PyTextIOWrapperMethod(PyTextIOWrapper _self) { self = _self; }
-        @Override public String repr() { throw new UnsupportedOperationException("'repr' unimplemented"); }
-    }
-    private static final class PyTextIOWrapperMethod_close extends PyTextIOWrapperMethod {
+    private static final class PyTextIOWrapperMethod_close extends PyBuiltinMethod<PyTextIOWrapper> {
         PyTextIOWrapperMethod_close(PyTextIOWrapper _self) { super(_self); }
+        @Override public String methodName() { return "close"; }
         @Override public PyNone call(PyObject[] args, PyDict kwargs) {
             Runtime.requireNoKwArgs(kwargs, "TextIOWrapper.close");
             Runtime.requireExactArgsAlt(args, 0, "TextIOWrapper.close");
             return self.pymethod_close();
         }
     }
-    private static final class PyTextIOWrapperMethod_readline extends PyTextIOWrapperMethod {
+    private static final class PyTextIOWrapperMethod_readline extends PyBuiltinMethod<PyTextIOWrapper> {
         PyTextIOWrapperMethod_readline(PyTextIOWrapper _self) { super(_self); }
+        @Override public String methodName() { return "readline"; }
         @Override public PyString call(PyObject[] args, PyDict kwargs) {
             Runtime.requireNoKwArgs(kwargs, "TextIOWrapper.readline");
             Runtime.requireMaxArgs(args, 1, "readline");
@@ -101,21 +98,18 @@ final class PyTextIOWrapper extends PyIter {
 }
 
 final class PyBufferedReader extends PyIter {
-    private static class PyBufferedReaderMethod extends PyBuiltinFunctionOrMethod {
-        protected final PyBufferedReader self;
-        PyBufferedReaderMethod(PyBufferedReader _self) { self = _self; }
-        @Override public String repr() { throw new UnsupportedOperationException("'repr' unimplemented"); }
-    }
-    private static final class PyBufferedReaderMethod_close extends PyBufferedReaderMethod {
+    private static final class PyBufferedReaderMethod_close extends PyBuiltinMethod<PyBufferedReader> {
         PyBufferedReaderMethod_close(PyBufferedReader _self) { super(_self); }
+        @Override public String methodName() { return "close"; }
         @Override public PyNone call(PyObject[] args, PyDict kwargs) {
             Runtime.requireNoKwArgs(kwargs, "BufferedReader.close");
             Runtime.requireExactArgsAlt(args, 0, "BufferedReader.close");
             return self.pymethod_close();
         }
     }
-    private static final class PyBufferedReaderMethod_read extends PyBufferedReaderMethod {
+    private static final class PyBufferedReaderMethod_read extends PyBuiltinMethod<PyBufferedReader> {
         PyBufferedReaderMethod_read(PyBufferedReader _self) { super(_self); }
+        @Override public String methodName() { return "read"; }
         @Override public PyBytes call(PyObject[] args, PyDict kwargs) {
             Runtime.requireNoKwArgs(kwargs, "BufferedReader.read");
             Runtime.requireMaxArgs(args, 1, "read");

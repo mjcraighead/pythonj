@@ -122,13 +122,9 @@ public final class PyDict extends PyObject {
         @Override public PyBuiltinClass type() { return values_class_singleton; }
     };
 
-    private static class PyDictMethod extends PyBuiltinFunctionOrMethod {
-        protected final PyDict self;
-        PyDictMethod(PyDict _self) { self = _self; }
-        @Override public String repr() { throw new UnsupportedOperationException("'repr' unimplemented"); }
-    }
-    private static final class PyDictMethod_get extends PyDictMethod {
+    private static final class PyDictMethod_get extends PyBuiltinMethod<PyDict> {
         PyDictMethod_get(PyDict _self) { super(_self); }
+        @Override public String methodName() { return "get"; }
         @Override public PyObject call(PyObject[] args, PyDict kwargs) {
             Runtime.requireNoKwArgs(kwargs, "dict.get");
             if (args.length != 2) {
@@ -137,8 +133,9 @@ public final class PyDict extends PyObject {
             return self.pymethod_get(args[0], args[1]);
         }
     }
-    private static final class PyDictMethod_items extends PyDictMethod {
+    private static final class PyDictMethod_items extends PyBuiltinMethod<PyDict> {
         PyDictMethod_items(PyDict _self) { super(_self); }
+        @Override public String methodName() { return "items"; }
         @Override public PyDictItems call(PyObject[] args, PyDict kwargs) {
             Runtime.requireNoKwArgs(kwargs, "dict.items");
             if (args.length != 0) {
@@ -147,8 +144,9 @@ public final class PyDict extends PyObject {
             return self.pymethod_items();
         }
     }
-    private static final class PyDictMethod_keys extends PyDictMethod {
+    private static final class PyDictMethod_keys extends PyBuiltinMethod<PyDict> {
         PyDictMethod_keys(PyDict _self) { super(_self); }
+        @Override public String methodName() { return "keys"; }
         @Override public PyDictKeys call(PyObject[] args, PyDict kwargs) {
             Runtime.requireNoKwArgs(kwargs, "dict.keys");
             if (args.length != 0) {
@@ -157,8 +155,9 @@ public final class PyDict extends PyObject {
             return self.pymethod_keys();
         }
     }
-    private static final class PyDictMethod_values extends PyDictMethod {
+    private static final class PyDictMethod_values extends PyBuiltinMethod<PyDict> {
         PyDictMethod_values(PyDict _self) { super(_self); }
+        @Override public String methodName() { return "values"; }
         @Override public PyDictValues call(PyObject[] args, PyDict kwargs) {
             Runtime.requireNoKwArgs(kwargs, "dict.values");
             if (args.length != 0) {
