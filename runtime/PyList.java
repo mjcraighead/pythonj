@@ -91,15 +91,17 @@ public final class PyList extends PyObject {
             ret.items.addAll(items);
             ret.items.addAll(rhsList.items);
             return ret;
+        } else {
+            throw unimplementedBinOp("+", rhs);
         }
-        throw new UnsupportedOperationException("unsupported operand type for list addition");
     }
     @Override public PyList addInPlace(PyObject rhs) {
         if (rhs instanceof PyList rhsList) {
             items.addAll(rhsList.items);
             return this;
+        } else {
+            throw unimplementedBinOp("+=", rhs);
         }
-        throw new UnsupportedOperationException("unsupported operand type for list addition");
     }
     @Override public PyList mul(PyObject rhs) {
         var ret = new PyList();
