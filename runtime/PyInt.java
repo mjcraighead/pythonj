@@ -23,18 +23,22 @@ public final class PyInt extends PyObject {
     @Override public PyInt and(PyObject rhs) {
         return new PyInt(value & ((PyInt)rhs).value);
     }
-    @Override public PyInt floordiv(PyObject rhs) {
+    public static long floorDiv(long lhs, long rhs) {
+        if ((lhs == Long.MIN_VALUE) && (rhs == -1)) {
+            throw new ArithmeticException("integer overflow");
+        }
+        if (rhs == 0) {
+            throw PyZeroDivisionError.raise("division by zero");
+        }
+        return Math.floorDiv(lhs, rhs);
+    }
+    @Override public PyObject floordiv(PyObject rhs) {
         if (rhs instanceof PyInt rhsInt) {
-            long rhsValue = rhsInt.value;
-            if ((value == Long.MIN_VALUE) && (rhsValue == -1)) {
-                throw new ArithmeticException("integer overflow");
-            }
-            if (rhsValue == 0) {
-                throw PyZeroDivisionError.raise("division by zero");
-            }
-            return new PyInt(Math.floorDiv(value, rhsValue));
+            return new PyInt(floorDiv(value, rhsInt.value));
+        } else if (rhs instanceof PyBool rhsBool) {
+            return new PyInt(floorDiv(value, rhsBool.asInt()));
         } else {
-            throw unimplementedBinOp("//", rhs);
+            return super.floordiv(rhs);
         }
     }
     @Override public PyInt lshift(PyObject rhs) {
