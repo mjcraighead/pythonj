@@ -431,7 +431,7 @@ public final class Runtime {
             } else if (type instanceof PyBuiltinClass type_class) {
                 return type_class.instanceClass.isInstance(obj);
             } else if (type instanceof PyType) {
-                throw new UnsupportedOperationException(String.format("isinstance() is unimplemented for type %s", type.repr()));
+                throw new UnsupportedOperationException("isinstance() is unimplemented for type " + type.repr());
             } else {
                 throw PyTypeError.raise("isinstance() arg 2 must be a type, a tuple of types, or a union");
             }

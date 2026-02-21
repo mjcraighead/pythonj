@@ -52,7 +52,7 @@ public abstract class PyObject implements Comparable<PyObject> {
     public PyObject getAttr(String key) {
         switch (key) {
             case "__class__": return type();
-            default: throw new NoSuchElementException(String.format("object does not have attribute %s", PyString.reprOf(key)));
+            default: throw new NoSuchElementException("object does not have attribute " + PyString.reprOf(key));
         }
     }
     public void setAttr(String key, PyObject value) { throw unimplementedMethod("setAttr"); }
@@ -62,11 +62,11 @@ public abstract class PyObject implements Comparable<PyObject> {
 
     public boolean hasIter() { return false; }
     public PyIter iter() {
-        throw PyTypeError.raiseFormat("%s object is not iterable", PyString.reprOf(type().name()));
+        throw PyTypeError.raise(PyString.reprOf(type().name()) + " object is not iterable");
     }
     public PyIter reversed() { throw unimplementedMethod("reversed"); }
     public PyObject next() {
-        throw PyTypeError.raiseFormat("%s object is not an iterator", PyString.reprOf(type().name()));
+        throw PyTypeError.raise(PyString.reprOf(type().name()) + " object is not an iterator");
     }
     public abstract PyType type();
 
