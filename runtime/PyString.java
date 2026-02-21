@@ -99,6 +99,9 @@ public final class PyString extends PyObject {
         return new PyString(value + ((PyString)rhs).value);
     }
     @Override public PyString mul(PyObject rhs) {
+        if (!rhs.hasIndex()) {
+            throw PyTypeError.raise("can't multiply sequence by non-int of type " + PyString.reprOf(rhs.type().name()));
+        }
         var s = new StringBuilder();
         long count = rhs.indexValue();
         for (long i = 0; i < count; i++) {
