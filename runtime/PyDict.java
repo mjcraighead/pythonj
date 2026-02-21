@@ -14,6 +14,7 @@ public final class PyDict extends PyObject {
         PyDictIter(Iterator<PyObject> _it) { it = _it; }
 
         @Override public PyObject next() { return it.hasNext() ? it.next() : null; }
+        @Override public String repr() { return defaultRepr(); }
         @Override public PyBuiltinClass type() { return iter_class_singleton; }
     };
 
@@ -30,6 +31,7 @@ public final class PyDict extends PyObject {
             Map.Entry<PyObject, PyObject> entry = it.next();
             return new PyTuple(new PyObject[] {entry.getKey(), entry.getValue()});
         }
+        @Override public String repr() { return defaultRepr(); }
         @Override public PyBuiltinClass type() { return itemiter_class_singleton; }
     };
 
@@ -40,6 +42,7 @@ public final class PyDict extends PyObject {
         PyDictValueIter(Iterator<Map.Entry<PyObject, PyObject>> _it) { it = _it; }
 
         @Override public PyObject next() { return it.hasNext() ? it.next().getValue() : null; }
+        @Override public String repr() { return defaultRepr(); }
         @Override public PyBuiltinClass type() { return valueiter_class_singleton; }
     };
 

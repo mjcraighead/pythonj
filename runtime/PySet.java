@@ -14,6 +14,7 @@ public final class PySet extends PyObject {
         PySetIter(Iterator<PyObject> _it) { it = _it; }
 
         @Override public PyObject next() { return it.hasNext() ? it.next() : null; }
+        @Override public String repr() { return defaultRepr(); }
         @Override public PyBuiltinClass type() { return iter_class_singleton; }
     };
 

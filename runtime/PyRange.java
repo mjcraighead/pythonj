@@ -28,6 +28,7 @@ public final class PyRange extends PyObject {
             start += step;
             return ret;
         }
+        @Override public String repr() { return defaultRepr(); }
         @Override public PyBuiltinClass type() { return iter_class_singleton; }
     };
 

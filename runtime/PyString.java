@@ -22,6 +22,7 @@ public final class PyString extends PyObject {
             index++;
             return ret;
         }
+        @Override public String repr() { return defaultRepr(); }
         @Override public PyBuiltinClass type() { return iter_class_singleton; }
     };
 

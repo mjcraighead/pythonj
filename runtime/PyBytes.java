@@ -18,6 +18,7 @@ public final class PyBytes extends PyObject {
             }
             return new PyInt(b[index++] & 0xFF);
         }
+        @Override public String repr() { return defaultRepr(); }
         @Override public PyBuiltinClass type() { return iter_class_singleton; }
     };
 
