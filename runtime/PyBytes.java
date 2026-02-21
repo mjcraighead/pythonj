@@ -32,7 +32,7 @@ public final class PyBytes extends PyObject {
             System.arraycopy(rhsBytes.value, 0, result, value.length, rhsBytes.value.length);
             return new PyBytes(result);
         } else {
-            throw new UnsupportedOperationException(String.format("bytes + %s is not implemented", rhs.type().name()));
+            throw unimplementedBinOp("+", rhs);
         }
     }
 

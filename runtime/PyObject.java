@@ -8,6 +8,9 @@ public abstract class PyObject implements Comparable<PyObject> {
     protected UnsupportedOperationException unimplementedMethod(String method) {
         return new UnsupportedOperationException(String.format("'%s' unimplemented on '%s'", method, type().name()));
     }
+    protected UnsupportedOperationException unimplementedBinOp(String op, PyObject rhs) {
+        return new UnsupportedOperationException(String.format("%s %s %s is not implemented", type().name(), op, rhs.type().name()));
+    }
 
     // These all take and/or return boxed PyObjects
     public PyObject invert() { throw unimplementedMethod("invert"); }
