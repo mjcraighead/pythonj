@@ -764,9 +764,6 @@ class PythonjVisitor(ast.NodeVisitor):
             yield JavaVariableDecl('var', temp_name, JavaMethodCall(value, 'iter', []))
             # XXX This is not atomic if an exception is thrown; a subset of LHS's will be left assigned
             for subtarget in target.elts:
-                if not isinstance(subtarget, ast.Name):
-                    self.error(subtarget.lineno, 'only simple names are supported in unpacking assignments')
-                    continue
                 yield from self.emit_bind(subtarget, JavaMethodCall(JavaIdentifier('Runtime'), 'nextRequireNonNull', [JavaIdentifier(temp_name)]))
             yield JavaExprStatement(JavaMethodCall(JavaIdentifier('Runtime'), 'nextRequireNull', [JavaIdentifier(temp_name)]))
         else:
