@@ -312,7 +312,7 @@ public final class Runtime {
             if (args[1] instanceof PyString name) {
                 return args[0].getAttr(name.value);
             } else {
-                throw PyTypeError.raiseFormat("attribute name must be string, not '%s'", args[1].type().name());
+                throw PyTypeError.raiseFormat("attribute name must be string, not %s", PyString.reprOf(args[1].type().name()));
             }
         }
     }

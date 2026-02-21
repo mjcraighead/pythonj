@@ -85,7 +85,7 @@ final class PyTextIOWrapper extends PyIter {
     }
     @Override public String repr() {
         // XXX hardcoded encoding matches CPython on Windows default
-        return String.format("<%s name=%s mode='r' encoding='%s'>", type().name(), name.repr(), "cp1252");
+        return String.format("<%s name=%s mode='r' encoding=%s>", type().name(), name.repr(), PyString.reprOf("cp1252"));
     }
 
     public PyNone pymethod_close() {

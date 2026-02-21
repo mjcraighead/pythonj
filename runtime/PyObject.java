@@ -52,7 +52,7 @@ public abstract class PyObject implements Comparable<PyObject> {
     public PyObject getAttr(String key) {
         switch (key) {
             case "__class__": return type();
-            default: throw new NoSuchElementException(String.format("object does not have attribute '%s'", key));
+            default: throw new NoSuchElementException(String.format("object does not have attribute %s", PyString.reprOf(key)));
         }
     }
     public void setAttr(String key, PyObject value) { throw unimplementedMethod("setAttr"); }
@@ -62,11 +62,11 @@ public abstract class PyObject implements Comparable<PyObject> {
 
     public boolean hasIter() { return false; }
     public PyIter iter() {
-        throw PyTypeError.raiseFormat("'%s' object is not iterable", type().name());
+        throw PyTypeError.raiseFormat("%s object is not iterable", PyString.reprOf(type().name()));
     }
     public PyIter reversed() { throw unimplementedMethod("reversed"); }
     public PyObject next() {
-        throw PyTypeError.raiseFormat("'%s' object is not an iterator", type().name());
+        throw PyTypeError.raiseFormat("%s object is not an iterator", PyString.reprOf(type().name()));
     }
     public abstract PyType type();
 
@@ -91,7 +91,7 @@ public abstract class PyObject implements Comparable<PyObject> {
     public double floatValue() { throw unimplementedMethod("floatValue"); }
     public String format(String formatSpec) {
         if (!formatSpec.isEmpty()) {
-            throw new UnsupportedOperationException(String.format("formatSpec='%s' unimplemented on '%s'", formatSpec, type().name()));
+            throw new UnsupportedOperationException(String.format("formatSpec=%s unimplemented on %s", PyString.reprOf(formatSpec), PyString.reprOf(type().name())));
         }
         return str();
     }
@@ -108,7 +108,7 @@ public abstract class PyObject implements Comparable<PyObject> {
 
     // Helpers used by derived classes
     protected UnsupportedOperationException unimplementedMethod(String method) {
-        return new UnsupportedOperationException(String.format("'%s' unimplemented on '%s'", method, type().name()));
+        return new UnsupportedOperationException(String.format("%s unimplemented on %s", PyString.reprOf(method), PyString.reprOf(type().name())));
     }
     protected UnsupportedOperationException unimplementedBinOp(String op, PyObject rhs) {
         return new UnsupportedOperationException(String.format("%s %s %s is not implemented", type().name(), op, rhs.type().name()));

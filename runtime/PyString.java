@@ -172,7 +172,7 @@ public final class PyString extends PyObject {
     @Override public int hashCode() { return value.hashCode(); }
     @Override public long len() { return value.length(); }
     @Override public String str() { return value; }
-    @Override public String repr() {
+    public static String reprOf(String value) {
         boolean use_double_quotes = (value.indexOf('\'') >= 0) && (value.indexOf('"') < 0);
         var s = new StringBuilder(use_double_quotes ? "\"" : "'");
         for (int i = 0; i < value.length(); i++) {
@@ -198,6 +198,7 @@ public final class PyString extends PyObject {
         s.append(use_double_quotes ? '"' : '\'');
         return s.toString();
     }
+    @Override public String repr() { return reprOf(value); }
 
     public PyString pymethod_join(PyObject arg) {
         // XXX consider special casing value.isEmpty() for performance
