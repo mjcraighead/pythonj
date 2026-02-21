@@ -34,7 +34,7 @@ public final class PyBool extends PyObject {
                    (rhs instanceof PyString) || (rhs instanceof PyTuple)) {
             return rhs.mul(this); // remap bool * T -> T * bool implementation
         } else {
-            throw unimplementedBinOp("*", rhs);
+            throw raiseBinOp("*", rhs);
         }
     }
     @Override public PyBool or(PyObject rhs) {

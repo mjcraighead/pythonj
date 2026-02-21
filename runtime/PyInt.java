@@ -77,7 +77,7 @@ public final class PyInt extends PyObject {
                    (rhs instanceof PyString) || (rhs instanceof PyTuple)) {
             return rhs.mul(this); // remap int * T -> T * int implementation
         } else {
-            throw unimplementedBinOp("*", rhs);
+            throw raiseBinOp("*", rhs);
         }
     }
     @Override public PyInt or(PyObject rhs) {

@@ -113,5 +113,8 @@ public abstract class PyObject implements Comparable<PyObject> {
     protected UnsupportedOperationException unimplementedBinOp(String op, PyObject rhs) {
         return new UnsupportedOperationException(String.format("%s %s %s is not implemented", type().name(), op, rhs.type().name()));
     }
+    protected PyRaise raiseBinOp(String op, PyObject rhs) {
+        return PyTypeError.raiseFormat("unsupported operand type(s) for %s: %s and %s", op, PyString.reprOf(type().name()), PyString.reprOf(rhs.type().name()));
+    }
     protected String defaultRepr() { return "<" + type().name() + " object>"; }
 }
