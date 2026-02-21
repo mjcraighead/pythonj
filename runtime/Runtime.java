@@ -13,7 +13,7 @@ abstract class PyTruthyObject extends PyObject {
 abstract class PyIter extends PyTruthyObject {
     @Override public final boolean hasIter() { return true; }
     @Override public final PyIter iter() { return this; }
-    @Override public String repr() { throw new UnsupportedOperationException("'repr' unimplemented"); }
+    @Override public String repr() { throw unimplementedMethod("repr"); }
 }
 
 abstract class PyType extends PyTruthyObject {

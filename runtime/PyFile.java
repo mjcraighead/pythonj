@@ -81,7 +81,7 @@ final class PyTextIOWrapper extends PyIter {
             default: return super.getAttr(key);
         }
     }
-    @Override public String repr() { throw new UnsupportedOperationException("'repr' unimplemented"); }
+    @Override public String repr() { throw unimplementedMethod("repr"); }
 
     public PyNone pymethod_close() {
         try {
@@ -143,7 +143,7 @@ final class PyBufferedReader extends PyIter {
             default: return super.getAttr(key);
         }
     }
-    @Override public String repr() { throw new UnsupportedOperationException("'repr' unimplemented"); }
+    @Override public String repr() { throw unimplementedMethod("repr"); }
 
     public PyNone pymethod_close() {
         try {

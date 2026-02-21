@@ -5,25 +5,29 @@
 import java.util.NoSuchElementException;
 
 public abstract class PyObject implements Comparable<PyObject> {
-    // These all take and/or return boxed PyObjects
-    public PyObject invert() { throw new UnsupportedOperationException("'invert' unimplemented"); }
-    public PyObject pos() { throw new UnsupportedOperationException("'pos' unimplemented"); }
-    public PyObject neg() { throw new UnsupportedOperationException("'neg' unimplemented"); }
-    public PyObject abs() { throw new UnsupportedOperationException("'abs' unimplemented"); }
+    protected UnsupportedOperationException unimplementedMethod(String method) {
+        return new UnsupportedOperationException(String.format("'%s' unimplemented on '%s'", method, type().name()));
+    }
 
-    public PyObject add(PyObject rhs) { throw new UnsupportedOperationException("'add' unimplemented"); }
-    public PyObject and(PyObject rhs) { throw new UnsupportedOperationException("'and' unimplemented"); }
-    public PyObject floordiv(PyObject rhs) { throw new UnsupportedOperationException("'floordiv' unimplemented"); }
-    public PyObject lshift(PyObject rhs) { throw new UnsupportedOperationException("'lshift' unimplemented"); }
-    public PyObject matmul(PyObject rhs) { throw new UnsupportedOperationException("'matmul' unimplemented"); }
-    public PyObject mod(PyObject rhs) { throw new UnsupportedOperationException("'mod' unimplemented"); }
-    public PyObject mul(PyObject rhs) { throw new UnsupportedOperationException("'mul' unimplemented"); }
-    public PyObject or(PyObject rhs) { throw new UnsupportedOperationException("'or' unimplemented"); }
-    public PyObject pow(PyObject rhs) { throw new UnsupportedOperationException("'pow' unimplemented"); }
-    public PyObject rshift(PyObject rhs) { throw new UnsupportedOperationException("'rshift' unimplemented"); }
-    public PyObject sub(PyObject rhs) { throw new UnsupportedOperationException("'sub' unimplemented"); }
-    public PyObject truediv(PyObject rhs) { throw new UnsupportedOperationException("'truediv' unimplemented"); }
-    public PyObject xor(PyObject rhs) { throw new UnsupportedOperationException("'xor' unimplemented"); }
+    // These all take and/or return boxed PyObjects
+    public PyObject invert() { throw unimplementedMethod("invert"); }
+    public PyObject pos() { throw unimplementedMethod("pos"); }
+    public PyObject neg() { throw unimplementedMethod("neg"); }
+    public PyObject abs() { throw unimplementedMethod("abs"); }
+
+    public PyObject add(PyObject rhs) { throw unimplementedMethod("add"); }
+    public PyObject and(PyObject rhs) { throw unimplementedMethod("and"); }
+    public PyObject floordiv(PyObject rhs) { throw unimplementedMethod("floordiv"); }
+    public PyObject lshift(PyObject rhs) { throw unimplementedMethod("lshift"); }
+    public PyObject matmul(PyObject rhs) { throw unimplementedMethod("matmul"); }
+    public PyObject mod(PyObject rhs) { throw unimplementedMethod("mod"); }
+    public PyObject mul(PyObject rhs) { throw unimplementedMethod("mul"); }
+    public PyObject or(PyObject rhs) { throw unimplementedMethod("or"); }
+    public PyObject pow(PyObject rhs) { throw unimplementedMethod("pow"); }
+    public PyObject rshift(PyObject rhs) { throw unimplementedMethod("rshift"); }
+    public PyObject sub(PyObject rhs) { throw unimplementedMethod("sub"); }
+    public PyObject truediv(PyObject rhs) { throw unimplementedMethod("truediv"); }
+    public PyObject xor(PyObject rhs) { throw unimplementedMethod("xor"); }
 
     // By default, in-place ops map to regular ops
     public PyObject addInPlace(PyObject rhs) { return add(rhs); }
@@ -40,14 +44,14 @@ public abstract class PyObject implements Comparable<PyObject> {
     public PyObject truedivInPlace(PyObject rhs) { return truediv(rhs); }
     public PyObject xorInPlace(PyObject rhs) { return xor(rhs); }
 
-    public boolean ge(PyObject rhs) { throw new UnsupportedOperationException("'ge' unimplemented"); }
-    public boolean gt(PyObject rhs) { throw new UnsupportedOperationException("'gt' unimplemented"); }
-    public boolean le(PyObject rhs) { throw new UnsupportedOperationException("'le' unimplemented"); }
-    public boolean lt(PyObject rhs) { throw new UnsupportedOperationException("'lt' unimplemented"); }
+    public boolean ge(PyObject rhs) { throw unimplementedMethod("ge"); }
+    public boolean gt(PyObject rhs) { throw unimplementedMethod("gt"); }
+    public boolean le(PyObject rhs) { throw unimplementedMethod("le"); }
+    public boolean lt(PyObject rhs) { throw unimplementedMethod("lt"); }
 
-    public PyObject getItem(PyObject key) { throw new UnsupportedOperationException("'getItem' unimplemented"); }
-    public void setItem(PyObject key, PyObject value) { throw new UnsupportedOperationException("'setItem' unimplemented"); }
-    public void delItem(PyObject key) { throw new UnsupportedOperationException("'delItem' unimplemented"); }
+    public PyObject getItem(PyObject key) { throw unimplementedMethod("getItem"); }
+    public void setItem(PyObject key, PyObject value) { throw unimplementedMethod("setItem"); }
+    public void delItem(PyObject key) { throw unimplementedMethod("delItem"); }
 
     public PyObject getAttr(String key) {
         switch (key) {
@@ -55,23 +59,23 @@ public abstract class PyObject implements Comparable<PyObject> {
             default: throw new NoSuchElementException(String.format("object does not have attribute '%s'", key));
         }
     }
-    public void setAttr(String key, PyObject value) { throw new UnsupportedOperationException("'setAttr' unimplemented"); }
-    public void delAttr(String key) { throw new UnsupportedOperationException("'delAttr' unimplemented"); }
+    public void setAttr(String key, PyObject value) { throw unimplementedMethod("setAttr"); }
+    public void delAttr(String key) { throw unimplementedMethod("delAttr"); }
 
-    public PyObject call(PyObject args[], PyDict kwargs) { throw new UnsupportedOperationException("'call' unimplemented"); }
+    public PyObject call(PyObject args[], PyDict kwargs) { throw unimplementedMethod("call"); }
 
     public boolean hasIter() { return false; }
     public PyIter iter() {
         throw PyTypeError.raiseFormat("'%s' object is not iterable", type().name());
     }
-    public PyIter reversed() { throw new UnsupportedOperationException("'reversed' unimplemented"); }
+    public PyIter reversed() { throw unimplementedMethod("reversed"); }
     public PyObject next() {
         throw PyTypeError.raiseFormat("'%s' object is not an iterator", type().name());
     }
     public abstract PyType type();
 
-    public PyObject enter() { throw new UnsupportedOperationException("'enter' unimplemented"); }
-    public void exit() { throw new UnsupportedOperationException("'exit' unimplemented"); }
+    public PyObject enter() { throw unimplementedMethod("enter"); }
+    public void exit() { throw unimplementedMethod("exit"); }
 
     // These take and/or return unboxed values
     // Note: any subclass that overrides equals() must also override hashCode(), unless it is intentionally 
@@ -86,20 +90,20 @@ public abstract class PyObject implements Comparable<PyObject> {
         }
         return 1;
     }
-    public boolean contains(PyObject rhs) { throw new UnsupportedOperationException("'contains' unimplemented"); }
-    @Override public boolean equals(Object rhs) { throw new UnsupportedOperationException("'equals' unimplemented"); }
-    public double floatValue() { throw new UnsupportedOperationException("'floatValue' unimplemented"); }
+    public boolean contains(PyObject rhs) { throw unimplementedMethod("contains"); }
+    @Override public boolean equals(Object rhs) { throw unimplementedMethod("equals"); }
+    public double floatValue() { throw unimplementedMethod("floatValue"); }
     public String format(String formatSpec) {
         if (!formatSpec.isEmpty()) {
             throw new UnsupportedOperationException(String.format("formatSpec='%s' unimplemented on '%s'", formatSpec, type().name()));
         }
         return str();
     }
-    @Override public int hashCode() { throw new UnsupportedOperationException("'hashCode' unimplemented"); }
+    @Override public int hashCode() { throw unimplementedMethod("hashCode"); }
     public boolean hasIndex() { return false; }
-    public long indexValue() { throw new UnsupportedOperationException("'indexValue' unimplemented"); }
-    public long intValue() { throw new UnsupportedOperationException("'intValue' unimplemented"); }
-    public long len() { throw new UnsupportedOperationException("'len' unimplemented"); }
+    public long indexValue() { throw unimplementedMethod("indexValue"); }
+    public long intValue() { throw unimplementedMethod("intValue"); }
+    public long len() { throw unimplementedMethod("len"); }
     public abstract String repr();
     public String str() { return repr(); }
 
