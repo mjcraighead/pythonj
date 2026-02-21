@@ -275,6 +275,25 @@ public final class Runtime {
     }
     public static final pyfunc_enumerate pyglobal_enumerate = new pyfunc_enumerate();
 
+    static final class pyfunc_format extends PyBuiltinFunction {
+        pyfunc_format() { super("format"); }
+        @Override public PyString call(PyObject[] args, PyDict kwargs) {
+            requireNoKwArgs(kwargs, funcName);
+            requireMinArgs(args, 1, funcName);
+            requireMaxArgs(args, 2, funcName);
+            String formatSpec = "";
+            if (args.length == 2) {
+                if (args[1] instanceof PyString arg1_str) {
+                    formatSpec = arg1_str.value;
+                } else {
+                    throw PyTypeError.raiseFormat("format() argument 2 must be str, not %s", args[1].type().name());
+                }
+            }
+            return new PyString(args[0].format(formatSpec));
+        }
+    }
+    public static final pyfunc_format pyglobal_format = new pyfunc_format();
+
     static final class pyfunc_getattr extends PyBuiltinFunction {
         pyfunc_getattr() { super("getattr"); }
         @Override public PyObject call(PyObject[] args, PyDict kwargs) {

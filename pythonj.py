@@ -18,8 +18,9 @@ from types import NoneType
 from typing import Iterator, Optional, TextIO
 
 BUILTINS = {
-    'abs', 'all', 'any', 'bool', 'bytearray', 'bytes', 'chr', 'dict', 'enumerate', 'getattr', 'hash', 'hex', 'int', 'isinstance', 'issubclass', 'iter', 'len', 'list',
-    'max', 'min', 'next', 'object', 'open', 'ord', 'print', 'range', 'repr', 'reversed', 'set', 'slice', 'sorted', 'str', 'sum', 'tuple', 'type', 'zip',
+    'abs', 'all', 'any', 'bool', 'bytearray', 'bytes', 'chr', 'dict', 'enumerate', 'format', 'getattr', 'hash',
+    'hex', 'int', 'isinstance', 'issubclass', 'iter', 'len', 'list', 'max', 'min', 'next', 'object', 'open',
+    'ord', 'print', 'range', 'repr', 'reversed', 'set', 'slice', 'sorted', 'str', 'sum', 'tuple', 'type', 'zip',
     'ArithmeticError', 'AssertionError', 'IndexError', 'KeyError', 'LookupError', 'StopIteration', 'TypeError', 'ValueError', 'ZeroDivisionError',
 }
 
