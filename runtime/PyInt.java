@@ -73,11 +73,8 @@ public final class PyInt extends PyObject {
             return new PyInt(Math.multiplyExact(value, rhsInt.value));
         } else if (rhs instanceof PyBool rhsBool) {
             return new PyInt(value * rhsBool.asInt());
-        } else if ((rhs instanceof PyBytes) || (rhs instanceof PyByteArray) || (rhs instanceof PyList) ||
-                   (rhs instanceof PyString) || (rhs instanceof PyTuple)) {
-            return rhs.mul(this); // remap int * T -> T * int implementation
         } else {
-            throw raiseBinOp("*", rhs);
+            return super.mul(rhs);
         }
     }
     @Override public PyInt or(PyObject rhs) {

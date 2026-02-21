@@ -30,11 +30,8 @@ public final class PyBool extends PyObject {
             return new PyInt(asInt() * rhsInt.value);
         } else if (rhs instanceof PyBool rhsBool) {
             return new PyInt(asInt() * rhsBool.asInt());
-        } else if ((rhs instanceof PyBytes) || (rhs instanceof PyByteArray) || (rhs instanceof PyList) ||
-                   (rhs instanceof PyString) || (rhs instanceof PyTuple)) {
-            return rhs.mul(this); // remap bool * T -> T * bool implementation
         } else {
-            throw raiseBinOp("*", rhs);
+            return super.mul(rhs);
         }
     }
     @Override public PyBool or(PyObject rhs) {

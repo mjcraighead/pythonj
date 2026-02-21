@@ -17,7 +17,13 @@ public abstract class PyObject implements Comparable<PyObject> {
     public PyObject lshift(PyObject rhs) { throw unimplementedMethod("lshift"); }
     public PyObject matmul(PyObject rhs) { throw unimplementedMethod("matmul"); }
     public PyObject mod(PyObject rhs) { throw unimplementedMethod("mod"); }
-    public PyObject mul(PyObject rhs) { throw unimplementedMethod("mul"); }
+    public PyObject mul(PyObject rhs) {
+        if ((rhs instanceof PyBytes) || (rhs instanceof PyByteArray) || (rhs instanceof PyList) ||
+            (rhs instanceof PyString) || (rhs instanceof PyTuple)) {
+            return rhs.mul(this); // remap T * Sequence -> Sequence * T implementation
+        }
+        throw raiseBinOp("*", rhs);
+    }
     public PyObject or(PyObject rhs) { throw unimplementedMethod("or"); }
     public PyObject pow(PyObject rhs) { throw unimplementedMethod("pow"); }
     public PyObject rshift(PyObject rhs) { throw unimplementedMethod("rshift"); }
