@@ -33,11 +33,13 @@ final class PyTextIOWrapper extends PyIter {
         }
     }
 
+    private final PyObject name;
     public final BufferedReader reader;
 
-    PyTextIOWrapper(String path) {
+    PyTextIOWrapper(PyString path) {
+        name = path;
         try {
-            reader = new BufferedReader(new FileReader(path));
+            reader = new BufferedReader(new FileReader(path.value));
         } catch (FileNotFoundException e) {
             throw new UncheckedIOException(e);
         }
@@ -81,7 +83,10 @@ final class PyTextIOWrapper extends PyIter {
             default: return super.getAttr(key);
         }
     }
-    @Override public String repr() { throw unimplementedMethod("repr"); }
+    @Override public String repr() {
+        // XXX hardcoded encoding matches CPython on Windows default
+        return String.format("<%s name=%s mode='r' encoding='%s'>", type().name(), name.repr(), "cp1252");
+    }
 
     public PyNone pymethod_close() {
         try {
@@ -120,11 +125,13 @@ final class PyBufferedReader extends PyIter {
         }
     }
 
+    private final PyObject name;
     public final BufferedInputStream reader;
 
-    PyBufferedReader(String path) {
+    PyBufferedReader(PyString path) {
+        name = path;
         try {
-            reader = new BufferedInputStream(new FileInputStream(path));
+            reader = new BufferedInputStream(new FileInputStream(path.value));
         } catch (FileNotFoundException e) {
             throw new UncheckedIOException(e);
         }
@@ -143,7 +150,7 @@ final class PyBufferedReader extends PyIter {
             default: return super.getAttr(key);
         }
     }
-    @Override public String repr() { throw unimplementedMethod("repr"); }
+    @Override public String repr() { return String.format("<%s name=%s>", type().name(), name.repr()); }
 
     public PyNone pymethod_close() {
         try {

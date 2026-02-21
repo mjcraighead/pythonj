@@ -605,13 +605,13 @@ public final class Runtime {
                 throw new IllegalArgumentException("open() does not accept kwargs");
             }
             if (args.length == 1) {
-                return new PyTextIOWrapper(((PyString)args[0]).value);
+                return new PyTextIOWrapper((PyString)args[0]);
             } else if (args.length == 2) {
                 if (args[1] instanceof PyString arg1_str) {
                     if (!arg1_str.value.equals("rb")) {
                         throw new IllegalArgumentException("open() second argument must be 'rb'");
                     }
-                    return new PyBufferedReader(((PyString)args[0]).value);
+                    return new PyBufferedReader((PyString)args[0]);
                 } else {
                     throw new IllegalArgumentException("open() second argument must be a string");
                 }
