@@ -26,6 +26,24 @@ public final class PyString extends PyObject {
         @Override public PyBuiltinClass type() { return iter_class_singleton; }
     };
 
+    private static final class PyStringMethod_find extends PyBuiltinMethod<PyString> {
+        PyStringMethod_find(PyString _self) { super(_self); }
+        @Override public String methodName() { return "find"; }
+        @Override public PyInt call(PyObject[] args, PyDict kwargs) {
+            Runtime.requireNoKwArgs(kwargs, "str.find");
+            if ((args.length < 1) || (args.length > 3)) {
+                throw new IllegalArgumentException("str.find() takes between 1 and 3 arguments");
+            }
+            if (args.length != 1) {
+                throw new UnsupportedOperationException("str.find() currently only supports 1 argument");
+            }
+            if (args[0] instanceof PyString arg0Str) {
+                return self.pymethod_find(arg0Str);
+            } else {
+                throw new UnsupportedOperationException("str.find() only supports a str as argument");
+            }
+        }
+    }
     private static final class PyStringMethod_join extends PyBuiltinMethod<PyString> {
         PyStringMethod_join(PyString _self) { super(_self); }
         @Override public String methodName() { return "join"; }
@@ -162,6 +180,7 @@ public final class PyString extends PyObject {
     }
     @Override public PyObject getAttr(String key) {
         switch (key) {
+            case "find": return new PyStringMethod_find(this);
             case "join": return new PyStringMethod_join(this);
             case "lower": return new PyStringMethod_lower(this);
             case "split": return new PyStringMethod_split(this);
@@ -200,6 +219,9 @@ public final class PyString extends PyObject {
     }
     @Override public String repr() { return reprOf(value); }
 
+    public PyInt pymethod_find(PyString arg) {
+        return new PyInt(value.indexOf(arg.value));
+    }
     public PyString pymethod_join(PyObject arg) {
         // XXX consider special casing value.isEmpty() for performance
         var s = new StringBuilder();
