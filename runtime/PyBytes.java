@@ -36,6 +36,21 @@ public final class PyBytes extends PyObject {
             throw unimplementedBinOp("+", rhs);
         }
     }
+    @Override public PyBytes mul(PyObject rhs) {
+        if (!rhs.hasIndex()) {
+            throw PyTypeError.raise("can't multiply sequence by non-int of type " + PyString.reprOf(rhs.type().name()));
+        }
+        int count = Math.toIntExact(rhs.indexValue());
+        if (count <= 0) {
+            return new PyBytes(new byte[0]);
+        }
+        int newLength = Math.multiplyExact(value.length, count);
+        byte[] result = new byte[newLength];
+        for (int i = 0; i < count; i++) {
+            System.arraycopy(value, 0, result, i * value.length, value.length);
+        }
+        return new PyBytes(result);
+    }
 
     @Override public PyInt getItem(PyObject key) {
         int index = Math.toIntExact(key.indexValue());

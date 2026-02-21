@@ -26,6 +26,22 @@ public final class PyByteArray extends PyObject {
 
     PyByteArray(byte[] _value) { value = _value; }
 
+    @Override public PyByteArray mul(PyObject rhs) {
+        if (!rhs.hasIndex()) {
+            throw PyTypeError.raise("can't multiply sequence by non-int of type " + PyString.reprOf(rhs.type().name()));
+        }
+        int count = Math.toIntExact(rhs.indexValue());
+        if (count <= 0) {
+            return new PyByteArray(new byte[0]);
+        }
+        int newLength = Math.multiplyExact(value.length, count);
+        byte[] result = new byte[newLength];
+        for (int i = 0; i < count; i++) {
+            System.arraycopy(value, 0, result, i * value.length, value.length);
+        }
+        return new PyByteArray(result);
+    }
+
     @Override public PyInt getItem(PyObject key) {
         int index = Math.toIntExact(key.indexValue());
         if (index < 0) {
