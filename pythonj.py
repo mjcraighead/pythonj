@@ -966,7 +966,7 @@ class PythonjVisitor(ast.NodeVisitor):
             self.code.append(JavaAssignStatement(JavaIdentifier('expr_discard'), value))
             self.used_expr_discard = True
 
-    def check_args(self, lineno: int, args: ast.arguments) -> set[str]:
+    def check_args(self, lineno: int, args: ast.arguments) -> list[str]:
         if args.posonlyargs:
             self.error(lineno, 'position-only arguments are unsupported')
         if args.vararg:
@@ -983,10 +983,10 @@ class PythonjVisitor(ast.NodeVisitor):
             # arg.type_comment is ignored; we only plan to support "real" type annotations.
             if arg.annotation:
                 self.error(lineno, 'argument type annotations are unsupported')
-        return {arg.arg for arg in args.args}
+        return [arg.arg for arg in args.args]
 
     @contextmanager
-    def new_function(self, arg_names: set[str]) -> Iterator[None]:
+    def new_function(self, arg_names: list[str]) -> Iterator[None]:
         assert not self.in_function
         assert self.names is self.global_names
         assert not self.explicit_globals
@@ -999,7 +999,7 @@ class PythonjVisitor(ast.NodeVisitor):
         self.in_function = True
         self.n_temps = 0
         self.used_expr_discard = False
-        self.local_names = arg_names.copy()
+        self.local_names = set(arg_names)
         self.names = self.local_names
         self.explicit_globals = set()
 
@@ -1012,8 +1012,8 @@ class PythonjVisitor(ast.NodeVisitor):
         self.names = self.global_names
         self.explicit_globals = saved_explicit_globals
 
-    def add_function(self, py_name: str, java_name: str, args: ast.arguments, arg_names: set[str], body: list[JavaStatement]) -> None:
-        n_args = len(args.args)
+    def add_function(self, py_name: str, java_name: str, arg_names: list[str], body: list[JavaStatement]) -> None:
+        n_args = len(arg_names)
         func_code: list[JavaStatement] = [
             *if_statement(
                 JavaBinaryOp('&&', JavaBinaryOp('!=', JavaIdentifier('kwargs'), JavaIdentifier('null')), bool_value(JavaIdentifier('kwargs'))),
@@ -1024,13 +1024,13 @@ class PythonjVisitor(ast.NodeVisitor):
                 JavaBinaryOp('!=', JavaField(JavaIdentifier('args'), 'length'), JavaIntLiteral(n_args, '')),
                 [JavaThrowStatement(JavaMethodCall(JavaIdentifier('Runtime'), 'raiseUserExactArgs', [
                     JavaIdentifier('args'), JavaIntLiteral(n_args, ''), JavaStrLiteral(py_name),
-                    *(JavaStrLiteral(arg.arg) for arg in args.args),
+                    *(JavaStrLiteral(arg) for arg in arg_names),
                 ]))],
                 [],
             ),
             *(JavaVariableDecl(
-                'PyObject', f'pylocal_{arg.arg}', JavaArrayAccess(JavaIdentifier('args'), JavaIntLiteral(i, ''))
-            ) for (i, arg) in enumerate(args.args)),
+                'PyObject', f'pylocal_{arg}', JavaArrayAccess(JavaIdentifier('args'), JavaIntLiteral(i, ''))
+            ) for (i, arg) in enumerate(arg_names)),
             *((JavaVariableDecl('PyObject', 'expr_discard', None),) if self.used_expr_discard else ()),
             # XXX It's tempting to assign Java null here, but this makes it far too easy for null to leak out into the runtime
             *(JavaVariableDecl('PyObject', f'pylocal_{name}', None) for name in sorted(self.names) if name not in arg_names),
@@ -1063,14 +1063,13 @@ class PythonjVisitor(ast.NodeVisitor):
             self.error(node.lineno, 'function type parameters are unsupported')
 
         arg_names = self.check_args(node.lineno, node.args)
-        py_name = node.name
         java_name = f'pyfunc_{node.name}'
-        self.global_names.add(py_name)
+        self.global_names.add(node.name)
         self.global_code.append(JavaAssignStatement(JavaIdentifier(f'pyglobal_{node.name}'), JavaCreateObject(java_name, [])))
 
         with self.new_function(arg_names):
             body = self.visit_block(node.body)
-            self.add_function(py_name, java_name, node.args, arg_names, body)
+            self.add_function(node.name, java_name, arg_names, body)
 
     def visit_Lambda(self, node) -> JavaExpr:
         if self.in_function:
@@ -1078,14 +1077,13 @@ class PythonjVisitor(ast.NodeVisitor):
             return JavaIdentifier('__cannot_translate_lambda__')
 
         arg_names = self.check_args(node.lineno, node.args)
-        py_name = '<lambda>'
         java_name = f'pylambda{self.n_lambdas}'
         self.n_lambdas += 1
 
         with self.new_function(arg_names):
             with self.new_block() as body:
                 body.append(JavaReturnStatement(self.visit(node.body)))
-            self.add_function(py_name, java_name, node.args, arg_names, body)
+            self.add_function('<lambda>', java_name, arg_names, body)
 
         return JavaCreateObject(java_name, [])
 
