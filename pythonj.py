@@ -1012,7 +1012,8 @@ class PythonjVisitor(ast.NodeVisitor):
         self.names = self.global_names
         self.explicit_globals = saved_explicit_globals
 
-    def add_function(self, py_name: str, java_name: str, arg_names: list[str], body: list[JavaStatement]) -> None:
+    def add_function(self, py_name: str, java_name: str, arg_names: list[str], body: list[JavaStatement],
+                     invisible_args: bool = False) -> None:
         n_args = len(arg_names)
         func_code: list[JavaStatement] = [
             *if_statement(
@@ -1029,11 +1030,11 @@ class PythonjVisitor(ast.NodeVisitor):
                 [],
             ),
             *(JavaVariableDecl(
-                'PyObject', f'pylocal_{arg}', JavaArrayAccess(JavaIdentifier('args'), JavaIntLiteral(i, ''))
+                'PyObject', arg if invisible_args else f'pylocal_{arg}', JavaArrayAccess(JavaIdentifier('args'), JavaIntLiteral(i, ''))
             ) for (i, arg) in enumerate(arg_names)),
             *((JavaVariableDecl('PyObject', 'expr_discard', None),) if self.used_expr_discard else ()),
             # XXX It's tempting to assign Java null here, but this makes it far too easy for null to leak out into the runtime
-            *(JavaVariableDecl('PyObject', f'pylocal_{name}', None) for name in sorted(self.names) if name not in arg_names),
+            *(JavaVariableDecl('PyObject', f'pylocal_{name}', None) for name in sorted(self.names) if invisible_args or name not in arg_names),
             *body,
             JavaReturnStatement(JavaPyConstant(None)),
         ]
@@ -1086,6 +1087,51 @@ class PythonjVisitor(ast.NodeVisitor):
             self.add_function('<lambda>', java_name, arg_names, body)
 
         return JavaCreateObject(java_name, [])
+
+    def lower_comp(self, py_name: str, type_name: str, method_name: str, lineno: int,
+                   generators: list[ast.comprehension], elt: ast.expr) -> JavaExpr:
+        if self.in_function:
+            self.error(lineno, 'nested function definitions are unsupported')
+            return JavaIdentifier('__cannot_translate_listcomp__')
+        if len(generators) != 1:
+            self.error(lineno, 'multiple generators are unsupported in comprehensions')
+        generator = generators[0]
+        if generator.ifs:
+            self.error(lineno, "'if' conditions are not supported in comprehensions")
+        if generator.is_async:
+            self.error(lineno, 'asynchronous generators are unsupported')
+
+        arg_name = 'iterable'
+        arg_names = [arg_name]
+        java_name = f'pylambda{self.n_lambdas}'
+        self.n_lambdas += 1
+
+        with self.new_function(arg_names):
+            with self.new_block() as body:
+                temp_iter = self.make_temp()
+                temp_list = self.make_temp()
+                temp_element = self.make_temp()
+                self.code.append(JavaVariableDecl('var', temp_iter, JavaMethodCall(JavaIdentifier(arg_name), 'iter', [])))
+                self.code.append(JavaVariableDecl('var', temp_list, JavaCreateObject(type_name, [])))
+                self.code.append(JavaForStatement(
+                    'var', temp_element, JavaMethodCall(JavaIdentifier(temp_iter), 'next', []),
+                    JavaBinaryOp('!=', JavaIdentifier(temp_element), JavaIdentifier('null')),
+                    temp_element, JavaMethodCall(JavaIdentifier(temp_iter), 'next', []),
+                    [
+                        *self.emit_bind(generator.target, JavaIdentifier(temp_element)),
+                        JavaExprStatement(JavaMethodCall(JavaIdentifier(temp_list), f'pymethod_{method_name}', [self.visit(elt)])),
+                    ]
+                ))
+                body.append(JavaReturnStatement(JavaIdentifier(temp_list)))
+            self.add_function(py_name, java_name, arg_names, body, invisible_args=True)
+
+        return JavaMethodCall(JavaCreateObject(java_name, []), 'call', [JavaCreateArray('PyObject', [self.visit(generator.iter)]), JavaIdentifier('null')])
+
+    def visit_ListComp(self, node) -> JavaExpr:
+        return self.lower_comp('<listcomp>', 'PyList', 'append', node.lineno, node.generators, node.elt)
+
+    def visit_SetComp(self, node) -> JavaExpr:
+        return self.lower_comp('<setcomp>', 'PySet', 'add', node.lineno, node.generators, node.elt)
 
     def visit_Module(self, node) -> None:
         for statement in node.body:
