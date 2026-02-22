@@ -14,7 +14,7 @@ public abstract class PyObject implements Comparable<PyObject> {
     public PyObject add(PyObject rhs) { throw unimplementedMethod("add"); }
     public PyObject and(PyObject rhs) { throw unimplementedMethod("and"); }
     public PyObject floordiv(PyObject rhs) { throw raiseBinOp("//", rhs); }
-    public PyObject lshift(PyObject rhs) { throw unimplementedMethod("lshift"); }
+    public PyObject lshift(PyObject rhs) { throw raiseBinOp("<<", rhs); }
     public PyObject matmul(PyObject rhs) { throw raiseBinOp("@", rhs); }
     public PyObject mod(PyObject rhs) { throw raiseBinOp("%", rhs); }
     public PyObject mul(PyObject rhs) {
@@ -26,7 +26,7 @@ public abstract class PyObject implements Comparable<PyObject> {
     }
     public PyObject or(PyObject rhs) { throw unimplementedMethod("or"); }
     public PyObject pow(PyObject rhs) { throw unimplementedMethod("pow"); }
-    public PyObject rshift(PyObject rhs) { throw unimplementedMethod("rshift"); }
+    public PyObject rshift(PyObject rhs) { throw raiseBinOp(">>", rhs); }
     public PyObject sub(PyObject rhs) { throw unimplementedMethod("sub"); }
     public PyObject truediv(PyObject rhs) { throw unimplementedMethod("truediv"); }
     public PyObject xor(PyObject rhs) { throw unimplementedMethod("xor"); }

@@ -20,6 +20,22 @@ public final class PyInt extends PyObject {
         }
         return Math.floorDiv(lhs, rhs);
     }
+    public static long lshift(long lhs, long rhs) {
+        if (rhs < 0) {
+            throw PyValueError.raise("negative shift count");
+        }
+        if (rhs >= 64) {
+            if (lhs == 0) {
+                return 0; // 0 << N -> 0 for any N >= 0
+            }
+            throw new ArithmeticException("shift count too large");
+        }
+        long ret = lhs << rhs;
+        if ((ret >> rhs) != lhs) {
+            throw new ArithmeticException("integer overflow");
+        }
+        return ret;
+    }
     public static long mod(long lhs, long rhs) {
         if ((lhs == Long.MIN_VALUE) && (rhs == -1)) {
             throw new ArithmeticException("integer overflow");
@@ -28,6 +44,15 @@ public final class PyInt extends PyObject {
             throw PyZeroDivisionError.raise("division by zero");
         }
         return Math.floorMod(lhs, rhs);
+    }
+    public static long rshift(long lhs, long rhs) {
+        if (rhs < 0) {
+            throw PyValueError.raise("negative shift count");
+        }
+        if (rhs > 63) {
+            rhs = 63; // for all longs, rshift of >=63 yields the sign bit replicated into all bits
+        }
+        return lhs >> rhs;
     }
 
     // XXX Make sure that all of these throw an exception if the value wraps/overflows/etc.
@@ -51,22 +76,14 @@ public final class PyInt extends PyObject {
             return super.floordiv(rhs);
         }
     }
-    @Override public PyInt lshift(PyObject rhs) {
-        long rhsValue = ((PyInt)rhs).value;
-        if (rhsValue < 0) {
-            throw new ArithmeticException("negative shift count");
+    @Override public PyObject lshift(PyObject rhs) {
+        if (rhs instanceof PyInt rhsInt) {
+            return new PyInt(lshift(value, rhsInt.value));
+        } else if (rhs instanceof PyBool rhsBool) {
+            return new PyInt(lshift(value, rhsBool.asInt()));
+        } else {
+            return super.lshift(rhs);
         }
-        if (rhsValue >= 64) {
-            if (value == 0) {
-                return this; // 0 << N -> 0 for any N >= 0
-            }
-            throw new ArithmeticException("shift count too large");
-        }
-        long ret = value << rhsValue;
-        if ((ret >> rhsValue) != value) {
-            throw new ArithmeticException("integer overflow");
-        }
-        return new PyInt(ret);
     }
     @Override public PyObject mod(PyObject rhs) {
         if (rhs instanceof PyInt rhsInt) {
@@ -89,15 +106,14 @@ public final class PyInt extends PyObject {
     @Override public PyInt or(PyObject rhs) {
         return new PyInt(value | ((PyInt)rhs).value);
     }
-    @Override public PyInt rshift(PyObject rhs) {
-        long rhsValue = ((PyInt)rhs).value;
-        if (rhsValue < 0) {
-            throw new ArithmeticException("negative shift count");
+    @Override public PyObject rshift(PyObject rhs) {
+        if (rhs instanceof PyInt rhsInt) {
+            return new PyInt(rshift(value, rhsInt.value));
+        } else if (rhs instanceof PyBool rhsBool) {
+            return new PyInt(rshift(value, rhsBool.asInt()));
+        } else {
+            return super.rshift(rhs);
         }
-        if (rhsValue > 63) {
-            rhsValue = 63; // for all longs, rshift of >=63 yields the sign bit replicated into all bits
-        }
-        return new PyInt(value >> rhsValue);
     }
     @Override public PyInt sub(PyObject rhs) {
         return new PyInt(Math.subtractExact(value, ((PyInt)rhs).value));

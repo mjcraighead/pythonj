@@ -35,6 +35,15 @@ public final class PyBool extends PyObject {
             return super.floordiv(rhs);
         }
     }
+    @Override public PyObject lshift(PyObject rhs) {
+        if (rhs instanceof PyInt rhsInt) {
+            return new PyInt(PyInt.lshift(asInt(), rhsInt.value));
+        } else if (rhs instanceof PyBool rhsBool) {
+            return new PyInt(PyInt.lshift(asInt(), rhsBool.asInt()));
+        } else {
+            return super.lshift(rhs);
+        }
+    }
     @Override public PyObject mod(PyObject rhs) {
         if (rhs instanceof PyInt rhsInt) {
             return new PyInt(PyInt.mod(asInt(), rhsInt.value));
@@ -55,6 +64,15 @@ public final class PyBool extends PyObject {
     }
     @Override public PyBool or(PyObject rhs) {
         return create(value | ((PyBool)rhs).value);
+    }
+    @Override public PyObject rshift(PyObject rhs) {
+        if (rhs instanceof PyInt rhsInt) {
+            return new PyInt(PyInt.rshift(asInt(), rhsInt.value));
+        } else if (rhs instanceof PyBool rhsBool) {
+            return new PyInt(PyInt.rshift(asInt(), rhsBool.asInt()));
+        } else {
+            return super.rshift(rhs);
+        }
     }
     @Override public PyBool xor(PyObject rhs) {
         return create(value ^ ((PyBool)rhs).value);
