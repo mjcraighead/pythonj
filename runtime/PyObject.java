@@ -6,10 +6,10 @@ import java.util.NoSuchElementException;
 
 public abstract class PyObject implements Comparable<PyObject> {
     // These all take and/or return boxed PyObjects
-    public PyObject invert() { throw unimplementedMethod("invert"); }
-    public PyObject pos() { throw unimplementedMethod("pos"); }
-    public PyObject neg() { throw unimplementedMethod("neg"); }
-    public PyObject abs() { throw unimplementedMethod("abs"); }
+    public PyObject invert() { throw raiseUnaryOp("unary ~"); }
+    public PyObject pos() { throw raiseUnaryOp("unary +"); }
+    public PyObject neg() { throw raiseUnaryOp("unary -"); }
+    public PyObject abs() { throw raiseUnaryOp("abs()"); }
 
     public PyObject add(PyObject rhs) { throw unimplementedMethod("add"); }
     public PyObject and(PyObject rhs) { throw unimplementedMethod("and"); }
@@ -118,6 +118,9 @@ public abstract class PyObject implements Comparable<PyObject> {
     }
     protected UnsupportedOperationException unimplementedBinOp(String op, PyObject rhs) {
         return new UnsupportedOperationException(String.format("%s %s %s is not implemented", type().name(), op, rhs.type().name()));
+    }
+    protected PyRaise raiseUnaryOp(String op) {
+        return PyTypeError.raiseFormat("bad operand type for %s: %s", op, PyString.reprOf(type().name()));
     }
     protected PyRaise raiseBinOp(String op, PyObject rhs) {
         return PyTypeError.raiseFormat("unsupported operand type(s) for %s: %s and %s", op, PyString.reprOf(type().name()), PyString.reprOf(rhs.type().name()));
