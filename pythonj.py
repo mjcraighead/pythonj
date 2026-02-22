@@ -837,10 +837,17 @@ class PythonjVisitor(ast.NodeVisitor):
 
     @contextmanager
     def new_block(self) -> Iterator[list[JavaStatement]]:
-        saved_code = self.code
+        saved = self.code
         self.code = []
         yield self.code
-        self.code = saved_code
+        self.code = saved
+
+    @contextmanager
+    def push_break_name(self, break_name: Optional[str]) -> Iterator[None]:
+        saved = self.break_name
+        self.break_name = break_name
+        yield
+        self.break_name = saved
 
     def visit_block(self, statements: list[ast.stmt]) -> list[JavaStatement]:
         with self.new_block() as body:
@@ -858,10 +865,8 @@ class PythonjVisitor(ast.NodeVisitor):
         cond = bool_value(self.visit(node.test))
 
         block_name = self.make_temp() if node.orelse else None
-        saved_break_name = self.break_name
-        self.break_name = block_name
-        body = self.visit_block(node.body)
-        self.break_name = saved_break_name
+        with self.push_break_name(block_name):
+            body = self.visit_block(node.body)
 
         loop = list(while_statement(cond, body))
         if node.orelse:
@@ -876,10 +881,8 @@ class PythonjVisitor(ast.NodeVisitor):
         temp_name1 = self.make_temp()
         self.code.append(JavaVariableDecl('var', temp_name0, JavaMethodCall(self.visit(node.iter), 'iter', [])))
 
-        saved_break_name = self.break_name
-        self.break_name = block_name
-        body = self.visit_block(node.body)
-        self.break_name = saved_break_name
+        with self.push_break_name(block_name):
+            body = self.visit_block(node.body)
 
         loop = JavaForStatement(
             'var', temp_name1, JavaMethodCall(JavaIdentifier(temp_name0), 'next', []),
