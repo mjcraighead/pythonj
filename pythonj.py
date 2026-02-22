@@ -842,14 +842,16 @@ class PythonjVisitor(ast.NodeVisitor):
         yield self.code
         self.code = saved_code
 
+    def visit_block(self, statements: list[ast.stmt]) -> list[JavaStatement]:
+        with self.new_block() as body:
+            for statement in statements:
+                self.visit(statement)
+        return body
+
     def visit_If(self, node) -> None:
         cond = bool_value(self.visit(node.test))
-        with self.new_block() as body:
-            for statement in node.body:
-                self.visit(statement)
-        with self.new_block() as orelse:
-            for statement in node.orelse:
-                self.visit(statement)
+        body = self.visit_block(node.body)
+        orelse = self.visit_block(node.orelse)
         self.code.extend(if_statement(cond, body, orelse))
 
     def visit_While(self, node) -> None:
@@ -858,16 +860,12 @@ class PythonjVisitor(ast.NodeVisitor):
         block_name = self.make_temp() if node.orelse else None
         saved_break_name = self.break_name
         self.break_name = block_name
-        with self.new_block() as body:
-            for statement in node.body:
-                self.visit(statement)
+        body = self.visit_block(node.body)
         self.break_name = saved_break_name
 
         loop = list(while_statement(cond, body))
         if node.orelse:
-            with self.new_block() as orelse:
-                for statement in node.orelse:
-                    self.visit(statement)
+            orelse = self.visit_block(node.orelse)
             assert block_name is not None
             loop = [JavaLabeledBlock(block_name, [*loop, *orelse])]
         self.code.extend(loop)
@@ -880,9 +878,7 @@ class PythonjVisitor(ast.NodeVisitor):
 
         saved_break_name = self.break_name
         self.break_name = block_name
-        with self.new_block() as body:
-            for statement in node.body:
-                self.visit(statement)
+        body = self.visit_block(node.body)
         self.break_name = saved_break_name
 
         loop = JavaForStatement(
@@ -895,9 +891,7 @@ class PythonjVisitor(ast.NodeVisitor):
             ]
         )
         if node.orelse:
-            with self.new_block() as orelse:
-                for statement in node.orelse:
-                    self.visit(statement)
+            orelse = self.visit_block(node.orelse)
             assert block_name is not None
             loop = JavaLabeledBlock(block_name, [loop, *orelse])
         self.code.append(loop)
@@ -915,9 +909,7 @@ class PythonjVisitor(ast.NodeVisitor):
         else:
             self.code.extend(self.emit_bind(item.optional_vars, JavaMethodCall(JavaIdentifier(temp_name), 'enter', [])))
 
-        with self.new_block() as body:
-            for statement in node.body:
-                self.visit(statement)
+        body = self.visit_block(node.body)
 
         self.code.append(JavaTryStatement(body, None, None, [], [
             JavaExprStatement(JavaMethodCall(JavaIdentifier(temp_name), 'exit', [])),
@@ -932,9 +924,7 @@ class PythonjVisitor(ast.NodeVisitor):
             if handler.type and not (isinstance(handler.type, ast.Name) and handler.type.id == 'BaseException'):
                 self.error(node.lineno, "only catch-all 'except:' or 'except BaseException [as e]:' clauses in 'try' statements are supported")
 
-        with self.new_block() as try_body:
-            for statement in node.body:
-                self.visit(statement)
+        try_body = self.visit_block(node.body)
 
         exc_type = None
         exc_name = None
@@ -950,9 +940,7 @@ class PythonjVisitor(ast.NodeVisitor):
                 for statement in handler.body:
                     self.visit(statement)
 
-        with self.new_block() as finally_body:
-            for statement in node.finalbody:
-                self.visit(statement)
+        finally_body = self.visit_block(node.finalbody)
 
         self.code.append(JavaTryStatement(try_body, exc_type, exc_name, catch_body, finally_body))
 
@@ -1016,9 +1004,7 @@ class PythonjVisitor(ast.NodeVisitor):
         # Number temps in each function starting from temp0 for improved clarity/stability of generated code
         saved_temps = self.n_temps
         self.n_temps = 0
-        with self.new_block() as body:
-            for statement in node.body:
-                self.visit(statement)
+        body = self.visit_block(node.body)
         self.n_temps = saved_temps
 
         func_code: list[JavaStatement] = [
