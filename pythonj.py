@@ -452,11 +452,13 @@ class IndentedWriter:
 # will compile into.  Partial mitigations are likely to be easier than a total fix.
 # XXX "invokedynamic" might help us a lot, but there is no way to access it from Java source
 class PythonjVisitor(ast.NodeVisitor):
-    __slots__ = ('path', 'n_errors', 'n_temps', 'global_names', 'global_code', 'names', 'explicit_globals', 'code',
-                 'emit_ctx', 'in_function', 'functions', 'allow_intrinsics')
+    __slots__ = ('path', 'n_errors', 'n_temps', 'n_lambdas', 'local_names', 'global_names', 'global_code', 'names',
+                 'explicit_globals', 'code', 'emit_ctx', 'in_function', 'functions', 'allow_intrinsics')
     path: str
     n_errors: int
     n_temps: int
+    n_lambdas: int
+    local_names: set[str]
     global_names: set[str]
     global_code: list[JavaStatement]
     names: set[str]
@@ -473,6 +475,8 @@ class PythonjVisitor(ast.NodeVisitor):
         self.path = path
         self.n_errors = 0
         self.n_temps = 0
+        self.n_lambdas = 0
+        self.local_names = set()
         self.global_names = set()
         self.global_code = [JavaVariableDecl('PyObject', 'expr_discard', None)] # XXX remove this variable if not needed
         self.names = self.global_names
@@ -504,7 +508,7 @@ class PythonjVisitor(ast.NodeVisitor):
             return JavaIdentifier('null')
         elif name in BUILTINS:
             return JavaField(JavaIdentifier('Runtime'), f'pyglobal_{name}')
-        elif self.in_function and name not in self.global_names and name not in self.explicit_globals:
+        elif self.in_function and name in self.local_names and name not in self.explicit_globals:
             return JavaIdentifier(f'pylocal_{name}')
         else:
             return JavaIdentifier(f'pyglobal_{name}')
@@ -962,11 +966,94 @@ class PythonjVisitor(ast.NodeVisitor):
             self.code.append(JavaAssignStatement(JavaIdentifier('expr_discard'), value))
             self.used_expr_discard = True
 
+    def check_args(self, lineno: int, args: ast.arguments) -> set[str]:
+        if args.posonlyargs:
+            self.error(lineno, 'position-only arguments are unsupported')
+        if args.vararg:
+            self.error(lineno, '*args are unsupported')
+        if args.kwonlyargs:
+            self.error(lineno, 'kw-only arguments are unsupported')
+        if args.kw_defaults:
+            self.error(lineno, 'kw-only argument defaults are unsupported')
+        if args.kwarg:
+            self.error(lineno, '**kwargs are unsupported')
+        if args.defaults:
+            self.error(lineno, 'argument defaults are unsupported')
+        for arg in args.args:
+            # arg.type_comment is ignored; we only plan to support "real" type annotations.
+            if arg.annotation:
+                self.error(lineno, 'argument type annotations are unsupported')
+        return {arg.arg for arg in args.args}
+
+    @contextmanager
+    def new_function(self, arg_names: set[str]) -> Iterator[None]:
+        assert not self.in_function
+        assert self.names is self.global_names
+        assert not self.explicit_globals
+
+        saved_expr_discard = self.used_expr_discard
+        saved_n_temps = self.n_temps
+        saved_local_names = self.local_names
+        saved_explicit_globals = self.explicit_globals
+
+        self.in_function = True
+        self.n_temps = 0
+        self.used_expr_discard = False
+        self.local_names = arg_names.copy()
+        self.names = self.local_names
+        self.explicit_globals = set()
+
+        yield
+
+        self.in_function = False
+        self.n_temps = saved_n_temps
+        self.used_expr_discard = saved_expr_discard
+        self.local_names = saved_local_names
+        self.names = self.global_names
+        self.explicit_globals = saved_explicit_globals
+
+    def add_function(self, py_name: str, java_name: str, args: ast.arguments, arg_names: set[str], body: list[JavaStatement]) -> None:
+        n_args = len(args.args)
+        func_code: list[JavaStatement] = [
+            *if_statement(
+                JavaBinaryOp('&&', JavaBinaryOp('!=', JavaIdentifier('kwargs'), JavaIdentifier('null')), bool_value(JavaIdentifier('kwargs'))),
+                [JavaThrowStatement(JavaCreateObject('IllegalArgumentException', [JavaStrLiteral(f'{py_name}() does not accept kwargs')]))],
+                [],
+            ),
+            *if_statement(
+                JavaBinaryOp('!=', JavaField(JavaIdentifier('args'), 'length'), JavaIntLiteral(n_args, '')),
+                [JavaThrowStatement(JavaMethodCall(JavaIdentifier('Runtime'), 'raiseUserExactArgs', [
+                    JavaIdentifier('args'), JavaIntLiteral(n_args, ''), JavaStrLiteral(py_name),
+                    *(JavaStrLiteral(arg.arg) for arg in args.args),
+                ]))],
+                [],
+            ),
+            *(JavaVariableDecl(
+                'PyObject', f'pylocal_{arg.arg}', JavaArrayAccess(JavaIdentifier('args'), JavaIntLiteral(i, ''))
+            ) for (i, arg) in enumerate(args.args)),
+            *((JavaVariableDecl('PyObject', 'expr_discard', None),) if self.used_expr_discard else ()),
+            # XXX It's tempting to assign Java null here, but this makes it far too easy for null to leak out into the runtime
+            *(JavaVariableDecl('PyObject', f'pylocal_{name}', None) for name in sorted(self.names) if name not in arg_names),
+            *body,
+            JavaReturnStatement(JavaPyConstant(None)),
+        ]
+
+        assert java_name not in self.functions
+        self.functions[java_name] = [
+            f'private static final class {java_name} extends PyUserFunction {{',
+            f'{java_name}() {{',
+            f'super({java_string_literal(py_name)});',
+            '}',
+            '@Override public PyObject call(PyObject[] args, PyDict kwargs) {',
+            *block_emit_java(block_simplify(func_code), self.emit_ctx),
+            '}',
+            '}',
+        ]
+
     def visit_FunctionDef(self, node) -> None:
         if self.in_function:
             self.error(node.lineno, 'nested function definitions are unsupported')
             return
-
         # node.type_comment is ignored; we only plan to support "real" type annotations.
         if node.decorator_list:
             self.error(node.lineno, 'function decorators are unsupported')
@@ -975,78 +1062,32 @@ class PythonjVisitor(ast.NodeVisitor):
         if node.type_params:
             self.error(node.lineno, 'function type parameters are unsupported')
 
-        if node.args.posonlyargs:
-            self.error(node.lineno, 'position-only arguments are unsupported')
-        if node.args.vararg:
-            self.error(node.lineno, '*args are unsupported')
-        if node.args.kwonlyargs:
-            self.error(node.lineno, 'kw-only arguments are unsupported')
-        if node.args.kw_defaults:
-            self.error(node.lineno, 'kw-only argument defaults are unsupported')
-        if node.args.kwarg:
-            self.error(node.lineno, '**kwargs are unsupported')
-        if node.args.defaults:
-            self.error(node.lineno, 'argument defaults are unsupported')
-        for arg in node.args.args:
-            # arg.type_comment is ignored; we only plan to support "real" type annotations.
-            if arg.annotation:
-                self.error(node.lineno, 'argument type annotations are unsupported')
+        arg_names = self.check_args(node.lineno, node.args)
+        py_name = node.name
+        java_name = f'pyfunc_{node.name}'
+        self.global_names.add(py_name)
+        self.global_code.append(JavaAssignStatement(JavaIdentifier(f'pyglobal_{node.name}'), JavaCreateObject(java_name, [])))
 
-        n_args = len(node.args.args)
-        arg_names = {arg.arg for arg in node.args.args}
-        self.global_names.add(node.name)
-        expr = JavaCreateObject(f'pyfunc_{node.name}', [])
-        self.global_code.append(JavaAssignStatement(JavaIdentifier(f'pyglobal_{node.name}'), expr))
+        with self.new_function(arg_names):
+            body = self.visit_block(node.body)
+            self.add_function(py_name, java_name, node.args, arg_names, body)
 
-        self.in_function = True
-        self.used_expr_discard = False
-        self.names = set()
-        self.explicit_globals = set()
+    def visit_Lambda(self, node) -> JavaExpr:
+        if self.in_function:
+            self.error(node.lineno, 'nested function definitions are unsupported')
+            return JavaIdentifier('__cannot_translate_lambda__')
 
-        # Number temps in each function starting from temp0 for improved clarity/stability of generated code
-        saved_temps = self.n_temps
-        self.n_temps = 0
-        body = self.visit_block(node.body)
-        self.n_temps = saved_temps
+        arg_names = self.check_args(node.lineno, node.args)
+        py_name = '<lambda>'
+        java_name = f'pylambda{self.n_lambdas}'
+        self.n_lambdas += 1
 
-        func_code: list[JavaStatement] = [
-            *if_statement(
-                JavaBinaryOp('&&', JavaBinaryOp('!=', JavaIdentifier('kwargs'), JavaIdentifier('null')), bool_value(JavaIdentifier('kwargs'))),
-                [JavaThrowStatement(JavaCreateObject('IllegalArgumentException', [JavaStrLiteral(f'{node.name}() does not accept kwargs')]))],
-                [],
-            ),
-            *if_statement(
-                JavaBinaryOp('!=', JavaField(JavaIdentifier('args'), 'length'), JavaIntLiteral(n_args, '')),
-                [JavaThrowStatement(JavaMethodCall(JavaIdentifier('Runtime'), 'raiseUserExactArgs', [
-                    JavaIdentifier('args'), JavaIntLiteral(n_args, ''), JavaStrLiteral(node.name),
-                    *(JavaStrLiteral(arg.arg) for arg in node.args.args),
-                ]))],
-                [],
-            ),
-            *(JavaVariableDecl(
-                'PyObject', f'pylocal_{arg.arg}', JavaArrayAccess(JavaIdentifier('args'), JavaIntLiteral(i, ''))
-            ) for (i, arg) in enumerate(node.args.args)),
-            *((JavaVariableDecl('PyObject', 'expr_discard', None),) if self.used_expr_discard else ()),
-            # XXX It's tempting to assign Java null here, but this makes it far too easy for null to leak out into the runtime
-            *(JavaVariableDecl('PyObject', f'pylocal_{name}', None) for name in sorted(self.names) if name not in arg_names),
-            *body,
-            JavaReturnStatement(JavaPyConstant(None)),
-        ]
-        func_code = block_simplify(func_code)
+        with self.new_function(arg_names):
+            with self.new_block() as body:
+                body.append(JavaReturnStatement(self.visit(node.body)))
+            self.add_function(py_name, java_name, node.args, arg_names, body)
 
-        self.functions[node.name] = [
-            f'private static final class pyfunc_{node.name} extends PyUserFunction {{',
-            f'pyfunc_{node.name}() {{',
-            f'super({java_string_literal(node.name)});',
-            '}',
-            '@Override public PyObject call(PyObject[] args, PyDict kwargs) {',
-            *block_emit_java(func_code, self.emit_ctx),
-            '}',
-            '}',
-        ]
-
-        self.in_function = False
-        self.names = self.global_names
+        return JavaCreateObject(java_name, [])
 
     def visit_Module(self, node) -> None:
         for statement in node.body:
