@@ -882,17 +882,15 @@ class PythonjVisitor(ast.NodeVisitor):
         self.code.append(JavaVariableDecl('var', temp_name0, JavaMethodCall(self.visit(node.iter), 'iter', [])))
 
         with self.push_break_name(block_name):
-            body = self.visit_block(node.body)
-
-        loop = JavaForStatement(
-            'var', temp_name1, JavaMethodCall(JavaIdentifier(temp_name0), 'next', []),
-            JavaBinaryOp('!=', JavaIdentifier(temp_name1), JavaIdentifier('null')),
-            temp_name1, JavaMethodCall(JavaIdentifier(temp_name0), 'next', []),
-            [
-                *self.emit_bind(node.target, JavaIdentifier(temp_name1)),
-                *body,
-            ]
-        )
+            loop = JavaForStatement(
+                'var', temp_name1, JavaMethodCall(JavaIdentifier(temp_name0), 'next', []),
+                JavaBinaryOp('!=', JavaIdentifier(temp_name1), JavaIdentifier('null')),
+                temp_name1, JavaMethodCall(JavaIdentifier(temp_name0), 'next', []),
+                [
+                    *self.emit_bind(node.target, JavaIdentifier(temp_name1)),
+                    *self.visit_block(node.body),
+                ]
+            )
         if node.orelse:
             orelse = self.visit_block(node.orelse)
             assert block_name is not None
