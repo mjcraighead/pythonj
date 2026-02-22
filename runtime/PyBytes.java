@@ -36,6 +36,7 @@ public final class PyBytes extends PyObject {
             throw unimplementedBinOp("+", rhs);
         }
     }
+    @Override public PyString mod(PyObject rhs) { throw unimplementedMethod("mod"); }
     @Override public PyBytes mul(PyObject rhs) {
         if (!rhs.hasIndex()) {
             throw PyTypeError.raise("can't multiply sequence by non-int of type " + PyString.reprOf(rhs.type().name()));

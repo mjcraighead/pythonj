@@ -11,6 +11,25 @@ public final class PyInt extends PyObject {
 
     PyInt(long _value) { value = _value; }
 
+    public static long floorDiv(long lhs, long rhs) {
+        if ((lhs == Long.MIN_VALUE) && (rhs == -1)) {
+            throw new ArithmeticException("integer overflow");
+        }
+        if (rhs == 0) {
+            throw PyZeroDivisionError.raise("division by zero");
+        }
+        return Math.floorDiv(lhs, rhs);
+    }
+    public static long mod(long lhs, long rhs) {
+        if ((lhs == Long.MIN_VALUE) && (rhs == -1)) {
+            throw new ArithmeticException("integer overflow");
+        }
+        if (rhs == 0) {
+            throw PyZeroDivisionError.raise("division by zero");
+        }
+        return Math.floorMod(lhs, rhs);
+    }
+
     // XXX Make sure that all of these throw an exception if the value wraps/overflows/etc.
     @Override public PyInt invert() { return new PyInt(~value); }
     @Override public PyInt pos() { return this; }
@@ -22,15 +41,6 @@ public final class PyInt extends PyObject {
     }
     @Override public PyInt and(PyObject rhs) {
         return new PyInt(value & ((PyInt)rhs).value);
-    }
-    public static long floorDiv(long lhs, long rhs) {
-        if ((lhs == Long.MIN_VALUE) && (rhs == -1)) {
-            throw new ArithmeticException("integer overflow");
-        }
-        if (rhs == 0) {
-            throw PyZeroDivisionError.raise("division by zero");
-        }
-        return Math.floorDiv(lhs, rhs);
     }
     @Override public PyObject floordiv(PyObject rhs) {
         if (rhs instanceof PyInt rhsInt) {
@@ -58,18 +68,13 @@ public final class PyInt extends PyObject {
         }
         return new PyInt(ret);
     }
-    @Override public PyInt mod(PyObject rhs) {
+    @Override public PyObject mod(PyObject rhs) {
         if (rhs instanceof PyInt rhsInt) {
-            long rhsValue = rhsInt.value;
-            if ((value == Long.MIN_VALUE) && (rhsValue == -1)) {
-                throw new ArithmeticException("integer overflow");
-            }
-            if (rhsValue == 0) {
-                throw PyZeroDivisionError.raise("division by zero");
-            }
-            return new PyInt(Math.floorMod(value, rhsValue));
+            return new PyInt(mod(value, rhsInt.value));
+        } else if (rhs instanceof PyBool rhsBool) {
+            return new PyInt(mod(value, rhsBool.asInt()));
         } else {
-            throw unimplementedBinOp("%", rhs);
+            return super.mod(rhs);
         }
     }
     @Override public PyObject mul(PyObject rhs) {

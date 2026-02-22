@@ -26,6 +26,7 @@ public final class PyByteArray extends PyObject {
 
     PyByteArray(byte[] _value) { value = _value; }
 
+    @Override public PyString mod(PyObject rhs) { throw unimplementedMethod("mod"); }
     @Override public PyByteArray mul(PyObject rhs) {
         if (!rhs.hasIndex()) {
             throw PyTypeError.raise("can't multiply sequence by non-int of type " + PyString.reprOf(rhs.type().name()));

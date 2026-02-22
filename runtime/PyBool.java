@@ -34,6 +34,15 @@ public final class PyBool extends PyObject {
             return super.floordiv(rhs);
         }
     }
+    @Override public PyObject mod(PyObject rhs) {
+        if (rhs instanceof PyInt rhsInt) {
+            return new PyInt(PyInt.mod(asInt(), rhsInt.value));
+        } else if (rhs instanceof PyBool rhsBool) {
+            return new PyInt(PyInt.mod(asInt(), rhsBool.asInt()));
+        } else {
+            return super.mod(rhs);
+        }
+    }
     @Override public PyObject mul(PyObject rhs) {
         if (rhs instanceof PyInt rhsInt) {
             return new PyInt(asInt() * rhsInt.value);
