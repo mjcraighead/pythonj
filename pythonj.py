@@ -995,6 +995,7 @@ class PythonjVisitor(ast.NodeVisitor):
                 self.error(node.lineno, 'argument type annotations are unsupported')
 
         n_args = len(node.args.args)
+        arg_names = {arg.arg for arg in node.args.args}
         self.global_names.add(node.name)
         expr = JavaCreateObject(f'pyfunc_{node.name}', [])
         self.global_code.append(JavaAssignStatement(JavaIdentifier(f'pyglobal_{node.name}'), expr))
@@ -1029,7 +1030,7 @@ class PythonjVisitor(ast.NodeVisitor):
             ) for (i, arg) in enumerate(node.args.args)),
             *((JavaVariableDecl('PyObject', 'expr_discard', None),) if self.used_expr_discard else ()),
             # XXX It's tempting to assign Java null here, but this makes it far too easy for null to leak out into the runtime
-            *(JavaVariableDecl('PyObject', f'pylocal_{name}', None) for name in sorted(self.names)),
+            *(JavaVariableDecl('PyObject', f'pylocal_{name}', None) for name in sorted(self.names) if name not in arg_names),
             *body,
             JavaReturnStatement(JavaPyConstant(None)),
         ]
