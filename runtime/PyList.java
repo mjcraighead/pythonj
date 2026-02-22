@@ -23,9 +23,7 @@ public final class PyList extends PyObject {
         @Override public String methodName() { return "append"; }
         @Override public PyNone call(PyObject[] args, PyDict kwargs) {
             Runtime.requireNoKwArgs(kwargs, "list.append");
-            if (args.length != 1) {
-                throw new IllegalArgumentException("list.append() takes 1 argument");
-            }
+            Runtime.requireExactArgsAlt(args, 1, "list.append");
             return self.pymethod_append(args[0]);
         }
     }
@@ -34,9 +32,7 @@ public final class PyList extends PyObject {
         @Override public String methodName() { return "clear"; }
         @Override public PyNone call(PyObject[] args, PyDict kwargs) {
             Runtime.requireNoKwArgs(kwargs, "list.clear");
-            if (args.length != 0) {
-                throw new IllegalArgumentException("list.clear() takes 0 arguments");
-            }
+            Runtime.requireExactArgsAlt(args, 0, "list.clear");
             return self.pymethod_clear();
         }
     }
@@ -45,9 +41,7 @@ public final class PyList extends PyObject {
         @Override public String methodName() { return "count"; }
         @Override public PyInt call(PyObject[] args, PyDict kwargs) {
             Runtime.requireNoKwArgs(kwargs, "list.count");
-            if (args.length != 1) {
-                throw new IllegalArgumentException("list.count() takes 1 argument");
-            }
+            Runtime.requireExactArgsAlt(args, 1, "list.count");
             return self.pymethod_count(args[0]);
         }
     }
@@ -56,9 +50,7 @@ public final class PyList extends PyObject {
         @Override public String methodName() { return "extend"; }
         @Override public PyNone call(PyObject[] args, PyDict kwargs) {
             Runtime.requireNoKwArgs(kwargs, "list.extend");
-            if (args.length != 1) {
-                throw new IllegalArgumentException("list.extend() takes 1 argument");
-            }
+            Runtime.requireExactArgsAlt(args, 1, "list.extend");
             return self.pymethod_extend(args[0]);
         }
     }
