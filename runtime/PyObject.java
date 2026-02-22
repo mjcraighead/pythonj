@@ -105,7 +105,9 @@ public abstract class PyObject implements Comparable<PyObject> {
     public boolean hasIndex() { return false; }
     public long indexValue() { throw unimplementedMethod("indexValue"); }
     public long intValue() { throw unimplementedMethod("intValue"); }
-    public long len() { throw unimplementedMethod("len"); }
+    public long len() {
+        throw PyTypeError.raiseFormat("object of type %s has no len()", PyString.reprOf(type().name()));
+    }
     public abstract String repr();
     public String str() { return repr(); }
 
