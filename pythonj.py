@@ -446,6 +446,57 @@ class IndentedWriter:
         if line.endswith('{'):
             self.indent += 1
 
+# XXX Currently only used to validate comprehensions for no captures, but should be used everywhere
+class SymbolTableVisitor(ast.NodeVisitor):
+    __slots__ = ('reads', 'writes', 'globals', 'nonlocals')
+    reads: set[str]
+    writes: set[str]
+    globals: set[str]
+    nonlocals: set[str]
+
+    def __init__(self):
+        self.reads = set()
+        self.writes = set()
+        self.globals = set()
+        self.nonlocals = set()
+
+    def visit_Name(self, node):
+        if isinstance(node.ctx, (ast.Store, ast.Del)):
+            self.writes.add(node.id)
+        else:
+            self.reads.add(node.id)
+
+    def visit_Global(self, node) -> None:
+        for name in node.names:
+            self.globals.add(name)
+
+    def visit_Nonlocal(self, node) -> None:
+        for name in node.names:
+            self.nonlocals.add(name)
+
+    # Do not descend into nested scopes; only record function or class name as a write
+    def visit_FunctionDef(self, node):
+        self.writes.add(node.name)
+    def visit_AsyncFunctionDef(self, node):
+        self.writes.add(node.name)
+    def visit_Lambda(self, node):
+        pass
+    def visit_ClassDef(self, node):
+        self.writes.add(node.name)
+
+    # For comprehensions, only descend into generator.iters
+    def _visit_comp(self, node):
+        for generator in node.generators:
+            self.visit(generator.iter)
+    def visit_ListComp(self, node):
+        self._visit_comp(node)
+    def visit_SetComp(self, node):
+        self._visit_comp(node)
+    def visit_DictComp(self, node):
+        self._visit_comp(node)
+    def visit_GeneratorExp(self, node):
+        self._visit_comp(node)
+
 # XXX Need to design a systematic way to avoid "code too large" and "too many constants" errors.
 # This is somewhat challenging, as even a single Python expression or statement can easily overflow
 # the maximum code size limit, and it is somewhat unpredictable how much bytecode our translations
@@ -987,10 +1038,6 @@ class PythonjVisitor(ast.NodeVisitor):
 
     @contextmanager
     def new_function(self, arg_names: list[str]) -> Iterator[None]:
-        assert not self.in_function
-        assert self.names is self.global_names
-        assert not self.explicit_globals
-
         saved_in_function = self.in_function
         saved_expr_discard = self.used_expr_discard
         saved_n_temps = self.n_temps
@@ -1092,9 +1139,6 @@ class PythonjVisitor(ast.NodeVisitor):
 
     def lower_comp(self, py_name: str, type_name: str, method_name: str, lineno: int,
                    generators: list[ast.comprehension], elt: ast.expr) -> JavaExpr:
-        if self.in_function:
-            self.error(lineno, 'nested function definitions are unsupported')
-            return JavaIdentifier('__cannot_translate_listcomp__')
         if len(generators) != 1:
             self.error(lineno, 'multiple generators are unsupported in comprehensions')
         generator = generators[0]
@@ -1102,6 +1146,18 @@ class PythonjVisitor(ast.NodeVisitor):
             self.error(lineno, "'if' conditions are not supported in comprehensions")
         if generator.is_async:
             self.error(lineno, 'asynchronous generators are unsupported')
+
+        symbol_table = SymbolTableVisitor()
+        symbol_table.visit(generator.target)
+        for _if in generator.ifs:
+            symbol_table.visit(_if)
+        symbol_table.visit(elt)
+        assert not symbol_table.globals, symbol_table.globals # should not be possible in a comprehension
+        assert not symbol_table.nonlocals, symbol_table.nonlocals # should not be possible in a comprehension
+        free_vars = symbol_table.reads - symbol_table.writes
+        if self.in_function:
+            for name in free_vars:
+                self.error(lineno, f'comprehension capture of symbol {name!r} is unsupported')
 
         arg_name = 'iterable'
         arg_names = [arg_name]
