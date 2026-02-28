@@ -161,11 +161,14 @@ public final class PyInt extends PyObject {
     @Override public PyBuiltinClass type() { return Runtime.pyglobal_int; }
 
     @Override public boolean boolValue() { return value != 0; }
-    @Override public boolean equals(Object rhsArg) {
-        if (rhsArg instanceof PyInt rhs) {
-            return value == rhs.value;
+    @Override public boolean equals(Object rhs) {
+        if (rhs instanceof PyInt rhsInt) {
+            return value == rhsInt.value;
+        } else if (rhs instanceof PyBool rhsBool) {
+            return value == rhsBool.asInt();
+        } else {
+            return false;
         }
-        return false;
     }
     @Override public double floatValue() { return value; }
     @Override public String format(String formatSpec) {

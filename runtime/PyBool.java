@@ -95,7 +95,15 @@ public final class PyBool extends PyObject {
     @Override public Runtime.pyfunc_bool type() { return Runtime.pyglobal_bool; }
 
     @Override public boolean boolValue() { return value; }
-    @Override public boolean equals(Object rhs) { return value == ((PyBool)rhs).value; }
+    @Override public boolean equals(Object rhs) {
+        if (rhs instanceof PyInt rhsInt) {
+            return asInt() == rhsInt.value;
+        } else if (rhs instanceof PyBool rhsBool) {
+            return asInt() == rhsBool.asInt();
+        } else {
+            return false;
+        }
+    }
     @Override public double floatValue() { return asInt(); }
     @Override public int hashCode() { return value ? 1 : 0; }
     @Override public boolean hasIndex() { return true; }
