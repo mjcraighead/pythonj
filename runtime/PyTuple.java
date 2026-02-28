@@ -77,6 +77,7 @@ public final class PyTuple extends PyObject {
         }
         return false;
     }
+    @Override public int hashCode() { return Arrays.hashCode(items); }
     @Override public long len() { return items.length; }
     @Override public String repr() {
         var s = new StringBuilder("(");

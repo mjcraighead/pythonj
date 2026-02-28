@@ -115,6 +115,7 @@ public final class PyBytes extends PyObject {
         }
         return false;
     }
+    @Override public int hashCode() { return Arrays.hashCode(value); }
     @Override public long len() { return value.length; }
     @Override public String repr() {
         var s = new StringBuilder("b'");
