@@ -210,6 +210,7 @@ public final class PyDict extends PyObject {
             default: return super.getAttr(key);
         }
     }
+    @Override public int hashCode() { throw raiseUnhashable(); }
     @Override public long len() { return items.size(); }
     @Override public String repr() {
         var s = new StringBuilder("{");

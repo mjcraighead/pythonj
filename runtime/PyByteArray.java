@@ -81,6 +81,7 @@ public final class PyByteArray extends PyObject {
         }
         return false;
     }
+    @Override public int hashCode() { throw raiseUnhashable(); }
     @Override public long len() { return value.length; }
     @Override public String repr() {
         var s = new StringBuilder("bytearray(b'");

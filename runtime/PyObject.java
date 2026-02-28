@@ -127,5 +127,8 @@ public abstract class PyObject implements Comparable<PyObject> {
     protected PyRaise raiseBinOp(String op, PyObject rhs) {
         return PyTypeError.raiseFormat("unsupported operand type(s) for %s: %s and %s", op, PyString.reprOf(type().name()), PyString.reprOf(rhs.type().name()));
     }
+    protected PyRaise raiseUnhashable() {
+        return PyTypeError.raise("unhashable type: " + PyString.reprOf(type().name()));
+    }
     protected String defaultRepr() { return "<" + type().name() + " object>"; }
 }
