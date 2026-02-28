@@ -53,6 +53,43 @@ public final class PyBytes extends PyObject {
         return new PyBytes(result);
     }
 
+    @Override public boolean ge(PyObject rhs) {
+        if (rhs instanceof PyBytes rhsBytes) {
+            return Arrays.compareUnsigned(value, rhsBytes.value) >= 0;
+        } else if (rhs instanceof PyByteArray rhsByteArray) {
+            return Arrays.compareUnsigned(value, rhsByteArray.value) >= 0;
+        } else {
+            return super.ge(rhs);
+        }
+    }
+    @Override public boolean gt(PyObject rhs) {
+        if (rhs instanceof PyBytes rhsBytes) {
+            return Arrays.compareUnsigned(value, rhsBytes.value) > 0;
+        } else if (rhs instanceof PyByteArray rhsByteArray) {
+            return Arrays.compareUnsigned(value, rhsByteArray.value) > 0;
+        } else {
+            return super.gt(rhs);
+        }
+    }
+    @Override public boolean le(PyObject rhs) {
+        if (rhs instanceof PyBytes rhsBytes) {
+            return Arrays.compareUnsigned(value, rhsBytes.value) <= 0;
+        } else if (rhs instanceof PyByteArray rhsByteArray) {
+            return Arrays.compareUnsigned(value, rhsByteArray.value) <= 0;
+        } else {
+            return super.le(rhs);
+        }
+    }
+    @Override public boolean lt(PyObject rhs) {
+        if (rhs instanceof PyBytes rhsBytes) {
+            return Arrays.compareUnsigned(value, rhsBytes.value) < 0;
+        } else if (rhs instanceof PyByteArray rhsByteArray) {
+            return Arrays.compareUnsigned(value, rhsByteArray.value) < 0;
+        } else {
+            return super.lt(rhs);
+        }
+    }
+
     @Override public PyInt getItem(PyObject key) {
         int index = Math.toIntExact(key.indexValue());
         if (index < 0) {
@@ -70,9 +107,11 @@ public final class PyBytes extends PyObject {
     @Override public PyBuiltinClass type() { return Runtime.pyglobal_bytes; }
 
     @Override public boolean boolValue() { return value.length != 0; }
-    @Override public boolean equals(Object rhsArg) {
-        if (rhsArg instanceof PyBytes rhs) {
-            return Arrays.equals(value, rhs.value);
+    @Override public boolean equals(Object rhs) {
+        if (rhs instanceof PyBytes rhsBytes) {
+            return Arrays.equals(value, rhsBytes.value);
+        } else if (rhs instanceof PyByteArray rhsByteArray) {
+            return Arrays.equals(value, rhsByteArray.value);
         }
         return false;
     }

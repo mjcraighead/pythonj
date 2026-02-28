@@ -22,7 +22,7 @@ public final class PyByteArray extends PyObject {
         @Override public PyBuiltinClass type() { return iter_class_singleton; }
     };
 
-    private byte[] value;
+    protected byte[] value;
 
     PyByteArray(byte[] _value) { value = _value; }
 
@@ -41,6 +41,43 @@ public final class PyByteArray extends PyObject {
             System.arraycopy(value, 0, result, i * value.length, value.length);
         }
         return new PyByteArray(result);
+    }
+
+    @Override public boolean ge(PyObject rhs) {
+        if (rhs instanceof PyBytes rhsBytes) {
+            return Arrays.compareUnsigned(value, rhsBytes.value) >= 0;
+        } else if (rhs instanceof PyByteArray rhsByteArray) {
+            return Arrays.compareUnsigned(value, rhsByteArray.value) >= 0;
+        } else {
+            return super.ge(rhs);
+        }
+    }
+    @Override public boolean gt(PyObject rhs) {
+        if (rhs instanceof PyBytes rhsBytes) {
+            return Arrays.compareUnsigned(value, rhsBytes.value) > 0;
+        } else if (rhs instanceof PyByteArray rhsByteArray) {
+            return Arrays.compareUnsigned(value, rhsByteArray.value) > 0;
+        } else {
+            return super.gt(rhs);
+        }
+    }
+    @Override public boolean le(PyObject rhs) {
+        if (rhs instanceof PyBytes rhsBytes) {
+            return Arrays.compareUnsigned(value, rhsBytes.value) <= 0;
+        } else if (rhs instanceof PyByteArray rhsByteArray) {
+            return Arrays.compareUnsigned(value, rhsByteArray.value) <= 0;
+        } else {
+            return super.le(rhs);
+        }
+    }
+    @Override public boolean lt(PyObject rhs) {
+        if (rhs instanceof PyBytes rhsBytes) {
+            return Arrays.compareUnsigned(value, rhsBytes.value) < 0;
+        } else if (rhs instanceof PyByteArray rhsByteArray) {
+            return Arrays.compareUnsigned(value, rhsByteArray.value) < 0;
+        } else {
+            return super.lt(rhs);
+        }
     }
 
     @Override public PyInt getItem(PyObject key) {
@@ -75,9 +112,11 @@ public final class PyByteArray extends PyObject {
     @Override public PyBuiltinClass type() { return Runtime.pyglobal_bytearray; }
 
     @Override public boolean boolValue() { return value.length != 0; }
-    @Override public boolean equals(Object rhsArg) {
-        if (rhsArg instanceof PyByteArray rhs) {
-            return Arrays.equals(value, rhs.value);
+    @Override public boolean equals(Object rhs) {
+        if (rhs instanceof PyBytes rhsBytes) {
+            return Arrays.equals(value, rhsBytes.value);
+        } else if (rhs instanceof PyByteArray rhsByteArray) {
+            return Arrays.equals(value, rhsByteArray.value);
         }
         return false;
     }
