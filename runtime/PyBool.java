@@ -26,13 +26,13 @@ public final class PyBool extends PyObject {
     @Override public PyBool and(PyObject rhs) {
         return create(value & ((PyBool)rhs).value);
     }
-    @Override public PyObject floordiv(PyObject rhs) {
+    @Override public PyObject floorDiv(PyObject rhs) {
         if (rhs instanceof PyInt rhsInt) {
             return new PyInt(PyInt.floorDiv(asInt(), rhsInt.value));
         } else if (rhs instanceof PyBool rhsBool) {
             return new PyInt(PyInt.floorDiv(asInt(), rhsBool.asInt()));
         } else {
-            return super.floordiv(rhs);
+            return super.floorDiv(rhs);
         }
     }
     @Override public PyObject lshift(PyObject rhs) {

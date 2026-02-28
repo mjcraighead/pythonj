@@ -67,13 +67,13 @@ public final class PyInt extends PyObject {
     @Override public PyInt and(PyObject rhs) {
         return new PyInt(value & ((PyInt)rhs).value);
     }
-    @Override public PyObject floordiv(PyObject rhs) {
+    @Override public PyObject floorDiv(PyObject rhs) {
         if (rhs instanceof PyInt rhsInt) {
             return new PyInt(floorDiv(value, rhsInt.value));
         } else if (rhs instanceof PyBool rhsBool) {
             return new PyInt(floorDiv(value, rhsBool.asInt()));
         } else {
-            return super.floordiv(rhs);
+            return super.floorDiv(rhs);
         }
     }
     @Override public PyObject lshift(PyObject rhs) {

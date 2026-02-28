@@ -13,7 +13,7 @@ public abstract class PyObject implements Comparable<PyObject> {
 
     public PyObject add(PyObject rhs) { throw unimplementedMethod("add"); }
     public PyObject and(PyObject rhs) { throw unimplementedMethod("and"); }
-    public PyObject floordiv(PyObject rhs) { throw raiseBinOp("//", rhs); }
+    public PyObject floorDiv(PyObject rhs) { throw raiseBinOp("//", rhs); }
     public PyObject lshift(PyObject rhs) { throw raiseBinOp("<<", rhs); }
     public PyObject matmul(PyObject rhs) { throw raiseBinOp("@", rhs); }
     public PyObject mod(PyObject rhs) { throw raiseBinOp("%", rhs); }
@@ -28,13 +28,13 @@ public abstract class PyObject implements Comparable<PyObject> {
     public PyObject pow(PyObject rhs) { throw unimplementedMethod("pow"); }
     public PyObject rshift(PyObject rhs) { throw raiseBinOp(">>", rhs); }
     public PyObject sub(PyObject rhs) { throw unimplementedMethod("sub"); }
-    public PyObject truediv(PyObject rhs) { throw unimplementedMethod("truediv"); }
+    public PyObject trueDiv(PyObject rhs) { throw unimplementedMethod("trueDiv"); }
     public PyObject xor(PyObject rhs) { throw unimplementedMethod("xor"); }
 
     // By default, in-place ops map to regular ops
     public PyObject addInPlace(PyObject rhs) { return add(rhs); }
     public PyObject andInPlace(PyObject rhs) { return and(rhs); }
-    public PyObject floordivInPlace(PyObject rhs) { return floordiv(rhs); }
+    public PyObject floorDivInPlace(PyObject rhs) { return floorDiv(rhs); }
     public PyObject lshiftInPlace(PyObject rhs) { return lshift(rhs); }
     public PyObject matmulInPlace(PyObject rhs) { return matmul(rhs); }
     public PyObject modInPlace(PyObject rhs) { return mod(rhs); }
@@ -43,7 +43,7 @@ public abstract class PyObject implements Comparable<PyObject> {
     public PyObject powInPlace(PyObject rhs) { return pow(rhs); }
     public PyObject rshiftInPlace(PyObject rhs) { return rshift(rhs); }
     public PyObject subInPlace(PyObject rhs) { return sub(rhs); }
-    public PyObject truedivInPlace(PyObject rhs) { return truediv(rhs); }
+    public PyObject trueDivInPlace(PyObject rhs) { return trueDiv(rhs); }
     public PyObject xorInPlace(PyObject rhs) { return xor(rhs); }
 
     public boolean ge(PyObject rhs) { throw unimplementedMethod("ge"); }
