@@ -179,9 +179,7 @@ public final class PyDict extends PyObject {
             PyObject v = args[i+1];
             if (k == null) { // used to encode dictionary unpacking
                 if (v instanceof PyDict dict) {
-                    for (var x: dict.items.entrySet()) {
-                        items.put(x.getKey(), x.getValue());
-                    }
+                    items.putAll(dict.items);
                 } else {
                     throw new UnsupportedOperationException("dictionary unpacking only implemented for dict");
                 }
