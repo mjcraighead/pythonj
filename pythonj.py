@@ -8,9 +8,9 @@ import ast
 from contextlib import contextmanager
 from dataclasses import dataclass
 import difflib
-import glob
 import itertools
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -1171,12 +1171,13 @@ def main() -> None:
         py_names = sorted(x[:-3] for x in os.listdir('tests') if x.endswith('.py'))
 
     start = time.perf_counter()
-    for path in glob.glob('runtime/*.class'):
-        os.unlink(path)
-    subprocess.check_call(['javac', *RUNTIME_JAVA_FILES], cwd='runtime')
-    subprocess.check_call(['jar', '--create', '--file', 'tests/pythonj.jar', '--date=1980-01-01T00:00:02Z', '-C', 'runtime', '.'])
-    for path in glob.glob('runtime/*.class'):
-        os.unlink(path)
+    if os.path.exists('runtime/_out'):
+        shutil.rmtree('runtime/_out')
+    if os.path.exists('tests/_out'):
+        shutil.rmtree('tests/_out')
+    subprocess.check_call(['javac', '-d', '_out', *RUNTIME_JAVA_FILES], cwd='runtime')
+    os.makedirs('tests/_out', exist_ok=True)
+    subprocess.check_call(['jar', '--create', '--file', 'tests/_out/pythonj.jar', '--date=1980-01-01T00:00:02Z', '-C', 'runtime/_out', '.'])
     initial_javac_time = time.perf_counter() - start
     print(f'initial_javac_time={initial_javac_time:.3f}')
 
@@ -1190,20 +1191,20 @@ def main() -> None:
         if visitor.n_errors:
             print(f'Translation failed: {visitor.n_errors} errors')
             exit(1)
-        with open(f'tests/{py_name}.java', 'w') as f:
+        with open(f'tests/_out/{py_name}.java', 'w') as f:
             visitor.write_java(f, py_name)
     translate_time = time.perf_counter() - start
     print(f'translate_time={translate_time:5.3f}')
 
     start = time.perf_counter()
-    subprocess.check_call(['javac', '-cp', 'pythonj.jar', *(f'{py_name}.java' for py_name in py_names)], cwd='tests')
+    subprocess.check_call(['javac', '-cp', 'pythonj.jar', *(f'{py_name}.java' for py_name in py_names)], cwd='tests/_out')
     javac_time = time.perf_counter() - start
     print(f'javac_time={javac_time:5.3f}')
 
     for py_name in py_names:
         start = time.perf_counter()
         sep = ';' if os.name == 'nt' else ':'
-        j_output = subprocess.check_output(['java', '-cp', f'pythonj.jar{sep}.', py_name], cwd='tests')
+        j_output = subprocess.check_output(['java', '-cp', f'_out/pythonj.jar{sep}_out', py_name], cwd='tests')
         jexec_time = time.perf_counter() - start
 
         start = time.perf_counter()
@@ -1220,9 +1221,6 @@ def main() -> None:
             for line in difflib.unified_diff(j_output, c_output, 'pythonj output', 'cpython output', lineterm=''):
                 print(line)
             exit(1)
-
-    for path in glob.glob('tests/*.class'):
-        os.unlink(path)
 
 if __name__ == '__main__':
     main()
