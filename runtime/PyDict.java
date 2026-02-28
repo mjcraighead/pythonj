@@ -253,13 +253,7 @@ public final class PyDict extends PyObject {
         }
     }
 
-    public PyObject pymethod_get(PyObject arg0, PyObject arg1) {
-        PyObject value = items.get(arg0);
-        if (value == null) {
-            return arg1;
-        }
-        return value;
-    }
+    public PyObject pymethod_get(PyObject arg0, PyObject arg1) { return items.getOrDefault(arg0, arg1); }
     public PyDictItems pymethod_items() { return new PyDictItems(items); }
     public PyDictKeys pymethod_keys() { return new PyDictKeys(items); }
     public PyDictValues pymethod_values() { return new PyDictValues(items); }
