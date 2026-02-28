@@ -158,6 +158,20 @@ public final class PyString extends PyObject {
         return new PyString(s.toString());
     }
 
+    // Note some divergences vs. CPython when comparing surrogate pairs vs. private-use BMP chars
+    @Override public boolean ge(PyObject rhs) {
+        return value.compareTo(((PyString)rhs).value) >= 0;
+    }
+    @Override public boolean gt(PyObject rhs) {
+        return value.compareTo(((PyString)rhs).value) > 0;
+    }
+    @Override public boolean le(PyObject rhs) {
+        return value.compareTo(((PyString)rhs).value) <= 0;
+    }
+    @Override public boolean lt(PyObject rhs) {
+        return value.compareTo(((PyString)rhs).value) < 0;
+    }
+
     @Override public PyString getItem(PyObject key) {
         int index = Math.toIntExact(key.indexValue());
         int length = value.length();
