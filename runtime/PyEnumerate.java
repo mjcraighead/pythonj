@@ -3,8 +3,8 @@
 // SPDX-License-Identifier: MIT
 
 public final class PyEnumerate extends PyIter {
-    public final PyObject iter;
-    public long i = 0;
+    private final PyObject iter;
+    private long i;
 
     PyEnumerate(PyObject _iter, long start) {
         iter = _iter;

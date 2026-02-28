@@ -3,9 +3,9 @@
 // SPDX-License-Identifier: MIT
 
 public final class PyReversed extends PyIter {
-    public final PyObject obj;
-    public long i = 0;
-    public final long len;
+    private final PyObject obj;
+    private long i = 0;
+    private final long len;
 
     PyReversed(PyObject _obj) {
         obj = _obj;

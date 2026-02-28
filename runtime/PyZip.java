@@ -5,7 +5,7 @@
 import java.util.ArrayList;
 
 public final class PyZip extends PyIter {
-    public final PyIter[] iters;
+    private final PyIter[] iters;
 
     PyZip(PyIter[] _iters) {
         iters = _iters; // WARNING: takes ownership of _iters from caller, does not copy

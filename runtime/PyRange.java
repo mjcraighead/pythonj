@@ -32,7 +32,7 @@ public final class PyRange extends PyObject {
         @Override public PyBuiltinClass type() { return iter_class_singleton; }
     };
 
-    public final long start, end, step;
+    private final long start, end, step;
 
     PyRange(long _start, long _end, long _step) {
         if (_step == 0) {
@@ -61,6 +61,7 @@ public final class PyRange extends PyObject {
         return false;
     }
     @Override public long len() {
+        // XXX Math needs some overflow checks/handling
         if (step > 0) {
             if (start >= end) {
                 return 0;
