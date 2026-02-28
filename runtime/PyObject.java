@@ -115,20 +115,20 @@ public abstract class PyObject implements Comparable<PyObject> {
     public final boolean in(PyObject rhs) { return rhs.contains(this); }
 
     // Helpers used by derived classes
-    protected UnsupportedOperationException unimplementedMethod(String method) {
+    protected final UnsupportedOperationException unimplementedMethod(String method) {
         return new UnsupportedOperationException(String.format("%s unimplemented on %s", PyString.reprOf(method), PyString.reprOf(type().name())));
     }
-    protected UnsupportedOperationException unimplementedBinOp(String op, PyObject rhs) {
+    protected final UnsupportedOperationException unimplementedBinOp(String op, PyObject rhs) {
         return new UnsupportedOperationException(String.format("%s %s %s is not implemented", type().name(), op, rhs.type().name()));
     }
-    protected PyRaise raiseUnaryOp(String op) {
+    protected final PyRaise raiseUnaryOp(String op) {
         return PyTypeError.raiseFormat("bad operand type for %s: %s", op, PyString.reprOf(type().name()));
     }
-    protected PyRaise raiseBinOp(String op, PyObject rhs) {
+    protected final PyRaise raiseBinOp(String op, PyObject rhs) {
         return PyTypeError.raiseFormat("unsupported operand type(s) for %s: %s and %s", op, PyString.reprOf(type().name()), PyString.reprOf(rhs.type().name()));
     }
-    protected PyRaise raiseUnhashable() {
+    protected final PyRaise raiseUnhashable() {
         return PyTypeError.raise("unhashable type: " + PyString.reprOf(type().name()));
     }
-    protected String defaultRepr() { return "<" + type().name() + " object>"; }
+    protected final String defaultRepr() { return "<" + type().name() + " object>"; }
 }
