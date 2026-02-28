@@ -500,7 +500,7 @@ public final class Runtime {
             if (args.length == 0) {
                 return ret;
             }
-            addPyIterToCollection(ret.items, args[0].iter());
+            addIterableToCollection(ret.items, args[0]);
             return ret;
         }
     }
@@ -700,7 +700,7 @@ public final class Runtime {
             if (args.length == 0) {
                 return ret;
             }
-            addPyIterToCollection(ret.items, args[0].iter());
+            addIterableToCollection(ret.items, args[0]);
             return ret;
         }
     }
@@ -739,7 +739,7 @@ public final class Runtime {
                 throw new IllegalArgumentException("sorted() does not accept kwargs");
             }
             var ret = new PyList();
-            addPyIterToCollection(ret.items, args[0].iter());
+            addIterableToCollection(ret.items, args[0]);
             Collections.sort(ret.items);
             return ret;
         }
@@ -795,7 +795,7 @@ public final class Runtime {
                 return new PyTuple();
             }
             var list = new ArrayList<PyObject>();
-            addPyIterToCollection(list, args[0].iter());
+            addIterableToCollection(list, args[0]);
             return new PyTuple(list);
         }
     }
@@ -974,14 +974,15 @@ public final class Runtime {
         list.add(obj);
         return list;
     }
-    public static void addPyIterToCollection(Collection<PyObject> list, PyObject iter) {
+    public static void addIterableToCollection(Collection<PyObject> list, PyObject iterable) {
+        var iter = iterable.iter();
         for (var item = iter.next(); item != null; item = iter.next()) {
             list.add(item);
         }
     }
     public static ArrayList<PyObject> addStarToArrayList(ArrayList<PyObject> list, PyObject iterable) {
         if (iterable.hasIter()) {
-            addPyIterToCollection(list, iterable.iter());
+            addIterableToCollection(list, iterable);
             return list;
         } else {
             throw PyTypeError.raiseFormat("Value after * must be an iterable, not %s", iterable.type().name());

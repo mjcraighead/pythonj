@@ -203,7 +203,7 @@ public final class PyList extends PyObject {
         return new PyInt(n);
     }
     public PyNone pymethod_extend(PyObject arg) {
-        Runtime.addPyIterToCollection(items, arg.iter());
+        Runtime.addIterableToCollection(items, arg);
         return PyNone.singleton;
     }
     public PyInt pymethod_index(PyObject arg) {
