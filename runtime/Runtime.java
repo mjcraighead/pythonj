@@ -4,6 +4,7 @@
 
 import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 
 abstract class PyTruthyObject extends PyObject {
@@ -231,7 +232,7 @@ public final class Runtime {
                         if (value == null) {
                             throw PyValueError.raiseFormat("dictionary update sequence element #%d has length 1; 2 is required", index);
                         }
-                        Runtime.nextRequireNull(itemIter);
+                        nextRequireNull(itemIter);
                         ret.setItem(key, value);
                     }
                 }
@@ -499,10 +500,7 @@ public final class Runtime {
             if (args.length == 0) {
                 return ret;
             }
-            var iter = args[0].iter();
-            for (var item = iter.next(); item != null; item = iter.next()) {
-                ret.items.add(item);
-            }
+            addPyIterToCollection(ret.items, args[0].iter());
             return ret;
         }
     }
@@ -702,10 +700,7 @@ public final class Runtime {
             if (args.length == 0) {
                 return ret;
             }
-            var iter = args[0].iter();
-            for (var item = iter.next(); item != null; item = iter.next()) {
-                ret.items.add(item);
-            }
+            addPyIterToCollection(ret.items, args[0].iter());
             return ret;
         }
     }
@@ -744,10 +739,7 @@ public final class Runtime {
                 throw new IllegalArgumentException("sorted() does not accept kwargs");
             }
             var ret = new PyList();
-            var iter = args[0].iter();
-            for (var item = iter.next(); item != null; item = iter.next()) {
-                ret.items.add(item);
-            }
+            addPyIterToCollection(ret.items, args[0].iter());
             Collections.sort(ret.items);
             return ret;
         }
@@ -802,9 +794,8 @@ public final class Runtime {
             if (args.length == 0) {
                 return new PyTuple();
             }
-            var iter = args[0].iter();
             var list = new ArrayList<PyObject>();
-            addPyIterToArrayList(list, iter);
+            addPyIterToCollection(list, args[0].iter());
             return new PyTuple(list);
         }
     }
@@ -983,15 +974,15 @@ public final class Runtime {
         list.add(obj);
         return list;
     }
-    public static ArrayList<PyObject> addPyIterToArrayList(ArrayList<PyObject> list, PyObject iter) {
+    public static void addPyIterToCollection(Collection<PyObject> list, PyObject iter) {
         for (var item = iter.next(); item != null; item = iter.next()) {
             list.add(item);
         }
-        return list;
     }
     public static ArrayList<PyObject> addStarToArrayList(ArrayList<PyObject> list, PyObject iterable) {
         if (iterable.hasIter()) {
-            return addPyIterToArrayList(list, iterable.iter());
+            addPyIterToCollection(list, iterable.iter());
+            return list;
         } else {
             throw PyTypeError.raiseFormat("Value after * must be an iterable, not %s", iterable.type().name());
         }

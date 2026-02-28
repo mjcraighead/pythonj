@@ -123,10 +123,7 @@ public final class PySet extends PyObject {
         return PyNone.singleton;
     }
     public PyNone pymethod_update(PyObject arg) {
-        var iter = arg.iter();
-        for (var item = iter.next(); item != null; item = iter.next()) {
-            items.add(item);
-        }
+        Runtime.addPyIterToCollection(items, arg.iter());
         return PyNone.singleton;
     }
 }
