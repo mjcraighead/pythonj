@@ -16,7 +16,9 @@ public final class PyEnumerate extends PyIter {
         if (item == null) {
             return null;
         }
-        return new PyTuple(new PyObject[] {new PyInt(i++), item});
+        var ret = new PyTuple(new PyObject[] {new PyInt(i), item});
+        i = Math.incrementExact(i);
+        return ret;
     }
     @Override public String repr() { return defaultRepr(); }
     @Override public PyBuiltinClass type() { return Runtime.pyglobal_enumerate; }
