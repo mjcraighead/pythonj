@@ -506,10 +506,10 @@ class PythonjVisitor(ast.NodeVisitor):
     def ident_expr(self, name: str) -> JavaExpr:
         if self.allow_intrinsics and name == '__pythonj_null__':
             return JavaIdentifier('null')
-        elif name in BUILTINS:
-            return JavaField(JavaIdentifier('Runtime'), f'pyglobal_{name}')
         elif self.in_function and name in self.local_names and name not in self.explicit_globals:
             return JavaIdentifier(f'pylocal_{name}')
+        elif name in BUILTINS:
+            return JavaField(JavaIdentifier('Runtime'), f'pyglobal_{name}')
         else:
             return JavaIdentifier(f'pyglobal_{name}')
 
