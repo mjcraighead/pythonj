@@ -21,6 +21,14 @@ public final class PyNone extends PyObject {
 
     private PyNone() {}
 
+    public PyObject or(PyObject rhs) {
+        if (rhs instanceof PyType) {
+            throw new UnsupportedOperationException("type unions are unsupported");
+        } else {
+            return super.or(rhs);
+        }
+    }
+
     @Override public PyBuiltinClass type() { return class_singleton; }
 
     @Override public boolean boolValue() { return false; }

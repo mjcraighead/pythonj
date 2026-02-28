@@ -17,6 +17,14 @@ abstract class PyIter extends PyTruthyObject {
 }
 
 abstract class PyType extends PyTruthyObject {
+    public PyObject or(PyObject rhs) {
+        if ((rhs instanceof PyType) || (rhs instanceof PyNone)) {
+            throw new UnsupportedOperationException("type unions are unsupported");
+        } else {
+            return super.or(rhs);
+        }
+    }
+
     public abstract String name();
 }
 
