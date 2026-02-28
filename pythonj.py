@@ -991,9 +991,11 @@ class PythonjVisitor(ast.NodeVisitor):
         assert self.names is self.global_names
         assert not self.explicit_globals
 
+        saved_in_function = self.in_function
         saved_expr_discard = self.used_expr_discard
         saved_n_temps = self.n_temps
         saved_local_names = self.local_names
+        saved_names = self.names
         saved_explicit_globals = self.explicit_globals
 
         self.in_function = True
@@ -1005,11 +1007,11 @@ class PythonjVisitor(ast.NodeVisitor):
 
         yield
 
-        self.in_function = False
+        self.in_function = saved_in_function
         self.n_temps = saved_n_temps
         self.used_expr_discard = saved_expr_discard
         self.local_names = saved_local_names
-        self.names = self.global_names
+        self.names = saved_names
         self.explicit_globals = saved_explicit_globals
 
     def add_function(self, py_name: str, java_name: str, arg_names: list[str], body: list[JavaStatement],
