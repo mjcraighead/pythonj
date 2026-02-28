@@ -2,9 +2,10 @@
 // Copyright (c) 2012-2026 Matt Craighead
 // SPDX-License-Identifier: MIT
 
-import java.util.Map;
-import java.util.LinkedHashMap;
+import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 public final class PyDict extends PyObject {
     private static final PyBuiltinClass iter_class_singleton = new PyBuiltinClass("dict_keyiterator", PyDictIter.class);
@@ -47,10 +48,41 @@ public final class PyDict extends PyObject {
     };
 
     private static final PyBuiltinClass items_class_singleton = new PyBuiltinClass("dict_items", PyDictItems.class);
-    private static final class PyDictItems extends PyObject {
+    static final class PyDictItems extends PyObject {
         private final LinkedHashMap<PyObject, PyObject> items;
 
         PyDictItems(LinkedHashMap<PyObject, PyObject> _items) { items = _items; }
+
+        private HashSet<PyObject> materializeSet() {
+            var ret = new HashSet<PyObject>();
+            for (var x: items.entrySet()) {
+                ret.add(new PyTuple(new PyObject[] {x.getKey(), x.getValue()}));
+            }
+            return ret;
+        }
+
+        @Override public PyObject and(PyObject rhs) {
+            var itemsSet = materializeSet();
+            var result = new HashSet<PyObject>();
+            var iter = rhs.iter();
+            for (var item = iter.next(); item != null; item = iter.next()) {
+                if (itemsSet.contains(item)) {
+                    result.add(item);
+                }
+            }
+            return new PySet(result);
+        }
+        @Override public PyObject or(PyObject rhs) {
+            var itemsSet = materializeSet();
+            Runtime.addIterableToCollection(itemsSet, rhs);
+            return new PySet(itemsSet);
+        }
+        @Override public PyObject xor(PyObject rhs) {
+            var itemsSet = materializeSet();
+            var rhsSet = new HashSet<PyObject>();
+            Runtime.addIterableToCollection(rhsSet, rhs);
+            return new PySet(PySet.xor(itemsSet, rhsSet));
+        }
 
         @Override public boolean boolValue() { return !items.isEmpty(); }
         @Override public final boolean hasIter() { return true; }
@@ -76,10 +108,31 @@ public final class PyDict extends PyObject {
     };
 
     private static final PyBuiltinClass keys_class_singleton = new PyBuiltinClass("dict_keys", PyDictKeys.class);
-    private static final class PyDictKeys extends PyObject {
+    static final class PyDictKeys extends PyObject {
         private final LinkedHashMap<PyObject, PyObject> items;
 
         PyDictKeys(LinkedHashMap<PyObject, PyObject> _items) { items = _items; }
+
+        @Override public PySet and(PyObject rhs) {
+            var result = new HashSet<PyObject>();
+            var iter = rhs.iter();
+            for (var item = iter.next(); item != null; item = iter.next()) {
+                if (items.containsKey(item)) {
+                    result.add(item);
+                }
+            }
+            return new PySet(result);
+        }
+        @Override public PyObject or(PyObject rhs) {
+            var result = new HashSet<PyObject>(items.keySet());
+            Runtime.addIterableToCollection(result, rhs);
+            return new PySet(result);
+        }
+        @Override public PyObject xor(PyObject rhs) {
+            var rhsSet = new HashSet<PyObject>();
+            Runtime.addIterableToCollection(rhsSet, rhs);
+            return new PySet(PySet.xor(items.keySet(), rhsSet));
+        }
 
         @Override public boolean boolValue() { return !items.isEmpty(); }
         @Override public final boolean hasIter() { return true; }

@@ -12,7 +12,12 @@ public abstract class PyObject implements Comparable<PyObject> {
     public PyObject abs() { throw raiseUnaryOp("abs()"); }
 
     public PyObject add(PyObject rhs) { throw unimplementedMethod("add"); }
-    public PyObject and(PyObject rhs) { throw unimplementedMethod("and"); }
+    public PyObject and(PyObject rhs) {
+        if ((rhs instanceof PyDict.PyDictItems) || (rhs instanceof PyDict.PyDictKeys)) {
+            return rhs.and(this); // remap T & SetLike -> SetLike & T implementation
+        }
+        throw raiseBinOp("&", rhs);
+    }
     public PyObject floorDiv(PyObject rhs) { throw raiseBinOp("//", rhs); }
     public PyObject lshift(PyObject rhs) { throw raiseBinOp("<<", rhs); }
     public PyObject matmul(PyObject rhs) { throw raiseBinOp("@", rhs); }
@@ -24,12 +29,22 @@ public abstract class PyObject implements Comparable<PyObject> {
         }
         throw raiseBinOp("*", rhs);
     }
-    public PyObject or(PyObject rhs) { throw unimplementedMethod("or"); }
+    public PyObject or(PyObject rhs) {
+        if ((rhs instanceof PyDict.PyDictItems) || (rhs instanceof PyDict.PyDictKeys)) {
+            return rhs.or(this); // remap T | SetLike -> SetLike | T implementation
+        }
+        throw raiseBinOp("|", rhs);
+    }
     public PyObject pow(PyObject rhs) { throw raiseBinOp("** or pow()", rhs); }
     public PyObject rshift(PyObject rhs) { throw raiseBinOp(">>", rhs); }
     public PyObject sub(PyObject rhs) { throw unimplementedMethod("sub"); }
     public PyObject trueDiv(PyObject rhs) { throw unimplementedMethod("trueDiv"); }
-    public PyObject xor(PyObject rhs) { throw unimplementedMethod("xor"); }
+    public PyObject xor(PyObject rhs) {
+        if ((rhs instanceof PyDict.PyDictItems) || (rhs instanceof PyDict.PyDictKeys)) {
+            return rhs.xor(this); // remap T ^ SetLike -> SetLike ^ T implementation
+        }
+        throw raiseBinOp("^", rhs);
+    }
 
     // By default, in-place ops map to regular ops
     public PyObject addInPlace(PyObject rhs) { return add(rhs); }

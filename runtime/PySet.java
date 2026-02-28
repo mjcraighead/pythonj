@@ -5,6 +5,7 @@
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.Set;
 
 public final class PySet extends PyObject {
     private static final PyBuiltinClass iter_class_singleton = new PyBuiltinClass("set_iterator", PySetIter.class);
@@ -70,6 +71,45 @@ public final class PySet extends PyObject {
     }
     PySet(ArrayList<PyObject> list) {
         items = new HashSet<>(list);
+    }
+    PySet(HashSet<PyObject> _items) {
+        items = _items; // WARNING: takes ownership of _items from caller, does not copy
+    }
+
+    static HashSet<PyObject> xor(Set<PyObject> lhs, Set<PyObject> rhs) {
+        var result = new HashSet<PyObject>(lhs);
+        for (var x: rhs) {
+            if (!result.add(x)) {
+                result.remove(x);
+            }
+        }
+        return result;
+    }
+
+    @Override public PyObject and(PyObject rhs) {
+        if (rhs instanceof PySet rhsSet) {
+            var result = new HashSet<PyObject>(items);
+            result.retainAll(rhsSet.items);
+            return new PySet(result);
+        } else {
+            return super.and(rhs);
+        }
+    }
+    @Override public PyObject or(PyObject rhs) {
+        if (rhs instanceof PySet rhsSet) {
+            var result = new HashSet<PyObject>(items);
+            result.addAll(rhsSet.items);
+            return new PySet(result);
+        } else {
+            return super.or(rhs);
+        }
+    }
+    @Override public PyObject xor(PyObject rhs) {
+        if (rhs instanceof PySet rhsSet) {
+            return new PySet(xor(items, rhsSet.items));
+        } else {
+            return super.xor(rhs);
+        }
     }
 
     @Override public final boolean hasIter() { return true; }
