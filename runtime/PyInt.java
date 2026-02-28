@@ -45,6 +45,20 @@ public final class PyInt extends PyObject {
         }
         return Math.floorMod(lhs, rhs);
     }
+    public static long pow(long lhs, long rhs) {
+        if (rhs < 0) {
+            throw new ArithmeticException("negative exponent");
+        }
+        long ret = 1; // note 0 ** 0 -> 1
+        while (rhs > 0) {
+            if ((rhs & 1) == 1) {
+                ret = Math.multiplyExact(ret, lhs);
+            }
+            lhs = Math.multiplyExact(lhs, lhs);
+            rhs >>= 1;
+        }
+        return ret;
+    }
     public static long rshift(long lhs, long rhs) {
         if (rhs < 0) {
             throw PyValueError.raise("negative shift count");
@@ -105,6 +119,15 @@ public final class PyInt extends PyObject {
     }
     @Override public PyInt or(PyObject rhs) {
         return new PyInt(value | ((PyInt)rhs).value);
+    }
+    @Override public PyObject pow(PyObject rhs) {
+        if (rhs instanceof PyInt rhsInt) {
+            return new PyInt(pow(value, rhsInt.value));
+        } else if (rhs instanceof PyBool rhsBool) {
+            return new PyInt(pow(value, rhsBool.asInt()));
+        } else {
+            return super.pow(rhs);
+        }
     }
     @Override public PyObject rshift(PyObject rhs) {
         if (rhs instanceof PyInt rhsInt) {

@@ -65,6 +65,15 @@ public final class PyBool extends PyObject {
     @Override public PyBool or(PyObject rhs) {
         return create(value | ((PyBool)rhs).value);
     }
+    @Override public PyObject pow(PyObject rhs) {
+        if (rhs instanceof PyInt rhsInt) {
+            return new PyInt(PyInt.pow(asInt(), rhsInt.value));
+        } else if (rhs instanceof PyBool rhsBool) {
+            return new PyInt(PyInt.pow(asInt(), rhsBool.asInt()));
+        } else {
+            return super.pow(rhs);
+        }
+    }
     @Override public PyObject rshift(PyObject rhs) {
         if (rhs instanceof PyInt rhsInt) {
             return new PyInt(PyInt.rshift(asInt(), rhsInt.value));

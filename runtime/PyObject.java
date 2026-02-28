@@ -25,7 +25,7 @@ public abstract class PyObject implements Comparable<PyObject> {
         throw raiseBinOp("*", rhs);
     }
     public PyObject or(PyObject rhs) { throw unimplementedMethod("or"); }
-    public PyObject pow(PyObject rhs) { throw unimplementedMethod("pow"); }
+    public PyObject pow(PyObject rhs) { throw raiseBinOp("** or pow()", rhs); }
     public PyObject rshift(PyObject rhs) { throw raiseBinOp(">>", rhs); }
     public PyObject sub(PyObject rhs) { throw unimplementedMethod("sub"); }
     public PyObject trueDiv(PyObject rhs) { throw unimplementedMethod("trueDiv"); }
