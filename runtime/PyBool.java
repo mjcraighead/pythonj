@@ -23,8 +23,23 @@ public final class PyBool extends PyObject {
     @Override public PyInt neg() { return new PyInt(value ? -1 : 0); }
     @Override public PyInt abs() { return new PyInt(asInt()); }
 
-    @Override public PyBool and(PyObject rhs) {
-        return create(value & ((PyBool)rhs).value);
+    @Override public PyObject add(PyObject rhs) {
+        if (rhs instanceof PyInt rhsInt) {
+            return new PyInt(Math.addExact(asInt(), rhsInt.value));
+        } else if (rhs instanceof PyBool rhsBool) {
+            return new PyInt(asInt() + rhsBool.asInt());
+        } else {
+            return super.add(rhs);
+        }
+    }
+    @Override public PyObject and(PyObject rhs) {
+        if (rhs instanceof PyInt rhsInt) {
+            return new PyInt(asInt() & rhsInt.value);
+        } else if (rhs instanceof PyBool rhsBool) {
+            return create(value & rhsBool.value);
+        } else {
+            return super.and(rhs);
+        }
     }
     @Override public PyObject floorDiv(PyObject rhs) {
         if (rhs instanceof PyInt rhsInt) {
@@ -62,8 +77,14 @@ public final class PyBool extends PyObject {
             return super.mul(rhs);
         }
     }
-    @Override public PyBool or(PyObject rhs) {
-        return create(value | ((PyBool)rhs).value);
+    @Override public PyObject or(PyObject rhs) {
+        if (rhs instanceof PyInt rhsInt) {
+            return new PyInt(asInt() | rhsInt.value);
+        } else if (rhs instanceof PyBool rhsBool) {
+            return create(value | rhsBool.value);
+        } else {
+            return super.or(rhs);
+        }
     }
     @Override public PyObject pow(PyObject rhs) {
         if (rhs instanceof PyInt rhsInt) {
@@ -83,14 +104,61 @@ public final class PyBool extends PyObject {
             return super.rshift(rhs);
         }
     }
-    @Override public PyBool xor(PyObject rhs) {
-        return create(value ^ ((PyBool)rhs).value);
+    @Override public PyObject sub(PyObject rhs) {
+        if (rhs instanceof PyInt rhsInt) {
+            return new PyInt(Math.subtractExact(asInt(), rhsInt.value));
+        } else if (rhs instanceof PyBool rhsBool) {
+            return new PyInt(asInt() - rhsBool.asInt());
+        } else {
+            return super.sub(rhs);
+        }
+    }
+    @Override public PyObject xor(PyObject rhs) {
+        if (rhs instanceof PyInt rhsInt) {
+            return new PyInt(asInt() ^ rhsInt.value);
+        } else if (rhs instanceof PyBool rhsBool) {
+            return create(value ^ rhsBool.value);
+        } else {
+            return super.xor(rhs);
+        }
     }
 
-    @Override public boolean ge(PyObject rhs) { return asInt() >= ((PyBool)rhs).asInt(); }
-    @Override public boolean gt(PyObject rhs) { return asInt() > ((PyBool)rhs).asInt(); }
-    @Override public boolean le(PyObject rhs) { return asInt() <= ((PyBool)rhs).asInt(); }
-    @Override public boolean lt(PyObject rhs) { return asInt() < ((PyBool)rhs).asInt(); }
+    @Override public boolean ge(PyObject rhs) {
+        if (rhs instanceof PyInt rhsInt) {
+            return asInt() >= rhsInt.value;
+        } else if (rhs instanceof PyBool rhsBool) {
+            return asInt() >= rhsBool.asInt();
+        } else {
+            return super.ge(rhs);
+        }
+    }
+    @Override public boolean gt(PyObject rhs) {
+        if (rhs instanceof PyInt rhsInt) {
+            return asInt() > rhsInt.value;
+        } else if (rhs instanceof PyBool rhsBool) {
+            return asInt() > rhsBool.asInt();
+        } else {
+            return super.gt(rhs);
+        }
+    }
+    @Override public boolean le(PyObject rhs) {
+        if (rhs instanceof PyInt rhsInt) {
+            return asInt() <= rhsInt.value;
+        } else if (rhs instanceof PyBool rhsBool) {
+            return asInt() <= rhsBool.asInt();
+        } else {
+            return super.le(rhs);
+        }
+    }
+    @Override public boolean lt(PyObject rhs) {
+        if (rhs instanceof PyInt rhsInt) {
+            return asInt() < rhsInt.value;
+        } else if (rhs instanceof PyBool rhsBool) {
+            return asInt() < rhsBool.asInt();
+        } else {
+            return super.lt(rhs);
+        }
+    }
 
     @Override public Runtime.pyfunc_bool type() { return Runtime.pyglobal_bool; }
 

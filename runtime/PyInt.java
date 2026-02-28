@@ -75,11 +75,23 @@ public final class PyInt extends PyObject {
     @Override public PyInt neg() { return new PyInt(Math.negateExact(value)); }
     @Override public PyInt abs() { return (value >= 0) ? this : new PyInt(Math.negateExact(value)); }
 
-    @Override public PyInt add(PyObject rhs) {
-        return new PyInt(Math.addExact(value, ((PyInt)rhs).value));
+    @Override public PyObject add(PyObject rhs) {
+        if (rhs instanceof PyInt rhsInt) {
+            return new PyInt(Math.addExact(value, rhsInt.value));
+        } else if (rhs instanceof PyBool rhsBool) {
+            return new PyInt(Math.addExact(value, rhsBool.asInt()));
+        } else {
+            return super.add(rhs);
+        }
     }
-    @Override public PyInt and(PyObject rhs) {
-        return new PyInt(value & ((PyInt)rhs).value);
+    @Override public PyObject and(PyObject rhs) {
+        if (rhs instanceof PyInt rhsInt) {
+            return new PyInt(value & rhsInt.value);
+        } else if (rhs instanceof PyBool rhsBool) {
+            return new PyInt(value & rhsBool.asInt());
+        } else {
+            return super.and(rhs);
+        }
     }
     @Override public PyObject floorDiv(PyObject rhs) {
         if (rhs instanceof PyInt rhsInt) {
@@ -117,8 +129,14 @@ public final class PyInt extends PyObject {
             return super.mul(rhs);
         }
     }
-    @Override public PyInt or(PyObject rhs) {
-        return new PyInt(value | ((PyInt)rhs).value);
+    @Override public PyObject or(PyObject rhs) {
+        if (rhs instanceof PyInt rhsInt) {
+            return new PyInt(value | rhsInt.value);
+        } else if (rhs instanceof PyBool rhsBool) {
+            return new PyInt(value | rhsBool.asInt());
+        } else {
+            return super.or(rhs);
+        }
     }
     @Override public PyObject pow(PyObject rhs) {
         if (rhs instanceof PyInt rhsInt) {
@@ -138,24 +156,60 @@ public final class PyInt extends PyObject {
             return super.rshift(rhs);
         }
     }
-    @Override public PyInt sub(PyObject rhs) {
-        return new PyInt(Math.subtractExact(value, ((PyInt)rhs).value));
+    @Override public PyObject sub(PyObject rhs) {
+        if (rhs instanceof PyInt rhsInt) {
+            return new PyInt(Math.subtractExact(value, rhsInt.value));
+        } else if (rhs instanceof PyBool rhsBool) {
+            return new PyInt(Math.subtractExact(value, rhsBool.asInt()));
+        } else {
+            return super.sub(rhs);
+        }
     }
-    @Override public PyInt xor(PyObject rhs) {
-        return new PyInt(value ^ ((PyInt)rhs).value);
+    @Override public PyObject xor(PyObject rhs) {
+        if (rhs instanceof PyInt rhsInt) {
+            return new PyInt(value ^ rhsInt.value);
+        } else if (rhs instanceof PyBool rhsBool) {
+            return new PyInt(value ^ rhsBool.asInt());
+        } else {
+            return super.xor(rhs);
+        }
     }
 
     @Override public boolean ge(PyObject rhs) {
-        return value >= ((PyInt)rhs).value;
+        if (rhs instanceof PyInt rhsInt) {
+            return value >= rhsInt.value;
+        } else if (rhs instanceof PyBool rhsBool) {
+            return value >= rhsBool.asInt();
+        } else {
+            return super.ge(rhs);
+        }
     }
     @Override public boolean gt(PyObject rhs) {
-        return value > ((PyInt)rhs).value;
+        if (rhs instanceof PyInt rhsInt) {
+            return value > rhsInt.value;
+        } else if (rhs instanceof PyBool rhsBool) {
+            return value > rhsBool.asInt();
+        } else {
+            return super.gt(rhs);
+        }
     }
     @Override public boolean le(PyObject rhs) {
-        return value <= ((PyInt)rhs).value;
+        if (rhs instanceof PyInt rhsInt) {
+            return value <= rhsInt.value;
+        } else if (rhs instanceof PyBool rhsBool) {
+            return value <= rhsBool.asInt();
+        } else {
+            return super.le(rhs);
+        }
     }
     @Override public boolean lt(PyObject rhs) {
-        return value < ((PyInt)rhs).value;
+        if (rhs instanceof PyInt rhsInt) {
+            return value < rhsInt.value;
+        } else if (rhs instanceof PyBool rhsBool) {
+            return value < rhsBool.asInt();
+        } else {
+            return super.lt(rhs);
+        }
     }
 
     @Override public PyBuiltinClass type() { return Runtime.pyglobal_int; }
