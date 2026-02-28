@@ -1101,9 +1101,6 @@ class PythonjVisitor(ast.NodeVisitor):
         ]
 
     def visit_FunctionDef(self, node) -> None:
-        if self.in_function:
-            self.error(node.lineno, 'nested function definitions are unsupported')
-            return
         # node.type_comment is ignored; we only plan to support "real" type annotations.
         if node.decorator_list:
             self.error(node.lineno, 'function decorators are unsupported')
@@ -1114,8 +1111,24 @@ class PythonjVisitor(ast.NodeVisitor):
 
         arg_names = self.check_args(node.lineno, node.args)
         java_name = f'pyfunc_{node.name}'
-        self.global_names.add(node.name)
-        self.global_code.append(JavaAssignStatement(JavaIdentifier(f'pyglobal_{node.name}'), JavaCreateObject(java_name, [])))
+        self.names.add(node.name)
+        if self.in_function:
+            self.code.append(JavaAssignStatement(JavaIdentifier(f'pylocal_{node.name}'), JavaCreateObject(java_name, [])))
+        else:
+            self.code.append(JavaAssignStatement(JavaIdentifier(f'pyglobal_{node.name}'), JavaCreateObject(java_name, [])))
+
+        symbol_table = SymbolTableVisitor()
+        symbol_table.writes.update(arg_names)
+        for statement in node.body:
+            symbol_table.visit(statement)
+        captures = symbol_table.reads - symbol_table.writes
+        if self.in_function:
+            if symbol_table.globals:
+                self.error(node.lineno, "'global' is unsupported in nested functions")
+            if symbol_table.nonlocals:
+                self.error(node.lineno, "'nonlocal' is unsupported in nested functions")
+            for name in captures:
+                self.error(node.lineno, f'nested function capture of symbol {name!r} is unsupported')
 
         with self.new_function(arg_names):
             body = self.visit_block(node.body)
