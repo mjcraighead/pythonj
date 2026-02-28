@@ -1122,13 +1122,19 @@ class PythonjVisitor(ast.NodeVisitor):
             self.add_function(node.name, java_name, arg_names, body)
 
     def visit_Lambda(self, node) -> JavaExpr:
-        if self.in_function:
-            self.error(node.lineno, 'nested function definitions are unsupported')
-            return JavaIdentifier('__cannot_translate_lambda__')
-
         arg_names = self.check_args(node.lineno, node.args)
         java_name = f'pylambda{self.n_lambdas}'
         self.n_lambdas += 1
+
+        symbol_table = SymbolTableVisitor()
+        symbol_table.writes.update(arg_names)
+        symbol_table.visit(node.body)
+        assert not symbol_table.globals, symbol_table.globals # should not be possible in a lambda
+        assert not symbol_table.nonlocals, symbol_table.nonlocals # should not be possible in a lambda
+        captures = symbol_table.reads - symbol_table.writes
+        if self.in_function:
+            for name in captures:
+                self.error(node.lineno, f'lambda capture of symbol {name!r} is unsupported')
 
         with self.new_function(arg_names):
             with self.new_block() as body:
@@ -1154,9 +1160,9 @@ class PythonjVisitor(ast.NodeVisitor):
         symbol_table.visit(elt)
         assert not symbol_table.globals, symbol_table.globals # should not be possible in a comprehension
         assert not symbol_table.nonlocals, symbol_table.nonlocals # should not be possible in a comprehension
-        free_vars = symbol_table.reads - symbol_table.writes
+        captures = symbol_table.reads - symbol_table.writes
         if self.in_function:
-            for name in free_vars:
+            for name in captures:
                 self.error(lineno, f'comprehension capture of symbol {name!r} is unsupported')
 
         arg_name = 'iterable'
