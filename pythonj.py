@@ -488,10 +488,9 @@ class SymbolTableVisitor(ast.NodeVisitor):
     def visit_ClassDef(self, node):
         self.writes.add(node.name)
 
-    # For comprehensions, only descend into generator.iters
+    # For comprehensions, only descend into generators[0].iter; the rest is evaluated inside the lambda
     def _visit_comp(self, node):
-        for generator in node.generators:
-            self.visit(generator.iter)
+        self.visit(node.generators[0].iter)
     def visit_ListComp(self, node):
         self._visit_comp(node)
     def visit_SetComp(self, node):
@@ -1161,9 +1160,6 @@ class PythonjVisitor(ast.NodeVisitor):
                     generators: list[ast.comprehension], elts: list[ast.expr]) -> JavaExpr:
         if len(generators) != 1:
             self.error(lineno, 'multiple generators are unsupported in comprehensions')
-        generator = generators[0]
-        if generator.is_async:
-            self.error(lineno, 'asynchronous generators are unsupported')
 
         arg_name = 'iterable'
         arg_names = [arg_name]
@@ -1171,9 +1167,14 @@ class PythonjVisitor(ast.NodeVisitor):
         self.n_lambdas += 1
 
         symbol_table = SymbolTableVisitor()
-        symbol_table.visit(generator.target)
-        for _if in generator.ifs:
-            symbol_table.visit(_if)
+        for (i, generator) in enumerate(generators):
+            if generator.is_async:
+                self.error(lineno, 'asynchronous generators are unsupported')
+            if i != 0: # generators[0].iter is evaluated outside the lambda
+                symbol_table.visit(generator.iter)
+            symbol_table.visit(generator.target)
+            for _if in generator.ifs:
+                symbol_table.visit(_if)
         for elt in elts:
             symbol_table.visit(elt)
         assert not symbol_table.globals, symbol_table.globals # should not be possible in a comprehension
@@ -1184,21 +1185,21 @@ class PythonjVisitor(ast.NodeVisitor):
                 temp_iter = self.scope.make_temp()
                 temp_result = self.scope.make_temp()
                 temp_element = self.scope.make_temp()
-                self.code.append(JavaVariableDecl('var', temp_iter, JavaMethodCall(JavaIdentifier(arg_name), 'iter', [])))
-                self.code.append(JavaVariableDecl('var', temp_result, JavaCreateObject(type_name, [])))
-                self.code.append(JavaForStatement(
+                body.append(JavaVariableDecl('var', temp_iter, JavaMethodCall(JavaIdentifier(arg_name), 'iter', [])))
+                body.append(JavaVariableDecl('var', temp_result, JavaCreateObject(type_name, [])))
+                body.append(JavaForStatement(
                     'var', temp_element, JavaMethodCall(JavaIdentifier(temp_iter), 'next', []),
                     JavaBinaryOp('!=', JavaIdentifier(temp_element), JavaIdentifier('null')),
                     temp_element, JavaMethodCall(JavaIdentifier(temp_iter), 'next', []),
                     [
-                        *self.emit_bind(generator.target, JavaIdentifier(temp_element)),
-                        self._lower_comp_ifs_elts(temp_result, method_name, generator.ifs, elts),
+                        *self.emit_bind(generators[0].target, JavaIdentifier(temp_element)),
+                        self._lower_comp_ifs_elts(temp_result, method_name, generators[0].ifs, elts),
                     ]
                 ))
                 body.append(JavaReturnStatement(JavaIdentifier(temp_result)))
             self.add_function(py_name, java_name, arg_names, body, invisible_args=True)
 
-        return JavaMethodCall(JavaCreateObject(java_name, []), 'call', [JavaCreateArray('PyObject', [self.visit(generator.iter)]), JavaIdentifier('null')])
+        return JavaMethodCall(JavaCreateObject(java_name, []), 'call', [JavaCreateArray('PyObject', [self.visit(generators[0].iter)]), JavaIdentifier('null')])
 
     def visit_ListComp(self, node) -> JavaExpr:
         return self._lower_comp('<listcomp>', 'PyList', 'pymethod_append', node.lineno, node.generators, [node.elt])
