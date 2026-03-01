@@ -446,7 +446,6 @@ class IndentedWriter:
         if line.endswith('{'):
             self.indent += 1
 
-# XXX Currently only used to validate comprehensions for no captures, but should be used everywhere
 class SymbolTableVisitor(ast.NodeVisitor):
     __slots__ = ('reads', 'writes', 'globals', 'nonlocals')
     reads: set[str]
@@ -796,11 +795,10 @@ class PythonjVisitor(ast.NodeVisitor):
         pass
 
     def visit_Global(self, node) -> None:
-        if not self.in_function:
-            self.error(node.lineno, "'global' at global scope is unsupported")
-            return
-        for name in node.names:
-            self.explicit_globals.add(name)
+        pass # handled by SymbolTableVisitor
+
+    def visit_Nonlocal(self, node) -> None:
+        pass # handled by SymbolTableVisitor
 
     def emit_bind(self, target: ast.expr, value: JavaExpr) -> Iterator[JavaStatement]:
         if isinstance(target, ast.Name):
@@ -1121,16 +1119,17 @@ class PythonjVisitor(ast.NodeVisitor):
         symbol_table.writes.update(arg_names)
         for statement in node.body:
             symbol_table.visit(statement)
+        if symbol_table.nonlocals:
+            self.error(node.lineno, "'nonlocal' is unsupported")
         captures = symbol_table.reads - symbol_table.writes
         if self.in_function:
             if symbol_table.globals:
                 self.error(node.lineno, "'global' is unsupported in nested functions")
-            if symbol_table.nonlocals:
-                self.error(node.lineno, "'nonlocal' is unsupported in nested functions")
             for name in captures:
                 self.error(node.lineno, f'nested function capture of symbol {name!r} is unsupported')
 
         with self.new_function(arg_names):
+            self.explicit_globals.update(symbol_table.globals)
             body = self.visit_block(node.body)
             self.add_function(node.name, java_name, arg_names, body)
 
