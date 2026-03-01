@@ -465,6 +465,10 @@ class SymbolTableVisitor(ast.NodeVisitor):
         else:
             self.reads.add(node.id)
 
+    def visit_ExceptHandler(self, node):
+        if node.name is not None:
+            self.writes.add(node.name)
+
     def visit_Global(self, node) -> None:
         for name in node.names:
             self.globals.add(name)
@@ -502,7 +506,7 @@ class SymbolTableVisitor(ast.NodeVisitor):
 # will compile into.  Partial mitigations are likely to be easier than a total fix.
 # XXX "invokedynamic" might help us a lot, but there is no way to access it from Java source
 class PythonjVisitor(ast.NodeVisitor):
-    __slots__ = ('path', 'n_errors', 'n_temps', 'n_lambdas', 'local_names', 'global_names', 'global_code', 'names',
+    __slots__ = ('path', 'n_errors', 'n_temps', 'n_lambdas', 'local_names', 'global_names', 'global_code',
                  'explicit_globals', 'code', 'emit_ctx', 'in_function', 'functions', 'allow_intrinsics')
     path: str
     n_errors: int
@@ -529,7 +533,6 @@ class PythonjVisitor(ast.NodeVisitor):
         self.local_names = set()
         self.global_names = set()
         self.global_code = [JavaVariableDecl('PyObject', 'expr_discard', None)] # XXX remove this variable if not needed
-        self.names = self.global_names
         self.explicit_globals = set()
         self.code = self.global_code
         self.emit_ctx = EmitContext()
@@ -802,7 +805,6 @@ class PythonjVisitor(ast.NodeVisitor):
 
     def emit_bind(self, target: ast.expr, value: JavaExpr) -> Iterator[JavaStatement]:
         if isinstance(target, ast.Name):
-            self.names.add(target.id)
             yield JavaAssignStatement(self.visit(target), value)
         elif isinstance(target, ast.Attribute):
             temp_name = self.make_temp()
@@ -989,7 +991,6 @@ class PythonjVisitor(ast.NodeVisitor):
             handler = node.handlers[0]
             with self.new_block() as catch_body:
                 if handler.name is not None:
-                    self.names.add(handler.name)
                     catch_body.append(JavaAssignStatement(self.ident_expr(handler.name), JavaField(JavaIdentifier(exc_name), 'exc')))
                 for statement in handler.body:
                     self.visit(statement)
@@ -1035,20 +1036,18 @@ class PythonjVisitor(ast.NodeVisitor):
         return [arg.arg for arg in args.args]
 
     @contextmanager
-    def new_function(self, arg_names: list[str]) -> Iterator[None]:
+    def new_function(self, symbol_table: SymbolTableVisitor) -> Iterator[None]:
         saved_in_function = self.in_function
         saved_expr_discard = self.used_expr_discard
         saved_n_temps = self.n_temps
         saved_local_names = self.local_names
-        saved_names = self.names
         saved_explicit_globals = self.explicit_globals
 
         self.in_function = True
         self.n_temps = 0
         self.used_expr_discard = False
-        self.local_names = set(arg_names)
-        self.names = self.local_names
-        self.explicit_globals = set()
+        self.local_names = symbol_table.writes - symbol_table.globals
+        self.explicit_globals = symbol_table.globals.copy()
 
         yield
 
@@ -1056,7 +1055,6 @@ class PythonjVisitor(ast.NodeVisitor):
         self.n_temps = saved_n_temps
         self.used_expr_discard = saved_expr_discard
         self.local_names = saved_local_names
-        self.names = saved_names
         self.explicit_globals = saved_explicit_globals
 
     def add_function(self, py_name: str, java_name: str, arg_names: list[str], body: list[JavaStatement],
@@ -1081,7 +1079,7 @@ class PythonjVisitor(ast.NodeVisitor):
             ) for (i, arg) in enumerate(arg_names)),
             *((JavaVariableDecl('PyObject', 'expr_discard', None),) if self.used_expr_discard else ()),
             # XXX It's tempting to assign Java null here, but this makes it far too easy for null to leak out into the runtime
-            *(JavaVariableDecl('PyObject', f'pylocal_{name}', None) for name in sorted(self.names) if invisible_args or name not in arg_names),
+            *(JavaVariableDecl('PyObject', f'pylocal_{name}', None) for name in sorted(self.local_names) if invisible_args or name not in arg_names),
             *body,
             JavaReturnStatement(JavaPyConstant(None)),
         ]
@@ -1109,11 +1107,7 @@ class PythonjVisitor(ast.NodeVisitor):
 
         arg_names = self.check_args(node.lineno, node.args)
         java_name = f'pyfunc_{node.name}'
-        self.names.add(node.name)
-        if self.in_function:
-            self.code.append(JavaAssignStatement(JavaIdentifier(f'pylocal_{node.name}'), JavaCreateObject(java_name, [])))
-        else:
-            self.code.append(JavaAssignStatement(JavaIdentifier(f'pyglobal_{node.name}'), JavaCreateObject(java_name, [])))
+        self.code.append(JavaAssignStatement(self.ident_expr(node.name), JavaCreateObject(java_name, [])))
 
         symbol_table = SymbolTableVisitor()
         symbol_table.writes.update(arg_names)
@@ -1128,8 +1122,7 @@ class PythonjVisitor(ast.NodeVisitor):
             for name in captures:
                 self.error(node.lineno, f'nested function capture of symbol {name!r} is unsupported')
 
-        with self.new_function(arg_names):
-            self.explicit_globals.update(symbol_table.globals)
+        with self.new_function(symbol_table):
             body = self.visit_block(node.body)
             self.add_function(node.name, java_name, arg_names, body)
 
@@ -1148,7 +1141,7 @@ class PythonjVisitor(ast.NodeVisitor):
             for name in captures:
                 self.error(node.lineno, f'lambda capture of symbol {name!r} is unsupported')
 
-        with self.new_function(arg_names):
+        with self.new_function(symbol_table):
             with self.new_block() as body:
                 body.append(JavaReturnStatement(self.visit(node.body)))
             self.add_function('<lambda>', java_name, arg_names, body)
@@ -1182,7 +1175,7 @@ class PythonjVisitor(ast.NodeVisitor):
         java_name = f'pylambda{self.n_lambdas}'
         self.n_lambdas += 1
 
-        with self.new_function(arg_names):
+        with self.new_function(symbol_table):
             with self.new_block() as body:
                 temp_iter = self.make_temp()
                 temp_list = self.make_temp()
@@ -1210,6 +1203,11 @@ class PythonjVisitor(ast.NodeVisitor):
         return self.lower_comp('<setcomp>', 'PySet', 'add', node.lineno, node.generators, node.elt)
 
     def visit_Module(self, node) -> None:
+        symbol_table = SymbolTableVisitor()
+        for statement in node.body:
+            symbol_table.visit(statement)
+        self.global_names.update(symbol_table.writes)
+
         for statement in node.body:
             self.visit(statement)
 
