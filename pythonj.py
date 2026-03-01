@@ -8,6 +8,7 @@ import ast
 from contextlib import contextmanager
 from dataclasses import dataclass
 import difflib
+from enum import Enum
 import itertools
 import os
 import shutil
@@ -500,26 +501,40 @@ class SymbolTableVisitor(ast.NodeVisitor):
     def visit_GeneratorExp(self, node):
         self._visit_comp(node)
 
+class ScopeKind(Enum):
+    MODULE = 1
+    FUNCTION = 2
+
+class Scope:
+    __slots__ = ('parent', 'kind', 'locals', 'explicit_globals')
+    parent: Optional['Scope']
+    kind: ScopeKind
+    locals: set[str]
+    explicit_globals: set[str]
+
+    def __init__(self, parent: Optional['Scope'], kind: ScopeKind):
+        self.parent = parent
+        self.kind = kind
+        self.locals = set()
+        self.explicit_globals = set()
+
 # XXX Need to design a systematic way to avoid "code too large" and "too many constants" errors.
 # This is somewhat challenging, as even a single Python expression or statement can easily overflow
 # the maximum code size limit, and it is somewhat unpredictable how much bytecode our translations
 # will compile into.  Partial mitigations are likely to be easier than a total fix.
 # XXX "invokedynamic" might help us a lot, but there is no way to access it from Java source
 class PythonjVisitor(ast.NodeVisitor):
-    __slots__ = ('path', 'n_errors', 'n_temps', 'n_lambdas', 'local_names', 'global_names', 'global_code',
-                 'explicit_globals', 'code', 'emit_ctx', 'in_function', 'functions', 'allow_intrinsics')
+    __slots__ = ('path', 'n_errors', 'n_temps', 'scope', 'n_lambdas', 'global_code',
+                 'code', 'emit_ctx', 'functions', 'allow_intrinsics')
     path: str
     n_errors: int
     n_temps: int
     n_lambdas: int
-    local_names: set[str]
-    global_names: set[str]
+    scope: Scope
     global_code: list[JavaStatement]
     names: set[str]
-    explicit_globals: set[str]
     code: list[JavaStatement]
     emit_ctx: EmitContext
-    in_function: bool
     used_expr_discard: bool
     break_name: Optional[str]
     functions: dict[str, list[str]]
@@ -530,13 +545,10 @@ class PythonjVisitor(ast.NodeVisitor):
         self.n_errors = 0
         self.n_temps = 0
         self.n_lambdas = 0
-        self.local_names = set()
-        self.global_names = set()
+        self.scope = Scope(None, ScopeKind.MODULE)
         self.global_code = [JavaVariableDecl('PyObject', 'expr_discard', None)] # XXX remove this variable if not needed
-        self.explicit_globals = set()
         self.code = self.global_code
         self.emit_ctx = EmitContext()
-        self.in_function = False
         self.used_expr_discard = False
         self.break_name = None
         self.functions = {}
@@ -559,7 +571,7 @@ class PythonjVisitor(ast.NodeVisitor):
     def ident_expr(self, name: str) -> JavaExpr:
         if self.allow_intrinsics and name == '__pythonj_null__':
             return JavaIdentifier('null')
-        elif self.in_function and name in self.local_names and name not in self.explicit_globals:
+        elif self.scope.kind == ScopeKind.FUNCTION and name in self.scope.locals and name not in self.scope.explicit_globals:
             return JavaIdentifier(f'pylocal_{name}')
         elif name in BUILTINS:
             return JavaField(JavaIdentifier('Runtime'), f'pyglobal_{name}')
@@ -886,7 +898,7 @@ class PythonjVisitor(ast.NodeVisitor):
             self.code.append(code)
 
     def visit_Return(self, node) -> None:
-        assert self.in_function, node
+        assert self.scope.kind == ScopeKind.FUNCTION, node
         value = self.visit(node.value) if node.value else JavaPyConstant(None)
         self.code.append(JavaReturnStatement(value))
 
@@ -1037,25 +1049,21 @@ class PythonjVisitor(ast.NodeVisitor):
 
     @contextmanager
     def new_function(self, symbol_table: SymbolTableVisitor) -> Iterator[None]:
-        saved_in_function = self.in_function
         saved_expr_discard = self.used_expr_discard
         saved_n_temps = self.n_temps
-        saved_local_names = self.local_names
-        saved_explicit_globals = self.explicit_globals
+        saved_scope = self.scope
 
-        self.in_function = True
         self.n_temps = 0
         self.used_expr_discard = False
-        self.local_names = symbol_table.writes - symbol_table.globals
-        self.explicit_globals = symbol_table.globals.copy()
+        self.scope = Scope(self.scope, ScopeKind.FUNCTION)
+        self.scope.locals = symbol_table.writes - symbol_table.globals
+        self.scope.explicit_globals = symbol_table.globals.copy()
 
         yield
 
-        self.in_function = saved_in_function
         self.n_temps = saved_n_temps
         self.used_expr_discard = saved_expr_discard
-        self.local_names = saved_local_names
-        self.explicit_globals = saved_explicit_globals
+        self.scope = saved_scope
 
     def add_function(self, py_name: str, java_name: str, arg_names: list[str], body: list[JavaStatement],
                      invisible_args: bool = False) -> None:
@@ -1079,7 +1087,7 @@ class PythonjVisitor(ast.NodeVisitor):
             ) for (i, arg) in enumerate(arg_names)),
             *((JavaVariableDecl('PyObject', 'expr_discard', None),) if self.used_expr_discard else ()),
             # XXX It's tempting to assign Java null here, but this makes it far too easy for null to leak out into the runtime
-            *(JavaVariableDecl('PyObject', f'pylocal_{name}', None) for name in sorted(self.local_names) if invisible_args or name not in arg_names),
+            *(JavaVariableDecl('PyObject', f'pylocal_{name}', None) for name in sorted(self.scope.locals) if invisible_args or name not in arg_names),
             *body,
             JavaReturnStatement(JavaPyConstant(None)),
         ]
@@ -1115,11 +1123,11 @@ class PythonjVisitor(ast.NodeVisitor):
             symbol_table.visit(statement)
         if symbol_table.nonlocals:
             self.error(node.lineno, "'nonlocal' is unsupported")
-        captures = symbol_table.reads - symbol_table.writes
-        if self.in_function:
+        free_vars = symbol_table.reads - symbol_table.writes
+        if self.scope.kind != ScopeKind.MODULE:
             if symbol_table.globals:
                 self.error(node.lineno, "'global' is unsupported in nested functions")
-            for name in captures:
+            for name in free_vars:
                 self.error(node.lineno, f'nested function capture of symbol {name!r} is unsupported')
 
         with self.new_function(symbol_table):
@@ -1136,9 +1144,9 @@ class PythonjVisitor(ast.NodeVisitor):
         symbol_table.visit(node.body)
         assert not symbol_table.globals, symbol_table.globals # should not be possible in a lambda
         assert not symbol_table.nonlocals, symbol_table.nonlocals # should not be possible in a lambda
-        captures = symbol_table.reads - symbol_table.writes
-        if self.in_function:
-            for name in captures:
+        free_vars = symbol_table.reads - symbol_table.writes
+        if self.scope.kind != ScopeKind.MODULE:
+            for name in free_vars:
                 self.error(node.lineno, f'lambda capture of symbol {name!r} is unsupported')
 
         with self.new_function(symbol_table):
@@ -1165,10 +1173,13 @@ class PythonjVisitor(ast.NodeVisitor):
         symbol_table.visit(elt)
         assert not symbol_table.globals, symbol_table.globals # should not be possible in a comprehension
         assert not symbol_table.nonlocals, symbol_table.nonlocals # should not be possible in a comprehension
-        captures = symbol_table.reads - symbol_table.writes
-        if self.in_function:
-            for name in captures:
-                self.error(lineno, f'comprehension capture of symbol {name!r} is unsupported')
+        free_vars = symbol_table.reads - symbol_table.writes
+        parent_scope = self.scope
+        while parent_scope:
+            if parent_scope.kind == ScopeKind.FUNCTION and (match_names := free_vars & parent_scope.locals):
+                for name in match_names:
+                    self.error(lineno, f'comprehension capture of local {name!r} is unsupported')
+            parent_scope = parent_scope.parent
 
         arg_name = 'iterable'
         arg_names = [arg_name]
@@ -1206,7 +1217,7 @@ class PythonjVisitor(ast.NodeVisitor):
         symbol_table = SymbolTableVisitor()
         for statement in node.body:
             symbol_table.visit(statement)
-        self.global_names.update(symbol_table.writes)
+        self.scope.locals.update(symbol_table.writes)
 
         for statement in node.body:
             self.visit(statement)
@@ -1220,7 +1231,7 @@ class PythonjVisitor(ast.NodeVisitor):
             writer.write('')
 
         # XXX Initializing all globals to None is weird, but we don't have a better option yet
-        for name in sorted(self.global_names):
+        for name in sorted(self.scope.locals):
             writer.write(f'private static PyObject pyglobal_{name} = {JavaPyConstant(None).emit_java(self.emit_ctx)};')
         writer.write('')
 
