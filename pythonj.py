@@ -1150,13 +1150,18 @@ class PythonjVisitor(ast.NodeVisitor):
 
         return JavaCreateObject(java_name, [])
 
+    def _lower_comp_ifs_elts(self, temp_result: str, method_name: str, ifs: list[ast.expr], elts: list[ast.expr]) -> JavaStatement:
+        conds = [self.visit(_if) for _if in ifs]
+        statement = JavaExprStatement(JavaMethodCall(JavaIdentifier(temp_result), method_name, [self.visit(elt) for elt in elts]))
+        for cond in reversed(conds):
+            statement = JavaIfStatement(bool_value(cond), [statement], [])
+        return statement
+
     def _lower_comp(self, py_name: str, type_name: str, method_name: str, lineno: int,
                     generators: list[ast.comprehension], elts: list[ast.expr]) -> JavaExpr:
         if len(generators) != 1:
             self.error(lineno, 'multiple generators are unsupported in comprehensions')
         generator = generators[0]
-        if generator.ifs:
-            self.error(lineno, "'if' conditions are not supported in comprehensions")
         if generator.is_async:
             self.error(lineno, 'asynchronous generators are unsupported')
 
@@ -1187,7 +1192,7 @@ class PythonjVisitor(ast.NodeVisitor):
                     temp_element, JavaMethodCall(JavaIdentifier(temp_iter), 'next', []),
                     [
                         *self.emit_bind(generator.target, JavaIdentifier(temp_element)),
-                        JavaExprStatement(JavaMethodCall(JavaIdentifier(temp_result), method_name, [self.visit(elt) for elt in elts])),
+                        self._lower_comp_ifs_elts(temp_result, method_name, generator.ifs, elts),
                     ]
                 ))
                 body.append(JavaReturnStatement(JavaIdentifier(temp_result)))
