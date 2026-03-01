@@ -1145,9 +1145,12 @@ class PythonjVisitor(ast.NodeVisitor):
         assert not symbol_table.globals, symbol_table.globals # should not be possible in a lambda
         assert not symbol_table.nonlocals, symbol_table.nonlocals # should not be possible in a lambda
         free_vars = symbol_table.reads - symbol_table.writes
-        if self.scope.kind != ScopeKind.MODULE:
-            for name in free_vars:
-                self.error(node.lineno, f'lambda capture of symbol {name!r} is unsupported')
+        parent_scope = self.scope
+        while parent_scope:
+            if parent_scope.kind == ScopeKind.FUNCTION and (match_names := free_vars & parent_scope.locals):
+                for name in match_names:
+                    self.error(node.lineno, f'lambda capture of local {name!r} is unsupported')
+            parent_scope = parent_scope.parent
 
         with self.new_function(symbol_table):
             with self.new_block() as body:
@@ -1156,8 +1159,8 @@ class PythonjVisitor(ast.NodeVisitor):
 
         return JavaCreateObject(java_name, [])
 
-    def lower_comp(self, py_name: str, type_name: str, method_name: str, lineno: int,
-                   generators: list[ast.comprehension], elt: ast.expr) -> JavaExpr:
+    def _lower_comp(self, py_name: str, type_name: str, method_name: str, lineno: int,
+                    generators: list[ast.comprehension], elt: ast.expr) -> JavaExpr:
         if len(generators) != 1:
             self.error(lineno, 'multiple generators are unsupported in comprehensions')
         generator = generators[0]
@@ -1208,10 +1211,10 @@ class PythonjVisitor(ast.NodeVisitor):
         return JavaMethodCall(JavaCreateObject(java_name, []), 'call', [JavaCreateArray('PyObject', [self.visit(generator.iter)]), JavaIdentifier('null')])
 
     def visit_ListComp(self, node) -> JavaExpr:
-        return self.lower_comp('<listcomp>', 'PyList', 'append', node.lineno, node.generators, node.elt)
+        return self._lower_comp('<listcomp>', 'PyList', 'append', node.lineno, node.generators, node.elt)
 
     def visit_SetComp(self, node) -> JavaExpr:
-        return self.lower_comp('<setcomp>', 'PySet', 'add', node.lineno, node.generators, node.elt)
+        return self._lower_comp('<setcomp>', 'PySet', 'add', node.lineno, node.generators, node.elt)
 
     def visit_Module(self, node) -> None:
         symbol_table = SymbolTableVisitor()
