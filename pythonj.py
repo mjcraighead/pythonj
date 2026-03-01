@@ -1151,7 +1151,7 @@ class PythonjVisitor(ast.NodeVisitor):
         return JavaCreateObject(java_name, [])
 
     def _lower_comp(self, py_name: str, type_name: str, method_name: str, lineno: int,
-                    generators: list[ast.comprehension], elt: ast.expr) -> JavaExpr:
+                    generators: list[ast.comprehension], elts: list[ast.expr]) -> JavaExpr:
         if len(generators) != 1:
             self.error(lineno, 'multiple generators are unsupported in comprehensions')
         generator = generators[0]
@@ -1169,36 +1169,40 @@ class PythonjVisitor(ast.NodeVisitor):
         symbol_table.visit(generator.target)
         for _if in generator.ifs:
             symbol_table.visit(_if)
-        symbol_table.visit(elt)
+        for elt in elts:
+            symbol_table.visit(elt)
         assert not symbol_table.globals, symbol_table.globals # should not be possible in a comprehension
         assert not symbol_table.nonlocals, symbol_table.nonlocals # should not be possible in a comprehension
 
         with self.new_function(lineno, symbol_table, 'comprehension'):
             with self.new_block() as body:
                 temp_iter = self.scope.make_temp()
-                temp_list = self.scope.make_temp()
+                temp_result = self.scope.make_temp()
                 temp_element = self.scope.make_temp()
                 self.code.append(JavaVariableDecl('var', temp_iter, JavaMethodCall(JavaIdentifier(arg_name), 'iter', [])))
-                self.code.append(JavaVariableDecl('var', temp_list, JavaCreateObject(type_name, [])))
+                self.code.append(JavaVariableDecl('var', temp_result, JavaCreateObject(type_name, [])))
                 self.code.append(JavaForStatement(
                     'var', temp_element, JavaMethodCall(JavaIdentifier(temp_iter), 'next', []),
                     JavaBinaryOp('!=', JavaIdentifier(temp_element), JavaIdentifier('null')),
                     temp_element, JavaMethodCall(JavaIdentifier(temp_iter), 'next', []),
                     [
                         *self.emit_bind(generator.target, JavaIdentifier(temp_element)),
-                        JavaExprStatement(JavaMethodCall(JavaIdentifier(temp_list), f'pymethod_{method_name}', [self.visit(elt)])),
+                        JavaExprStatement(JavaMethodCall(JavaIdentifier(temp_result), method_name, [self.visit(elt) for elt in elts])),
                     ]
                 ))
-                body.append(JavaReturnStatement(JavaIdentifier(temp_list)))
+                body.append(JavaReturnStatement(JavaIdentifier(temp_result)))
             self.add_function(py_name, java_name, arg_names, body, invisible_args=True)
 
         return JavaMethodCall(JavaCreateObject(java_name, []), 'call', [JavaCreateArray('PyObject', [self.visit(generator.iter)]), JavaIdentifier('null')])
 
     def visit_ListComp(self, node) -> JavaExpr:
-        return self._lower_comp('<listcomp>', 'PyList', 'append', node.lineno, node.generators, node.elt)
+        return self._lower_comp('<listcomp>', 'PyList', 'pymethod_append', node.lineno, node.generators, [node.elt])
 
     def visit_SetComp(self, node) -> JavaExpr:
-        return self._lower_comp('<setcomp>', 'PySet', 'add', node.lineno, node.generators, node.elt)
+        return self._lower_comp('<setcomp>', 'PySet', 'pymethod_add', node.lineno, node.generators, [node.elt])
+
+    def visit_DictComp(self, node) -> JavaExpr:
+        return self._lower_comp('<dictcomp>', 'PyDict', 'setItem', node.lineno, node.generators, [node.key, node.value])
 
     def visit_Module(self, node) -> None:
         symbol_table = SymbolTableVisitor()
