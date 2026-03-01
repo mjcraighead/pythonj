@@ -1104,6 +1104,21 @@ class PythonjVisitor(ast.NodeVisitor):
             '}',
         ]
 
+    def _forbid_captures(self, lineno: int, symbol_table: SymbolTableVisitor, func_type: str):
+        """Error on captures of locals from parent scopes, while allowing access to module-level globals."""
+        if symbol_table.nonlocals:
+            self.error(lineno, "'nonlocal' is unsupported")
+
+        free_vars = symbol_table.reads - symbol_table.writes
+        free_vars -= symbol_table.globals # exclude any that match 'global' in current scope
+        parent_scope = self.scope
+        while parent_scope:
+            free_vars -= parent_scope.explicit_globals # exclude any that match 'global' in parent scope
+            if parent_scope.kind == ScopeKind.FUNCTION and (match_names := free_vars & parent_scope.locals):
+                for name in match_names:
+                    self.error(lineno, f'{func_type} capture of local {name!r} is unsupported')
+            parent_scope = parent_scope.parent
+
     def visit_FunctionDef(self, node) -> None:
         # node.type_comment is ignored; we only plan to support "real" type annotations.
         if node.decorator_list:
@@ -1121,14 +1136,7 @@ class PythonjVisitor(ast.NodeVisitor):
         symbol_table.writes.update(arg_names)
         for statement in node.body:
             symbol_table.visit(statement)
-        if symbol_table.nonlocals:
-            self.error(node.lineno, "'nonlocal' is unsupported")
-        free_vars = symbol_table.reads - symbol_table.writes
-        if self.scope.kind != ScopeKind.MODULE:
-            if symbol_table.globals:
-                self.error(node.lineno, "'global' is unsupported in nested functions")
-            for name in free_vars:
-                self.error(node.lineno, f'nested function capture of symbol {name!r} is unsupported')
+        self._forbid_captures(node.lineno, symbol_table, 'nested function')
 
         with self.new_function(symbol_table):
             body = self.visit_block(node.body)
@@ -1144,13 +1152,7 @@ class PythonjVisitor(ast.NodeVisitor):
         symbol_table.visit(node.body)
         assert not symbol_table.globals, symbol_table.globals # should not be possible in a lambda
         assert not symbol_table.nonlocals, symbol_table.nonlocals # should not be possible in a lambda
-        free_vars = symbol_table.reads - symbol_table.writes
-        parent_scope = self.scope
-        while parent_scope:
-            if parent_scope.kind == ScopeKind.FUNCTION and (match_names := free_vars & parent_scope.locals):
-                for name in match_names:
-                    self.error(node.lineno, f'lambda capture of local {name!r} is unsupported')
-            parent_scope = parent_scope.parent
+        self._forbid_captures(node.lineno, symbol_table, 'lambda')
 
         with self.new_function(symbol_table):
             with self.new_block() as body:
@@ -1176,13 +1178,7 @@ class PythonjVisitor(ast.NodeVisitor):
         symbol_table.visit(elt)
         assert not symbol_table.globals, symbol_table.globals # should not be possible in a comprehension
         assert not symbol_table.nonlocals, symbol_table.nonlocals # should not be possible in a comprehension
-        free_vars = symbol_table.reads - symbol_table.writes
-        parent_scope = self.scope
-        while parent_scope:
-            if parent_scope.kind == ScopeKind.FUNCTION and (match_names := free_vars & parent_scope.locals):
-                for name in match_names:
-                    self.error(lineno, f'comprehension capture of local {name!r} is unsupported')
-            parent_scope = parent_scope.parent
+        self._forbid_captures(lineno, symbol_table, 'comprehension')
 
         arg_name = 'iterable'
         arg_names = [arg_name]
