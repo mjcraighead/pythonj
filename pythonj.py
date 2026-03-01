@@ -1212,7 +1212,7 @@ class PythonjVisitor(ast.NodeVisitor):
     def write_java(self, f: TextIO, py_name: str) -> None:
         writer = IndentedWriter(f, 0)
         writer.write(f'public final class {py_name} {{')
-        for (name, code) in sorted(self.functions.items()):
+        for code in self.functions.values():
             for line in code:
                 writer.write(line)
             writer.write('')
