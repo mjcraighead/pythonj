@@ -506,17 +506,27 @@ class ScopeKind(Enum):
     FUNCTION = 2
 
 class Scope:
-    __slots__ = ('parent', 'kind', 'locals', 'explicit_globals')
+    __slots__ = ('parent', 'kind', 'locals', 'explicit_globals', 'n_temps', 'used_expr_discard')
     parent: Optional['Scope']
     kind: ScopeKind
     locals: set[str]
     explicit_globals: set[str]
+    n_temps: int
+    used_expr_discard: bool
 
     def __init__(self, parent: Optional['Scope'], kind: ScopeKind):
         self.parent = parent
         self.kind = kind
         self.locals = set()
         self.explicit_globals = set()
+        self.n_temps = 0
+        self.used_expr_discard = False
+
+    def make_temp(self) -> str:
+        """Assign and return a new temporary variable name."""
+        temp_name = f'temp{self.n_temps}'
+        self.n_temps += 1
+        return temp_name
 
 # XXX Need to design a systematic way to avoid "code too large" and "too many constants" errors.
 # This is somewhat challenging, as even a single Python expression or statement can easily overflow
@@ -524,18 +534,15 @@ class Scope:
 # will compile into.  Partial mitigations are likely to be easier than a total fix.
 # XXX "invokedynamic" might help us a lot, but there is no way to access it from Java source
 class PythonjVisitor(ast.NodeVisitor):
-    __slots__ = ('path', 'n_errors', 'n_temps', 'scope', 'n_lambdas', 'global_code',
-                 'code', 'emit_ctx', 'functions', 'allow_intrinsics')
+    __slots__ = ('path', 'n_errors', 'n_lambdas', 'scope', 'global_code', 'code',
+                 'emit_ctx', 'break_name', 'functions', 'allow_intrinsics')
     path: str
     n_errors: int
-    n_temps: int
     n_lambdas: int
     scope: Scope
     global_code: list[JavaStatement]
-    names: set[str]
     code: list[JavaStatement]
     emit_ctx: EmitContext
-    used_expr_discard: bool
     break_name: Optional[str]
     functions: dict[str, list[str]]
     allow_intrinsics: bool # enables special internal-only codegen features for builtins
@@ -543,13 +550,11 @@ class PythonjVisitor(ast.NodeVisitor):
     def __init__(self, path: str):
         self.path = path
         self.n_errors = 0
-        self.n_temps = 0
         self.n_lambdas = 0
         self.scope = Scope(None, ScopeKind.MODULE)
         self.global_code = [JavaVariableDecl('PyObject', 'expr_discard', None)] # XXX remove this variable if not needed
         self.code = self.global_code
         self.emit_ctx = EmitContext()
-        self.used_expr_discard = False
         self.break_name = None
         self.functions = {}
         self.allow_intrinsics = False
@@ -561,12 +566,6 @@ class PythonjVisitor(ast.NodeVisitor):
         else:
             print(f'ERROR: {self.path}:{lineno}: {msg}')
         self.n_errors += 1
-
-    def make_temp(self) -> str:
-        """Assign and return a new temporary variable name."""
-        temp_name = f'temp{self.n_temps}'
-        self.n_temps += 1
-        return temp_name
 
     def ident_expr(self, name: str) -> JavaExpr:
         if self.allow_intrinsics and name == '__pythonj_null__':
@@ -650,7 +649,7 @@ class PythonjVisitor(ast.NodeVisitor):
         for (i, (op, comparator)) in enumerate(zip(node.ops, node.comparators)):
             rhs = self.visit(comparator)
             if i < n_compares - 1:
-                temp_name = self.make_temp()
+                temp_name = self.scope.make_temp()
                 self.code.append(JavaVariableDecl('PyObject', temp_name, None))
                 rhs = JavaAssignExpr(JavaIdentifier(temp_name), rhs)
             else:
@@ -677,7 +676,7 @@ class PythonjVisitor(ast.NodeVisitor):
     def emit_bool_op(self, op: ast.boolop, values: list[ast.expr]) -> JavaExpr:
         if len(values) == 1:
             return self.visit(values[0])
-        temp_name = self.make_temp()
+        temp_name = self.scope.make_temp()
         self.code.append(JavaVariableDecl('PyObject', temp_name, None))
         lhs = self.visit(values[0])
         rhs = self.emit_bool_op(op, values[1:])
@@ -819,15 +818,15 @@ class PythonjVisitor(ast.NodeVisitor):
         if isinstance(target, ast.Name):
             yield JavaAssignStatement(self.visit(target), value)
         elif isinstance(target, ast.Attribute):
-            temp_name = self.make_temp()
+            temp_name = self.scope.make_temp()
             yield JavaVariableDecl('var', temp_name, value)
             yield JavaExprStatement(JavaMethodCall(self.visit(target.value), 'setAttr', [JavaStrLiteral(target.attr), JavaIdentifier(temp_name)]))
         elif isinstance(target, ast.Subscript):
-            temp_name = self.make_temp()
+            temp_name = self.scope.make_temp()
             yield JavaVariableDecl('var', temp_name, value)
             yield JavaExprStatement(JavaMethodCall(self.visit(target.value), 'setItem', [self.visit(target.slice), JavaIdentifier(temp_name)]))
         elif isinstance(target, (ast.Tuple, ast.List)):
-            temp_name = self.make_temp()
+            temp_name = self.scope.make_temp()
             yield JavaVariableDecl('var', temp_name, JavaMethodCall(value, 'iter', []))
             # XXX This is not atomic if an exception is thrown; a subset of LHS's will be left assigned
             for subtarget in target.elts:
@@ -848,7 +847,7 @@ class PythonjVisitor(ast.NodeVisitor):
         if isinstance(node.target, ast.Name):
             code = JavaAssignStatement(self.visit(node.target), JavaMethodCall(self.visit(node.target), op, [self.visit(node.value)]))
         elif isinstance(node.target, ast.Attribute):
-            temp_name = self.make_temp()
+            temp_name = self.scope.make_temp()
             self.code.append(JavaVariableDecl('var', temp_name, self.visit(node.target.value)))
             code = JavaExprStatement(JavaMethodCall(JavaIdentifier(temp_name), 'setAttr', [
                 JavaStrLiteral(node.target.attr),
@@ -859,8 +858,8 @@ class PythonjVisitor(ast.NodeVisitor):
                 )
             ]))
         elif isinstance(node.target, ast.Subscript):
-            temp_name0 = self.make_temp()
-            temp_name1 = self.make_temp()
+            temp_name0 = self.scope.make_temp()
+            temp_name1 = self.scope.make_temp()
             self.code.append(JavaVariableDecl('var', temp_name0, self.visit(node.target.value)))
             self.code.append(JavaVariableDecl('var', temp_name1, self.visit(node.target.slice)))
             code = JavaExprStatement(JavaMethodCall(JavaIdentifier(temp_name0), 'setItem', [
@@ -931,7 +930,7 @@ class PythonjVisitor(ast.NodeVisitor):
     def visit_While(self, node) -> None:
         cond = bool_value(self.visit(node.test))
 
-        block_name = self.make_temp() if node.orelse else None
+        block_name = self.scope.make_temp() if node.orelse else None
         with self.push_break_name(block_name):
             body = self.visit_block(node.body)
 
@@ -943,9 +942,9 @@ class PythonjVisitor(ast.NodeVisitor):
         self.code.extend(loop)
 
     def visit_For(self, node) -> None:
-        block_name = self.make_temp() if node.orelse else None
-        temp_name0 = self.make_temp()
-        temp_name1 = self.make_temp()
+        block_name = self.scope.make_temp() if node.orelse else None
+        temp_name0 = self.scope.make_temp()
+        temp_name1 = self.scope.make_temp()
         self.code.append(JavaVariableDecl('var', temp_name0, JavaMethodCall(self.visit(node.iter), 'iter', [])))
 
         with self.push_break_name(block_name):
@@ -970,7 +969,7 @@ class PythonjVisitor(ast.NodeVisitor):
             self.error(node.lineno, "multiple-item 'with' statements are unsupported")
         item = node.items[0]
 
-        temp_name = self.make_temp()
+        temp_name = self.scope.make_temp()
         self.code.append(JavaVariableDecl('var', temp_name, self.visit(item.context_expr)))
         if item.optional_vars is None:
             self.code.append(JavaExprStatement(JavaMethodCall(JavaIdentifier(temp_name), 'enter', [])))
@@ -999,7 +998,7 @@ class PythonjVisitor(ast.NodeVisitor):
         catch_body = []
         if node.handlers:
             exc_type = 'PyRaise'
-            exc_name = self.make_temp()
+            exc_name = self.scope.make_temp()
             handler = node.handlers[0]
             with self.new_block() as catch_body:
                 if handler.name is not None:
@@ -1026,7 +1025,7 @@ class PythonjVisitor(ast.NodeVisitor):
             # Cannot remove these statements because we rely on javac here to catch some portion of
             # Python usage errors.
             self.code.append(JavaAssignStatement(JavaIdentifier('expr_discard'), value))
-            self.used_expr_discard = True
+            self.scope.used_expr_discard = True
 
     def check_args(self, lineno: int, args: ast.arguments) -> list[str]:
         if args.posonlyargs:
@@ -1062,20 +1061,14 @@ class PythonjVisitor(ast.NodeVisitor):
                     self.error(lineno, f'{func_type} capture of local {name!r} is unsupported')
             parent_scope = parent_scope.parent
 
-        saved_expr_discard = self.used_expr_discard
-        saved_n_temps = self.n_temps
         saved_scope = self.scope
 
-        self.n_temps = 0
-        self.used_expr_discard = False
         self.scope = Scope(self.scope, ScopeKind.FUNCTION)
         self.scope.locals = symbol_table.writes - symbol_table.globals
         self.scope.explicit_globals = symbol_table.globals.copy()
 
         yield
 
-        self.n_temps = saved_n_temps
-        self.used_expr_discard = saved_expr_discard
         self.scope = saved_scope
 
     def add_function(self, py_name: str, java_name: str, arg_names: list[str], body: list[JavaStatement],
@@ -1098,7 +1091,7 @@ class PythonjVisitor(ast.NodeVisitor):
             *(JavaVariableDecl(
                 'PyObject', arg if invisible_args else f'pylocal_{arg}', JavaArrayAccess(JavaIdentifier('args'), JavaIntLiteral(i, ''))
             ) for (i, arg) in enumerate(arg_names)),
-            *((JavaVariableDecl('PyObject', 'expr_discard', None),) if self.used_expr_discard else ()),
+            *((JavaVariableDecl('PyObject', 'expr_discard', None),) if self.scope.used_expr_discard else ()),
             # XXX It's tempting to assign Java null here, but this makes it far too easy for null to leak out into the runtime
             *(JavaVariableDecl('PyObject', f'pylocal_{name}', None) for name in sorted(self.scope.locals) if invisible_args or name not in arg_names),
             *body,
@@ -1182,9 +1175,9 @@ class PythonjVisitor(ast.NodeVisitor):
 
         with self.new_function(lineno, symbol_table, 'comprehension'):
             with self.new_block() as body:
-                temp_iter = self.make_temp()
-                temp_list = self.make_temp()
-                temp_element = self.make_temp()
+                temp_iter = self.scope.make_temp()
+                temp_list = self.scope.make_temp()
+                temp_element = self.scope.make_temp()
                 self.code.append(JavaVariableDecl('var', temp_iter, JavaMethodCall(JavaIdentifier(arg_name), 'iter', [])))
                 self.code.append(JavaVariableDecl('var', temp_list, JavaCreateObject(type_name, [])))
                 self.code.append(JavaForStatement(
