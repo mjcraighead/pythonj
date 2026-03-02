@@ -1149,18 +1149,30 @@ class PythonjVisitor(ast.NodeVisitor):
 
         return JavaCreateObject(java_name, [])
 
-    def _lower_comp_ifs_elts(self, temp_result: str, method_name: str, ifs: list[ast.expr], elts: list[ast.expr]) -> JavaStatement:
+    def _lower_comp_ifs(self, ifs: list[ast.expr], statements: list[JavaStatement]) -> list[JavaStatement]:
         conds = [self.visit(_if) for _if in ifs]
-        statement = JavaExprStatement(JavaMethodCall(JavaIdentifier(temp_result), method_name, [self.visit(elt) for elt in elts]))
         for cond in reversed(conds):
-            statement = JavaIfStatement(bool_value(cond), [statement], [])
-        return statement
+            statements = list(if_statement(bool_value(cond), statements, []))
+        return statements
+
+    def _lower_comp_generator(self, generator: ast.comprehension, iterable: JavaExpr, statements: list[JavaStatement]) -> list[JavaStatement]:
+        temp_iter = self.scope.make_temp()
+        temp_element = self.scope.make_temp()
+        return [
+            JavaVariableDecl('var', temp_iter, JavaMethodCall(iterable, 'iter', [])),
+            JavaForStatement(
+                'var', temp_element, JavaMethodCall(JavaIdentifier(temp_iter), 'next', []),
+                JavaBinaryOp('!=', JavaIdentifier(temp_element), JavaIdentifier('null')),
+                temp_element, JavaMethodCall(JavaIdentifier(temp_iter), 'next', []),
+                [
+                    *self.emit_bind(generator.target, JavaIdentifier(temp_element)),
+                    *self._lower_comp_ifs(generator.ifs, statements),
+                ]
+            )
+        ]
 
     def _lower_comp(self, py_name: str, type_name: str, method_name: str, lineno: int,
                     generators: list[ast.comprehension], elts: list[ast.expr]) -> JavaExpr:
-        if len(generators) != 1:
-            self.error(lineno, 'multiple generators are unsupported in comprehensions')
-
         arg_name = 'iterable'
         arg_names = [arg_name]
         java_name = f'pylambda{self.n_lambdas}'
@@ -1182,21 +1194,18 @@ class PythonjVisitor(ast.NodeVisitor):
 
         with self.new_function(lineno, symbol_table, 'comprehension'):
             with self.new_block() as body:
-                temp_iter = self.scope.make_temp()
                 temp_result = self.scope.make_temp()
-                temp_element = self.scope.make_temp()
-                body.append(JavaVariableDecl('var', temp_iter, JavaMethodCall(JavaIdentifier(arg_name), 'iter', [])))
-                body.append(JavaVariableDecl('var', temp_result, JavaCreateObject(type_name, [])))
-                body.append(JavaForStatement(
-                    'var', temp_element, JavaMethodCall(JavaIdentifier(temp_iter), 'next', []),
-                    JavaBinaryOp('!=', JavaIdentifier(temp_element), JavaIdentifier('null')),
-                    temp_element, JavaMethodCall(JavaIdentifier(temp_iter), 'next', []),
-                    [
-                        *self.emit_bind(generators[0].target, JavaIdentifier(temp_element)),
-                        self._lower_comp_ifs_elts(temp_result, method_name, generators[0].ifs, elts),
-                    ]
-                ))
-                body.append(JavaReturnStatement(JavaIdentifier(temp_result)))
+                statements: list[JavaStatement] = [
+                    JavaExprStatement(JavaMethodCall(JavaIdentifier(temp_result), method_name, [self.visit(elt) for elt in elts]))
+                ]
+                for (i, generator) in enumerate(reversed(generators)):
+                    iterable = JavaIdentifier(arg_name) if i == len(generators)-1 else self.visit(generator.iter)
+                    statements = self._lower_comp_generator(generator, iterable, statements)
+                body += [
+                    JavaVariableDecl('var', temp_result, JavaCreateObject(type_name, [])),
+                    *statements,
+                    JavaReturnStatement(JavaIdentifier(temp_result)),
+                ]
             self.add_function(py_name, java_name, arg_names, body, invisible_args=True)
 
         return JavaMethodCall(JavaCreateObject(java_name, []), 'call', [JavaCreateArray('PyObject', [self.visit(generators[0].iter)]), JavaIdentifier('null')])
