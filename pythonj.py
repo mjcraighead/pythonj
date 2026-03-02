@@ -1149,13 +1149,10 @@ class PythonjVisitor(ast.NodeVisitor):
 
         return JavaCreateObject(java_name, [])
 
-    def _lower_comp_ifs(self, ifs: list[ast.expr], statements: list[JavaStatement]) -> list[JavaStatement]:
-        conds = [self.visit(_if) for _if in ifs]
-        for cond in reversed(conds):
-            statements = list(if_statement(bool_value(cond), statements, []))
-        return statements
-
     def _lower_comp_generator(self, generator: ast.comprehension, iterable: JavaExpr, statements: list[JavaStatement]) -> list[JavaStatement]:
+        for _if in reversed(generator.ifs):
+            statements = list(if_statement(bool_value(self.visit(_if)), statements, []))
+
         temp_iter = self.scope.make_temp()
         temp_element = self.scope.make_temp()
         return [
@@ -1166,7 +1163,7 @@ class PythonjVisitor(ast.NodeVisitor):
                 temp_element, JavaMethodCall(JavaIdentifier(temp_iter), 'next', []),
                 [
                     *self.emit_bind(generator.target, JavaIdentifier(temp_element)),
-                    *self._lower_comp_ifs(generator.ifs, statements),
+                    *statements,
                 ]
             )
         ]
@@ -1174,7 +1171,6 @@ class PythonjVisitor(ast.NodeVisitor):
     def _lower_comp(self, py_name: str, type_name: str, method_name: str, lineno: int,
                     generators: list[ast.comprehension], elts: list[ast.expr]) -> JavaExpr:
         arg_name = 'iterable'
-        arg_names = [arg_name]
         java_name = f'pylambda{self.n_lambdas}'
         self.n_lambdas += 1
 
@@ -1206,7 +1202,7 @@ class PythonjVisitor(ast.NodeVisitor):
                     *statements,
                     JavaReturnStatement(JavaIdentifier(temp_result)),
                 ]
-            self.add_function(py_name, java_name, arg_names, body, invisible_args=True)
+            self.add_function(py_name, java_name, [arg_name], body, invisible_args=True)
 
         return JavaMethodCall(JavaCreateObject(java_name, []), 'call', [JavaCreateArray('PyObject', [self.visit(generators[0].iter)]), JavaIdentifier('null')])
 
