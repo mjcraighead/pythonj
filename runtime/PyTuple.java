@@ -63,10 +63,34 @@ public final class PyTuple extends PyObject {
     }
     @Override public PyTuple rmul(PyObject rhs) { return mul(rhs); }
 
-    @Override public boolean ge(PyObject rhs) { throw unimplementedMethod("ge"); }
-    @Override public boolean gt(PyObject rhs) { throw unimplementedMethod("gt"); }
-    @Override public boolean le(PyObject rhs) { throw unimplementedMethod("le"); }
-    @Override public boolean lt(PyObject rhs) { throw unimplementedMethod("lt"); }
+    @Override public boolean ge(PyObject rhs) {
+        if (rhs instanceof PyTuple rhsTuple) {
+            return Arrays.compare(items, rhsTuple.items) >= 0;
+        } else {
+            return super.ge(rhs);
+        }
+    }
+    @Override public boolean gt(PyObject rhs) {
+        if (rhs instanceof PyTuple rhsTuple) {
+            return Arrays.compare(items, rhsTuple.items) > 0;
+        } else {
+            return super.gt(rhs);
+        }
+    }
+    @Override public boolean le(PyObject rhs) {
+        if (rhs instanceof PyTuple rhsTuple) {
+            return Arrays.compare(items, rhsTuple.items) <= 0;
+        } else {
+            return super.le(rhs);
+        }
+    }
+    @Override public boolean lt(PyObject rhs) {
+        if (rhs instanceof PyTuple rhsTuple) {
+            return Arrays.compare(items, rhsTuple.items) < 0;
+        } else {
+            return super.lt(rhs);
+        }
+    }
 
     @Override public PyObject getItem(PyObject key) {
         int index = Math.toIntExact(key.indexValue());
