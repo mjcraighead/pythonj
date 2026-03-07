@@ -35,7 +35,16 @@ public final class PyByteArray extends PyObject {
             throw PyTypeError.raise("can't concat " + rhs.type().name() + " to bytearray");
         }
     }
-    @Override public PyByteArray addInPlace(PyObject rhs) { throw unimplementedMethod("addInPlace"); }
+    @Override public PyByteArray addInPlace(PyObject rhs) {
+        if (rhs instanceof PyBytes rhsBytes) {
+            value = PyBytes.add(value, rhsBytes.value);
+        } else if (rhs instanceof PyByteArray rhsByteArray) {
+            value = PyBytes.add(value, rhsByteArray.value);
+        } else {
+            throw PyTypeError.raise("can't concat " + rhs.type().name() + " to bytearray");
+        }
+        return this;
+    }
     @Override public PyString mod(PyObject rhs) { throw unimplementedMethod("mod"); }
     @Override public PyByteArray mul(PyObject rhs) {
         if (!rhs.hasIndex()) {
