@@ -161,10 +161,34 @@ public final class PySet extends PyObject {
         }
     }
 
-    @Override public boolean ge(PyObject rhs) { throw unimplementedMethod("ge"); }
-    @Override public boolean gt(PyObject rhs) { throw unimplementedMethod("gt"); }
-    @Override public boolean le(PyObject rhs) { throw unimplementedMethod("le"); }
-    @Override public boolean lt(PyObject rhs) { throw unimplementedMethod("lt"); }
+    @Override public boolean ge(PyObject rhs) {
+        if (rhs instanceof PySet rhsSet) {
+            return items.containsAll(rhsSet.items);
+        } else {
+            throw unimplementedMethod("ge");
+        }
+    }
+    @Override public boolean gt(PyObject rhs) {
+        if (rhs instanceof PySet rhsSet) {
+            return (items.size() > rhsSet.items.size()) && items.containsAll(rhsSet.items);
+        } else {
+            throw unimplementedMethod("gt");
+        }
+    }
+    @Override public boolean le(PyObject rhs) {
+        if (rhs instanceof PySet rhsSet) {
+            return rhsSet.items.containsAll(items);
+        } else {
+            throw unimplementedMethod("le");
+        }
+    }
+    @Override public boolean lt(PyObject rhs) {
+        if (rhs instanceof PySet rhsSet) {
+            return (rhsSet.items.size() > items.size()) && rhsSet.items.containsAll(items);
+        } else {
+            throw unimplementedMethod("lt");
+        }
+    }
 
     @Override public final boolean hasIter() { return true; }
     @Override public PySetIter iter() { return new PySetIter(items.iterator()); }

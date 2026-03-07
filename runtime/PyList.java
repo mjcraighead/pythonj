@@ -78,6 +78,17 @@ public final class PyList extends PyObject {
         items = _items; // WARNING: takes ownership of _items from caller, does not copy
     }
 
+    static int compare(ArrayList<PyObject> lhs, ArrayList<PyObject> rhs) {
+        int n = Math.min(lhs.size(), rhs.size());
+        for (int i = 0; i < n; i++) {
+            int c = lhs.get(i).compareTo(rhs.get(i));
+            if (c != 0) {
+                return c;
+            }
+        }
+        return Integer.compare(lhs.size(), rhs.size());
+    }
+
     @Override public PyList add(PyObject rhs) {
         if (rhs instanceof PyList rhsList) {
             var ret = new PyList();
@@ -124,10 +135,34 @@ public final class PyList extends PyObject {
     }
     @Override public PyList rmul(PyObject rhs) { return mul(rhs); }
 
-    @Override public boolean ge(PyObject rhs) { throw unimplementedMethod("ge"); }
-    @Override public boolean gt(PyObject rhs) { throw unimplementedMethod("gt"); }
-    @Override public boolean le(PyObject rhs) { throw unimplementedMethod("le"); }
-    @Override public boolean lt(PyObject rhs) { throw unimplementedMethod("lt"); }
+    @Override public boolean ge(PyObject rhs) {
+        if (rhs instanceof PyList rhsList) {
+            return compare(items, rhsList.items) >= 0;
+        } else {
+            return super.ge(rhs);
+        }
+    }
+    @Override public boolean gt(PyObject rhs) {
+        if (rhs instanceof PyList rhsList) {
+            return compare(items, rhsList.items) > 0;
+        } else {
+            return super.gt(rhs);
+        }
+    }
+    @Override public boolean le(PyObject rhs) {
+        if (rhs instanceof PyList rhsList) {
+            return compare(items, rhsList.items) <= 0;
+        } else {
+            return super.le(rhs);
+        }
+    }
+    @Override public boolean lt(PyObject rhs) {
+        if (rhs instanceof PyList rhsList) {
+            return compare(items, rhsList.items) < 0;
+        } else {
+            return super.lt(rhs);
+        }
+    }
 
     @Override public PyObject getItem(PyObject key) {
         int index = Math.toIntExact(key.indexValue());
