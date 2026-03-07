@@ -852,6 +852,17 @@ public final class Runtime {
     }
     public static final pyfunc_AssertionError pyglobal_AssertionError = new pyfunc_AssertionError();
 
+    static final class pyfunc_AttributeError extends PyBuiltinClass {
+        pyfunc_AttributeError() { super("AttributeError", PyAttributeError.class); }
+        @Override public PyAttributeError call(PyObject[] args, PyDict kwargs) {
+            if ((kwargs != null) && kwargs.boolValue()) {
+                throw new IllegalArgumentException("AttributeError() does not accept kwargs");
+            }
+            return new PyAttributeError(args);
+        }
+    }
+    public static final pyfunc_AttributeError pyglobal_AttributeError = new pyfunc_AttributeError();
+
     static final class pyfunc_IndexError extends PyBuiltinClass {
         pyfunc_IndexError() { super("IndexError", PyIndexError.class); }
         @Override public PyIndexError call(PyObject[] args, PyDict kwargs) {

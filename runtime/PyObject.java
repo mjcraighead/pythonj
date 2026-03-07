@@ -77,8 +77,12 @@ public abstract class PyObject implements Comparable<PyObject> {
             default: throw new NoSuchElementException("object does not have attribute " + PyString.reprOf(key));
         }
     }
-    public void setAttr(String key, PyObject value) { throw unimplementedMethod("setAttr"); }
-    public void delAttr(String key) { throw unimplementedMethod("delAttr"); }
+    public void setAttr(String key, PyObject value) {
+        throw PyAttributeError.raiseFormat("%s object has no attribute %s and no __dict__ for setting new attributes", PyString.reprOf(type().name()), PyString.reprOf(key));
+    }
+    public void delAttr(String key) {
+        throw PyAttributeError.raiseFormat("%s object has no attribute %s and no __dict__ for setting new attributes", PyString.reprOf(type().name()), PyString.reprOf(key));
+    }
 
     public PyObject call(PyObject args[], PyDict kwargs) { throw unimplementedMethod("call"); }
 

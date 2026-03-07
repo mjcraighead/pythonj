@@ -47,6 +47,15 @@ final class PyAssertionError extends PyException {
     }
 }
 
+final class PyAttributeError extends PyException {
+    PyAttributeError(PyObject... _args) { super(_args); }
+    @Override public PyBuiltinClass type() { return Runtime.pyglobal_AttributeError; }
+
+    static PyRaise raiseFormat(String fmt, Object... args) {
+        return new PyRaise(new PyAttributeError(new PyString(String.format(fmt, args))));
+    }
+}
+
 class PyArithmeticError extends PyException {
     PyArithmeticError(PyObject... _args) { super(_args); }
     @Override public PyBuiltinClass type() { return Runtime.pyglobal_ArithmeticError; }
