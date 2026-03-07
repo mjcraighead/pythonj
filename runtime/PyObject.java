@@ -11,25 +11,33 @@ public abstract class PyObject implements Comparable<PyObject> {
     public PyObject neg() { throw raiseUnaryOp("unary -"); }
     public PyObject abs() { throw raiseUnaryOp("abs()"); }
 
-    public PyObject add(PyObject rhs) { throw raiseBinOp("+", rhs); }
+    public PyObject add(PyObject rhs) { return rhs.radd(this); }
     public PyObject and(PyObject rhs) { return rhs.rand(this); }
-    public PyObject floorDiv(PyObject rhs) { throw raiseBinOp("//", rhs); }
-    public PyObject lshift(PyObject rhs) { throw raiseBinOp("<<", rhs); }
-    public PyObject matmul(PyObject rhs) { throw raiseBinOp("@", rhs); }
-    public PyObject mod(PyObject rhs) { throw raiseBinOp("%", rhs); }
+    public PyObject floorDiv(PyObject rhs) { return rhs.rfloorDiv(this); }
+    public PyObject lshift(PyObject rhs) { return rhs.rlshift(this); }
+    public PyObject matmul(PyObject rhs) { return rhs.rmatmul(this); }
+    public PyObject mod(PyObject rhs) { return rhs.rmod(this); }
     public PyObject mul(PyObject rhs) { return rhs.rmul(this); }
     public PyObject or(PyObject rhs) { return rhs.ror(this); }
-    public PyObject pow(PyObject rhs) { throw raiseBinOp("** or pow()", rhs); }
-    public PyObject rshift(PyObject rhs) { throw raiseBinOp(">>", rhs); }
+    public PyObject pow(PyObject rhs) { return rhs.rpow(this); }
+    public PyObject rshift(PyObject rhs) { return rhs.rrshift(this); }
     public PyObject sub(PyObject rhs) { return rhs.rsub(this); }
-    public PyObject trueDiv(PyObject rhs) { throw raiseBinOp("/", rhs); }
+    public PyObject trueDiv(PyObject rhs) { return rhs.rtrueDiv(this); }
     public PyObject xor(PyObject rhs) { return rhs.rxor(this); }
 
-    // Reverse ops -- XXX add the rest of these
+    // Reverse ops
+    public PyObject radd(PyObject rhs) { throw rhs.raiseBinOp("+", this); }
     public PyObject rand(PyObject rhs) { throw rhs.raiseBinOp("&", this); }
+    public PyObject rfloorDiv(PyObject rhs) { throw rhs.raiseBinOp("//", this); }
+    public PyObject rlshift(PyObject rhs) { throw rhs.raiseBinOp("<<", this); }
+    public PyObject rmatmul(PyObject rhs) { throw rhs.raiseBinOp("@", this); }
+    public PyObject rmod(PyObject rhs) { throw rhs.raiseBinOp("%", this); }
     public PyObject rmul(PyObject rhs) { throw rhs.raiseBinOp("*", this); }
     public PyObject ror(PyObject rhs) { throw rhs.raiseBinOp("|", this); }
+    public PyObject rpow(PyObject rhs) { throw rhs.raiseBinOp("** or pow()", this); }
+    public PyObject rrshift(PyObject rhs) { throw rhs.raiseBinOp(">>", this); }
     public PyObject rsub(PyObject rhs) { throw rhs.raiseBinOp("-", this); }
+    public PyObject rtrueDiv(PyObject rhs) { throw rhs.raiseBinOp("/", this); }
     public PyObject rxor(PyObject rhs) { throw rhs.raiseBinOp("^", this); }
 
     // By default, in-place ops map to regular ops
