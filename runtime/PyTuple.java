@@ -4,7 +4,6 @@
 
 import java.util.Arrays;
 import java.util.ArrayList;
-import java.util.Collections;
 
 public final class PyTuple extends PyObject {
     private static final PyBuiltinClass iter_class_singleton = new PyBuiltinClass("tuple_iterator", PyTupleIter.class);
@@ -30,12 +29,28 @@ public final class PyTuple extends PyObject {
     PyTuple(PyObject[] args) { items = args; } // WARNING: takes ownership of args from caller, does not copy
     PyTuple(ArrayList<PyObject> list) { items = Runtime.arrayListToArray(list); }
 
+    public static PyObject[] add(PyObject[] lhs, PyObject[] rhs) {
+        int newLength = Math.addExact(lhs.length, rhs.length);
+        PyObject[] ret = Arrays.copyOf(lhs, newLength);
+        System.arraycopy(rhs, 0, ret, lhs.length, rhs.length);
+        return ret;
+    }
+    public static PyObject[] mul(PyObject[] lhs, long rhs) {
+        int count = Math.toIntExact(rhs);
+        if (count <= 0) {
+            return new PyObject[0];
+        }
+        int newLength = Math.multiplyExact(lhs.length, count);
+        PyObject[] ret = new PyObject[newLength];
+        for (int i = 0; i < count; i++) {
+            System.arraycopy(lhs, 0, ret, i * lhs.length, lhs.length);
+        }
+        return ret;
+    }
+
     @Override public PyTuple add(PyObject rhs) {
         if (rhs instanceof PyTuple rhsTuple) {
-            var list = new ArrayList<PyObject>();
-            Collections.addAll(list, items);
-            Collections.addAll(list, rhsTuple.items);
-            return new PyTuple(list);
+            return new PyTuple(add(items, rhsTuple.items));
         } else {
             throw PyTypeError.raise("can only concatenate tuple (not \"" + rhs.type().name() + "\") to tuple");
         }
@@ -44,15 +59,7 @@ public final class PyTuple extends PyObject {
         if (!rhs.hasIndex()) {
             throw PyTypeError.raise("can't multiply sequence by non-int of type " + PyString.reprOf(rhs.type().name()));
         }
-        long count = rhs.indexValue();
-        if (count <= 0) {
-            return new PyTuple();
-        }
-        var list = new ArrayList<PyObject>();
-        for (long i = 0; i < count; i++) {
-            Collections.addAll(list, items);
-        }
-        return new PyTuple(list);
+        return new PyTuple(mul(items, rhs.indexValue()));
     }
     @Override public PyTuple rmul(PyObject rhs) { return mul(rhs); }
 
