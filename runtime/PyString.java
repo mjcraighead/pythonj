@@ -161,6 +161,7 @@ public final class PyString extends PyObject {
         }
         return new PyString(s.toString());
     }
+    @Override public PyString rmul(PyObject rhs) { return mul(rhs); }
 
     // Note some divergences vs. CPython when comparing surrogate pairs vs. private-use BMP chars
     @Override public boolean ge(PyObject rhs) {

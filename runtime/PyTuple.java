@@ -54,6 +54,7 @@ public final class PyTuple extends PyObject {
         }
         return new PyTuple(list);
     }
+    @Override public PyTuple rmul(PyObject rhs) { return mul(rhs); }
 
     @Override public PyObject getItem(PyObject key) {
         int index = Math.toIntExact(key.indexValue());

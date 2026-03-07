@@ -122,6 +122,7 @@ public final class PyList extends PyObject {
         }
         return this;
     }
+    @Override public PyList rmul(PyObject rhs) { return mul(rhs); }
 
     @Override public PyObject getItem(PyObject key) {
         int index = Math.toIntExact(key.indexValue());

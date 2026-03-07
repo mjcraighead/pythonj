@@ -91,6 +91,8 @@ public final class PyDict extends PyObject {
             Runtime.addIterableToCollection(rhsSet, rhs);
             return new PySet(PySet.xor(itemsSet, rhsSet));
         }
+        @Override public PyObject rand(PyObject rhs) { return and(rhs); }
+        @Override public PyObject ror(PyObject rhs) { return or(rhs); }
         @Override public PyObject rsub(PyObject rhs) {
             var itemsSet = materializeSet();
             var rhsSet = new HashSet<PyObject>();
@@ -98,6 +100,7 @@ public final class PyDict extends PyObject {
             rhsSet.removeAll(itemsSet);
             return new PySet(rhsSet);
         }
+        @Override public PyObject rxor(PyObject rhs) { return xor(rhs); }
 
         @Override public boolean boolValue() { return !items.isEmpty(); }
         @Override public final boolean hasIter() { return true; }
@@ -156,12 +159,15 @@ public final class PyDict extends PyObject {
             Runtime.addIterableToCollection(rhsSet, rhs);
             return new PySet(PySet.xor(items.keySet(), rhsSet));
         }
+        @Override public PyObject rand(PyObject rhs) { return and(rhs); }
+        @Override public PyObject ror(PyObject rhs) { return or(rhs); }
         @Override public PyObject rsub(PyObject rhs) {
             var result = new HashSet<PyObject>();
             Runtime.addIterableToCollection(result, rhs);
             result.removeAll(items.keySet());
             return new PySet(result);
         }
+        @Override public PyObject rxor(PyObject rhs) { return xor(rhs); }
 
         @Override public boolean boolValue() { return !items.isEmpty(); }
         @Override public final boolean hasIter() { return true; }

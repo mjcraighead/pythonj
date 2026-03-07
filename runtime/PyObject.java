@@ -12,42 +12,25 @@ public abstract class PyObject implements Comparable<PyObject> {
     public PyObject abs() { throw raiseUnaryOp("abs()"); }
 
     public PyObject add(PyObject rhs) { throw raiseBinOp("+", rhs); }
-    public PyObject and(PyObject rhs) {
-        if ((rhs instanceof PyDict.PyDictItems) || (rhs instanceof PyDict.PyDictKeys)) {
-            return rhs.and(this); // remap T & SetLike -> SetLike & T implementation
-        }
-        throw raiseBinOp("&", rhs);
-    }
+    public PyObject and(PyObject rhs) { return rhs.rand(this); }
     public PyObject floorDiv(PyObject rhs) { throw raiseBinOp("//", rhs); }
     public PyObject lshift(PyObject rhs) { throw raiseBinOp("<<", rhs); }
     public PyObject matmul(PyObject rhs) { throw raiseBinOp("@", rhs); }
     public PyObject mod(PyObject rhs) { throw raiseBinOp("%", rhs); }
-    public PyObject mul(PyObject rhs) {
-        if ((rhs instanceof PyBytes) || (rhs instanceof PyByteArray) || (rhs instanceof PyList) ||
-            (rhs instanceof PyString) || (rhs instanceof PyTuple)) {
-            return rhs.mul(this); // remap T * Sequence -> Sequence * T implementation
-        }
-        throw raiseBinOp("*", rhs);
-    }
-    public PyObject or(PyObject rhs) {
-        if ((rhs instanceof PyDict.PyDictItems) || (rhs instanceof PyDict.PyDictKeys)) {
-            return rhs.or(this); // remap T | SetLike -> SetLike | T implementation
-        }
-        throw raiseBinOp("|", rhs);
-    }
+    public PyObject mul(PyObject rhs) { return rhs.rmul(this); }
+    public PyObject or(PyObject rhs) { return rhs.ror(this); }
     public PyObject pow(PyObject rhs) { throw raiseBinOp("** or pow()", rhs); }
     public PyObject rshift(PyObject rhs) { throw raiseBinOp(">>", rhs); }
     public PyObject sub(PyObject rhs) { return rhs.rsub(this); }
     public PyObject trueDiv(PyObject rhs) { throw unimplementedMethod("trueDiv"); }
-    public PyObject xor(PyObject rhs) {
-        if ((rhs instanceof PyDict.PyDictItems) || (rhs instanceof PyDict.PyDictKeys)) {
-            return rhs.xor(this); // remap T ^ SetLike -> SetLike ^ T implementation
-        }
-        throw raiseBinOp("^", rhs);
-    }
+    public PyObject xor(PyObject rhs) { return rhs.rxor(this); }
 
     // Reverse ops -- XXX add the rest of these
+    public PyObject rand(PyObject rhs) { throw rhs.raiseBinOp("&", this); }
+    public PyObject rmul(PyObject rhs) { throw rhs.raiseBinOp("*", this); }
+    public PyObject ror(PyObject rhs) { throw rhs.raiseBinOp("|", this); }
     public PyObject rsub(PyObject rhs) { throw rhs.raiseBinOp("-", this); }
+    public PyObject rxor(PyObject rhs) { throw rhs.raiseBinOp("^", this); }
 
     // By default, in-place ops map to regular ops
     public PyObject addInPlace(PyObject rhs) { return add(rhs); }

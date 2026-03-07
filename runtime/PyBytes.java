@@ -61,6 +61,7 @@ public final class PyBytes extends PyObject {
         }
         return new PyBytes(mul(value, rhs.indexValue()));
     }
+    @Override public PyBytes rmul(PyObject rhs) { return mul(rhs); }
 
     @Override public boolean ge(PyObject rhs) {
         if (rhs instanceof PyBytes rhsBytes) {
