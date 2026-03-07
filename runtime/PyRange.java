@@ -43,6 +43,11 @@ public final class PyRange extends PyObject {
         step = _step;
     }
 
+    @Override public PyInt getItem(PyObject key) { throw unimplementedMethod("getItem"); }
+    @Override public void delItem(PyObject key) {
+        throw PyTypeError.raise(PyString.reprOf(type().name()) + " object doesn't support item deletion");
+    }
+
     @Override public final boolean hasIter() { return true; }
     @Override public PyRangeIter iter() { return new PyRangeIter(this); }
     @Override public PyBuiltinClass type() { return Runtime.pyglobal_range; }

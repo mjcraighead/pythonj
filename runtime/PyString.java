@@ -204,6 +204,9 @@ public final class PyString extends PyObject {
         }
         return new PyString(String.valueOf(value.charAt(index)));
     }
+    @Override public void delItem(PyObject key) {
+        throw PyTypeError.raise(PyString.reprOf(type().name()) + " object doesn't support item deletion");
+    }
 
     @Override public final boolean hasIter() { return true; }
     @Override public PyStringIter iter() { return new PyStringIter(this); }

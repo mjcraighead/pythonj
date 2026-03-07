@@ -207,6 +207,10 @@ public final class PySet extends PyObject {
         }
     }
 
+    @Override public void delItem(PyObject key) {
+        throw PyTypeError.raise(PyString.reprOf(type().name()) + " object doesn't support item deletion");
+    }
+
     @Override public final boolean hasIter() { return true; }
     @Override public PySetIter iter() { return new PySetIter(items.iterator()); }
     @Override public PyBuiltinClass type() { return Runtime.pyglobal_set; }

@@ -111,6 +111,9 @@ public final class PyBytes extends PyObject {
             throw PyIndexError.raise("index out of range");
         }
     }
+    @Override public void delItem(PyObject key) {
+        throw PyTypeError.raise(PyString.reprOf(type().name()) + " object doesn't support item deletion");
+    }
 
     @Override public final boolean hasIter() { return true; }
     @Override public PyBytesIter iter() { return new PyBytesIter(this); }

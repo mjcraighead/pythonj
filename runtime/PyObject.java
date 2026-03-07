@@ -61,9 +61,15 @@ public abstract class PyObject implements Comparable<PyObject> {
     public boolean le(PyObject rhs) { throw raiseCompareOp("<=", rhs); }
     public boolean lt(PyObject rhs) { throw raiseCompareOp("<", rhs); }
 
-    public PyObject getItem(PyObject key) { throw unimplementedMethod("getItem"); }
-    public void setItem(PyObject key, PyObject value) { throw unimplementedMethod("setItem"); }
-    public void delItem(PyObject key) { throw unimplementedMethod("delItem"); }
+    public PyObject getItem(PyObject key) {
+        throw PyTypeError.raise(PyString.reprOf(type().name()) + " object is not subscriptable");
+    }
+    public void setItem(PyObject key, PyObject value) {
+        throw PyTypeError.raise(PyString.reprOf(type().name()) + " object does not support item assignment");
+    }
+    public void delItem(PyObject key) {
+        throw PyTypeError.raise(PyString.reprOf(type().name()) + " object does not support item deletion");
+    }
 
     public PyObject getAttr(String key) {
         switch (key) {
