@@ -13,6 +13,14 @@ public final class PySlice extends PyTruthyObject {
 
     @Override public PyBuiltinClass type() { return Runtime.pyglobal_slice; }
 
+    @Override public boolean equals(Object rhs) {
+        if (rhs instanceof PySlice rhsSlice) {
+            return start.equals(rhsSlice.start) &&
+                   end.equals(rhsSlice.end) &&
+                   step.equals(rhsSlice.step);
+        }
+        return false;
+    }
     @Override public String repr() {
         return String.format("slice(%s, %s, %s)", start.repr(), end.repr(), step.repr());
     }
