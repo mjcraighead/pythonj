@@ -26,21 +26,29 @@ public final class PyByteArray extends PyObject {
 
     PyByteArray(byte[] _value) { value = _value; }
 
+    @Override public PyByteArray add(PyObject rhs) {
+        if (rhs instanceof PyBytes rhsBytes) {
+            return new PyByteArray(PyBytes.add(value, rhsBytes.value));
+        } else if (rhs instanceof PyByteArray rhsByteArray) {
+            return new PyByteArray(PyBytes.add(value, rhsByteArray.value));
+        } else {
+            throw PyTypeError.raise("can't concat " + rhs.type().name() + " to bytearray");
+        }
+    }
+    @Override public PyByteArray addInPlace(PyObject rhs) { throw unimplementedMethod("addInPlace"); }
     @Override public PyString mod(PyObject rhs) { throw unimplementedMethod("mod"); }
     @Override public PyByteArray mul(PyObject rhs) {
         if (!rhs.hasIndex()) {
             throw PyTypeError.raise("can't multiply sequence by non-int of type " + PyString.reprOf(rhs.type().name()));
         }
-        int count = Math.toIntExact(rhs.indexValue());
-        if (count <= 0) {
-            return new PyByteArray(new byte[0]);
+        return new PyByteArray(PyBytes.mul(value, rhs.indexValue()));
+    }
+    @Override public PyByteArray mulInPlace(PyObject rhs) {
+        if (!rhs.hasIndex()) {
+            throw PyTypeError.raise("can't multiply sequence by non-int of type " + PyString.reprOf(rhs.type().name()));
         }
-        int newLength = Math.multiplyExact(value.length, count);
-        byte[] result = new byte[newLength];
-        for (int i = 0; i < count; i++) {
-            System.arraycopy(value, 0, result, i * value.length, value.length);
-        }
-        return new PyByteArray(result);
+        value = PyBytes.mul(value, rhs.indexValue());
+        return this;
     }
 
     @Override public boolean ge(PyObject rhs) {

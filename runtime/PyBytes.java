@@ -26,14 +26,32 @@ public final class PyBytes extends PyObject {
 
     PyBytes(byte[] _value) { value = _value; }
 
+    public static byte[] add(byte[] lhs, byte[] rhs) {
+        int newLength = Math.addExact(lhs.length, rhs.length);
+        byte[] ret = Arrays.copyOf(lhs, newLength);
+        System.arraycopy(rhs, 0, ret, lhs.length, rhs.length);
+        return ret;
+    }
+    public static byte[] mul(byte[] lhs, long rhs) {
+        int count = Math.toIntExact(rhs);
+        if (count <= 0) {
+            return new byte[0];
+        }
+        int newLength = Math.multiplyExact(lhs.length, count);
+        byte[] ret = new byte[newLength];
+        for (int i = 0; i < count; i++) {
+            System.arraycopy(lhs, 0, ret, i * lhs.length, lhs.length);
+        }
+        return ret;
+    }
+
     @Override public PyBytes add(PyObject rhs) {
         if (rhs instanceof PyBytes rhsBytes) {
-            int newLength = Math.addExact(value.length, rhsBytes.value.length);
-            byte[] result = Arrays.copyOf(value, newLength);
-            System.arraycopy(rhsBytes.value, 0, result, value.length, rhsBytes.value.length);
-            return new PyBytes(result);
+            return new PyBytes(add(value, rhsBytes.value));
+        } else if (rhs instanceof PyByteArray rhsByteArray) {
+            return new PyBytes(add(value, rhsByteArray.value));
         } else {
-            throw unimplementedBinOp("+", rhs);
+            throw PyTypeError.raise("can't concat " + rhs.type().name() + " to bytes");
         }
     }
     @Override public PyString mod(PyObject rhs) { throw unimplementedMethod("mod"); }
@@ -41,16 +59,7 @@ public final class PyBytes extends PyObject {
         if (!rhs.hasIndex()) {
             throw PyTypeError.raise("can't multiply sequence by non-int of type " + PyString.reprOf(rhs.type().name()));
         }
-        int count = Math.toIntExact(rhs.indexValue());
-        if (count <= 0) {
-            return new PyBytes(new byte[0]);
-        }
-        int newLength = Math.multiplyExact(value.length, count);
-        byte[] result = new byte[newLength];
-        for (int i = 0; i < count; i++) {
-            System.arraycopy(value, 0, result, i * value.length, value.length);
-        }
-        return new PyBytes(result);
+        return new PyBytes(mul(value, rhs.indexValue()));
     }
 
     @Override public boolean ge(PyObject rhs) {
