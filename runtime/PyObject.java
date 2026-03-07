@@ -93,13 +93,10 @@ public abstract class PyObject implements Comparable<PyObject> {
     // unhashable.  If a.equals(b) is true, then a.hashCode() == b.hashCode() must also be true.
     public abstract boolean boolValue();
     @Override public final int compareTo(PyObject rhs) {
-        if (lt(rhs)) {
-            return -1;
-        }
         if (equals(rhs)) {
             return 0;
         }
-        return 1;
+        return lt(rhs) ? -1 : 1;
     }
     public boolean contains(PyObject rhs) { throw unimplementedMethod("contains"); }
     @Override public boolean equals(Object rhs) { throw unimplementedMethod("equals"); }
