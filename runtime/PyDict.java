@@ -379,11 +379,23 @@ public final class PyDict extends PyObject {
     }
     @Override public PyObject getAttr(String key) {
         switch (key) {
+            case "clear": throw unimplementedAttr(key);
+            case "copy": throw unimplementedAttr(key);
+            case "fromkeys": throw unimplementedAttr(key);
             case "get": return new PyDictMethod_get(this);
-            case "keys": return new PyDictMethod_keys(this);
             case "items": return new PyDictMethod_items(this);
+            case "keys": return new PyDictMethod_keys(this);
+            case "pop": throw unimplementedAttr(key);
+            case "popitem": throw unimplementedAttr(key);
+            case "setdefault": throw unimplementedAttr(key);
+            case "update": throw unimplementedAttr(key);
             case "values": return new PyDictMethod_values(this);
-            default: return super.getAttr(key);
+            default:
+                if (key.startsWith("__")) {
+                    return super.getAttr(key);
+                } else {
+                    throw raiseMissingAttr(key);
+                }
         }
     }
     @Override public int hashCode() { throw raiseUnhashable(); }

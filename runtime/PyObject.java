@@ -136,6 +136,9 @@ public abstract class PyObject implements Comparable<PyObject> {
     protected final UnsupportedOperationException unimplementedMethod(String method) {
         return new UnsupportedOperationException(String.format("%s unimplemented on %s", PyString.reprOf(method), PyString.reprOf(type().name())));
     }
+    protected final UnsupportedOperationException unimplementedAttr(String key) {
+        return new UnsupportedOperationException(String.format("%s attribute unimplemented on %s", PyString.reprOf(key), PyString.reprOf(type().name())));
+    }
     protected final PyRaise raiseUnaryOp(String op) {
         return PyTypeError.raiseFormat("bad operand type for %s: %s", op, PyString.reprOf(type().name()));
     }
@@ -147,6 +150,9 @@ public abstract class PyObject implements Comparable<PyObject> {
     }
     protected final PyRaise raiseUnhashable() {
         return PyTypeError.raise("unhashable type: " + PyString.reprOf(type().name()));
+    }
+    protected final PyRaise raiseMissingAttr(String key) {
+        return PyAttributeError.raiseFormat("%s object has no attribute %s", PyString.reprOf(type().name()), PyString.reprOf(key));
     }
     protected final String defaultRepr() { return "<" + type().name() + " object>"; }
 }
