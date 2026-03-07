@@ -55,10 +55,10 @@ public abstract class PyObject implements Comparable<PyObject> {
     public PyObject trueDivInPlace(PyObject rhs) { return trueDiv(rhs); }
     public PyObject xorInPlace(PyObject rhs) { return xor(rhs); }
 
-    public boolean ge(PyObject rhs) { throw unimplementedMethod("ge"); }
-    public boolean gt(PyObject rhs) { throw unimplementedMethod("gt"); }
-    public boolean le(PyObject rhs) { throw unimplementedMethod("le"); }
-    public boolean lt(PyObject rhs) { throw unimplementedMethod("lt"); }
+    public boolean ge(PyObject rhs) { throw raiseCompareOp(">=", rhs); }
+    public boolean gt(PyObject rhs) { throw raiseCompareOp(">", rhs); }
+    public boolean le(PyObject rhs) { throw raiseCompareOp("<=", rhs); }
+    public boolean lt(PyObject rhs) { throw raiseCompareOp("<", rhs); }
 
     public PyObject getItem(PyObject key) { throw unimplementedMethod("getItem"); }
     public void setItem(PyObject key, PyObject value) { throw unimplementedMethod("setItem"); }
@@ -132,6 +132,9 @@ public abstract class PyObject implements Comparable<PyObject> {
     }
     protected final PyRaise raiseBinOp(String op, PyObject rhs) {
         return PyTypeError.raiseFormat("unsupported operand type(s) for %s: %s and %s", op, PyString.reprOf(type().name()), PyString.reprOf(rhs.type().name()));
+    }
+    protected final PyRaise raiseCompareOp(String op, PyObject rhs) {
+        return PyTypeError.raiseFormat("'%s' not supported between instances of %s and %s", op, PyString.reprOf(type().name()), PyString.reprOf(rhs.type().name()));
     }
     protected final PyRaise raiseUnhashable() {
         return PyTypeError.raise("unhashable type: " + PyString.reprOf(type().name()));

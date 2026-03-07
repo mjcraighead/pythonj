@@ -161,6 +161,11 @@ public final class PySet extends PyObject {
         }
     }
 
+    @Override public boolean ge(PyObject rhs) { throw unimplementedMethod("ge"); }
+    @Override public boolean gt(PyObject rhs) { throw unimplementedMethod("gt"); }
+    @Override public boolean le(PyObject rhs) { throw unimplementedMethod("le"); }
+    @Override public boolean lt(PyObject rhs) { throw unimplementedMethod("lt"); }
+
     @Override public final boolean hasIter() { return true; }
     @Override public PySetIter iter() { return new PySetIter(items.iterator()); }
     @Override public PyBuiltinClass type() { return Runtime.pyglobal_set; }

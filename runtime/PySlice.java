@@ -13,6 +13,11 @@ public final class PySlice extends PyTruthyObject {
 
     @Override public PyBuiltinClass type() { return Runtime.pyglobal_slice; }
 
+    @Override public boolean ge(PyObject rhs) { throw unimplementedMethod("ge"); }
+    @Override public boolean gt(PyObject rhs) { throw unimplementedMethod("gt"); }
+    @Override public boolean le(PyObject rhs) { throw unimplementedMethod("le"); }
+    @Override public boolean lt(PyObject rhs) { throw unimplementedMethod("lt"); }
+
     @Override public boolean equals(Object rhs) {
         if (rhs instanceof PySlice rhsSlice) {
             return start.equals(rhsSlice.start) &&

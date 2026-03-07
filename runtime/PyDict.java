@@ -102,6 +102,11 @@ public final class PyDict extends PyObject {
         }
         @Override public PyObject rxor(PyObject rhs) { return xor(rhs); }
 
+        @Override public boolean ge(PyObject rhs) { throw unimplementedMethod("ge"); }
+        @Override public boolean gt(PyObject rhs) { throw unimplementedMethod("gt"); }
+        @Override public boolean le(PyObject rhs) { throw unimplementedMethod("le"); }
+        @Override public boolean lt(PyObject rhs) { throw unimplementedMethod("lt"); }
+
         @Override public boolean boolValue() { return !items.isEmpty(); }
         @Override public final boolean hasIter() { return true; }
         @Override public PyDictItemIter iter() { return new PyDictItemIter(items.entrySet().iterator()); }
@@ -168,6 +173,11 @@ public final class PyDict extends PyObject {
             return new PySet(result);
         }
         @Override public PyObject rxor(PyObject rhs) { return xor(rhs); }
+
+        @Override public boolean ge(PyObject rhs) { throw unimplementedMethod("ge"); }
+        @Override public boolean gt(PyObject rhs) { throw unimplementedMethod("gt"); }
+        @Override public boolean le(PyObject rhs) { throw unimplementedMethod("le"); }
+        @Override public boolean lt(PyObject rhs) { throw unimplementedMethod("lt"); }
 
         @Override public boolean boolValue() { return !items.isEmpty(); }
         @Override public final boolean hasIter() { return true; }

@@ -63,6 +63,11 @@ public final class PyTuple extends PyObject {
     }
     @Override public PyTuple rmul(PyObject rhs) { return mul(rhs); }
 
+    @Override public boolean ge(PyObject rhs) { throw unimplementedMethod("ge"); }
+    @Override public boolean gt(PyObject rhs) { throw unimplementedMethod("gt"); }
+    @Override public boolean le(PyObject rhs) { throw unimplementedMethod("le"); }
+    @Override public boolean lt(PyObject rhs) { throw unimplementedMethod("lt"); }
+
     @Override public PyObject getItem(PyObject key) {
         int index = Math.toIntExact(key.indexValue());
         if (index < 0) {
