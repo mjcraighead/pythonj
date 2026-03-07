@@ -84,7 +84,9 @@ public abstract class PyObject implements Comparable<PyObject> {
         throw PyAttributeError.raiseFormat("%s object has no attribute %s and no __dict__ for setting new attributes", PyString.reprOf(type().name()), PyString.reprOf(key));
     }
 
-    public PyObject call(PyObject args[], PyDict kwargs) { throw unimplementedMethod("call"); }
+    public PyObject call(PyObject args[], PyDict kwargs) {
+        throw PyTypeError.raise(PyString.reprOf(type().name()) + " object is not callable");
+    }
 
     public boolean hasIter() { return false; }
     public PyIter iter() {
