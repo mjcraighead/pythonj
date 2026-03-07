@@ -22,7 +22,7 @@ public abstract class PyObject implements Comparable<PyObject> {
     public PyObject pow(PyObject rhs) { throw raiseBinOp("** or pow()", rhs); }
     public PyObject rshift(PyObject rhs) { throw raiseBinOp(">>", rhs); }
     public PyObject sub(PyObject rhs) { return rhs.rsub(this); }
-    public PyObject trueDiv(PyObject rhs) { throw unimplementedMethod("trueDiv"); }
+    public PyObject trueDiv(PyObject rhs) { throw raiseBinOp("/", rhs); }
     public PyObject xor(PyObject rhs) { return rhs.rxor(this); }
 
     // Reverse ops -- XXX add the rest of these

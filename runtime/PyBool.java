@@ -113,6 +113,13 @@ public final class PyBool extends PyObject {
             return super.sub(rhs);
         }
     }
+    @Override public PyObject trueDiv(PyObject rhs) {
+        if ((rhs instanceof PyInt) || (rhs instanceof PyBool)) {
+            throw unimplementedMethod("trueDiv");
+        } else {
+            return super.trueDiv(rhs);
+        }
+    }
     @Override public PyObject xor(PyObject rhs) {
         if (rhs instanceof PyInt rhsInt) {
             return new PyInt(asInt() ^ rhsInt.value);
