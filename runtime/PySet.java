@@ -167,9 +167,9 @@ public final class PySet extends PyObject {
 
     @Override public boolean boolValue() { return !items.isEmpty(); }
     @Override public boolean contains(PyObject rhs) { return items.contains(rhs); }
-    @Override public boolean equals(Object rhsArg) {
-        if (rhsArg instanceof PySet rhs) {
-            return items.equals(rhs.items);
+    @Override public boolean equals(Object rhs) {
+        if (rhs instanceof PySet rhsSet) {
+            return items.equals(rhsSet.items);
         }
         return false;
     }

@@ -302,9 +302,9 @@ public final class PyDict extends PyObject {
 
     @Override public boolean boolValue() { return !items.isEmpty(); }
     @Override public boolean contains(PyObject rhs) { return items.containsKey(rhs); }
-    @Override public boolean equals(Object rhsArg) {
-        if (rhsArg instanceof PyDict rhs) {
-            return items.equals(rhs.items);
+    @Override public boolean equals(Object rhs) {
+        if (rhs instanceof PyDict rhsDict) {
+            return items.equals(rhsDict.items);
         }
         return false;
     }

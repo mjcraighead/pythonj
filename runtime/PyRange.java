@@ -50,13 +50,13 @@ public final class PyRange extends PyObject {
     @Override public boolean boolValue() {
         return len() != 0;
     }
-    @Override public boolean equals(Object rhsArg) {
-        if (rhsArg instanceof PyRange rhs) {
+    @Override public boolean equals(Object rhs) {
+        if (rhs instanceof PyRange rhsRange) {
             // XXX CPython does not compare end, it compares start/step/length, and also special cases empty ranges
             // This could be fixed, but creates potentially expensive hashing obligations as well
-            return (start == rhs.start) &&
-                   (end == rhs.end) &&
-                   (step == rhs.step);
+            return (start == rhsRange.start) &&
+                   (end == rhsRange.end) &&
+                   (step == rhsRange.step);
         }
         return false;
     }

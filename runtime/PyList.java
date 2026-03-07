@@ -156,9 +156,9 @@ public final class PyList extends PyObject {
 
     @Override public boolean boolValue() { return !items.isEmpty(); }
     @Override public boolean contains(PyObject rhs) { return items.contains(rhs); }
-    @Override public boolean equals(Object rhsArg) {
-        if (rhsArg instanceof PyList rhs) {
-            return items.equals(rhs.items);
+    @Override public boolean equals(Object rhs) {
+        if (rhs instanceof PyList rhsList) {
+            return items.equals(rhsList.items);
         }
         return false;
     }

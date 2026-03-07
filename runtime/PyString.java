@@ -194,9 +194,9 @@ public final class PyString extends PyObject {
     @Override public PyBuiltinClass type() { return Runtime.pyglobal_str; }
 
     @Override public boolean boolValue() { return !value.isEmpty(); }
-    @Override public boolean equals(Object rhsArg) {
-        if (rhsArg instanceof PyString rhs) {
-            return value.equals(rhs.value);
+    @Override public boolean equals(Object rhs) {
+        if (rhs instanceof PyString rhsStr) {
+            return value.equals(rhsStr.value);
         }
         return false;
     }
