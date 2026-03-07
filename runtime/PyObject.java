@@ -37,7 +37,7 @@ public abstract class PyObject implements Comparable<PyObject> {
     }
     public PyObject pow(PyObject rhs) { throw raiseBinOp("** or pow()", rhs); }
     public PyObject rshift(PyObject rhs) { throw raiseBinOp(">>", rhs); }
-    public PyObject sub(PyObject rhs) { throw unimplementedMethod("sub"); }
+    public PyObject sub(PyObject rhs) { return rhs.rsub(this); }
     public PyObject trueDiv(PyObject rhs) { throw unimplementedMethod("trueDiv"); }
     public PyObject xor(PyObject rhs) {
         if ((rhs instanceof PyDict.PyDictItems) || (rhs instanceof PyDict.PyDictKeys)) {
@@ -45,6 +45,9 @@ public abstract class PyObject implements Comparable<PyObject> {
         }
         throw raiseBinOp("^", rhs);
     }
+
+    // Reverse ops -- XXX add the rest of these
+    public PyObject rsub(PyObject rhs) { throw rhs.raiseBinOp("-", this); }
 
     // By default, in-place ops map to regular ops
     public PyObject addInPlace(PyObject rhs) { return add(rhs); }

@@ -91,6 +91,13 @@ public final class PyDict extends PyObject {
             Runtime.addIterableToCollection(rhsSet, rhs);
             return new PySet(PySet.xor(itemsSet, rhsSet));
         }
+        @Override public PyObject rsub(PyObject rhs) {
+            var itemsSet = materializeSet();
+            var rhsSet = new HashSet<PyObject>();
+            Runtime.addIterableToCollection(rhsSet, rhs);
+            rhsSet.removeAll(itemsSet);
+            return new PySet(rhsSet);
+        }
 
         @Override public boolean boolValue() { return !items.isEmpty(); }
         @Override public final boolean hasIter() { return true; }
@@ -148,6 +155,12 @@ public final class PyDict extends PyObject {
             var rhsSet = new HashSet<PyObject>();
             Runtime.addIterableToCollection(rhsSet, rhs);
             return new PySet(PySet.xor(items.keySet(), rhsSet));
+        }
+        @Override public PyObject rsub(PyObject rhs) {
+            var result = new HashSet<PyObject>();
+            Runtime.addIterableToCollection(result, rhs);
+            result.removeAll(items.keySet());
+            return new PySet(result);
         }
 
         @Override public boolean boolValue() { return !items.isEmpty(); }
