@@ -6,18 +6,31 @@ abstract class PyBaseException extends PyTruthyObject {
     protected final PyObject[] args;
     PyBaseException(PyObject[] _args) { args = _args; }
 
-    @Override public String repr() {
-        String typeName = type().name();
-        StringBuilder s = new StringBuilder();
-        s.append(typeName).append("(");
+    @Override public String str() {
+        if (args.length == 0) {
+            return "";
+        }
+        if (args.length == 1) {
+            return args[0].str();
+        }
+        StringBuilder s = new StringBuilder("(");
         for (int i = 0; i < args.length; i++) {
             if (i != 0) {
                 s.append(", ");
             }
             s.append(args[i].repr());
         }
-        s.append(")");
-        return s.toString();
+        return s.append(")").toString();
+    }
+    @Override public String repr() {
+        StringBuilder s = new StringBuilder(type().name()).append("(");
+        for (int i = 0; i < args.length; i++) {
+            if (i != 0) {
+                s.append(", ");
+            }
+            s.append(args[i].repr());
+        }
+        return s.append(")").toString();
     }
 }
 
@@ -62,6 +75,13 @@ final class PyIndexError extends PyLookupError {
 final class PyKeyError extends PyLookupError {
     PyKeyError(PyObject... _args) { super(_args); }
     @Override public PyBuiltinClass type() { return Runtime.pyglobal_KeyError; }
+    @Override public String str() { // special case for KeyError
+        if (args.length == 1) {
+            return args[0].repr();
+        } else {
+            return super.str();
+        }
+    }
 }
 
 final class PyStopIteration extends PyException {
