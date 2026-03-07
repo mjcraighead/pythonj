@@ -120,6 +120,23 @@ public final class PySet extends PyObject {
             return super.orInPlace(rhs);
         }
     }
+    @Override public PyObject sub(PyObject rhs) {
+        if (rhs instanceof PySet rhsSet) {
+            var result = new HashSet<PyObject>(items);
+            result.removeAll(rhsSet.items);
+            return new PySet(result);
+        } else {
+            return super.sub(rhs);
+        }
+    }
+    @Override public PyObject subInPlace(PyObject rhs) {
+        if (rhs instanceof PySet rhsSet) {
+            items.removeAll(rhsSet.items);
+            return this;
+        } else {
+            return super.subInPlace(rhs);
+        }
+    }
     @Override public PyObject xor(PyObject rhs) {
         if (rhs instanceof PySet rhsSet) {
             return new PySet(xor(items, rhsSet.items));
