@@ -95,6 +95,14 @@ public final class PySet extends PyObject {
             return super.and(rhs);
         }
     }
+    @Override public PyObject andInPlace(PyObject rhs) {
+        if (rhs instanceof PySet rhsSet) {
+            items.retainAll(rhsSet.items);
+            return this;
+        } else {
+            return super.andInPlace(rhs);
+        }
+    }
     @Override public PyObject or(PyObject rhs) {
         if (rhs instanceof PySet rhsSet) {
             var result = new HashSet<PyObject>(items);
@@ -104,11 +112,35 @@ public final class PySet extends PyObject {
             return super.or(rhs);
         }
     }
+    @Override public PyObject orInPlace(PyObject rhs) {
+        if (rhs instanceof PySet rhsSet) {
+            items.addAll(rhsSet.items);
+            return this;
+        } else {
+            return super.orInPlace(rhs);
+        }
+    }
     @Override public PyObject xor(PyObject rhs) {
         if (rhs instanceof PySet rhsSet) {
             return new PySet(xor(items, rhsSet.items));
         } else {
             return super.xor(rhs);
+        }
+    }
+    @Override public PyObject xorInPlace(PyObject rhs) {
+        if (rhs instanceof PySet rhsSet) {
+            if (rhsSet == this) {
+                items.clear();
+                return this;
+            }
+            for (var x: rhsSet.items) {
+                if (!items.add(x)) {
+                    items.remove(x);
+                }
+            }
+            return this;
+        } else {
+            return super.xorInPlace(rhs);
         }
     }
 

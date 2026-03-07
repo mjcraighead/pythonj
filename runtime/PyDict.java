@@ -252,6 +252,14 @@ public final class PyDict extends PyObject {
             return super.or(rhs);
         }
     }
+    @Override public PyObject orInPlace(PyObject rhs) {
+        if (rhs instanceof PyDict rhsDict) {
+            items.putAll(rhsDict.items);
+            return this;
+        } else {
+            return super.orInPlace(rhs);
+        }
+    }
 
     @Override public final boolean hasIter() { return true; }
     @Override public PyDictIter iter() { return new PyDictIter(items.keySet().iterator()); }
