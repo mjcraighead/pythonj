@@ -96,7 +96,11 @@ public final class PyString extends PyObject {
     PyString(String _value) { value = _value; }
 
     @Override public PyString add(PyObject rhs) {
-        return new PyString(value + ((PyString)rhs).value);
+        if (rhs instanceof PyString rhsStr) {
+            return new PyString(value + rhsStr.value);
+        } else {
+            throw PyTypeError.raise("can only concatenate str (not \"" + rhs.type().name() + "\") to str");
+        }
     }
     @Override public PyString mul(PyObject rhs) {
         if (!rhs.hasIndex()) {

@@ -30,6 +30,16 @@ public final class PyTuple extends PyObject {
     PyTuple(PyObject[] args) { items = args; } // WARNING: takes ownership of args from caller, does not copy
     PyTuple(ArrayList<PyObject> list) { items = Runtime.arrayListToArray(list); }
 
+    @Override public PyTuple add(PyObject rhs) {
+        if (rhs instanceof PyTuple rhsTuple) {
+            var list = new ArrayList<PyObject>();
+            Collections.addAll(list, items);
+            Collections.addAll(list, rhsTuple.items);
+            return new PyTuple(list);
+        } else {
+            throw PyTypeError.raise("can only concatenate tuple (not \"" + rhs.type().name() + "\") to tuple");
+        }
+    }
     @Override public PyTuple mul(PyObject rhs) {
         if (!rhs.hasIndex()) {
             throw PyTypeError.raise("can't multiply sequence by non-int of type " + PyString.reprOf(rhs.type().name()));
