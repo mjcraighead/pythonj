@@ -128,13 +128,11 @@ public final class PyTuple extends PyObject {
     @Override public long len() { return items.length; }
     @Override public String repr() {
         var s = new StringBuilder("(");
-        boolean first = true;
-        for (var x: items) {
-            if (!first) {
+        for (int i = 0; i < items.length; i++) {
+            if (i != 0) {
                 s.append(", ");
             }
-            first = false;
-            s.append(x.repr());
+            s.append(items[i].repr());
         }
         if (items.length == 1) {
             s.append(",");
