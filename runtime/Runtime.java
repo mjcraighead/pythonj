@@ -221,9 +221,7 @@ public final class Runtime {
             if (args.length != 0) {
                 PyObject arg = args[0];
                 if (arg instanceof PyDict dict) { // XXX support arbitrary mappings here
-                    for (var x: dict.items.entrySet()) {
-                        ret.setItem(x.getKey(), x.getValue());
-                    }
+                    ret.items.putAll(dict.items);
                 } else {
                     var iter = arg.iter();
                     long index = 0;
@@ -246,9 +244,7 @@ public final class Runtime {
                 }
             }
             if (kwargs != null) {
-                for (var x: kwargs.items.entrySet()) {
-                    ret.setItem(x.getKey(), x.getValue());
-                }
+                ret.items.putAll(kwargs.items);
             }
             return ret;
         }
