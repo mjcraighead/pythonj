@@ -77,6 +77,14 @@ public final class PyDict extends PyObject {
             Runtime.addIterableToCollection(itemsSet, rhs);
             return new PySet(itemsSet);
         }
+        @Override public PyObject sub(PyObject rhs) {
+            var itemsSet = materializeSet();
+            var iter = rhs.iter();
+            for (var item = iter.next(); item != null; item = iter.next()) {
+                itemsSet.remove(item);
+            }
+            return new PySet(itemsSet);
+        }
         @Override public PyObject xor(PyObject rhs) {
             var itemsSet = materializeSet();
             var rhsSet = new HashSet<PyObject>();
@@ -126,6 +134,14 @@ public final class PyDict extends PyObject {
         @Override public PyObject or(PyObject rhs) {
             var result = new HashSet<PyObject>(items.keySet());
             Runtime.addIterableToCollection(result, rhs);
+            return new PySet(result);
+        }
+        @Override public PyObject sub(PyObject rhs) {
+            var result = new HashSet<PyObject>(items.keySet());
+            var iter = rhs.iter();
+            for (var item = iter.next(); item != null; item = iter.next()) {
+                result.remove(item);
+            }
             return new PySet(result);
         }
         @Override public PyObject xor(PyObject rhs) {
