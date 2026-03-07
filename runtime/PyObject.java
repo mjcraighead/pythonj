@@ -11,7 +11,7 @@ public abstract class PyObject implements Comparable<PyObject> {
     public PyObject neg() { throw raiseUnaryOp("unary -"); }
     public PyObject abs() { throw raiseUnaryOp("abs()"); }
 
-    public PyObject add(PyObject rhs) { throw unimplementedMethod("add"); }
+    public PyObject add(PyObject rhs) { throw raiseBinOp("+", rhs); }
     public PyObject and(PyObject rhs) {
         if ((rhs instanceof PyDict.PyDictItems) || (rhs instanceof PyDict.PyDictKeys)) {
             return rhs.and(this); // remap T & SetLike -> SetLike & T implementation
@@ -135,9 +135,6 @@ public abstract class PyObject implements Comparable<PyObject> {
     // Helpers used by derived classes
     protected final UnsupportedOperationException unimplementedMethod(String method) {
         return new UnsupportedOperationException(String.format("%s unimplemented on %s", PyString.reprOf(method), PyString.reprOf(type().name())));
-    }
-    protected final UnsupportedOperationException unimplementedBinOp(String op, PyObject rhs) {
-        return new UnsupportedOperationException(String.format("%s %s %s is not implemented", type().name(), op, rhs.type().name()));
     }
     protected final PyRaise raiseUnaryOp(String op) {
         return PyTypeError.raiseFormat("bad operand type for %s: %s", op, PyString.reprOf(type().name()));
