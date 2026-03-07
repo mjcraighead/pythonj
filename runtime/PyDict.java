@@ -6,6 +6,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 
 public final class PyDict extends PyObject {
     private static final PyBuiltinClass iter_class_singleton = new PyBuiltinClass("dict_keyiterator", PyDictIter.class);
@@ -102,11 +103,40 @@ public final class PyDict extends PyObject {
         }
         @Override public PyObject rxor(PyObject rhs) { return xor(rhs); }
 
-        @Override public boolean ge(PyObject rhs) { throw unimplementedMethod("ge"); }
-        @Override public boolean gt(PyObject rhs) { throw unimplementedMethod("gt"); }
-        @Override public boolean le(PyObject rhs) { throw unimplementedMethod("le"); }
-        @Override public boolean lt(PyObject rhs) { throw unimplementedMethod("lt"); }
+        @Override public boolean ge(PyObject rhs) {
+            var rhsSet = rhs.asSetOrNull();
+            if (rhsSet != null) {
+                return PySet.ge(materializeSet(), rhsSet);
+            } else {
+                return super.ge(rhs);
+            }
+        }
+        @Override public boolean gt(PyObject rhs) {
+            var rhsSet = rhs.asSetOrNull();
+            if (rhsSet != null) {
+                return PySet.gt(materializeSet(), rhsSet);
+            } else {
+                return super.gt(rhs);
+            }
+        }
+        @Override public boolean le(PyObject rhs) {
+            var rhsSet = rhs.asSetOrNull();
+            if (rhsSet != null) {
+                return PySet.le(materializeSet(), rhsSet);
+            } else {
+                return super.le(rhs);
+            }
+        }
+        @Override public boolean lt(PyObject rhs) {
+            var rhsSet = rhs.asSetOrNull();
+            if (rhsSet != null) {
+                return PySet.lt(materializeSet(), rhsSet);
+            } else {
+                return super.lt(rhs);
+            }
+        }
 
+        @Override public Set<PyObject> asSetOrNull() { return materializeSet(); }
         @Override public boolean boolValue() { return !items.isEmpty(); }
         @Override public final boolean hasIter() { return true; }
         @Override public PyDictItemIter iter() { return new PyDictItemIter(items.entrySet().iterator()); }
@@ -174,11 +204,40 @@ public final class PyDict extends PyObject {
         }
         @Override public PyObject rxor(PyObject rhs) { return xor(rhs); }
 
-        @Override public boolean ge(PyObject rhs) { throw unimplementedMethod("ge"); }
-        @Override public boolean gt(PyObject rhs) { throw unimplementedMethod("gt"); }
-        @Override public boolean le(PyObject rhs) { throw unimplementedMethod("le"); }
-        @Override public boolean lt(PyObject rhs) { throw unimplementedMethod("lt"); }
+        @Override public boolean ge(PyObject rhs) {
+            var rhsSet = rhs.asSetOrNull();
+            if (rhsSet != null) {
+                return PySet.ge(items.keySet(), rhsSet);
+            } else {
+                return super.ge(rhs);
+            }
+        }
+        @Override public boolean gt(PyObject rhs) {
+            var rhsSet = rhs.asSetOrNull();
+            if (rhsSet != null) {
+                return PySet.gt(items.keySet(), rhsSet);
+            } else {
+                return super.gt(rhs);
+            }
+        }
+        @Override public boolean le(PyObject rhs) {
+            var rhsSet = rhs.asSetOrNull();
+            if (rhsSet != null) {
+                return PySet.le(items.keySet(), rhsSet);
+            } else {
+                return super.le(rhs);
+            }
+        }
+        @Override public boolean lt(PyObject rhs) {
+            var rhsSet = rhs.asSetOrNull();
+            if (rhsSet != null) {
+                return PySet.lt(items.keySet(), rhsSet);
+            } else {
+                return super.lt(rhs);
+            }
+        }
 
+        @Override public Set<PyObject> asSetOrNull() { return items.keySet(); }
         @Override public boolean boolValue() { return !items.isEmpty(); }
         @Override public final boolean hasIter() { return true; }
         @Override public PyDictIter iter() { return new PyDictIter(items.keySet().iterator()); }

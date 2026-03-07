@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: MIT
 
 import java.util.NoSuchElementException;
+import java.util.Set;
 
 public abstract class PyObject implements Comparable<PyObject> {
     // These all take and/or return boxed PyObjects
@@ -91,6 +92,7 @@ public abstract class PyObject implements Comparable<PyObject> {
     // These take and/or return unboxed values
     // Note: any subclass that overrides equals() must also override hashCode(), unless it is intentionally 
     // unhashable.  If a.equals(b) is true, then a.hashCode() == b.hashCode() must also be true.
+    public Set<PyObject> asSetOrNull() { return null; }
     public abstract boolean boolValue();
     @Override public final int compareTo(PyObject rhs) {
         if (equals(rhs)) {

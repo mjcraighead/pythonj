@@ -85,6 +85,19 @@ public final class PySet extends PyObject {
         }
         return result;
     }
+    static boolean ge(Set<PyObject> lhs, Set<PyObject> rhs) {
+        return lhs.containsAll(rhs);
+    }
+    // XXX This and lt() has some fragility with mutable sets and non-mathematical sets with size() check
+    static boolean gt(Set<PyObject> lhs, Set<PyObject> rhs) {
+        return (lhs.size() > rhs.size()) && lhs.containsAll(rhs);
+    }
+    static boolean le(Set<PyObject> lhs, Set<PyObject> rhs) {
+        return rhs.containsAll(lhs);
+    }
+    static boolean lt(Set<PyObject> lhs, Set<PyObject> rhs) {
+        return (rhs.size() > lhs.size()) && rhs.containsAll(lhs);
+    }
 
     @Override public PyObject and(PyObject rhs) {
         if (rhs instanceof PySet rhsSet) {
@@ -162,31 +175,35 @@ public final class PySet extends PyObject {
     }
 
     @Override public boolean ge(PyObject rhs) {
-        if (rhs instanceof PySet rhsSet) {
-            return items.containsAll(rhsSet.items);
+        var rhsSet = rhs.asSetOrNull();
+        if (rhsSet != null) {
+            return ge(items, rhsSet);
         } else {
-            throw unimplementedMethod("ge");
+            return super.ge(rhs);
         }
     }
     @Override public boolean gt(PyObject rhs) {
-        if (rhs instanceof PySet rhsSet) {
-            return (items.size() > rhsSet.items.size()) && items.containsAll(rhsSet.items);
+        var rhsSet = rhs.asSetOrNull();
+        if (rhsSet != null) {
+            return gt(items, rhsSet);
         } else {
-            throw unimplementedMethod("gt");
+            return super.gt(rhs);
         }
     }
     @Override public boolean le(PyObject rhs) {
-        if (rhs instanceof PySet rhsSet) {
-            return rhsSet.items.containsAll(items);
+        var rhsSet = rhs.asSetOrNull();
+        if (rhsSet != null) {
+            return le(items, rhsSet);
         } else {
-            throw unimplementedMethod("le");
+            return super.le(rhs);
         }
     }
     @Override public boolean lt(PyObject rhs) {
-        if (rhs instanceof PySet rhsSet) {
-            return (rhsSet.items.size() > items.size()) && rhsSet.items.containsAll(items);
+        var rhsSet = rhs.asSetOrNull();
+        if (rhsSet != null) {
+            return lt(items, rhsSet);
         } else {
-            throw unimplementedMethod("lt");
+            return super.lt(rhs);
         }
     }
 
@@ -194,6 +211,7 @@ public final class PySet extends PyObject {
     @Override public PySetIter iter() { return new PySetIter(items.iterator()); }
     @Override public PyBuiltinClass type() { return Runtime.pyglobal_set; }
 
+    @Override public Set<PyObject> asSetOrNull() { return items; }
     @Override public boolean boolValue() { return !items.isEmpty(); }
     @Override public boolean contains(PyObject rhs) { return items.contains(rhs); }
     @Override public boolean equals(Object rhs) {
