@@ -126,6 +126,30 @@ public final class Runtime {
     }
     public static final pyfunc_any pyglobal_any = new pyfunc_any();
 
+    static final class pyfunc_ascii extends PyBuiltinFunction {
+        pyfunc_ascii() { super("ascii"); }
+        @Override public PyString call(PyObject[] args, PyDict kwargs) {
+            var arg = exactlyOneArg(args, kwargs);
+            String r = arg.repr();
+            var s = new StringBuilder();
+            for (int i = 0; i < r.length(); i++) {
+                char c = r.charAt(i);
+                if (c < 0x80) {
+                    s.append(c);
+                } else if (c <= 0xFF) {
+                    s.append("\\x");
+                    s.append("0123456789abcdef".charAt(c >> 4));
+                    s.append("0123456789abcdef".charAt(c & 15));
+                } else {
+                    s.append("\\u");
+                    s.append(String.format("%04x", (int)c));
+                }
+            }
+            return new PyString(s.toString());
+        }
+    }
+    public static final pyfunc_ascii pyglobal_ascii = new pyfunc_ascii();
+
     static final class pyfunc_bool extends PyBuiltinClass {
         pyfunc_bool() { super("bool", PyBool.class); }
         @Override public PyBool call(PyObject[] args, PyDict kwargs) {
