@@ -174,11 +174,7 @@ public final class PyList extends PyObject {
         }
     }
     @Override public PyList addInPlace(PyObject rhs) {
-        if (rhs instanceof PyList rhsList) {
-            items.addAll(rhsList.items);
-        } else {
-            pymethod_extend(rhs);
-        }
+        pymethod_extend(rhs);
         return this;
     }
     @Override public PyList mul(PyObject rhs) {
@@ -333,7 +329,11 @@ public final class PyList extends PyObject {
         return new PyInt(n);
     }
     public PyNone pymethod_extend(PyObject arg) {
-        Runtime.addIterableToCollection(items, arg);
+        if (arg instanceof PyList argList) {
+            items.addAll(argList.items); // safe for x.extend(x)
+        } else {
+            Runtime.addIterableToCollection(items, arg);
+        }
         return PyNone.singleton;
     }
     public PyInt pymethod_index(PyObject arg) {
