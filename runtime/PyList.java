@@ -119,7 +119,16 @@ public final class PyList extends PyObject {
         PyListMethod_sort(PyList _self) { super(_self); }
         @Override public String methodName() { return "sort"; }
         @Override public PyNone call(PyObject[] args, PyDict kwargs) {
-            if ((kwargs != null) && kwargs.boolValue()) {
+            if ((kwargs != null) && kwargs.boolValue()) { // XXX Handle more cases correctly here
+                if (kwargs.len() > 2) {
+                    throw PyTypeError.raiseFormat("sort() takes at most 2 keyword arguments (%d given)", kwargs.len());
+                }
+                for (var x: kwargs.items.entrySet()) {
+                    PyString key = (PyString)x.getKey(); // PyString validated at call site
+                    if (!key.value.equals("key") && !key.value.equals("reverse")) {
+                        throw PyTypeError.raise("sort() got an unexpected keyword argument " + key.repr());
+                    }
+                }
                 throw new IllegalArgumentException("list.sort() does not accept kwargs");
             }
             if (args.length > 2) {
