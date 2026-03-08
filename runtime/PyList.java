@@ -206,10 +206,21 @@ public final class PyList extends PyObject {
         switch (key) {
             case "append": return new PyListMethod_append(this);
             case "clear": return new PyListMethod_clear(this);
+            case "copy": throw unimplementedAttr(key);
             case "count": return new PyListMethod_count(this);
             case "extend": return new PyListMethod_extend(this);
             case "index": return new PyListMethod_index(this);
-            default: return super.getAttr(key);
+            case "insert": throw unimplementedAttr(key);
+            case "pop": throw unimplementedAttr(key);
+            case "remove": throw unimplementedAttr(key);
+            case "reverse": throw unimplementedAttr(key);
+            case "sort": throw unimplementedAttr(key);
+            default:
+                if (key.startsWith("__")) {
+                    return super.getAttr(key);
+                } else {
+                    throw raiseMissingAttr(key);
+                }
         }
     }
     @Override public int hashCode() { throw raiseUnhashable(); }

@@ -228,9 +228,27 @@ public final class PySet extends PyObject {
         switch (key) {
             case "add": return new PySetMethod_add(this);
             case "clear": return new PySetMethod_clear(this);
+            case "copy": throw unimplementedAttr(key);
+            case "difference": throw unimplementedAttr(key);
+            case "difference_update": throw unimplementedAttr(key);
             case "discard": return new PySetMethod_discard(this);
+            case "intersection": throw unimplementedAttr(key);
+            case "intersection_update": throw unimplementedAttr(key);
+            case "isdisjoint": throw unimplementedAttr(key);
+            case "issubset": throw unimplementedAttr(key);
+            case "issuperset": throw unimplementedAttr(key);
+            case "pop": throw unimplementedAttr(key);
+            case "remove": throw unimplementedAttr(key);
+            case "symmetric_difference": throw unimplementedAttr(key);
+            case "symmetric_difference_update": throw unimplementedAttr(key);
+            case "union": throw unimplementedAttr(key);
             case "update": return new PySetMethod_update(this);
-            default: return super.getAttr(key);
+            default:
+                if (key.startsWith("__")) {
+                    return super.getAttr(key);
+                } else {
+                    throw raiseMissingAttr(key);
+                }
         }
     }
     @Override public int hashCode() { throw raiseUnhashable(); }
