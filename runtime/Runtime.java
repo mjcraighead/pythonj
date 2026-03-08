@@ -313,9 +313,15 @@ public final class Runtime {
             requireNoKwArgs(kwargs, funcName);
             requireMinArgs(args, 2, funcName);
             requireMaxArgs(args, 3, funcName);
-            // Currently we never use args[2] (default) because this will throw a Java exception
             if (args[1] instanceof PyString name) {
-                return args[0].getAttr(name.value);
+                try {
+                    return args[0].getAttr(name.value);
+                } catch (PyRaise r) {
+                    if ((args.length == 3) && (r.exc instanceof PyAttributeError)) {
+                        return args[2];
+                    }
+                    throw r;
+                }
             } else {
                 throw PyTypeError.raiseFormat("attribute name must be string, not %s", PyString.reprOf(args[1].type().name()));
             }
