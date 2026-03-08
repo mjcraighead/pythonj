@@ -338,6 +338,16 @@ public final class PyDict extends PyObject {
             return self.pymethod_pop(args[0], (args.length == 2) ? args[1] : null);
         }
     }
+    private static final class PyDictMethod_setdefault extends PyBuiltinMethod<PyDict> {
+        PyDictMethod_setdefault(PyDict _self) { super(_self); }
+        @Override public String methodName() { return "setdefault"; }
+        @Override public PyObject call(PyObject[] args, PyDict kwargs) {
+            Runtime.requireNoKwArgs(kwargs, "dict.setdefault");
+            Runtime.requireMinArgs(args, 1, "setdefault");
+            Runtime.requireMaxArgs(args, 2, "setdefault");
+            return self.pymethod_setdefault(args[0], (args.length == 2) ? args[1] : PyNone.singleton);
+        }
+    }
     private static final class PyDictMethod_values extends PyBuiltinMethod<PyDict> {
         PyDictMethod_values(PyDict _self) { super(_self); }
         @Override public String methodName() { return "values"; }
@@ -408,7 +418,7 @@ public final class PyDict extends PyObject {
             case "keys": return new PyDictMethod_keys(this);
             case "pop": return new PyDictMethod_pop(this);
             case "popitem": throw unimplementedAttr(key);
-            case "setdefault": throw unimplementedAttr(key);
+            case "setdefault": return new PyDictMethod_setdefault(this);
             case "update": throw unimplementedAttr(key);
             case "values": return new PyDictMethod_values(this);
             default:
@@ -472,6 +482,14 @@ public final class PyDict extends PyObject {
             return defaultValue;
         }
         throw new PyRaise(new PyKeyError(key));
+    }
+    public PyObject pymethod_setdefault(PyObject key, PyObject defaultValue) {
+        PyObject value = items.get(key);
+        if (value != null) {
+            return value;
+        }
+        items.put(key, defaultValue);
+        return defaultValue;
     }
     public PyDictValues pymethod_values() { return new PyDictValues(items); }
 }
