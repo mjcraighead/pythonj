@@ -724,11 +724,14 @@ class PythonjVisitor(ast.NodeVisitor):
                 else:
                     format_spec = JavaStrLiteral("")
                 expr = self.visit(val.value)
-                # XXX !a is unsupported; should call the ascii() builtin, as there is no __ascii__ dunder
                 if val.conversion == ord('s'):
                     expr = JavaCreateObject('PyString', [JavaMethodCall(expr, 'str', [])])
                 elif val.conversion == ord('r'):
                     expr = JavaCreateObject('PyString', [JavaMethodCall(expr, 'repr', [])])
+                elif val.conversion == ord('a'):
+                    expr = JavaMethodCall(JavaField(JavaIdentifier('Runtime'), 'pyglobal_ascii'), 'call', [
+                        JavaCreateArray('PyObject', [expr]), JavaIdentifier('null')
+                    ])
                 elif val.conversion != -1:
                     self.error(val.lineno, f'unsupported f string conversion type {val.conversion}')
                 vals.append(JavaMethodCall(expr, 'format', [format_spec]))
