@@ -44,6 +44,30 @@ public final class PyBytes extends PyObject {
         }
         return ret;
     }
+    public static boolean contains(byte[] lhs, byte[] rhs) {
+        int lhsLen = lhs.length;
+        int rhsLen = rhs.length;
+        if (rhsLen == 0) {
+            return true;
+        }
+        if (rhsLen > lhsLen) {
+            return false;
+        }
+        for (int i = 0; i <= lhsLen - rhsLen; i++) {
+            if (Arrays.mismatch(lhs, i, i + rhsLen, rhs, 0, rhsLen) == -1) {
+                return true;
+            }
+        }
+        return false;
+    }
+    public static boolean contains(byte[] lhs, byte rhs) {
+        for (byte b: lhs) {
+            if (b == rhs) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     @Override public PyBytes add(PyObject rhs) {
         if (rhs instanceof PyBytes rhsBytes) {
@@ -120,6 +144,23 @@ public final class PyBytes extends PyObject {
     @Override public PyBuiltinClass type() { return Runtime.pyglobal_bytes; }
 
     @Override public boolean boolValue() { return value.length != 0; }
+    @Override public boolean contains(PyObject rhs) {
+        if (rhs instanceof PyBytes rhsBytes) {
+            return contains(value, rhsBytes.value);
+        } else if (rhs instanceof PyByteArray rhsByteArray) {
+            return contains(value, rhsByteArray.value);
+        } else if (rhs instanceof PyBool rhsBool) {
+            return contains(value, (byte)rhsBool.asInt());
+        } else if (rhs instanceof PyInt rhsInt) {
+            long v = rhsInt.value;
+            if ((v < 0) || (v > 255)) {
+                throw PyValueError.raise("byte must be in range(0, 256)");
+            }
+            return contains(value, (byte)v);
+        } else {
+            throw PyTypeError.raise("a bytes-like object is required, not " + PyString.reprOf(rhs.type().name()));
+        }
+    }
     @Override public boolean equals(Object rhs) {
         if (rhs instanceof PyBytes rhsBytes) {
             return Arrays.equals(value, rhsBytes.value);

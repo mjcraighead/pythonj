@@ -130,6 +130,23 @@ public final class PyByteArray extends PyObject {
     @Override public PyBuiltinClass type() { return Runtime.pyglobal_bytearray; }
 
     @Override public boolean boolValue() { return value.length != 0; }
+    @Override public boolean contains(PyObject rhs) {
+        if (rhs instanceof PyBytes rhsBytes) {
+            return PyBytes.contains(value, rhsBytes.value);
+        } else if (rhs instanceof PyByteArray rhsByteArray) {
+            return PyBytes.contains(value, rhsByteArray.value);
+        } else if (rhs instanceof PyBool rhsBool) {
+            return PyBytes.contains(value, (byte)rhsBool.asInt());
+        } else if (rhs instanceof PyInt rhsInt) {
+            long v = rhsInt.value;
+            if ((v < 0) || (v > 255)) {
+                throw PyValueError.raise("byte must be in range(0, 256)");
+            }
+            return PyBytes.contains(value, (byte)v);
+        } else {
+            throw PyTypeError.raise("a bytes-like object is required, not " + PyString.reprOf(rhs.type().name()));
+        }
+    }
     @Override public boolean equals(Object rhs) {
         if (rhs instanceof PyBytes rhsBytes) {
             return Arrays.equals(value, rhsBytes.value);
