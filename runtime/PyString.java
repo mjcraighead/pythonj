@@ -227,15 +227,51 @@ public final class PyString extends PyObject {
     }
 
     @Override public PyString getItem(PyObject key) {
-        int index = Math.toIntExact(key.indexValue());
-        int length = value.length();
-        if ((index < -length) || (index >= length)) {
-            throw PyIndexError.raise("string index out of range");
+        if (key instanceof PySlice slice) {
+            if (slice.step != PyNone.singleton) {
+                throw new UnsupportedOperationException("string slicing with step unsupported");
+            }
+            int length = value.length();
+            int start = 0;
+            int stop = length;
+            if (slice.start != PyNone.singleton) {
+                if (!slice.start.hasIndex()) {
+                    throw PyTypeError.raise("slice indices must be integers or None or have an __index__ method");
+                }
+                start = Math.toIntExact(slice.start.indexValue());
+                if (start < 0) {
+                    start += length;
+                    start = Math.max(start, 0);
+                } else {
+                    start = Math.min(start, length);
+                }
+            }
+            if (slice.stop != PyNone.singleton) {
+                if (!slice.stop.hasIndex()) {
+                    throw PyTypeError.raise("slice indices must be integers or None or have an __index__ method");
+                }
+                stop = Math.toIntExact(slice.stop.indexValue());
+                if (stop < 0) {
+                    stop += length;
+                } else {
+                    stop = Math.min(stop, length);
+                }
+            }
+            if (stop < start) {
+                stop = start;
+            }
+            return new PyString(value.substring(start, stop));
+        } else {
+            int index = Math.toIntExact(key.indexValue());
+            int length = value.length();
+            if ((index < -length) || (index >= length)) {
+                throw PyIndexError.raise("string index out of range");
+            }
+            if (index < 0) {
+                index += length;
+            }
+            return new PyString(String.valueOf(value.charAt(index)));
         }
-        if (index < 0) {
-            index += length;
-        }
-        return new PyString(String.valueOf(value.charAt(index)));
     }
     @Override public void delItem(PyObject key) {
         throw PyTypeError.raise(PyString.reprOf(type().name()) + " object doesn't support item deletion");
