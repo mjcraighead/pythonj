@@ -65,13 +65,24 @@ public final class PyString extends PyObject {
         PyStringMethod_split(PyString _self) { super(_self); }
         @Override public String methodName() { return "split"; }
         @Override public PyList call(PyObject[] args, PyDict kwargs) {
-            if (args.length != 1) {
-                throw new IllegalArgumentException("str.split() takes 1 argument");
-            }
-            if ((kwargs != null) && kwargs.boolValue()) {
+            if ((kwargs != null) && kwargs.boolValue()) { // XXX Handle more cases correctly here
+                if (kwargs.len() > 2) {
+                    throw PyTypeError.raiseFormat("split() takes at most 2 keyword arguments (%d given)", kwargs.len());
+                }
+                for (var x: kwargs.items.entrySet()) {
+                    PyString key = (PyString)x.getKey(); // PyString validated at call site
+                    if (!key.value.equals("sep") && !key.value.equals("maxsplit")) {
+                        throw PyTypeError.raise("split() got an unexpected keyword argument " + key.repr());
+                    }
+                }
                 throw new IllegalArgumentException("str.split() does not accept kwargs");
             }
-            return self.pymethod_split(args[0]);
+            if (args.length > 2) {
+                throw PyTypeError.raiseFormat("split() takes at most 2 arguments (%d given)", args.length);
+            }
+            PyObject sep = (args.length >= 1) ? args[0] : PyNone.singleton;
+            PyObject maxsplit = (args.length >= 2) ? args[1] : PyInt.singleton_neg1;
+            return self.pymethod_split(sep, maxsplit);
         }
     }
     private static final class PyStringMethod_upper extends PyBuiltinMethod<PyString> {
@@ -272,13 +283,24 @@ public final class PyString extends PyObject {
         return new PyString(s.toString());
     }
     public PyString pymethod_lower() { return new PyString(value.toLowerCase(Locale.ROOT)); }
-    public PyList pymethod_split(PyObject arg) {
-        // XXX Implement zero-args case
-        // XXX Implement delimiters not of length 1
-        if (arg.len() != 1) {
+    public PyList pymethod_split(PyObject sep, PyObject maxsplit) {
+        if (sep == PyNone.singleton) {
+            throw new UnsupportedOperationException("sep=None unsupported");
+        }
+        if (!maxsplit.hasIndex()) {
+            throw PyTypeError.raise(PyString.reprOf(maxsplit.type().name()) + " object cannot be interpreted as an integer");
+        }
+        if (!(sep instanceof PyString sepStr)) {
+            throw PyTypeError.raise("must be str or None, not " + sep.type().name());
+        }
+        if (sepStr.len() != 1) {
             throw new UnsupportedOperationException("multi-character split tokens unsupported");
         }
-        char split = ((PyString)arg).value.charAt(0);
+        long m = maxsplit.indexValue();
+        if (m != -1) {
+            throw new UnsupportedOperationException("maxsplit=-1 is the only value supported");
+        }
+        char split = sepStr.value.charAt(0);
         var ret = new PyList();
         var s = new StringBuilder();
         for (int i = 0; i < value.length(); i++) {
