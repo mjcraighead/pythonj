@@ -51,10 +51,7 @@ public final class PySet extends PyObject {
         @Override public String methodName() { return "update"; }
         @Override public PyNone call(PyObject[] args, PyDict kwargs) {
             Runtime.requireNoKwArgs(kwargs, "set.update");
-            if (args.length != 1) {
-                throw new IllegalArgumentException("set.update() takes 1 argument");
-            }
-            return self.pymethod_update(args[0]);
+            return self.pymethod_update(args);
         }
     }
 
@@ -281,8 +278,10 @@ public final class PySet extends PyObject {
         items.remove(arg);
         return PyNone.singleton;
     }
-    public PyNone pymethod_update(PyObject arg) {
-        Runtime.addIterableToCollection(items, arg);
+    public PyNone pymethod_update(PyObject[] args) {
+        for (var arg: args) {
+            Runtime.addIterableToCollection(items, arg);
+        }
         return PyNone.singleton;
     }
 }
