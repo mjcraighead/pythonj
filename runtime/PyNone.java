@@ -32,6 +32,7 @@ public final class PyNone extends PyObject {
     @Override public PyBuiltinClass type() { return class_singleton; }
 
     @Override public boolean boolValue() { return false; }
+    @Override public boolean contains(PyObject rhs) { throw raiseUnsupportedContains(); }
     @Override public boolean equals(Object rhs) { return this == rhs; } // always works because this is a singleton
     @Override public int hashCode() { return 0; }
     @Override public String repr() { return "None"; }

@@ -6,6 +6,7 @@ abstract class PyBaseException extends PyTruthyObject {
     protected final PyObject[] args;
     PyBaseException(PyObject[] _args) { args = _args; }
 
+    @Override public boolean contains(PyObject rhs) { throw raiseUnsupportedContains(); }
     @Override public String str() {
         if (args.length == 0) {
             return "";

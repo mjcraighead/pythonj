@@ -223,6 +223,7 @@ public final class PyInt extends PyObject {
     @Override public PyBuiltinClass type() { return Runtime.pyglobal_int; }
 
     @Override public boolean boolValue() { return value != 0; }
+    @Override public boolean contains(PyObject rhs) { throw raiseUnsupportedContains(); }
     @Override public boolean equals(Object rhs) {
         if (rhs instanceof PyInt rhsInt) {
             return value == rhsInt.value;

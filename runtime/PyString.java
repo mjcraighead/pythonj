@@ -217,6 +217,13 @@ public final class PyString extends PyObject {
     @Override public PyBuiltinClass type() { return Runtime.pyglobal_str; }
 
     @Override public boolean boolValue() { return !value.isEmpty(); }
+    @Override public boolean contains(PyObject rhs) {
+        if (rhs instanceof PyString rhsStr) {
+            return value.contains(rhsStr.value);
+        } else {
+            throw PyTypeError.raise("'in <string>' requires string as left operand, not " + rhs.type().name());
+        }
+    }
     @Override public boolean equals(Object rhs) {
         if (rhs instanceof PyString rhsStr) {
             return value.equals(rhsStr.value);
