@@ -59,6 +59,8 @@ public final class PyList extends PyObject {
         @Override public String methodName() { return "index"; }
         @Override public PyInt call(PyObject[] args, PyDict kwargs) {
             Runtime.requireNoKwArgs(kwargs, "list.index");
+            Runtime.requireMinArgs(args, 1, "index");
+            Runtime.requireMaxArgs(args, 3, "index");
             if (args.length != 1) {
                 throw new IllegalArgumentException("list.index() takes 1 argument");
             }
