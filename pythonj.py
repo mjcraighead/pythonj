@@ -199,8 +199,11 @@ class JavaPyConstant(JavaExpr):
         elif self.value is False or self.value is True:
             return f'PyBool.{str(self.value).lower()}_singleton'
         elif isinstance(self.value, int):
-            if 0 <= self.value <= 1:
-                return f'PyInt.singleton_{self.value}'
+            if -1 <= self.value <= 1:
+                if self.value < 0:
+                    return f'PyInt.singleton_neg{-self.value}'
+                else:
+                    return f'PyInt.singleton_{self.value}'
             ctx.all_ints.add(self.value)
             return int_name(self.value)
         elif isinstance(self.value, str):
