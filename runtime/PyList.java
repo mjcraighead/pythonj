@@ -165,10 +165,10 @@ public final class PyList extends PyObject {
 
     @Override public PyList add(PyObject rhs) {
         if (rhs instanceof PyList rhsList) {
-            var ret = new PyList();
-            ret.items.addAll(items);
-            ret.items.addAll(rhsList.items);
-            return ret;
+            var list = new ArrayList<PyObject>(Math.addExact(items.size(), rhsList.items.size()));
+            list.addAll(items);
+            list.addAll(rhsList.items);
+            return new PyList(list);
         } else {
             throw PyTypeError.raise("can only concatenate list (not \"" + rhs.type().name() + "\") to list");
         }
