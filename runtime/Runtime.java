@@ -640,17 +640,17 @@ public final class Runtime {
             requireNoKwArgs(kwargs, typeName);
             requireMinArgs(args, 1, typeName);
             requireMaxArgs(args, 3, typeName);
-            long start = 0, end, step = 1;
+            long start = 0, stop, step = 1;
             if (args.length == 1) {
-                end = args[0].indexValue();
+                stop = args[0].indexValue();
             } else {
                 start = args[0].indexValue();
-                end = args[1].indexValue();
+                stop = args[1].indexValue();
                 if (args.length == 3) {
                     step = args[2].indexValue();
                 }
             }
-            return new PyRange(start, end, step);
+            return new PyRange(start, stop, step);
         }
     }
     public static final pyfunc_range pyglobal_range = new pyfunc_range();
@@ -696,18 +696,18 @@ public final class Runtime {
             requireMinArgs(args, 1, typeName);
             requireMaxArgs(args, 3, typeName);
             PyObject start = PyNone.singleton;
-            PyObject end;
+            PyObject stop;
             PyObject step = PyNone.singleton;
             if (args.length == 1) {
-                end = args[0];
+                stop = args[0];
             } else {
                 start = args[0];
-                end = args[1];
+                stop = args[1];
                 if (args.length == 3) {
                     step = args[2];
                 }
             }
-            return new PySlice(start, end, step);
+            return new PySlice(start, stop, step);
         }
     }
     public static final pyfunc_slice pyglobal_slice = new pyfunc_slice();

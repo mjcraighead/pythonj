@@ -3,11 +3,11 @@
 // SPDX-License-Identifier: MIT
 
 public final class PySlice extends PyTruthyObject {
-    public final PyObject start, end, step;
+    public final PyObject start, stop, step;
 
-    PySlice(PyObject _start, PyObject _end, PyObject _step) {
+    PySlice(PyObject _start, PyObject _stop, PyObject _step) {
         start = _start;
-        end = _end;
+        stop = _stop;
         step = _step;
     }
 
@@ -21,12 +21,12 @@ public final class PySlice extends PyTruthyObject {
     @Override public boolean equals(Object rhs) {
         if (rhs instanceof PySlice rhsSlice) {
             return start.equals(rhsSlice.start) &&
-                   end.equals(rhsSlice.end) &&
+                   stop.equals(rhsSlice.stop) &&
                    step.equals(rhsSlice.step);
         }
         return false;
     }
     @Override public String repr() {
-        return String.format("slice(%s, %s, %s)", start.repr(), end.repr(), step.repr());
+        return String.format("slice(%s, %s, %s)", start.repr(), stop.repr(), step.repr());
     }
 }

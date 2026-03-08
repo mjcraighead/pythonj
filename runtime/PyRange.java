@@ -6,21 +6,21 @@ public final class PyRange extends PyObject {
     private static final PyBuiltinClass iter_class_singleton = new PyBuiltinClass("range_iterator", PyRangeIter.class);
     static final class PyRangeIter extends PyIter {
         private long start;
-        private final long end, step;
+        private final long stop, step;
 
         PyRangeIter(PyRange r) {
             start = r.start;
-            end = r.end;
+            stop = r.stop;
             step = r.step;
         }
 
         @Override public PyInt next() {
             if (step > 0) {
-                if (start >= end) {
+                if (start >= stop) {
                     return null;
                 }
             } else {
-                if (start <= end) {
+                if (start <= stop) {
                     return null;
                 }
             }
@@ -32,14 +32,14 @@ public final class PyRange extends PyObject {
         @Override public PyBuiltinClass type() { return iter_class_singleton; }
     };
 
-    private final long start, end, step;
+    private final long start, stop, step;
 
-    PyRange(long _start, long _end, long _step) {
+    PyRange(long _start, long _stop, long _step) {
         if (_step == 0) {
             throw new IllegalArgumentException("range() step cannot be zero");
         }
         start = _start;
-        end = _end;
+        stop = _stop;
         step = _step;
     }
 
@@ -57,10 +57,10 @@ public final class PyRange extends PyObject {
     }
     @Override public boolean equals(Object rhs) {
         if (rhs instanceof PyRange rhsRange) {
-            // XXX CPython does not compare end, it compares start/step/length, and also special cases empty ranges
+            // XXX CPython does not compare stop, it compares start/step/length, and also special cases empty ranges
             // This could be fixed, but creates potentially expensive hashing obligations as well
             return (start == rhsRange.start) &&
-                   (end == rhsRange.end) &&
+                   (stop == rhsRange.stop) &&
                    (step == rhsRange.step);
         }
         return false;
@@ -68,22 +68,22 @@ public final class PyRange extends PyObject {
     @Override public long len() {
         // XXX Math needs some overflow checks/handling
         if (step > 0) {
-            if (start >= end) {
+            if (start >= stop) {
                 return 0;
             }
-            return (end - start + step - 1) / step;
+            return (stop - start + step - 1) / step;
         } else {
-            if (start <= end) {
+            if (start <= stop) {
                 return 0;
             }
-            return (start - end - step - 1) / (-step);
+            return (start - stop - step - 1) / (-step);
         }
     }
     @Override public String repr() {
         if (step == 1) {
-            return String.format("range(%d, %d)", start, end);
+            return String.format("range(%d, %d)", start, stop);
         } else {
-            return String.format("range(%d, %d, %d)", start, end, step);
+            return String.format("range(%d, %d, %d)", start, stop, step);
         }
     }
 }
