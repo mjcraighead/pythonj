@@ -338,6 +338,15 @@ public final class PyDict extends PyObject {
             return self.pymethod_pop(args[0], (args.length == 2) ? args[1] : null);
         }
     }
+    private static final class PyDictMethod_popitem extends PyBuiltinMethod<PyDict> {
+        PyDictMethod_popitem(PyDict _self) { super(_self); }
+        @Override public String methodName() { return "popitem"; }
+        @Override public PyObject call(PyObject[] args, PyDict kwargs) {
+            Runtime.requireNoKwArgs(kwargs, "dict.popitem");
+            Runtime.requireExactArgsAlt(args, 0, "dict.popitem");
+            return self.pymethod_popitem();
+        }
+    }
     private static final class PyDictMethod_setdefault extends PyBuiltinMethod<PyDict> {
         PyDictMethod_setdefault(PyDict _self) { super(_self); }
         @Override public String methodName() { return "setdefault"; }
@@ -417,7 +426,7 @@ public final class PyDict extends PyObject {
             case "items": return new PyDictMethod_items(this);
             case "keys": return new PyDictMethod_keys(this);
             case "pop": return new PyDictMethod_pop(this);
-            case "popitem": throw unimplementedAttr(key);
+            case "popitem": return new PyDictMethod_popitem(this);
             case "setdefault": return new PyDictMethod_setdefault(this);
             case "update": throw unimplementedAttr(key);
             case "values": return new PyDictMethod_values(this);
@@ -482,6 +491,19 @@ public final class PyDict extends PyObject {
             return defaultValue;
         }
         throw new PyRaise(new PyKeyError(key));
+    }
+    public PyObject pymethod_popitem() {
+        Map.Entry<PyObject, PyObject> last = null;
+        for (var e: items.entrySet()) {
+            last = e;
+        }
+        if (last == null) {
+            throw PyKeyError.raise("popitem(): dictionary is empty");
+        }
+        var key = last.getKey();
+        var value = last.getValue();
+        items.remove(key);
+        return new PyTuple(new PyObject[] {key, value});
     }
     public PyObject pymethod_setdefault(PyObject key, PyObject defaultValue) {
         PyObject value = items.get(key);

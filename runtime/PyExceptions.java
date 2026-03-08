@@ -91,6 +91,10 @@ final class PyKeyError extends PyLookupError {
             return super.str();
         }
     }
+
+    static PyRaise raise(String msg) {
+        return new PyRaise(new PyKeyError(new PyString(msg)));
+    }
 }
 
 final class PyStopIteration extends PyException {
