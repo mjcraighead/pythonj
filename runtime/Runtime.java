@@ -327,6 +327,28 @@ public final class Runtime {
     }
     public static final pyfunc_getattr pyglobal_getattr = new pyfunc_getattr();
 
+    static final class pyfunc_hasattr extends PyBuiltinFunction {
+        pyfunc_hasattr() { super("hasattr"); }
+        @Override public PyBool call(PyObject[] args, PyDict kwargs) {
+            requireNoKwArgs(kwargs, funcName);
+            requireExactArgs(args, 2, funcName);
+            if (args[1] instanceof PyString name) {
+                try {
+                    args[0].getAttr(name.value);
+                } catch (PyRaise r) {
+                    if (r.exc instanceof PyAttributeError) {
+                        return PyBool.false_singleton;
+                    }
+                    throw r;
+                }
+                return PyBool.true_singleton;
+            } else {
+                throw PyTypeError.raiseFormat("attribute name must be string, not %s", PyString.reprOf(args[1].type().name()));
+            }
+        }
+    }
+    public static final pyfunc_hasattr pyglobal_hasattr = new pyfunc_hasattr();
+
     static final class pyfunc_hash extends PyBuiltinFunction {
         pyfunc_hash() { super("hash"); }
         @Override public PyInt call(PyObject[] args, PyDict kwargs) {
