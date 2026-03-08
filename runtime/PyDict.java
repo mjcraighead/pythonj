@@ -328,6 +328,16 @@ public final class PyDict extends PyObject {
             return self.pymethod_keys();
         }
     }
+    private static final class PyDictMethod_pop extends PyBuiltinMethod<PyDict> {
+        PyDictMethod_pop(PyDict _self) { super(_self); }
+        @Override public String methodName() { return "pop"; }
+        @Override public PyObject call(PyObject[] args, PyDict kwargs) {
+            Runtime.requireNoKwArgs(kwargs, "dict.pop");
+            Runtime.requireMinArgs(args, 1, "pop");
+            Runtime.requireMaxArgs(args, 2, "pop");
+            return self.pymethod_pop(args[0], (args.length == 2) ? args[1] : null);
+        }
+    }
     private static final class PyDictMethod_values extends PyBuiltinMethod<PyDict> {
         PyDictMethod_values(PyDict _self) { super(_self); }
         @Override public String methodName() { return "values"; }
@@ -396,7 +406,7 @@ public final class PyDict extends PyObject {
             case "get": return new PyDictMethod_get(this);
             case "items": return new PyDictMethod_items(this);
             case "keys": return new PyDictMethod_keys(this);
-            case "pop": throw unimplementedAttr(key);
+            case "pop": return new PyDictMethod_pop(this);
             case "popitem": throw unimplementedAttr(key);
             case "setdefault": throw unimplementedAttr(key);
             case "update": throw unimplementedAttr(key);
@@ -453,5 +463,15 @@ public final class PyDict extends PyObject {
     public PyObject pymethod_get(PyObject arg0, PyObject arg1) { return items.getOrDefault(arg0, arg1); }
     public PyDictItems pymethod_items() { return new PyDictItems(items); }
     public PyDictKeys pymethod_keys() { return new PyDictKeys(items); }
+    public PyObject pymethod_pop(PyObject key, PyObject defaultValue) {
+        PyObject value = items.remove(key);
+        if (value != null) {
+            return value;
+        }
+        if (defaultValue != null) {
+            return defaultValue;
+        }
+        throw new PyRaise(new PyKeyError(key));
+    }
     public PyDictValues pymethod_values() { return new PyDictValues(items); }
 }
