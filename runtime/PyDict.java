@@ -357,6 +357,15 @@ public final class PyDict extends PyObject {
             return self.pymethod_setdefault(args[0], (args.length == 2) ? args[1] : PyNone.singleton);
         }
     }
+    private static final class PyDictMethod_update extends PyBuiltinMethod<PyDict> {
+        PyDictMethod_update(PyDict _self) { super(_self); }
+        @Override public String methodName() { return "update"; }
+        @Override public PyNone call(PyObject[] args, PyDict kwargs) {
+            Runtime.requireMaxArgs(args, 1, "update");
+            self.pymethod_update(args, kwargs);
+            return PyNone.singleton;
+        }
+    }
     private static final class PyDictMethod_values extends PyBuiltinMethod<PyDict> {
         PyDictMethod_values(PyDict _self) { super(_self); }
         @Override public String methodName() { return "values"; }
@@ -428,7 +437,7 @@ public final class PyDict extends PyObject {
             case "pop": return new PyDictMethod_pop(this);
             case "popitem": return new PyDictMethod_popitem(this);
             case "setdefault": return new PyDictMethod_setdefault(this);
-            case "update": throw unimplementedAttr(key);
+            case "update": return new PyDictMethod_update(this);
             case "values": return new PyDictMethod_values(this);
             default:
                 if (key.startsWith("__")) {
@@ -514,6 +523,43 @@ public final class PyDict extends PyObject {
         }
         items.put(key, defaultValue);
         return defaultValue;
+    }
+    public void pymethod_update(PyObject[] args, PyDict kwargs) {
+        if (args.length == 1) {
+            var arg = args[0];
+            if (arg instanceof PyDict dict) { // XXX support arbitrary mappings here
+                items.putAll(dict.items);
+            } else {
+                var iter = arg.iter();
+                long index = 0;
+                for (var item = iter.next(); item != null; item = iter.next(), index++) {
+                    if (!item.hasIter()) {
+                        throw PyTypeError.raise("object is not iterable");
+                    }
+                    var itemIter = item.iter();
+                    var key = itemIter.next();
+                    if (key == null) {
+                        throw PyValueError.raiseFormat("dictionary update sequence element #%d has length 0; 2 is required", index);
+                    }
+                    var value = itemIter.next();
+                    if (value == null) {
+                        throw PyValueError.raiseFormat("dictionary update sequence element #%d has length 1; 2 is required", index);
+                    }
+                    var nextItem = itemIter.next();
+                    if (nextItem != null) {
+                        long length = 3;
+                        while (itemIter.next() != null) {
+                            length++;
+                        }
+                        throw PyValueError.raiseFormat("dictionary update sequence element #%d has length %d; 2 is required", index, length);
+                    }
+                    items.put(key, value);
+                }
+            }
+        }
+        if (kwargs != null) {
+            items.putAll(kwargs.items);
+        }
     }
     public PyDictValues pymethod_values() { return new PyDictValues(items); }
 }

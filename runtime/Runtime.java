@@ -218,34 +218,7 @@ public final class Runtime {
                 throw new IllegalArgumentException("dict() takes 0 or 1 arguments");
             }
             var ret = new PyDict();
-            if (args.length != 0) {
-                PyObject arg = args[0];
-                if (arg instanceof PyDict dict) { // XXX support arbitrary mappings here
-                    ret.items.putAll(dict.items);
-                } else {
-                    var iter = arg.iter();
-                    long index = 0;
-                    for (var item = iter.next(); item != null; item = iter.next(), index++) {
-                        if (!item.hasIter()) {
-                            throw PyTypeError.raise("object is not iterable");
-                        }
-                        var itemIter = item.iter();
-                        PyObject key = itemIter.next();
-                        if (key == null) {
-                            throw PyValueError.raiseFormat("dictionary update sequence element #%d has length 0; 2 is required", index);
-                        }
-                        PyObject value = itemIter.next();
-                        if (value == null) {
-                            throw PyValueError.raiseFormat("dictionary update sequence element #%d has length 1; 2 is required", index);
-                        }
-                        nextRequireNull(itemIter);
-                        ret.setItem(key, value);
-                    }
-                }
-            }
-            if (kwargs != null) {
-                ret.items.putAll(kwargs.items);
-            }
+            ret.pymethod_update(args, kwargs);
             return ret;
         }
     }
