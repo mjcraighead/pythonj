@@ -85,6 +85,35 @@ public final class PyString extends PyObject {
             return self.pymethod_split(sep, maxsplit);
         }
     }
+    private static final class PyStringMethod_startswith extends PyBuiltinMethod<PyString> {
+        PyStringMethod_startswith(PyString _self) { super(_self); }
+        @Override public String methodName() { return "startswith"; }
+        @Override public PyBool call(PyObject[] args, PyDict kwargs) {
+            Runtime.requireNoKwArgs(kwargs, "str.startswith");
+            Runtime.requireMinArgs(args, 1, "startswith");
+            Runtime.requireMaxArgs(args, 3, "startswith");
+            if (args[0] instanceof PyTuple) {
+                throw new UnsupportedOperationException("str.startswith() does not yet support a tuple as prefix");
+            }
+            if (!(args[0] instanceof PyString prefix)) {
+                throw PyTypeError.raise("startswith first arg must be str or a tuple of str, not " + args[0].type().name());
+            }
+            PyObject start = (args.length >= 2) ? args[1] : PyNone.singleton;
+            PyObject end = (args.length >= 3) ? args[2] : PyNone.singleton;
+            if (end != PyNone.singleton) {
+                throw new UnsupportedOperationException("str.startswith() does not yet support 'end' argument");
+            }
+            if (start == PyNone.singleton) {
+                return self.pymethod_startswith(prefix);
+            } else {
+                if (!start.hasIndex()) {
+                    throw PyTypeError.raise("slice indices must be integers or None or have an __index__ method");
+                }
+                long startIndex = start.indexValue();
+                return self.pymethod_startswith(prefix, startIndex);
+            }
+        }
+    }
     private static final class PyStringMethod_upper extends PyBuiltinMethod<PyString> {
         PyStringMethod_upper(PyString _self) { super(_self); }
         @Override public String methodName() { return "upper"; }
@@ -236,6 +265,7 @@ public final class PyString extends PyObject {
             case "join": return new PyStringMethod_join(this);
             case "lower": return new PyStringMethod_lower(this);
             case "split": return new PyStringMethod_split(this);
+            case "startswith": return new PyStringMethod_startswith(this);
             case "upper": return new PyStringMethod_upper(this);
             default: return super.getAttr(key);
         }
@@ -321,6 +351,12 @@ public final class PyString extends PyObject {
         }
         ret.items.add(new PyString(s.toString()));
         return ret;
+    }
+    public PyBool pymethod_startswith(PyString prefix) {
+        return PyBool.create(value.startsWith(prefix.value));
+    }
+    public PyBool pymethod_startswith(PyString prefix, long start) {
+        return PyBool.create(value.startsWith(prefix.value, Math.toIntExact(start)));
     }
     public PyString pymethod_upper() { return new PyString(value.toUpperCase(Locale.ROOT)); }
 }
