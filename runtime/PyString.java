@@ -31,9 +31,8 @@ public final class PyString extends PyObject {
         @Override public String methodName() { return "find"; }
         @Override public PyInt call(PyObject[] args, PyDict kwargs) {
             Runtime.requireNoKwArgs(kwargs, "str.find");
-            if ((args.length < 1) || (args.length > 3)) {
-                throw new IllegalArgumentException("str.find() takes between 1 and 3 arguments");
-            }
+            Runtime.requireMinArgs(args, 1, "find");
+            Runtime.requireMaxArgs(args, 3, "find");
             if (args.length != 1) {
                 throw new UnsupportedOperationException("str.find() currently only supports 1 argument");
             }
@@ -49,9 +48,7 @@ public final class PyString extends PyObject {
         @Override public String methodName() { return "join"; }
         @Override public PyString call(PyObject[] args, PyDict kwargs) {
             Runtime.requireNoKwArgs(kwargs, "str.join");
-            if (args.length != 1) {
-                throw new IllegalArgumentException("str.join() takes 1 argument");
-            }
+            Runtime.requireExactArgsAlt(args, 1, "str.join");
             return self.pymethod_join(args[0]);
         }
     }
@@ -60,9 +57,7 @@ public final class PyString extends PyObject {
         @Override public String methodName() { return "lower"; }
         @Override public PyString call(PyObject[] args, PyDict kwargs) {
             Runtime.requireNoKwArgs(kwargs, "str.lower");
-            if (args.length != 0) {
-                throw new IllegalArgumentException("str.lower() takes 0 arguments");
-            }
+            Runtime.requireExactArgsAlt(args, 0, "str.lower");
             return self.pymethod_lower();
         }
     }
@@ -84,9 +79,7 @@ public final class PyString extends PyObject {
         @Override public String methodName() { return "upper"; }
         @Override public PyString call(PyObject[] args, PyDict kwargs) {
             Runtime.requireNoKwArgs(kwargs, "str.upper");
-            if (args.length != 0) {
-                throw new IllegalArgumentException("str.upper() takes 0 arguments");
-            }
+            Runtime.requireExactArgsAlt(args, 0, "str.upper");
             return self.pymethod_upper();
         }
     }
