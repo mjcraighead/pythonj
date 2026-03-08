@@ -291,6 +291,15 @@ public final class PyDict extends PyObject {
             return self.pymethod_clear();
         }
     }
+    private static final class PyDictMethod_copy extends PyBuiltinMethod<PyDict> {
+        PyDictMethod_copy(PyDict _self) { super(_self); }
+        @Override public String methodName() { return "copy"; }
+        @Override public PyDict call(PyObject[] args, PyDict kwargs) {
+            Runtime.requireNoKwArgs(kwargs, "dict.copy");
+            Runtime.requireExactArgsAlt(args, 0, "dict.copy");
+            return self.pymethod_copy();
+        }
+    }
     private static final class PyDictMethod_get extends PyBuiltinMethod<PyDict> {
         PyDictMethod_get(PyDict _self) { super(_self); }
         @Override public String methodName() { return "get"; }
@@ -389,7 +398,7 @@ public final class PyDict extends PyObject {
     @Override public PyObject getAttr(String key) {
         switch (key) {
             case "clear": return new PyDictMethod_clear(this);
-            case "copy": throw unimplementedAttr(key);
+            case "copy": return new PyDictMethod_copy(this);
             case "fromkeys": throw unimplementedAttr(key);
             case "get": return new PyDictMethod_get(this);
             case "items": return new PyDictMethod_items(this);
@@ -442,6 +451,11 @@ public final class PyDict extends PyObject {
     public PyNone pymethod_clear() {
         items.clear();
         return PyNone.singleton;
+    }
+    public PyDict pymethod_copy() {
+        var ret = new PyDict();
+        ret.items.putAll(items);
+        return ret;
     }
     public PyObject pymethod_get(PyObject arg0, PyObject arg1) { return items.getOrDefault(arg0, arg1); }
     public PyDictItems pymethod_items() { return new PyDictItems(items); }
