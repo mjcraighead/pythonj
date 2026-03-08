@@ -1274,7 +1274,7 @@ def main() -> None:
     start = time.perf_counter()
     for py_name in py_names:
         py_path = f'tests/{py_name}.py'
-        with open(py_path) as f:
+        with open(py_path, encoding='utf-8') as f:
             node = ast.parse(f.read())
         visitor = PythonjVisitor(py_path)
         visitor.visit(node)
