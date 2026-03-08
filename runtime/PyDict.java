@@ -305,10 +305,9 @@ public final class PyDict extends PyObject {
         @Override public String methodName() { return "get"; }
         @Override public PyObject call(PyObject[] args, PyDict kwargs) {
             Runtime.requireNoKwArgs(kwargs, "dict.get");
-            if (args.length != 2) {
-                throw new IllegalArgumentException("dict.get() takes 2 arguments");
-            }
-            return self.pymethod_get(args[0], args[1]);
+            Runtime.requireMinArgs(args, 1, "get");
+            Runtime.requireMaxArgs(args, 2, "get");
+            return self.pymethod_get(args[0], (args.length == 2) ? args[1] : PyNone.singleton);
         }
     }
     private static final class PyDictMethod_items extends PyBuiltinMethod<PyDict> {
@@ -316,9 +315,7 @@ public final class PyDict extends PyObject {
         @Override public String methodName() { return "items"; }
         @Override public PyDictItems call(PyObject[] args, PyDict kwargs) {
             Runtime.requireNoKwArgs(kwargs, "dict.items");
-            if (args.length != 0) {
-                throw new IllegalArgumentException("dict.items() takes no arguments");
-            }
+            Runtime.requireExactArgsAlt(args, 0, "dict.items");
             return self.pymethod_items();
         }
     }
@@ -327,9 +324,7 @@ public final class PyDict extends PyObject {
         @Override public String methodName() { return "keys"; }
         @Override public PyDictKeys call(PyObject[] args, PyDict kwargs) {
             Runtime.requireNoKwArgs(kwargs, "dict.keys");
-            if (args.length != 0) {
-                throw new IllegalArgumentException("dict.keys() takes no arguments");
-            }
+            Runtime.requireExactArgsAlt(args, 0, "dict.keys");
             return self.pymethod_keys();
         }
     }
@@ -338,9 +333,7 @@ public final class PyDict extends PyObject {
         @Override public String methodName() { return "values"; }
         @Override public PyDictValues call(PyObject[] args, PyDict kwargs) {
             Runtime.requireNoKwArgs(kwargs, "dict.values");
-            if (args.length != 0) {
-                throw new IllegalArgumentException("dict.values() takes no arguments");
-            }
+            Runtime.requireExactArgsAlt(args, 0, "dict.values");
             return self.pymethod_values();
         }
     }
