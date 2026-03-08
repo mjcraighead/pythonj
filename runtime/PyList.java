@@ -4,6 +4,7 @@
 
 import java.util.Arrays;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 
 public final class PyList extends PyObject {
@@ -36,6 +37,15 @@ public final class PyList extends PyObject {
             return self.pymethod_clear();
         }
     }
+    private static final class PyListMethod_copy extends PyBuiltinMethod<PyList> {
+        PyListMethod_copy(PyList _self) { super(_self); }
+        @Override public String methodName() { return "copy"; }
+        @Override public PyList call(PyObject[] args, PyDict kwargs) {
+            Runtime.requireNoKwArgs(kwargs, "list.copy");
+            Runtime.requireExactArgsAlt(args, 0, "list.copy");
+            return self.pymethod_copy();
+        }
+    }
     private static final class PyListMethod_count extends PyBuiltinMethod<PyList> {
         PyListMethod_count(PyList _self) { super(_self); }
         @Override public String methodName() { return "count"; }
@@ -65,6 +75,59 @@ public final class PyList extends PyObject {
                 throw new IllegalArgumentException("list.index() takes 1 argument");
             }
             return self.pymethod_index(args[0]);
+        }
+    }
+    private static final class PyListMethod_insert extends PyBuiltinMethod<PyList> {
+        PyListMethod_insert(PyList _self) { super(_self); }
+        @Override public String methodName() { return "insert"; }
+        @Override public PyNone call(PyObject[] args, PyDict kwargs) {
+            Runtime.requireNoKwArgs(kwargs, "list.insert");
+            Runtime.requireExactArgs(args, 2, "insert");
+            return self.pymethod_insert(args[0], args[1]);
+        }
+    }
+    private static final class PyListMethod_pop extends PyBuiltinMethod<PyList> {
+        PyListMethod_pop(PyList _self) { super(_self); }
+        @Override public String methodName() { return "pop"; }
+        @Override public PyObject call(PyObject[] args, PyDict kwargs) {
+            Runtime.requireNoKwArgs(kwargs, "list.pop");
+            Runtime.requireMinArgs(args, 0, "pop");
+            Runtime.requireMaxArgs(args, 1, "pop");
+            PyObject index = (args.length >= 1) ? args[0] : PyInt.singleton_neg1;
+            return self.pymethod_pop(index);
+        }
+    }
+    private static final class PyListMethod_remove extends PyBuiltinMethod<PyList> {
+        PyListMethod_remove(PyList _self) { super(_self); }
+        @Override public String methodName() { return "remove"; }
+        @Override public PyNone call(PyObject[] args, PyDict kwargs) {
+            Runtime.requireNoKwArgs(kwargs, "list.remove");
+            Runtime.requireExactArgsAlt(args, 1, "list.remove");
+            return self.pymethod_remove(args[0]);
+        }
+    }
+    private static final class PyListMethod_reverse extends PyBuiltinMethod<PyList> {
+        PyListMethod_reverse(PyList _self) { super(_self); }
+        @Override public String methodName() { return "reverse"; }
+        @Override public PyNone call(PyObject[] args, PyDict kwargs) {
+            Runtime.requireNoKwArgs(kwargs, "list.reverse");
+            Runtime.requireExactArgsAlt(args, 0, "list.reverse");
+            return self.pymethod_reverse();
+        }
+    }
+    private static final class PyListMethod_sort extends PyBuiltinMethod<PyList> {
+        PyListMethod_sort(PyList _self) { super(_self); }
+        @Override public String methodName() { return "sort"; }
+        @Override public PyNone call(PyObject[] args, PyDict kwargs) {
+            if ((kwargs != null) && kwargs.boolValue()) {
+                throw new IllegalArgumentException("list.sort() does not accept kwargs");
+            }
+            if (args.length > 2) {
+                throw PyTypeError.raiseFormat("sort() takes at most 2 arguments (%d given)", args.length);
+            } else if (args.length != 0) {
+                throw PyTypeError.raise("sort() takes no positional arguments");
+            }
+            return self.pymethod_sort();
         }
     }
 
@@ -208,15 +271,15 @@ public final class PyList extends PyObject {
         switch (key) {
             case "append": return new PyListMethod_append(this);
             case "clear": return new PyListMethod_clear(this);
-            case "copy": throw unimplementedAttr(key);
+            case "copy": return new PyListMethod_copy(this);
             case "count": return new PyListMethod_count(this);
             case "extend": return new PyListMethod_extend(this);
             case "index": return new PyListMethod_index(this);
-            case "insert": throw unimplementedAttr(key);
-            case "pop": throw unimplementedAttr(key);
-            case "remove": throw unimplementedAttr(key);
-            case "reverse": throw unimplementedAttr(key);
-            case "sort": throw unimplementedAttr(key);
+            case "insert": return new PyListMethod_insert(this);
+            case "pop": return new PyListMethod_pop(this);
+            case "remove": return new PyListMethod_remove(this);
+            case "reverse": return new PyListMethod_reverse(this);
+            case "sort": return new PyListMethod_sort(this);
             default:
                 if (key.startsWith("__")) {
                     return super.getAttr(key);
@@ -248,6 +311,9 @@ public final class PyList extends PyObject {
         items.clear();
         return PyNone.singleton;
     }
+    public PyList pymethod_copy() {
+        return new PyList(new ArrayList<>(items));
+    }
     public PyInt pymethod_count(PyObject arg) {
         long n = 0;
         for (var x: items) {
@@ -267,5 +333,46 @@ public final class PyList extends PyObject {
             throw PyValueError.raise("list.index(x): x not in list");
         }
         return new PyInt(index);
+    }
+    public PyNone pymethod_insert(PyObject indexObj, PyObject value) {
+        int index = Math.toIntExact(indexObj.indexValue());
+        if (index < 0) {
+            index += items.size();
+        }
+        index = Math.max(index, 0);
+        index = Math.min(index, items.size());
+        items.add(index, value);
+        return PyNone.singleton;
+    }
+    public PyObject pymethod_pop(PyObject indexObj) {
+        if (items.isEmpty()) {
+            throw PyIndexError.raise("pop from empty list");
+        }
+        int index = Math.toIntExact(indexObj.indexValue());
+        if (index < 0) {
+            index += items.size();
+        }
+        try {
+            return items.remove(index);
+        } catch (IndexOutOfBoundsException e) {
+            throw PyIndexError.raise("pop index out of range");
+        }
+    }
+    public PyNone pymethod_remove(PyObject value) {
+        for (int i = 0; i < items.size(); i++) {
+            if (items.get(i).equals(value)) {
+                items.remove(i);
+                return PyNone.singleton;
+            }
+        }
+        throw PyValueError.raise("list.remove(x): x not in list");
+    }
+    public PyNone pymethod_reverse() {
+        Collections.reverse(items);
+        return PyNone.singleton;
+    }
+    public PyNone pymethod_sort() {
+        Collections.sort(items);
+        return PyNone.singleton;
     }
 }
