@@ -92,26 +92,10 @@ public final class PyString extends PyObject {
             Runtime.requireNoKwArgs(kwargs, "str.startswith");
             Runtime.requireMinArgs(args, 1, "startswith");
             Runtime.requireMaxArgs(args, 3, "startswith");
-            if (args[0] instanceof PyTuple) {
-                throw new UnsupportedOperationException("str.startswith() does not yet support a tuple as prefix");
-            }
-            if (!(args[0] instanceof PyString prefix)) {
-                throw PyTypeError.raise("startswith first arg must be str or a tuple of str, not " + args[0].type().name());
-            }
+            PyObject prefix = args[0];
             PyObject start = (args.length >= 2) ? args[1] : PyNone.singleton;
             PyObject end = (args.length >= 3) ? args[2] : PyNone.singleton;
-            if (end != PyNone.singleton) {
-                throw new UnsupportedOperationException("str.startswith() does not yet support 'end' argument");
-            }
-            if (start == PyNone.singleton) {
-                return self.pymethod_startswith(prefix);
-            } else {
-                if (!start.hasIndex()) {
-                    throw PyTypeError.raise("slice indices must be integers or None or have an __index__ method");
-                }
-                long startIndex = start.indexValue();
-                return self.pymethod_startswith(prefix, startIndex);
-            }
+            return self.pymethod_startswith(prefix, start, end);
         }
     }
     private static final class PyStringMethod_upper extends PyBuiltinMethod<PyString> {
@@ -434,11 +418,38 @@ public final class PyString extends PyObject {
         ret.items.add(new PyString(s.toString()));
         return ret;
     }
-    public PyBool pymethod_startswith(PyString prefix) {
-        return PyBool.create(value.startsWith(prefix.value));
-    }
-    public PyBool pymethod_startswith(PyString prefix, long start) {
-        return PyBool.create(value.startsWith(prefix.value, Math.toIntExact(start)));
+    public PyBool pymethod_startswith(PyObject prefix, PyObject start, PyObject end) {
+        if (end != PyNone.singleton) {
+            throw new UnsupportedOperationException("str.startswith() does not yet support 'end' argument");
+        }
+        int startIndex = 0;
+        if (start != PyNone.singleton) {
+            if (!start.hasIndex()) {
+                throw PyTypeError.raise("slice indices must be integers or None or have an __index__ method");
+            }
+            startIndex = Math.toIntExact(start.indexValue());
+            if (startIndex < 0) {
+                startIndex += value.length();
+                startIndex = Math.max(startIndex, 0);
+            }
+        }
+        if (prefix instanceof PyString prefixStr) {
+            return PyBool.create(value.startsWith(prefixStr.value, startIndex));
+        } else if (prefix instanceof PyTuple prefixTuple) {
+            for (int i = 0; i < prefixTuple.items.length; i++) {
+                var item = prefixTuple.items[i];
+                if (item instanceof PyString itemStr) {
+                    if (value.startsWith(itemStr.value, startIndex)) {
+                        return PyBool.true_singleton;
+                    }
+                } else {
+                    throw PyTypeError.raise("tuple for startswith must only contain str, not " + item.type().name());
+                }
+            }
+            return PyBool.false_singleton;
+        } else {
+            throw PyTypeError.raise("startswith first arg must be str or a tuple of str, not " + prefix.type().name());
+        }
     }
     public PyString pymethod_upper() { return new PyString(value.toUpperCase(Locale.ROOT)); }
 }
