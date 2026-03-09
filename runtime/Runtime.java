@@ -24,7 +24,7 @@ abstract class PyType extends PyTruthyObject {
             return super.or(rhs);
         }
     }
-    @Override public boolean contains(PyObject rhs) { throw raiseUnsupportedContains(); }
+    @Override public boolean contains(PyObject rhs) { return defaultContains(rhs); }
 
     public abstract String name();
 }

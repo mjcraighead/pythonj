@@ -170,7 +170,7 @@ public final class PyBool extends PyObject {
     @Override public Runtime.pyfunc_bool type() { return Runtime.pyglobal_bool; }
 
     @Override public boolean boolValue() { return value; }
-    @Override public boolean contains(PyObject rhs) { throw raiseUnsupportedContains(); }
+    @Override public boolean contains(PyObject rhs) { return defaultContains(rhs); }
     @Override public boolean equals(Object rhs) {
         if (rhs instanceof PyInt rhsInt) {
             return asInt() == rhsInt.value;

@@ -20,6 +20,8 @@ public final class PyEnumerate extends PyIter {
         i = Math.incrementExact(i);
         return ret;
     }
+
+    @Override public boolean contains(PyObject rhs) { return defaultContains(rhs); }
     @Override public String repr() { return defaultRepr(); }
     @Override public PyBuiltinClass type() { return Runtime.pyglobal_enumerate; }
 }
