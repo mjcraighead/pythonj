@@ -44,7 +44,7 @@ class PyBuiltinClass extends PyType {
         }
     }
     @Override public final String repr() { return "<class '" + typeName + "'>"; }
-    @Override public final Runtime.pyfunc_type type() { return Runtime.pyglobal_type; }
+    @Override public final Runtime.pyclass_type type() { return Runtime.pyglobal_type; }
     @Override public String name() { return typeName; }
 }
 
@@ -150,8 +150,8 @@ public final class Runtime {
     }
     public static final pyfunc_ascii pyglobal_ascii = new pyfunc_ascii();
 
-    static final class pyfunc_bool extends PyBuiltinClass {
-        pyfunc_bool() { super("bool", PyBool.class); }
+    static final class pyclass_bool extends PyBuiltinClass {
+        pyclass_bool() { super("bool", PyBool.class); }
         @Override public PyBool call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, typeName);
             requireMaxArgs(args, 1, typeName);
@@ -161,10 +161,10 @@ public final class Runtime {
             return PyBool.false_singleton;
         }
     }
-    public static final pyfunc_bool pyglobal_bool = new pyfunc_bool();
+    public static final pyclass_bool pyglobal_bool = new pyclass_bool();
 
-    static final class pyfunc_bytearray extends PyBuiltinClass {
-        pyfunc_bytearray() { super("bytearray", PyByteArray.class); }
+    static final class pyclass_bytearray extends PyBuiltinClass {
+        pyclass_bytearray() { super("bytearray", PyByteArray.class); }
         @Override public PyByteArray call(PyObject[] args, PyDict kwargs) {
             if (args.length > 1) {
                 throw new IllegalArgumentException("bytearray() takes 0 or 1 arguments");
@@ -191,10 +191,10 @@ public final class Runtime {
             return new PyByteArray(b.toByteArray());
         }
     }
-    public static final pyfunc_bytearray pyglobal_bytearray = new pyfunc_bytearray();
+    public static final pyclass_bytearray pyglobal_bytearray = new pyclass_bytearray();
 
-    static final class pyfunc_bytes extends PyBuiltinClass {
-        pyfunc_bytes() { super("bytes", PyBytes.class); }
+    static final class pyclass_bytes extends PyBuiltinClass {
+        pyclass_bytes() { super("bytes", PyBytes.class); }
         @Override public PyBytes call(PyObject[] args, PyDict kwargs) {
             if (args.length > 1) {
                 throw new IllegalArgumentException("bytes() takes 0 or 1 arguments");
@@ -221,7 +221,7 @@ public final class Runtime {
             return new PyBytes(b.toByteArray());
         }
     }
-    public static final pyfunc_bytes pyglobal_bytes = new pyfunc_bytes();
+    public static final pyclass_bytes pyglobal_bytes = new pyclass_bytes();
 
     static final class pyfunc_chr extends PyBuiltinFunction {
         pyfunc_chr() { super("chr"); }
@@ -236,8 +236,8 @@ public final class Runtime {
     }
     public static final pyfunc_chr pyglobal_chr = new pyfunc_chr();
 
-    static final class pyfunc_dict extends PyBuiltinClass {
-        pyfunc_dict() { super("dict", PyDict.class); }
+    static final class pyclass_dict extends PyBuiltinClass {
+        pyclass_dict() { super("dict", PyDict.class); }
         @Override public PyDict call(PyObject[] args, PyDict kwargs) {
             if (args.length > 1) {
                 throw new IllegalArgumentException("dict() takes 0 or 1 arguments");
@@ -253,8 +253,8 @@ public final class Runtime {
             }
         }
 
-        static final class PyDictClassMethod_fromkeys extends PyBuiltinMethod<pyfunc_dict> {
-            PyDictClassMethod_fromkeys(pyfunc_dict _self) { super(_self); }
+        static final class PyDictClassMethod_fromkeys extends PyBuiltinMethod<pyclass_dict> {
+            PyDictClassMethod_fromkeys(pyclass_dict _self) { super(_self); }
             @Override public String methodName() { return "fromkeys"; }
             @Override public PyDict call(PyObject[] args, PyDict kwargs) {
                 Runtime.requireNoKwArgs(kwargs, "dict.fromkeys");
@@ -271,10 +271,10 @@ public final class Runtime {
             }
         }
     }
-    public static final pyfunc_dict pyglobal_dict = new pyfunc_dict();
+    public static final pyclass_dict pyglobal_dict = new pyclass_dict();
 
-    static final class pyfunc_enumerate extends PyBuiltinClass {
-        pyfunc_enumerate() { super("enumerate", PyEnumerate.class); }
+    static final class pyclass_enumerate extends PyBuiltinClass {
+        pyclass_enumerate() { super("enumerate", PyEnumerate.class); }
         @Override public PyEnumerate call(PyObject[] args, PyDict kwargs) {
             // This is quirky, but is intended to match corner cases in CPython enumerate()
             long totalArgs = args.length;
@@ -308,7 +308,7 @@ public final class Runtime {
             }
         }
     }
-    public static final pyfunc_enumerate pyglobal_enumerate = new pyfunc_enumerate();
+    public static final pyclass_enumerate pyglobal_enumerate = new pyclass_enumerate();
 
     static final class pyfunc_format extends PyBuiltinFunction {
         pyfunc_format() { super("format"); }
@@ -396,8 +396,8 @@ public final class Runtime {
     }
     public static final pyfunc_hex pyglobal_hex = new pyfunc_hex();
 
-    static final class pyfunc_int extends PyBuiltinClass {
-        pyfunc_int() { super("int", PyInt.class); }
+    static final class pyclass_int extends PyBuiltinClass {
+        pyclass_int() { super("int", PyInt.class); }
         @Override public PyInt call(PyObject[] args, PyDict kwargs) {
             requireMaxArgs(args, 2, typeName);
             if ((kwargs != null) && kwargs.boolValue()) {
@@ -471,7 +471,7 @@ public final class Runtime {
             throw new UnsupportedOperationException("don't know how to handle argument to int()");
         }
     }
-    public static final pyfunc_int pyglobal_int = new pyfunc_int();
+    public static final pyclass_int pyglobal_int = new pyclass_int();
 
     static final class pyfunc_isinstance extends PyBuiltinFunction {
         pyfunc_isinstance() { super("isinstance"); }
@@ -545,8 +545,8 @@ public final class Runtime {
     }
     public static final pyfunc_len pyglobal_len = new pyfunc_len();
 
-    static final class pyfunc_list extends PyBuiltinClass {
-        pyfunc_list() { super("list", PyList.class); }
+    static final class pyclass_list extends PyBuiltinClass {
+        pyclass_list() { super("list", PyList.class); }
         @Override public PyList call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, typeName);
             requireMaxArgs(args, 1, typeName);
@@ -558,7 +558,7 @@ public final class Runtime {
             return ret;
         }
     }
-    public static final pyfunc_list pyglobal_list = new pyfunc_list();
+    public static final pyclass_list pyglobal_list = new pyclass_list();
 
     static final class pyfunc_max extends PyBuiltinFunction {
         pyfunc_max() { super("max"); }
@@ -644,10 +644,10 @@ public final class Runtime {
     }
     public static final pyfunc_next pyglobal_next = new pyfunc_next();
 
-    static final class pyfunc_object extends PyBuiltinClass {
-        pyfunc_object() { super("object", PyObject.class); }
+    static final class pyclass_object extends PyBuiltinClass {
+        pyclass_object() { super("object", PyObject.class); }
     }
-    public static final pyfunc_object pyglobal_object = new pyfunc_object();
+    public static final pyclass_object pyglobal_object = new pyclass_object();
 
     static final class pyfunc_open extends PyBuiltinFunction {
         pyfunc_open() { super("open"); }
@@ -705,8 +705,8 @@ public final class Runtime {
     }
     public static final pyfunc_print pyglobal_print = new pyfunc_print();
 
-    static final class pyfunc_range extends PyBuiltinClass {
-        pyfunc_range() { super("range", PyRange.class); }
+    static final class pyclass_range extends PyBuiltinClass {
+        pyclass_range() { super("range", PyRange.class); }
         @Override public PyRange call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, typeName);
             requireMinArgs(args, 1, typeName);
@@ -724,7 +724,7 @@ public final class Runtime {
             return new PyRange(start, stop, step);
         }
     }
-    public static final pyfunc_range pyglobal_range = new pyfunc_range();
+    public static final pyclass_range pyglobal_range = new pyclass_range();
 
     static final class pyfunc_repr extends PyBuiltinFunction {
         pyfunc_repr() { super("repr"); }
@@ -735,18 +735,18 @@ public final class Runtime {
     }
     public static final pyfunc_repr pyglobal_repr = new pyfunc_repr();
 
-    static final class pyfunc_reversed extends PyBuiltinClass {
-        pyfunc_reversed() { super("reversed", PyReversed.class); }
+    static final class pyclass_reversed extends PyBuiltinClass {
+        pyclass_reversed() { super("reversed", PyReversed.class); }
         @Override public PyIter call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, typeName);
             requireExactArgs(args, 1, typeName);
             return args[0].reversed();
         }
     }
-    public static final pyfunc_reversed pyglobal_reversed = new pyfunc_reversed();
+    public static final pyclass_reversed pyglobal_reversed = new pyclass_reversed();
 
-    static final class pyfunc_set extends PyBuiltinClass {
-        pyfunc_set() { super("set", PySet.class); }
+    static final class pyclass_set extends PyBuiltinClass {
+        pyclass_set() { super("set", PySet.class); }
         @Override public PySet call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, typeName);
             requireMaxArgs(args, 1, typeName);
@@ -758,10 +758,10 @@ public final class Runtime {
             return ret;
         }
     }
-    public static final pyfunc_set pyglobal_set = new pyfunc_set();
+    public static final pyclass_set pyglobal_set = new pyclass_set();
 
-    static final class pyfunc_slice extends PyBuiltinClass {
-        pyfunc_slice() { super("slice", PySlice.class); }
+    static final class pyclass_slice extends PyBuiltinClass {
+        pyclass_slice() { super("slice", PySlice.class); }
         @Override public PySlice call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, typeName);
             requireMinArgs(args, 1, typeName);
@@ -781,7 +781,7 @@ public final class Runtime {
             return new PySlice(start, stop, step);
         }
     }
-    public static final pyfunc_slice pyglobal_slice = new pyfunc_slice();
+    public static final pyclass_slice pyglobal_slice = new pyclass_slice();
 
     static final class pyfunc_sorted extends PyBuiltinFunction {
         pyfunc_sorted() { super("sorted"); }
@@ -800,8 +800,8 @@ public final class Runtime {
     }
     public static final pyfunc_sorted pyglobal_sorted = new pyfunc_sorted();
 
-    static final class pyfunc_str extends PyBuiltinClass {
-        pyfunc_str() { super("str", PyString.class); }
+    static final class pyclass_str extends PyBuiltinClass {
+        pyclass_str() { super("str", PyString.class); }
         @Override public PyString call(PyObject[] args, PyDict kwargs) {
             if (args.length > 1) {
                 throw new IllegalArgumentException("str() takes 0 or 1 arguments");
@@ -815,7 +815,7 @@ public final class Runtime {
             return PyString.empty_singleton;
         }
     }
-    public static final pyfunc_str pyglobal_str = new pyfunc_str();
+    public static final pyclass_str pyglobal_str = new pyclass_str();
 
     static final class pyfunc_sum extends PyBuiltinFunction {
         pyfunc_sum() { super("sum"); }
@@ -840,8 +840,8 @@ public final class Runtime {
     }
     public static final pyfunc_sum pyglobal_sum = new pyfunc_sum();
 
-    static final class pyfunc_tuple extends PyBuiltinClass {
-        pyfunc_tuple() { super("tuple", PyTuple.class); }
+    static final class pyclass_tuple extends PyBuiltinClass {
+        pyclass_tuple() { super("tuple", PyTuple.class); }
         @Override public PyTuple call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, typeName);
             requireMaxArgs(args, 1, typeName);
@@ -853,10 +853,10 @@ public final class Runtime {
             return new PyTuple(list);
         }
     }
-    public static final pyfunc_tuple pyglobal_tuple = new pyfunc_tuple();
+    public static final pyclass_tuple pyglobal_tuple = new pyclass_tuple();
 
-    static final class pyfunc_type extends PyBuiltinClass {
-        pyfunc_type() { super("type", PyType.class); }
+    static final class pyclass_type extends PyBuiltinClass {
+        pyclass_type() { super("type", PyType.class); }
         @Override public PyType call(PyObject[] args, PyDict kwargs) {
             if (args.length != 1) {
                 throw new IllegalArgumentException("type() takes 1 argument");
@@ -867,10 +867,10 @@ public final class Runtime {
             return args[0].type();
         }
     }
-    public static final pyfunc_type pyglobal_type = new pyfunc_type();
+    public static final pyclass_type pyglobal_type = new pyclass_type();
 
-    static final class pyfunc_zip extends PyBuiltinClass {
-        pyfunc_zip() { super("zip", PyZip.class); }
+    static final class pyclass_zip extends PyBuiltinClass {
+        pyclass_zip() { super("zip", PyZip.class); }
         @Override public PyZip call(PyObject[] args, PyDict kwargs) {
             if ((kwargs != null) && kwargs.boolValue()) {
                 throw new IllegalArgumentException("zip() does not accept kwargs");
@@ -882,28 +882,28 @@ public final class Runtime {
             return new PyZip(iters);
         }
     }
-    public static final pyfunc_zip pyglobal_zip = new pyfunc_zip();
+    public static final pyclass_zip pyglobal_zip = new pyclass_zip();
 
-    static final class pyfunc_ArithmeticError extends PyBuiltinClass {
-        pyfunc_ArithmeticError() { super("ArithmeticError", PyArithmeticError.class); }
+    static final class pyclass_ArithmeticError extends PyBuiltinClass {
+        pyclass_ArithmeticError() { super("ArithmeticError", PyArithmeticError.class); }
         @Override public PyArithmeticError call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, typeName);
             return new PyArithmeticError(args);
         }
     }
-    public static final pyfunc_ArithmeticError pyglobal_ArithmeticError = new pyfunc_ArithmeticError();
+    public static final pyclass_ArithmeticError pyglobal_ArithmeticError = new pyclass_ArithmeticError();
 
-    static final class pyfunc_AssertionError extends PyBuiltinClass {
-        pyfunc_AssertionError() { super("AssertionError", PyAssertionError.class); }
+    static final class pyclass_AssertionError extends PyBuiltinClass {
+        pyclass_AssertionError() { super("AssertionError", PyAssertionError.class); }
         @Override public PyAssertionError call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, typeName);
             return new PyAssertionError(args);
         }
     }
-    public static final pyfunc_AssertionError pyglobal_AssertionError = new pyfunc_AssertionError();
+    public static final pyclass_AssertionError pyglobal_AssertionError = new pyclass_AssertionError();
 
-    static final class pyfunc_AttributeError extends PyBuiltinClass {
-        pyfunc_AttributeError() { super("AttributeError", PyAttributeError.class); }
+    static final class pyclass_AttributeError extends PyBuiltinClass {
+        pyclass_AttributeError() { super("AttributeError", PyAttributeError.class); }
         @Override public PyAttributeError call(PyObject[] args, PyDict kwargs) {
             if ((kwargs != null) && kwargs.boolValue()) {
                 throw new IllegalArgumentException("AttributeError() does not accept kwargs");
@@ -911,88 +911,88 @@ public final class Runtime {
             return new PyAttributeError(args);
         }
     }
-    public static final pyfunc_AttributeError pyglobal_AttributeError = new pyfunc_AttributeError();
+    public static final pyclass_AttributeError pyglobal_AttributeError = new pyclass_AttributeError();
 
-    static final class pyfunc_BaseException extends PyBuiltinClass {
-        pyfunc_BaseException() { super("BaseException", PyBaseException.class); }
+    static final class pyclass_BaseException extends PyBuiltinClass {
+        pyclass_BaseException() { super("BaseException", PyBaseException.class); }
         @Override public PyBaseException call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, typeName);
             return new PyBaseException(args);
         }
     }
-    public static final pyfunc_BaseException pyglobal_BaseException = new pyfunc_BaseException();
+    public static final pyclass_BaseException pyglobal_BaseException = new pyclass_BaseException();
 
-    static final class pyfunc_Exception extends PyBuiltinClass {
-        pyfunc_Exception() { super("Exception", PyException.class); }
+    static final class pyclass_Exception extends PyBuiltinClass {
+        pyclass_Exception() { super("Exception", PyException.class); }
         @Override public PyException call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, typeName);
             return new PyException(args);
         }
     }
-    public static final pyfunc_Exception pyglobal_Exception = new pyfunc_Exception();
+    public static final pyclass_Exception pyglobal_Exception = new pyclass_Exception();
 
-    static final class pyfunc_IndexError extends PyBuiltinClass {
-        pyfunc_IndexError() { super("IndexError", PyIndexError.class); }
+    static final class pyclass_IndexError extends PyBuiltinClass {
+        pyclass_IndexError() { super("IndexError", PyIndexError.class); }
         @Override public PyIndexError call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, typeName);
             return new PyIndexError(args);
         }
     }
-    public static final pyfunc_IndexError pyglobal_IndexError = new pyfunc_IndexError();
+    public static final pyclass_IndexError pyglobal_IndexError = new pyclass_IndexError();
 
-    static final class pyfunc_KeyError extends PyBuiltinClass {
-        pyfunc_KeyError() { super("KeyError", PyKeyError.class); }
+    static final class pyclass_KeyError extends PyBuiltinClass {
+        pyclass_KeyError() { super("KeyError", PyKeyError.class); }
         @Override public PyKeyError call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, typeName);
             return new PyKeyError(args);
         }
     }
-    public static final pyfunc_KeyError pyglobal_KeyError = new pyfunc_KeyError();
+    public static final pyclass_KeyError pyglobal_KeyError = new pyclass_KeyError();
 
-    static final class pyfunc_LookupError extends PyBuiltinClass {
-        pyfunc_LookupError() { super("LookupError", PyLookupError.class); }
+    static final class pyclass_LookupError extends PyBuiltinClass {
+        pyclass_LookupError() { super("LookupError", PyLookupError.class); }
         @Override public PyLookupError call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, typeName);
             return new PyLookupError(args);
         }
     }
-    public static final pyfunc_LookupError pyglobal_LookupError = new pyfunc_LookupError();
+    public static final pyclass_LookupError pyglobal_LookupError = new pyclass_LookupError();
 
-    static final class pyfunc_StopIteration extends PyBuiltinClass {
-        pyfunc_StopIteration() { super("StopIteration", PyStopIteration.class); }
+    static final class pyclass_StopIteration extends PyBuiltinClass {
+        pyclass_StopIteration() { super("StopIteration", PyStopIteration.class); }
         @Override public PyStopIteration call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, typeName);
             return new PyStopIteration(args);
         }
     }
-    public static final pyfunc_StopIteration pyglobal_StopIteration = new pyfunc_StopIteration();
+    public static final pyclass_StopIteration pyglobal_StopIteration = new pyclass_StopIteration();
 
-    static final class pyfunc_TypeError extends PyBuiltinClass {
-        pyfunc_TypeError() { super("TypeError", PyTypeError.class); }
+    static final class pyclass_TypeError extends PyBuiltinClass {
+        pyclass_TypeError() { super("TypeError", PyTypeError.class); }
         @Override public PyTypeError call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, typeName);
             return new PyTypeError(args);
         }
     }
-    public static final pyfunc_TypeError pyglobal_TypeError = new pyfunc_TypeError();
+    public static final pyclass_TypeError pyglobal_TypeError = new pyclass_TypeError();
 
-    static final class pyfunc_ValueError extends PyBuiltinClass {
-        pyfunc_ValueError() { super("ValueError", PyValueError.class); }
+    static final class pyclass_ValueError extends PyBuiltinClass {
+        pyclass_ValueError() { super("ValueError", PyValueError.class); }
         @Override public PyValueError call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, typeName);
             return new PyValueError(args);
         }
     }
-    public static final pyfunc_ValueError pyglobal_ValueError = new pyfunc_ValueError();
+    public static final pyclass_ValueError pyglobal_ValueError = new pyclass_ValueError();
 
-    static final class pyfunc_ZeroDivisionError extends PyBuiltinClass {
-        pyfunc_ZeroDivisionError() { super("ZeroDivisionError", PyZeroDivisionError.class); }
+    static final class pyclass_ZeroDivisionError extends PyBuiltinClass {
+        pyclass_ZeroDivisionError() { super("ZeroDivisionError", PyZeroDivisionError.class); }
         @Override public PyZeroDivisionError call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, typeName);
             return new PyZeroDivisionError(args);
         }
     }
-    public static final pyfunc_ZeroDivisionError pyglobal_ZeroDivisionError = new pyfunc_ZeroDivisionError();
+    public static final pyclass_ZeroDivisionError pyglobal_ZeroDivisionError = new pyclass_ZeroDivisionError();
 
     // Helper functions used by the builtins and code generator
     public static void requireNoKwArgs(PyDict kwargs, String name) {
