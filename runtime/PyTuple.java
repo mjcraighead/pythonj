@@ -23,6 +23,29 @@ public final class PyTuple extends PyObject {
         @Override public PyBuiltinClass type() { return iter_class_singleton; }
     };
 
+    private static final class PyTupleMethod_count extends PyBuiltinMethod<PyTuple> {
+        PyTupleMethod_count(PyTuple _self) { super(_self); }
+        @Override public String methodName() { return "count"; }
+        @Override public PyInt call(PyObject[] args, PyDict kwargs) {
+            Runtime.requireNoKwArgs(kwargs, "tuple.count");
+            Runtime.requireExactArgsAlt(args, 1, "tuple.count");
+            return self.pymethod_count(args[0]);
+        }
+    }
+    private static final class PyTupleMethod_index extends PyBuiltinMethod<PyTuple> {
+        PyTupleMethod_index(PyTuple _self) { super(_self); }
+        @Override public String methodName() { return "index"; }
+        @Override public PyInt call(PyObject[] args, PyDict kwargs) {
+            Runtime.requireNoKwArgs(kwargs, "tuple.index");
+            Runtime.requireMinArgs(args, 1, "index");
+            Runtime.requireMaxArgs(args, 3, "index");
+            PyObject value = args[0];
+            PyObject start = (args.length >= 2) ? args[1] : null;
+            PyObject stop = (args.length >= 3) ? args[2] : null;
+            return self.pymethod_index(value, start, stop);
+        }
+    }
+
     public final PyObject[] items;
 
     PyTuple() { items = new PyObject[] {}; }
@@ -124,6 +147,18 @@ public final class PyTuple extends PyObject {
         }
         return false;
     }
+    @Override public PyObject getAttr(String key) {
+        switch (key) {
+            case "count": return new PyTupleMethod_count(this);
+            case "index": return new PyTupleMethod_index(this);
+            default:
+                if (key.startsWith("__")) {
+                    return super.getAttr(key);
+                } else {
+                    throw raiseMissingAttr(key);
+                }
+        }
+    }
     @Override public int hashCode() { return Arrays.hashCode(items); }
     @Override public long len() { return items.length; }
     @Override public String repr() {
@@ -138,5 +173,47 @@ public final class PyTuple extends PyObject {
             s.append(",");
         }
         return s + ")";
+    }
+
+    public PyInt pymethod_count(PyObject arg) {
+        long n = 0;
+        for (var x: items) {
+            if (x.equals(arg)) {
+                n++;
+            }
+        }
+        return new PyInt(n);
+    }
+    public PyInt pymethod_index(PyObject value, PyObject start, PyObject stop) {
+        int n = items.length;
+        int startIndex = 0;
+        int stopIndex = n;
+        if (start != null) {
+            if (!start.hasIndex()) {
+                throw PyTypeError.raise("slice indices must be integers or have an __index__ method");
+            }
+            startIndex = Math.toIntExact(start.indexValue());
+            if (startIndex < 0) {
+                startIndex += n;
+                startIndex = Math.max(startIndex, 0);
+            }
+        }
+        if (stop != null) {
+            if (!stop.hasIndex()) {
+                throw PyTypeError.raise("slice indices must be integers or have an __index__ method");
+            }
+            stopIndex = Math.toIntExact(stop.indexValue());
+            if (stopIndex < 0) {
+                stopIndex += n;
+            } else {
+                stopIndex = Math.min(stopIndex, n);
+            }
+        }
+        for (int i = startIndex; i < stopIndex; i++) {
+            if (items[i].equals(value)) {
+                return new PyInt(i);
+            }
+        }
+        throw PyValueError.raise("tuple.index(x): x not in tuple");
     }
 }
