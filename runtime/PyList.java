@@ -235,14 +235,31 @@ public final class PyList extends PyObject {
     }
 
     @Override public PyObject getItem(PyObject key) {
-        int index = Math.toIntExact(key.indexValue());
-        if (index < 0) {
-            index += items.size();
-        }
-        try {
-            return items.get(index);
-        } catch (IndexOutOfBoundsException e) {
-            throw PyIndexError.raise("list index out of range");
+        if (key instanceof PySlice slice) {
+            PySlice.Indices indices = slice.computeIndices(items.size());
+            int index = indices.start();
+            int step = indices.step();
+            int n = indices.length();
+            if (step == 1) {
+                return new PyList(new ArrayList<>(items.subList(index, index + n)));
+            } else {
+                var result = new ArrayList<PyObject>(n);
+                for (int i = 0; i < n; i++) {
+                    result.add(items.get(index));
+                    index += step;
+                }
+                return new PyList(result);
+            }
+        } else {
+            int index = Math.toIntExact(key.indexValue());
+            if (index < 0) {
+                index += items.size();
+            }
+            try {
+                return items.get(index);
+            } catch (IndexOutOfBoundsException e) {
+                throw PyIndexError.raise("list index out of range");
+            }
         }
     }
     @Override public void setItem(PyObject key, PyObject value) {
