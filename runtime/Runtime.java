@@ -1089,15 +1089,6 @@ public final class Runtime {
             throw new IllegalStateException("too many values to unpack");
         }
     }
-    public static int clampSliceIndex(int i, int n) {
-        if (i < 0) {
-            i += n;
-            i = Math.max(i, 0);
-        } else {
-            i = Math.min(i, n);
-        }
-        return i;
-    }
     public static int asSliceIndexAllowNull(PyObject obj, int defaultIndex, int n) {
         if (obj == null) {
             return defaultIndex;
@@ -1106,17 +1097,13 @@ public final class Runtime {
             throw PyTypeError.raise("slice indices must be integers or have an __index__ method");
         }
         int i = Math.toIntExact(obj.indexValue());
-        return clampSliceIndex(i, n);
-    }
-    public static int asSliceIndexAllowNone(PyObject obj, int defaultIndex, int n) {
-        if (obj == PyNone.singleton) {
-            return defaultIndex;
+        if (i < 0) {
+            i += n;
+            i = Math.max(i, 0);
+        } else {
+            i = Math.min(i, n);
         }
-        if (!obj.hasIndex()) {
-            throw PyTypeError.raise("slice indices must be integers or None or have an __index__ method");
-        }
-        int i = Math.toIntExact(obj.indexValue());
-        return clampSliceIndex(i, n);
+        return i;
     }
     public static int asSearchIndexAllowNone(PyObject obj, int defaultIndex, int n) {
         if (obj == PyNone.singleton) {

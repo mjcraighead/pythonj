@@ -208,16 +208,20 @@ public final class PyString extends PyObject {
 
     @Override public PyString getItem(PyObject key) {
         if (key instanceof PySlice slice) {
-            if (slice.step != PyNone.singleton) {
-                throw new UnsupportedOperationException("string slicing with step unsupported");
+            PySlice.Indices indices = slice.computeIndices(value.length());
+            int index = indices.start();
+            int step = indices.step();
+            int n = indices.length();
+            if (step == 1) {
+                return new PyString(value.substring(index, index + n));
+            } else {
+                var s = new StringBuilder(n);
+                for (int i = 0; i < n; i++) {
+                    s.append(value.charAt(index));
+                    index += step;
+                }
+                return new PyString(s.toString());
             }
-            int length = value.length();
-            int start = Runtime.asSliceIndexAllowNone(slice.start, 0, length);
-            int stop = Runtime.asSliceIndexAllowNone(slice.stop, length, length);
-            if (stop < start) {
-                stop = start;
-            }
-            return new PyString(value.substring(start, stop));
         } else {
             int index = Math.toIntExact(key.indexValue());
             int length = value.length();
