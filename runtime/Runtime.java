@@ -43,10 +43,10 @@ class PyBuiltinClass extends PyType {
             default: return super.getAttr(key);
         }
     }
-    @Override public void setAttr(String key, PyObject value) {
+    @Override public final void setAttr(String key, PyObject value) {
         throw PyTypeError.raiseFormat("cannot set %s attribute of immutable type %s", PyString.reprOf(key), PyString.reprOf(typeName));
     }
-    @Override public void delAttr(String key) {
+    @Override public final void delAttr(String key) {
         throw PyTypeError.raiseFormat("cannot set %s attribute of immutable type %s", PyString.reprOf(key), PyString.reprOf(typeName));
     }
 
