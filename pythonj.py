@@ -470,8 +470,12 @@ class SymbolTableVisitor(ast.NodeVisitor):
             self.reads.add(node.id)
 
     def visit_ExceptHandler(self, node):
+        if node.type is not None:
+            self.visit(node.type)
         if node.name is not None:
             self.writes.add(node.name)
+        for statement in node.body:
+            self.visit(statement)
 
     def visit_Global(self, node) -> None:
         for name in node.names:
