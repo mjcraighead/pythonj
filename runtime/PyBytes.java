@@ -124,15 +124,32 @@ public final class PyBytes extends PyObject {
         }
     }
 
-    @Override public PyInt getItem(PyObject key) {
-        int index = Math.toIntExact(key.indexValue());
-        if (index < 0) {
-            index += value.length;
-        }
-        try {
-            return new PyInt(value[index] & 0xFF);
-        } catch (ArrayIndexOutOfBoundsException e) {
-            throw PyIndexError.raise("index out of range");
+    @Override public PyObject getItem(PyObject key) {
+        if (key instanceof PySlice slice) {
+            PySlice.Indices indices = slice.computeIndices(value.length);
+            int index = indices.start();
+            int step = indices.step();
+            int n = indices.length();
+            if (step == 1) {
+                return new PyBytes(Arrays.copyOfRange(value, index, index + n));
+            } else {
+                byte[] result = new byte[n];
+                for (int i = 0; i < n; i++) {
+                    result[i] = value[index];
+                    index += step;
+                }
+                return new PyBytes(result);
+            }
+        } else {
+            int index = Math.toIntExact(key.indexValue());
+            if (index < 0) {
+                index += value.length;
+            }
+            try {
+                return new PyInt(value[index] & 0xFF);
+            } catch (ArrayIndexOutOfBoundsException e) {
+                throw PyIndexError.raise("index out of range");
+            }
         }
     }
     @Override public void delItem(PyObject key) {
