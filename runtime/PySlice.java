@@ -55,6 +55,9 @@ public final class PySlice extends PyTruthyObject {
             start = (step < 0) ? (length - 1) : 0;
         } else {
             start = asIndex(this.start);
+            if (start < 0) {
+                start += length;
+            }
         }
 
         boolean stopIsNone = this.stop == PyNone.singleton;
@@ -62,10 +65,6 @@ public final class PySlice extends PyTruthyObject {
             stop = (step < 0) ? -1 : length;
         } else {
             stop = asIndex(this.stop);
-        }
-
-        if (start < 0) {
-            start += length;
         }
 
         int slicelen;
