@@ -355,15 +355,20 @@ public final class PyString extends PyObject {
     public PyString pymethod_join(PyObject arg) {
         // XXX consider special casing value.isEmpty() for performance
         var s = new StringBuilder();
+        if (!arg.hasIter()) {
+            throw PyTypeError.raise("can only join an iterable");
+        }
         var iter = arg.iter();
-        boolean first = true;
-        for (var item = iter.next(); item != null; item = iter.next()) {
-            if (first) {
-                first = false;
-            } else {
+        long index = 0;
+        for (var item = iter.next(); item != null; item = iter.next(), index++) {
+            if (index != 0) {
                 s.append(value);
             }
-            s.append(((PyString)item).value);
+            if (item instanceof PyString itemStr) {
+                s.append(itemStr.value);
+            } else {
+                throw PyTypeError.raiseFormat("sequence item %d: expected str instance, %s found", index, item.type().name());
+            }
         }
         return new PyString(s.toString());
     }
