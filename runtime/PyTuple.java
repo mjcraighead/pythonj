@@ -186,29 +186,8 @@ public final class PyTuple extends PyObject {
     }
     public PyInt pymethod_index(PyObject value, PyObject start, PyObject stop) {
         int n = items.length;
-        int startIndex = 0;
-        int stopIndex = n;
-        if (start != null) {
-            if (!start.hasIndex()) {
-                throw PyTypeError.raise("slice indices must be integers or have an __index__ method");
-            }
-            startIndex = Math.toIntExact(start.indexValue());
-            if (startIndex < 0) {
-                startIndex += n;
-                startIndex = Math.max(startIndex, 0);
-            }
-        }
-        if (stop != null) {
-            if (!stop.hasIndex()) {
-                throw PyTypeError.raise("slice indices must be integers or have an __index__ method");
-            }
-            stopIndex = Math.toIntExact(stop.indexValue());
-            if (stopIndex < 0) {
-                stopIndex += n;
-            } else {
-                stopIndex = Math.min(stopIndex, n);
-            }
-        }
+        int startIndex = Runtime.asSliceIndexAllowNull(start, 0, n);
+        int stopIndex = Runtime.asSliceIndexAllowNull(stop, n, n);
         for (int i = startIndex; i < stopIndex; i++) {
             if (items[i].equals(value)) {
                 return new PyInt(i);

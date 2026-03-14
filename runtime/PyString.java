@@ -212,31 +212,8 @@ public final class PyString extends PyObject {
                 throw new UnsupportedOperationException("string slicing with step unsupported");
             }
             int length = value.length();
-            int start = 0;
-            int stop = length;
-            if (slice.start != PyNone.singleton) {
-                if (!slice.start.hasIndex()) {
-                    throw PyTypeError.raise("slice indices must be integers or None or have an __index__ method");
-                }
-                start = Math.toIntExact(slice.start.indexValue());
-                if (start < 0) {
-                    start += length;
-                    start = Math.max(start, 0);
-                } else {
-                    start = Math.min(start, length);
-                }
-            }
-            if (slice.stop != PyNone.singleton) {
-                if (!slice.stop.hasIndex()) {
-                    throw PyTypeError.raise("slice indices must be integers or None or have an __index__ method");
-                }
-                stop = Math.toIntExact(slice.stop.indexValue());
-                if (stop < 0) {
-                    stop += length;
-                } else {
-                    stop = Math.min(stop, length);
-                }
-            }
+            int start = Runtime.asSliceIndexAllowNone(slice.start, 0, length);
+            int stop = Runtime.asSliceIndexAllowNone(slice.stop, length, length);
             if (stop < start) {
                 stop = start;
             }
@@ -367,18 +344,8 @@ public final class PyString extends PyObject {
         if (!(sub instanceof PyString subStr)) {
             throw PyTypeError.raise("find() argument 1 must be str, not " + sub.type().name());
         }
-        if (start != PyNone.singleton) {
-            if (!start.hasIndex()) {
-                throw PyTypeError.raise("slice indices must be integers or None or have an __index__ method");
-            }
-            throw new UnsupportedOperationException("str.find() does not yet support 'start' argument");
-        }
-        if (end != PyNone.singleton) {
-            if (!end.hasIndex()) {
-                throw PyTypeError.raise("slice indices must be integers or None or have an __index__ method");
-            }
-            throw new UnsupportedOperationException("str.find() does not yet support 'end' argument");
-        }
+        Runtime.unsupportedSearchIndexAllowNone(start, "str.find() does not yet support 'start' argument");
+        Runtime.unsupportedSearchIndexAllowNone(end, "str.find() does not yet support 'end' argument");
         return new PyInt(value.indexOf(subStr.value));
     }
     public PyString pymethod_join(PyObject arg) {
@@ -430,23 +397,9 @@ public final class PyString extends PyObject {
         return ret;
     }
     public PyBool pymethod_startswith(PyObject prefix, PyObject start, PyObject end) {
-        int startIndex = 0;
-        if (start != PyNone.singleton) {
-            if (!start.hasIndex()) {
-                throw PyTypeError.raise("slice indices must be integers or None or have an __index__ method");
-            }
-            startIndex = Math.toIntExact(start.indexValue());
-            if (startIndex < 0) {
-                startIndex += value.length();
-                startIndex = Math.max(startIndex, 0);
-            }
-        }
-        if (end != PyNone.singleton) {
-            if (!end.hasIndex()) {
-                throw PyTypeError.raise("slice indices must be integers or None or have an __index__ method");
-            }
-            throw new UnsupportedOperationException("str.startswith() does not yet support 'end' argument");
-        }
+        int length = value.length();
+        int startIndex = Runtime.asSearchIndexAllowNone(start, 0, value.length());
+        Runtime.unsupportedSearchIndexAllowNone(end, "str.startswith() does not yet support 'end' argument");
         if (prefix instanceof PyString prefixStr) {
             return PyBool.create(value.startsWith(prefixStr.value, startIndex));
         } else if (prefix instanceof PyTuple prefixTuple) {
