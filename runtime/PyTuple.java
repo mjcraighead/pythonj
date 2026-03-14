@@ -117,18 +117,15 @@ public final class PyTuple extends PyObject {
 
     @Override public PyObject getItem(PyObject key) {
         if (key instanceof PySlice slice) {
-            if (slice.step != PyNone.singleton) {
-                throw new UnsupportedOperationException("tuple slicing with step unsupported");
+            PySlice.Indices indices = slice.computeIndices(items.length);
+            int index = indices.start();
+            int step = indices.step();
+            int n = indices.length();
+            PyObject[] result = new PyObject[n];
+            for (int i = 0; i < n; i++) {
+                result[i] = items[index];
+                index += step;
             }
-            int length = items.length;
-            int start = Runtime.asSliceIndexAllowNone(slice.start, 0, length);
-            int stop = Runtime.asSliceIndexAllowNone(slice.stop, length, length);
-            if (stop < start) {
-                stop = start;
-            }
-            int newLen = stop - start;
-            PyObject[] result = new PyObject[newLen];
-            System.arraycopy(items, start, result, 0, newLen);
             return new PyTuple(result);
         } else {
             int index = Math.toIntExact(key.indexValue());
