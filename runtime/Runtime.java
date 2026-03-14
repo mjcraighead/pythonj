@@ -37,7 +37,7 @@ class PyBuiltinClass extends PyType {
         typeName = name;
         instanceClass = _instanceClass;
     }
-    @Override public final PyObject getAttr(String key) {
+    @Override public PyObject getAttr(String key) {
         switch (key) {
             case "__name__": return new PyString(typeName);
             default: return super.getAttr(key);
@@ -245,6 +245,30 @@ public final class Runtime {
             var ret = new PyDict();
             ret.pymethod_update(args, kwargs);
             return ret;
+        }
+        @Override public PyObject getAttr(String key) {
+            switch (key) {
+                case "fromkeys": return new PyDictClassMethod_fromkeys(this);
+                default: return super.getAttr(key);
+            }
+        }
+
+        static final class PyDictClassMethod_fromkeys extends PyBuiltinMethod<pyfunc_dict> {
+            PyDictClassMethod_fromkeys(pyfunc_dict _self) { super(_self); }
+            @Override public String methodName() { return "fromkeys"; }
+            @Override public PyDict call(PyObject[] args, PyDict kwargs) {
+                Runtime.requireNoKwArgs(kwargs, "dict.fromkeys");
+                Runtime.requireMinArgs(args, 1, "fromkeys");
+                Runtime.requireMaxArgs(args, 2, "fromkeys");
+                PyObject iterable = args[0];
+                PyObject value = (args.length == 2) ? args[1] : PyNone.singleton;
+                var ret = new PyDict();
+                var iter = iterable.iter();
+                for (var key = iter.next(); key != null; key = iter.next()) {
+                    ret.items.put(key, value);
+                }
+                return ret;
+            }
         }
     }
     public static final pyfunc_dict pyglobal_dict = new pyfunc_dict();
