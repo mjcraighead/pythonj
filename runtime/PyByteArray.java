@@ -127,19 +127,26 @@ public final class PyByteArray extends PyObject {
         }
     }
     @Override public void setItem(PyObject key, PyObject val) {
-        int index = Math.toIntExact(key.indexValue());
-        if (index < 0) {
-            index += value.length;
+        if (key instanceof PySlice) {
+            throw unimplementedMethod("slice assignment");
+        } else {
+            int index = Math.toIntExact(key.indexValue());
+            if (index < 0) {
+                index += value.length;
+            }
+            long new_val = val.indexValue();
+            if ((new_val < 0) || (new_val > 255)) {
+                throw PyValueError.raise("byte must be in range(0, 256)");
+            }
+            try {
+                value[index] = (byte)new_val;
+            } catch (ArrayIndexOutOfBoundsException e) {
+                throw PyIndexError.raise("bytearray index out of range");
+            }
         }
-        long new_val = val.indexValue();
-        if ((new_val < 0) || (new_val > 255)) {
-            throw PyValueError.raise("byte must be in range(0, 256)");
-        }
-        try {
-            value[index] = (byte)new_val;
-        } catch (ArrayIndexOutOfBoundsException e) {
-            throw PyIndexError.raise("bytearray index out of range");
-        }
+    }
+    @Override public void delItem(PyObject key) {
+        throw unimplementedMethod("delItem");
     }
 
     @Override public final boolean hasIter() { return true; }

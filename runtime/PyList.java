@@ -263,15 +263,22 @@ public final class PyList extends PyObject {
         }
     }
     @Override public void setItem(PyObject key, PyObject value) {
-        int index = Math.toIntExact(key.indexValue());
-        if (index < 0) {
-            index += items.size();
+        if (key instanceof PySlice) {
+            throw unimplementedMethod("slice assignment");
+        } else {
+            int index = Math.toIntExact(key.indexValue());
+            if (index < 0) {
+                index += items.size();
+            }
+            try {
+                items.set(index, value);
+            } catch (IndexOutOfBoundsException e) {
+                throw PyIndexError.raise("list assignment index out of range");
+            }
         }
-        try {
-            items.set(index, value);
-        } catch (IndexOutOfBoundsException e) {
-            throw PyIndexError.raise("list assignment index out of range");
-        }
+    }
+    @Override public void delItem(PyObject key) {
+        throw unimplementedMethod("delItem");
     }
 
     // NOTE: CPython returns a specialized list_reverseiterator.
