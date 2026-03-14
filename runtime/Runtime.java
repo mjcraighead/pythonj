@@ -236,6 +236,21 @@ public final class Runtime {
     }
     public static final pyfunc_chr pyglobal_chr = new pyfunc_chr();
 
+    static final class pyfunc_delattr extends PyBuiltinFunction {
+        pyfunc_delattr() { super("delattr"); }
+        @Override public PyNone call(PyObject[] args, PyDict kwargs) {
+            requireNoKwArgs(kwargs, funcName);
+            requireExactArgs(args, 2, funcName);
+            if (args[1] instanceof PyString name) {
+                args[0].delAttr(name.value);
+                return PyNone.singleton;
+            } else {
+                throw PyTypeError.raiseFormat("attribute name must be string, not %s", PyString.reprOf(args[1].type().name()));
+            }
+        }
+    }
+    public static final pyfunc_delattr pyglobal_delattr = new pyfunc_delattr();
+
     static final class pyclass_dict extends PyBuiltinClass {
         pyclass_dict() { super("dict", PyDict.class); }
         @Override public PyDict call(PyObject[] args, PyDict kwargs) {
@@ -760,6 +775,21 @@ public final class Runtime {
     }
     public static final pyclass_set pyglobal_set = new pyclass_set();
 
+    static final class pyfunc_setattr extends PyBuiltinFunction {
+        pyfunc_setattr() { super("setattr"); }
+        @Override public PyNone call(PyObject[] args, PyDict kwargs) {
+            requireNoKwArgs(kwargs, funcName);
+            requireExactArgs(args, 3, funcName);
+            if (args[1] instanceof PyString name) {
+                args[0].setAttr(name.value, args[2]);
+                return PyNone.singleton;
+            } else {
+                throw PyTypeError.raiseFormat("attribute name must be string, not %s", PyString.reprOf(args[1].type().name()));
+            }
+        }
+    }
+    public static final pyfunc_setattr pyglobal_setattr = new pyfunc_setattr();
+
     static final class pyclass_slice extends PyBuiltinClass {
         pyclass_slice() { super("slice", PySlice.class); }
         @Override public PySlice call(PyObject[] args, PyDict kwargs) {
@@ -1034,6 +1064,9 @@ public final class Runtime {
             }
             return PyTypeError.raise(s.toString());
         }
+    }
+    public static PyRaise raiseNamedReadOnlyAttr(PyObject obj, String key) {
+        return PyAttributeError.raise(PyString.reprOf(obj.type().name()) + " object attribute " + PyString.reprOf(key) + " is read-only");
     }
     public static void requireMinArgs(PyObject[] args, int min, String name) {
         if (args.length < min) {
