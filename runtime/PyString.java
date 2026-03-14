@@ -33,14 +33,10 @@ public final class PyString extends PyObject {
             Runtime.requireNoKwArgs(kwargs, "str.find");
             Runtime.requireMinArgs(args, 1, "find");
             Runtime.requireMaxArgs(args, 3, "find");
-            if (args.length != 1) {
-                throw new UnsupportedOperationException("str.find() currently only supports 1 argument");
-            }
-            if (args[0] instanceof PyString arg0Str) {
-                return self.pymethod_find(arg0Str);
-            } else {
-                throw new UnsupportedOperationException("str.find() only supports a str as argument");
-            }
+            PyObject sub = args[0];
+            PyObject start = (args.length >= 2) ? args[1] : PyNone.singleton;
+            PyObject end = (args.length >= 3) ? args[2] : PyNone.singleton;
+            return self.pymethod_find(sub, start, end);
         }
     }
     private static final class PyStringMethod_join extends PyBuiltinMethod<PyString> {
@@ -367,8 +363,23 @@ public final class PyString extends PyObject {
     }
     @Override public String repr() { return reprOf(value); }
 
-    public PyInt pymethod_find(PyString arg) {
-        return new PyInt(value.indexOf(arg.value));
+    public PyInt pymethod_find(PyObject sub, PyObject start, PyObject end) {
+        if (!(sub instanceof PyString subStr)) {
+            throw PyTypeError.raise("find() argument 1 must be str, not " + sub.type().name());
+        }
+        if (start != PyNone.singleton) {
+            if (!start.hasIndex()) {
+                throw PyTypeError.raise("slice indices must be integers or None or have an __index__ method");
+            }
+            throw new UnsupportedOperationException("str.find() does not yet support 'start' argument");
+        }
+        if (end != PyNone.singleton) {
+            if (!end.hasIndex()) {
+                throw PyTypeError.raise("slice indices must be integers or None or have an __index__ method");
+            }
+            throw new UnsupportedOperationException("str.find() does not yet support 'end' argument");
+        }
+        return new PyInt(value.indexOf(subStr.value));
     }
     public PyString pymethod_join(PyObject arg) {
         // XXX consider special casing value.isEmpty() for performance
@@ -419,9 +430,6 @@ public final class PyString extends PyObject {
         return ret;
     }
     public PyBool pymethod_startswith(PyObject prefix, PyObject start, PyObject end) {
-        if (end != PyNone.singleton) {
-            throw new UnsupportedOperationException("str.startswith() does not yet support 'end' argument");
-        }
         int startIndex = 0;
         if (start != PyNone.singleton) {
             if (!start.hasIndex()) {
@@ -432,6 +440,12 @@ public final class PyString extends PyObject {
                 startIndex += value.length();
                 startIndex = Math.max(startIndex, 0);
             }
+        }
+        if (end != PyNone.singleton) {
+            if (!end.hasIndex()) {
+                throw PyTypeError.raise("slice indices must be integers or None or have an __index__ method");
+            }
+            throw new UnsupportedOperationException("str.startswith() does not yet support 'end' argument");
         }
         if (prefix instanceof PyString prefixStr) {
             return PyBool.create(value.startsWith(prefixStr.value, startIndex));
