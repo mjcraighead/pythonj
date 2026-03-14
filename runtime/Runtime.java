@@ -55,6 +55,19 @@ class PyBuiltinClass extends PyType {
     @Override public String name() { return typeName; }
 }
 
+class PyMethodDescriptor extends PyTruthyObject {
+    protected final PyType owner;
+    protected final String name;
+
+    protected PyMethodDescriptor(PyType _owner, String _name) {
+        owner = _owner;
+        name = _name;
+    }
+
+    @Override public final String repr() { return "<method " + PyString.reprOf(name) + " of " + PyString.reprOf(owner.name()) + " objects>"; }
+    @Override public final PyBuiltinClass type() { return Runtime.pytype_method_descriptor; }
+}
+
 abstract class PyBuiltinFunctionOrMethod extends PyTruthyObject {
     @Override public final PyBuiltinClass type() { return Runtime.pytype_builtin_function_or_method; }
 }
@@ -93,6 +106,7 @@ public final class Runtime {
     public static final PyBuiltinClass pytype_function = new PyBuiltinClass("function", PyUserFunction.class);
     public static final PyBuiltinClass pytype_io_BufferedReader = new PyBuiltinClass("_io.BufferedReader", PyBufferedReader.class);
     public static final PyBuiltinClass pytype_io_TextIOWrapper = new PyBuiltinClass("_io.TextIOWrapper", PyTextIOWrapper.class);
+    public static final PyBuiltinClass pytype_method_descriptor = new PyBuiltinClass("method_descriptor", PyMethodDescriptor.class);
 
     static final class pyfunc_abs extends PyBuiltinFunction {
         pyfunc_abs() { super("abs"); }
@@ -260,6 +274,24 @@ public final class Runtime {
 
     static final class pyclass_dict extends PyBuiltinClass {
         pyclass_dict() { super("dict", PyDict.class); }
+
+        @Override public PyObject getAttr(String key) {
+            switch (key) {
+                case "clear": return pydesc_dict_clear;
+                case "copy": return pydesc_dict_copy;
+                case "fromkeys": return new PyDictClassMethod_fromkeys(this);
+                case "get": return pydesc_dict_get;
+                case "items": return pydesc_dict_items;
+                case "keys": return pydesc_dict_keys;
+                case "pop": return pydesc_dict_pop;
+                case "popitem": return pydesc_dict_popitem;
+                case "setdefault": return pydesc_dict_setdefault;
+                case "update": return pydesc_dict_update;
+                case "values": return pydesc_dict_values;
+                default: return super.getAttr(key);
+            }
+        }
+
         @Override public PyDict call(PyObject[] args, PyDict kwargs) {
             if (args.length > 1) {
                 throw new IllegalArgumentException("dict() takes 0 or 1 arguments");
@@ -267,12 +299,6 @@ public final class Runtime {
             var ret = new PyDict();
             ret.pymethod_update(args, kwargs);
             return ret;
-        }
-        @Override public PyObject getAttr(String key) {
-            switch (key) {
-                case "fromkeys": return new PyDictClassMethod_fromkeys(this);
-                default: return super.getAttr(key);
-            }
         }
 
         static final class PyDictClassMethod_fromkeys extends PyBuiltinMethod<pyclass_dict> {
@@ -294,6 +320,16 @@ public final class Runtime {
         }
     }
     public static final pyclass_dict pyglobal_dict = new pyclass_dict();
+    private static final PyMethodDescriptor pydesc_dict_copy = new PyMethodDescriptor(pyglobal_dict, "copy");
+    private static final PyMethodDescriptor pydesc_dict_clear = new PyMethodDescriptor(pyglobal_dict, "clear");
+    private static final PyMethodDescriptor pydesc_dict_get = new PyMethodDescriptor(pyglobal_dict, "get");
+    private static final PyMethodDescriptor pydesc_dict_keys = new PyMethodDescriptor(pyglobal_dict, "keys");
+    private static final PyMethodDescriptor pydesc_dict_items = new PyMethodDescriptor(pyglobal_dict, "items");
+    private static final PyMethodDescriptor pydesc_dict_pop = new PyMethodDescriptor(pyglobal_dict, "pop");
+    private static final PyMethodDescriptor pydesc_dict_popitem = new PyMethodDescriptor(pyglobal_dict, "popitem");
+    private static final PyMethodDescriptor pydesc_dict_setdefault = new PyMethodDescriptor(pyglobal_dict, "setdefault");
+    private static final PyMethodDescriptor pydesc_dict_update = new PyMethodDescriptor(pyglobal_dict, "update");
+    private static final PyMethodDescriptor pydesc_dict_values = new PyMethodDescriptor(pyglobal_dict, "values");
 
     static final class pyclass_enumerate extends PyBuiltinClass {
         pyclass_enumerate() { super("enumerate", PyEnumerate.class); }
