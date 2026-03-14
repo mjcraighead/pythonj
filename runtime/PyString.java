@@ -238,24 +238,6 @@ public final class PyString extends PyObject {
         throw PyTypeError.raise(PyString.reprOf(type().name()) + " object doesn't support item deletion");
     }
 
-    @Override public final boolean hasIter() { return true; }
-    @Override public PyStringIter iter() { return new PyStringIter(this); }
-    @Override public PyBuiltinClass type() { return Runtime.pyglobal_str; }
-
-    @Override public boolean boolValue() { return !value.isEmpty(); }
-    @Override public boolean contains(PyObject rhs) {
-        if (rhs instanceof PyString rhsStr) {
-            return value.contains(rhsStr.value);
-        } else {
-            throw PyTypeError.raise("'in <string>' requires string as left operand, not " + rhs.type().name());
-        }
-    }
-    @Override public boolean equals(Object rhs) {
-        if (rhs instanceof PyString rhsStr) {
-            return value.equals(rhsStr.value);
-        }
-        return false;
-    }
     @Override public PyObject getAttr(String key) {
         switch (key) {
             case "capitalize": throw unimplementedAttr(key);
@@ -312,6 +294,47 @@ public final class PyString extends PyObject {
                     throw raiseMissingAttr(key);
                 }
         }
+    }
+    @Override public void setAttr(String key, PyObject value) {
+        switch (key) {
+            case "find": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            case "join": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            case "lower": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            case "split": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            case "startswith": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            case "upper": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            default: super.setAttr(key, value); break;
+        }
+    }
+    @Override public void delAttr(String key) {
+        switch (key) {
+            case "find": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            case "join": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            case "lower": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            case "split": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            case "startswith": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            case "upper": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            default: super.delAttr(key); break;
+        }
+    }
+
+    @Override public final boolean hasIter() { return true; }
+    @Override public PyStringIter iter() { return new PyStringIter(this); }
+    @Override public PyBuiltinClass type() { return Runtime.pyglobal_str; }
+
+    @Override public boolean boolValue() { return !value.isEmpty(); }
+    @Override public boolean contains(PyObject rhs) {
+        if (rhs instanceof PyString rhsStr) {
+            return value.contains(rhsStr.value);
+        } else {
+            throw PyTypeError.raise("'in <string>' requires string as left operand, not " + rhs.type().name());
+        }
+    }
+    @Override public boolean equals(Object rhs) {
+        if (rhs instanceof PyString rhsStr) {
+            return value.equals(rhsStr.value);
+        }
+        return false;
     }
     @Override public int hashCode() { return value.hashCode(); }
     @Override public long len() { return value.length(); }

@@ -281,21 +281,6 @@ public final class PyList extends PyObject {
         throw unimplementedMethod("delItem");
     }
 
-    // NOTE: CPython returns a specialized list_reverseiterator.
-    // pythonj intentionally uses the generic reversed iterator, at least for now.
-    @Override public final boolean hasIter() { return true; }
-    @Override public PyListIter iter() { return new PyListIter(items.iterator()); }
-    @Override public PyReversed reversed() { return new PyReversed(this); }
-    @Override public PyBuiltinClass type() { return Runtime.pyglobal_list; }
-
-    @Override public boolean boolValue() { return !items.isEmpty(); }
-    @Override public boolean contains(PyObject rhs) { return items.contains(rhs); }
-    @Override public boolean equals(Object rhs) {
-        if (rhs instanceof PyList rhsList) {
-            return items.equals(rhsList.items);
-        }
-        return false;
-    }
     @Override public PyObject getAttr(String key) {
         switch (key) {
             case "append": return new PyListMethod_append(this);
@@ -316,6 +301,54 @@ public final class PyList extends PyObject {
                     throw raiseMissingAttr(key);
                 }
         }
+    }
+    @Override public void setAttr(String key, PyObject value) {
+        switch (key) {
+            case "append": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            case "clear": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            case "copy": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            case "count": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            case "extend": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            case "index": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            case "insert": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            case "pop": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            case "remove": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            case "reverse": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            case "sort": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            default: super.setAttr(key, value); break;
+        }
+    }
+    @Override public void delAttr(String key) {
+        switch (key) {
+            case "append": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            case "clear": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            case "copy": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            case "count": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            case "extend": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            case "index": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            case "insert": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            case "pop": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            case "remove": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            case "reverse": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            case "sort": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            default: super.delAttr(key); break;
+        }
+    }
+
+    // NOTE: CPython returns a specialized list_reverseiterator.
+    // pythonj intentionally uses the generic reversed iterator, at least for now.
+    @Override public final boolean hasIter() { return true; }
+    @Override public PyListIter iter() { return new PyListIter(items.iterator()); }
+    @Override public PyReversed reversed() { return new PyReversed(this); }
+    @Override public PyBuiltinClass type() { return Runtime.pyglobal_list; }
+
+    @Override public boolean boolValue() { return !items.isEmpty(); }
+    @Override public boolean contains(PyObject rhs) { return items.contains(rhs); }
+    @Override public boolean equals(Object rhs) {
+        if (rhs instanceof PyList rhsList) {
+            return items.equals(rhsList.items);
+        }
+        return false;
     }
     @Override public int hashCode() { throw raiseUnhashable(); }
     @Override public long len() { return items.size(); }

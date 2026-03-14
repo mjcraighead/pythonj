@@ -208,19 +208,6 @@ public final class PySet extends PyObject {
         throw PyTypeError.raise(PyString.reprOf(type().name()) + " object doesn't support item deletion");
     }
 
-    @Override public final boolean hasIter() { return true; }
-    @Override public PySetIter iter() { return new PySetIter(items.iterator()); }
-    @Override public PyBuiltinClass type() { return Runtime.pyglobal_set; }
-
-    @Override public Set<PyObject> asSetOrNull() { return items; }
-    @Override public boolean boolValue() { return !items.isEmpty(); }
-    @Override public boolean contains(PyObject rhs) { return items.contains(rhs); }
-    @Override public boolean equals(Object rhs) {
-        if (rhs instanceof PySet rhsSet) {
-            return items.equals(rhsSet.items);
-        }
-        return false;
-    }
     @Override public PyObject getAttr(String key) {
         switch (key) {
             case "add": return new PySetMethod_add(this);
@@ -247,6 +234,38 @@ public final class PySet extends PyObject {
                     throw raiseMissingAttr(key);
                 }
         }
+    }
+    @Override public void setAttr(String key, PyObject value) {
+        switch (key) {
+            case "add": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            case "clear": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            case "discard": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            case "update": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            default: super.setAttr(key, value); break;
+        }
+    }
+    @Override public void delAttr(String key) {
+        switch (key) {
+            case "add": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            case "clear": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            case "discard": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            case "update": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            default: super.delAttr(key); break;
+        }
+    }
+
+    @Override public final boolean hasIter() { return true; }
+    @Override public PySetIter iter() { return new PySetIter(items.iterator()); }
+    @Override public PyBuiltinClass type() { return Runtime.pyglobal_set; }
+
+    @Override public Set<PyObject> asSetOrNull() { return items; }
+    @Override public boolean boolValue() { return !items.isEmpty(); }
+    @Override public boolean contains(PyObject rhs) { return items.contains(rhs); }
+    @Override public boolean equals(Object rhs) {
+        if (rhs instanceof PySet rhsSet) {
+            return items.equals(rhsSet.items);
+        }
+        return false;
     }
     @Override public int hashCode() { throw raiseUnhashable(); }
     @Override public long len() { return items.size(); }

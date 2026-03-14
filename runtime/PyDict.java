@@ -414,18 +414,21 @@ public final class PyDict extends PyObject {
         }
     }
 
-    @Override public final boolean hasIter() { return true; }
-    @Override public PyDictIter iter() { return new PyDictIter(items.keySet().iterator()); }
-    @Override public PyBuiltinClass type() { return Runtime.pyglobal_dict; }
-
-    @Override public boolean boolValue() { return !items.isEmpty(); }
-    @Override public boolean contains(PyObject rhs) { return items.containsKey(rhs); }
-    @Override public boolean equals(Object rhs) {
-        if (rhs instanceof PyDict rhsDict) {
-            return items.equals(rhsDict.items);
+    @Override public PyObject getItem(PyObject key) {
+        PyObject value = items.get(key);
+        if (value == null) {
+            throw new PyRaise(new PyKeyError(key));
         }
-        return false;
+        return value;
     }
+    @Override public void setItem(PyObject key, PyObject value) { items.put(key, value); }
+    @Override public void delItem(PyObject key) {
+        PyObject value = items.remove(key);
+        if (value == null) {
+            throw new PyRaise(new PyKeyError(key));
+        }
+    }
+
     @Override public PyObject getAttr(String key) {
         switch (key) {
             case "clear": return new PyDictMethod_clear(this);
@@ -447,6 +450,51 @@ public final class PyDict extends PyObject {
                 }
         }
     }
+    @Override public void setAttr(String key, PyObject value) {
+        switch (key) {
+            case "clear": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            case "copy": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            case "fromkeys": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            case "get": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            case "items": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            case "keys": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            case "pop": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            case "popitem": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            case "setdefault": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            case "update": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            case "values": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            default: super.setAttr(key, value); break;
+        }
+    }
+    @Override public void delAttr(String key) {
+        switch (key) {
+            case "clear": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            case "copy": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            case "fromkeys": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            case "get": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            case "items": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            case "keys": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            case "pop": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            case "popitem": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            case "setdefault": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            case "update": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            case "values": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            default: super.delAttr(key); break;
+        }
+    }
+
+    @Override public final boolean hasIter() { return true; }
+    @Override public PyDictIter iter() { return new PyDictIter(items.keySet().iterator()); }
+    @Override public PyBuiltinClass type() { return Runtime.pyglobal_dict; }
+
+    @Override public boolean boolValue() { return !items.isEmpty(); }
+    @Override public boolean contains(PyObject rhs) { return items.containsKey(rhs); }
+    @Override public boolean equals(Object rhs) {
+        if (rhs instanceof PyDict rhsDict) {
+            return items.equals(rhsDict.items);
+        }
+        return false;
+    }
     @Override public int hashCode() { throw raiseUnhashable(); }
     @Override public long len() { return items.size(); }
     @Override public String repr() {
@@ -462,21 +510,6 @@ public final class PyDict extends PyObject {
             s.append(x.getValue().repr());
         }
         return s + "}";
-    }
-
-    @Override public PyObject getItem(PyObject key) {
-        PyObject value = items.get(key);
-        if (value == null) {
-            throw new PyRaise(new PyKeyError(key));
-        }
-        return value;
-    }
-    @Override public void setItem(PyObject key, PyObject value) { items.put(key, value); }
-    @Override public void delItem(PyObject key) {
-        PyObject value = items.remove(key);
-        if (value == null) {
-            throw new PyRaise(new PyKeyError(key));
-        }
     }
 
     public PyNone pymethod_clear() {

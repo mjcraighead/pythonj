@@ -140,6 +140,33 @@ public final class PyTuple extends PyObject {
         }
     }
 
+    @Override public PyObject getAttr(String key) {
+        switch (key) {
+            case "count": return new PyTupleMethod_count(this);
+            case "index": return new PyTupleMethod_index(this);
+            default:
+                if (key.startsWith("__")) {
+                    return super.getAttr(key);
+                } else {
+                    throw raiseMissingAttr(key);
+                }
+        }
+    }
+    @Override public void setAttr(String key, PyObject value) {
+        switch (key) {
+            case "count": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            case "index": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            default: super.setAttr(key, value); break;
+        }
+    }
+    @Override public void delAttr(String key) {
+        switch (key) {
+            case "count": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            case "index": throw Runtime.raiseNamedReadOnlyAttr(this, key);
+            default: super.delAttr(key); break;
+        }
+    }
+
     @Override public final boolean hasIter() { return true; }
     @Override public PyTupleIter iter() { return new PyTupleIter(this); }
     @Override public PyReversed reversed() { return new PyReversed(this); }
@@ -159,18 +186,6 @@ public final class PyTuple extends PyObject {
             return Arrays.equals(items, rhsTuple.items);
         }
         return false;
-    }
-    @Override public PyObject getAttr(String key) {
-        switch (key) {
-            case "count": return new PyTupleMethod_count(this);
-            case "index": return new PyTupleMethod_index(this);
-            default:
-                if (key.startsWith("__")) {
-                    return super.getAttr(key);
-                } else {
-                    throw raiseMissingAttr(key);
-                }
-        }
     }
     @Override public int hashCode() { return Arrays.hashCode(items); }
     @Override public long len() { return items.length; }
