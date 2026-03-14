@@ -48,6 +48,38 @@ public final class PyRange extends PyObject {
         throw PyTypeError.raise(PyString.reprOf(type().name()) + " object doesn't support item deletion");
     }
 
+    @Override public PyObject getAttr(String key) {
+        switch (key) {
+            case "count": throw unimplementedAttr(key);
+            case "index": throw unimplementedAttr(key);
+            case "start": return new PyInt(start);
+            case "step": return new PyInt(step);
+            case "stop": return new PyInt(stop);
+            default:
+                if (key.startsWith("__")) {
+                    return super.getAttr(key);
+                } else {
+                    throw raiseMissingAttr(key);
+                }
+        }
+    }
+    @Override public void setAttr(String key, PyObject value) {
+        switch (key) {
+            case "start": throw PyAttributeError.raise("readonly attribute");
+            case "step": throw PyAttributeError.raise("readonly attribute");
+            case "stop": throw PyAttributeError.raise("readonly attribute");
+            default: super.setAttr(key, value); break;
+        }
+    }
+    @Override public void delAttr(String key) {
+        switch (key) {
+            case "start": throw PyAttributeError.raise("readonly attribute");
+            case "step": throw PyAttributeError.raise("readonly attribute");
+            case "stop": throw PyAttributeError.raise("readonly attribute");
+            default: super.delAttr(key); break;
+        }
+    }
+
     @Override public final boolean hasIter() { return true; }
     @Override public PyRangeIter iter() { return new PyRangeIter(this); }
     @Override public PyBuiltinClass type() { return Runtime.pyglobal_range; }

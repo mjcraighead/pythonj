@@ -54,6 +54,9 @@ final class PyAttributeError extends PyException {
     PyAttributeError(PyObject... _args) { super(_args); }
     @Override public PyBuiltinClass type() { return Runtime.pyglobal_AttributeError; }
 
+    static PyRaise raise(String msg) {
+        return new PyRaise(new PyAttributeError(new PyString(msg)));
+    }
     static PyRaise raiseFormat(String fmt, Object... args) {
         return new PyRaise(new PyAttributeError(new PyString(String.format(fmt, args))));
     }
