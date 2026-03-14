@@ -2,9 +2,10 @@
 // Copyright (c) 2012-2026 Matt Craighead
 // SPDX-License-Identifier: MIT
 
-abstract class PyBaseException extends PyTruthyObject {
+class PyBaseException extends PyTruthyObject {
     protected final PyObject[] args;
     PyBaseException(PyObject[] _args) { args = _args; }
+    @Override public PyBuiltinClass type() { return Runtime.pyglobal_BaseException; }
 
     @Override public boolean contains(PyObject rhs) { return defaultContains(rhs); }
     @Override public String str() {
@@ -35,8 +36,9 @@ abstract class PyBaseException extends PyTruthyObject {
     }
 }
 
-abstract class PyException extends PyBaseException {
+class PyException extends PyBaseException {
     PyException(PyObject[] _args) { super(_args); }
+    @Override public PyBuiltinClass type() { return Runtime.pyglobal_Exception; }
 }
 
 final class PyAssertionError extends PyException {

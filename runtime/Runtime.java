@@ -889,6 +889,24 @@ public final class Runtime {
     }
     public static final pyfunc_AttributeError pyglobal_AttributeError = new pyfunc_AttributeError();
 
+    static final class pyfunc_BaseException extends PyBuiltinClass {
+        pyfunc_BaseException() { super("BaseException", PyBaseException.class); }
+        @Override public PyBaseException call(PyObject[] args, PyDict kwargs) {
+            requireNoKwArgs(kwargs, typeName);
+            return new PyBaseException(args);
+        }
+    }
+    public static final pyfunc_BaseException pyglobal_BaseException = new pyfunc_BaseException();
+
+    static final class pyfunc_Exception extends PyBuiltinClass {
+        pyfunc_Exception() { super("Exception", PyException.class); }
+        @Override public PyException call(PyObject[] args, PyDict kwargs) {
+            requireNoKwArgs(kwargs, typeName);
+            return new PyException(args);
+        }
+    }
+    public static final pyfunc_Exception pyglobal_Exception = new pyfunc_Exception();
+
     static final class pyfunc_IndexError extends PyBuiltinClass {
         pyfunc_IndexError() { super("IndexError", PyIndexError.class); }
         @Override public PyIndexError call(PyObject[] args, PyDict kwargs) {
