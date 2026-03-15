@@ -450,22 +450,6 @@ public final class PyDict extends PyObject {
                 }
         }
     }
-    @Override public void setAttr(String key, PyObject value) {
-        var desc = type().getDescriptor(key);
-        if (desc != null) {
-            desc.set(this, value);
-            return;
-        }
-        super.setAttr(key, value);
-    }
-    @Override public void delAttr(String key) {
-        var desc = type().getDescriptor(key);
-        if (desc != null) {
-            desc.delete(this);
-            return;
-        }
-        super.delAttr(key);
-    }
 
     @Override public final boolean hasIter() { return true; }
     @Override public PyDictIter iter() { return new PyDictIter(items.keySet().iterator()); }

@@ -78,9 +78,19 @@ public abstract class PyObject implements Comparable<PyObject> {
         }
     }
     public void setAttr(String key, PyObject value) {
+        var desc = type().getDescriptor(key);
+        if (desc != null) {
+            desc.set(this, value);
+            return;
+        }
         throw PyAttributeError.raiseFormat("%s object has no attribute %s and no __dict__ for setting new attributes", PyString.reprOf(type().name()), PyString.reprOf(key));
     }
     public void delAttr(String key) {
+        var desc = type().getDescriptor(key);
+        if (desc != null) {
+            desc.delete(this);
+            return;
+        }
         throw PyAttributeError.raiseFormat("%s object has no attribute %s and no __dict__ for setting new attributes", PyString.reprOf(type().name()), PyString.reprOf(key));
     }
 
