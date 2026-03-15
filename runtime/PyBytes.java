@@ -22,6 +22,15 @@ public final class PyBytes extends PyObject {
         @Override public PyBuiltinClass type() { return iter_class_singleton; }
     };
 
+    protected static final class PyBytesMethodUnimplemented extends PyBuiltinMethod<PyBytes> {
+        private final String name;
+        PyBytesMethodUnimplemented(PyBytes self, String name) { super(self); this.name = name; }
+        @Override public String methodName() { return name; }
+        @Override public PyObject call(PyObject[] args, PyDict kwargs) {
+            throw new UnsupportedOperationException("bytes." + name + "() unimplemented");
+        }
+    }
+
     public final byte[] value;
 
     PyBytes(byte[] _value) { value = _value; }

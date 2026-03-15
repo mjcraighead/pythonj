@@ -323,6 +323,53 @@ public final class Runtime {
 
     static final class pyclass_bytes extends PyBuiltinClass {
         pyclass_bytes() { super("bytes", PyBytes.class); }
+        @Override public PyDescriptor getDescriptor(String name) {
+            switch (name) {
+                case "capitalize": return pydesc_bytes_capitalize;
+                case "center": return pydesc_bytes_center;
+                case "count": return pydesc_bytes_count;
+                case "decode": return pydesc_bytes_decode;
+                case "endswith": return pydesc_bytes_endswith;
+                case "expandtabs": return pydesc_bytes_expandtabs;
+                case "find": return pydesc_bytes_find;
+                case "fromhex": return pydesc_bytes_fromhex;
+                case "hex": return pydesc_bytes_hex;
+                case "index": return pydesc_bytes_index;
+                case "isalnum": return pydesc_bytes_isalnum;
+                case "isalpha": return pydesc_bytes_isalpha;
+                case "isascii": return pydesc_bytes_isascii;
+                case "isdigit": return pydesc_bytes_isdigit;
+                case "islower": return pydesc_bytes_islower;
+                case "isspace": return pydesc_bytes_isspace;
+                case "istitle": return pydesc_bytes_istitle;
+                case "isupper": return pydesc_bytes_isupper;
+                case "join": return pydesc_bytes_join;
+                case "ljust": return pydesc_bytes_ljust;
+                case "lower": return pydesc_bytes_lower;
+                case "lstrip": return pydesc_bytes_lstrip;
+                case "maketrans": return pydesc_bytes_maketrans;
+                case "partition": return pydesc_bytes_partition;
+                case "removeprefix": return pydesc_bytes_removeprefix;
+                case "removesuffix": return pydesc_bytes_removesuffix;
+                case "replace": return pydesc_bytes_replace;
+                case "rfind": return pydesc_bytes_rfind;
+                case "rindex": return pydesc_bytes_rindex;
+                case "rjust": return pydesc_bytes_rjust;
+                case "rpartition": return pydesc_bytes_rpartition;
+                case "rsplit": return pydesc_bytes_rsplit;
+                case "rstrip": return pydesc_bytes_rstrip;
+                case "split": return pydesc_bytes_split;
+                case "splitlines": return pydesc_bytes_splitlines;
+                case "startswith": return pydesc_bytes_startswith;
+                case "strip": return pydesc_bytes_strip;
+                case "swapcase": return pydesc_bytes_swapcase;
+                case "title": return pydesc_bytes_title;
+                case "translate": return pydesc_bytes_translate;
+                case "upper": return pydesc_bytes_upper;
+                case "zfill": return pydesc_bytes_zfill;
+                default: return null;
+            }
+        }
         @Override public PyBytes call(PyObject[] args, PyDict kwargs) {
             if (args.length > 1) {
                 throw new IllegalArgumentException("bytes() takes 0 or 1 arguments");
@@ -348,8 +395,69 @@ public final class Runtime {
             }
             return new PyBytes(b.toByteArray());
         }
+
+        protected static final class PyBytesClassMethod_fromhex extends PyBuiltinMethod<PyType> {
+            PyBytesClassMethod_fromhex(PyType self) { super(self); }
+            @Override public String methodName() { return "fromhex"; }
+            @Override public PyObject call(PyObject[] args, PyDict kwargs) {
+                throw new UnsupportedOperationException("bytes.fromhex() unimplemented");
+            }
+        }
+        protected static final class PyBytesStaticMethod_maketrans extends PyBuiltinMethod<PyType> {
+            PyBytesStaticMethod_maketrans(PyType self) { super(self); }
+            @Override public String methodName() { return "maketrans"; }
+            @Override public PyObject call(PyObject[] args, PyDict kwargs) {
+                throw new UnsupportedOperationException("bytes.maketrans() unimplemented");
+            }
+        }
     }
     public static final pyclass_bytes pyglobal_bytes = new pyclass_bytes();
+    private static final PyMethodDescriptor pydesc_bytes_capitalize = new PyMethodDescriptor(pyglobal_bytes, "capitalize", obj -> new PyBytes.PyBytesMethodUnimplemented((PyBytes)obj, "capitalize"));
+    private static final PyMethodDescriptor pydesc_bytes_center = new PyMethodDescriptor(pyglobal_bytes, "center", obj -> new PyBytes.PyBytesMethodUnimplemented((PyBytes)obj, "center"));
+    private static final PyMethodDescriptor pydesc_bytes_count = new PyMethodDescriptor(pyglobal_bytes, "count", obj -> new PyBytes.PyBytesMethodUnimplemented((PyBytes)obj, "count"));
+    private static final PyMethodDescriptor pydesc_bytes_decode = new PyMethodDescriptor(pyglobal_bytes, "decode", obj -> new PyBytes.PyBytesMethodUnimplemented((PyBytes)obj, "decode"));
+    private static final PyMethodDescriptor pydesc_bytes_endswith = new PyMethodDescriptor(pyglobal_bytes, "endswith", obj -> new PyBytes.PyBytesMethodUnimplemented((PyBytes)obj, "endswith"));
+    private static final PyMethodDescriptor pydesc_bytes_expandtabs = new PyMethodDescriptor(pyglobal_bytes, "expandtabs", obj -> new PyBytes.PyBytesMethodUnimplemented((PyBytes)obj, "expandtabs"));
+    private static final PyMethodDescriptor pydesc_bytes_find = new PyMethodDescriptor(pyglobal_bytes, "find", obj -> new PyBytes.PyBytesMethodUnimplemented((PyBytes)obj, "find"));
+    private static final PyClassMethodDescriptor pydesc_bytes_fromhex = new PyClassMethodDescriptor(pyglobal_bytes, "fromhex") {
+        @Override public PyObject get(PyObject instance) {
+            return new pyclass_bytes.PyBytesClassMethod_fromhex(owner);
+        }
+    };
+    private static final PyMethodDescriptor pydesc_bytes_hex = new PyMethodDescriptor(pyglobal_bytes, "hex", obj -> new PyBytes.PyBytesMethodUnimplemented((PyBytes)obj, "hex"));
+    private static final PyMethodDescriptor pydesc_bytes_index = new PyMethodDescriptor(pyglobal_bytes, "index", obj -> new PyBytes.PyBytesMethodUnimplemented((PyBytes)obj, "index"));
+    private static final PyMethodDescriptor pydesc_bytes_isalnum = new PyMethodDescriptor(pyglobal_bytes, "isalnum", obj -> new PyBytes.PyBytesMethodUnimplemented((PyBytes)obj, "isalnum"));
+    private static final PyMethodDescriptor pydesc_bytes_isalpha = new PyMethodDescriptor(pyglobal_bytes, "isalpha", obj -> new PyBytes.PyBytesMethodUnimplemented((PyBytes)obj, "isalpha"));
+    private static final PyMethodDescriptor pydesc_bytes_isascii = new PyMethodDescriptor(pyglobal_bytes, "isascii", obj -> new PyBytes.PyBytesMethodUnimplemented((PyBytes)obj, "isascii"));
+    private static final PyMethodDescriptor pydesc_bytes_isdigit = new PyMethodDescriptor(pyglobal_bytes, "isdigit", obj -> new PyBytes.PyBytesMethodUnimplemented((PyBytes)obj, "isdigit"));
+    private static final PyMethodDescriptor pydesc_bytes_islower = new PyMethodDescriptor(pyglobal_bytes, "islower", obj -> new PyBytes.PyBytesMethodUnimplemented((PyBytes)obj, "islower"));
+    private static final PyMethodDescriptor pydesc_bytes_isspace = new PyMethodDescriptor(pyglobal_bytes, "isspace", obj -> new PyBytes.PyBytesMethodUnimplemented((PyBytes)obj, "isspace"));
+    private static final PyMethodDescriptor pydesc_bytes_istitle = new PyMethodDescriptor(pyglobal_bytes, "istitle", obj -> new PyBytes.PyBytesMethodUnimplemented((PyBytes)obj, "istitle"));
+    private static final PyMethodDescriptor pydesc_bytes_isupper = new PyMethodDescriptor(pyglobal_bytes, "isupper", obj -> new PyBytes.PyBytesMethodUnimplemented((PyBytes)obj, "isupper"));
+    private static final PyMethodDescriptor pydesc_bytes_join = new PyMethodDescriptor(pyglobal_bytes, "join", obj -> new PyBytes.PyBytesMethodUnimplemented((PyBytes)obj, "join"));
+    private static final PyMethodDescriptor pydesc_bytes_ljust = new PyMethodDescriptor(pyglobal_bytes, "ljust", obj -> new PyBytes.PyBytesMethodUnimplemented((PyBytes)obj, "ljust"));
+    private static final PyMethodDescriptor pydesc_bytes_lower = new PyMethodDescriptor(pyglobal_bytes, "lower", obj -> new PyBytes.PyBytesMethodUnimplemented((PyBytes)obj, "lower"));
+    private static final PyMethodDescriptor pydesc_bytes_lstrip = new PyMethodDescriptor(pyglobal_bytes, "lstrip", obj -> new PyBytes.PyBytesMethodUnimplemented((PyBytes)obj, "lstrip"));
+    private static final PyStaticMethod pydesc_bytes_maketrans = new PyStaticMethod(pyglobal_bytes, "maketrans", new pyclass_bytes.PyBytesStaticMethod_maketrans(pyglobal_bytes));
+    private static final PyMethodDescriptor pydesc_bytes_partition = new PyMethodDescriptor(pyglobal_bytes, "partition", obj -> new PyBytes.PyBytesMethodUnimplemented((PyBytes)obj, "partition"));
+    private static final PyMethodDescriptor pydesc_bytes_removeprefix = new PyMethodDescriptor(pyglobal_bytes, "removeprefix", obj -> new PyBytes.PyBytesMethodUnimplemented((PyBytes)obj, "removeprefix"));
+    private static final PyMethodDescriptor pydesc_bytes_removesuffix = new PyMethodDescriptor(pyglobal_bytes, "removesuffix", obj -> new PyBytes.PyBytesMethodUnimplemented((PyBytes)obj, "removesuffix"));
+    private static final PyMethodDescriptor pydesc_bytes_replace = new PyMethodDescriptor(pyglobal_bytes, "replace", obj -> new PyBytes.PyBytesMethodUnimplemented((PyBytes)obj, "replace"));
+    private static final PyMethodDescriptor pydesc_bytes_rfind = new PyMethodDescriptor(pyglobal_bytes, "rfind", obj -> new PyBytes.PyBytesMethodUnimplemented((PyBytes)obj, "rfind"));
+    private static final PyMethodDescriptor pydesc_bytes_rindex = new PyMethodDescriptor(pyglobal_bytes, "rindex", obj -> new PyBytes.PyBytesMethodUnimplemented((PyBytes)obj, "rindex"));
+    private static final PyMethodDescriptor pydesc_bytes_rjust = new PyMethodDescriptor(pyglobal_bytes, "rjust", obj -> new PyBytes.PyBytesMethodUnimplemented((PyBytes)obj, "rjust"));
+    private static final PyMethodDescriptor pydesc_bytes_rpartition = new PyMethodDescriptor(pyglobal_bytes, "rpartition", obj -> new PyBytes.PyBytesMethodUnimplemented((PyBytes)obj, "rpartition"));
+    private static final PyMethodDescriptor pydesc_bytes_rsplit = new PyMethodDescriptor(pyglobal_bytes, "rsplit", obj -> new PyBytes.PyBytesMethodUnimplemented((PyBytes)obj, "rsplit"));
+    private static final PyMethodDescriptor pydesc_bytes_rstrip = new PyMethodDescriptor(pyglobal_bytes, "rstrip", obj -> new PyBytes.PyBytesMethodUnimplemented((PyBytes)obj, "rstrip"));
+    private static final PyMethodDescriptor pydesc_bytes_split = new PyMethodDescriptor(pyglobal_bytes, "split", obj -> new PyBytes.PyBytesMethodUnimplemented((PyBytes)obj, "split"));
+    private static final PyMethodDescriptor pydesc_bytes_splitlines = new PyMethodDescriptor(pyglobal_bytes, "splitlines", obj -> new PyBytes.PyBytesMethodUnimplemented((PyBytes)obj, "splitlines"));
+    private static final PyMethodDescriptor pydesc_bytes_startswith = new PyMethodDescriptor(pyglobal_bytes, "startswith", obj -> new PyBytes.PyBytesMethodUnimplemented((PyBytes)obj, "startswith"));
+    private static final PyMethodDescriptor pydesc_bytes_strip = new PyMethodDescriptor(pyglobal_bytes, "strip", obj -> new PyBytes.PyBytesMethodUnimplemented((PyBytes)obj, "strip"));
+    private static final PyMethodDescriptor pydesc_bytes_swapcase = new PyMethodDescriptor(pyglobal_bytes, "swapcase", obj -> new PyBytes.PyBytesMethodUnimplemented((PyBytes)obj, "swapcase"));
+    private static final PyMethodDescriptor pydesc_bytes_title = new PyMethodDescriptor(pyglobal_bytes, "title", obj -> new PyBytes.PyBytesMethodUnimplemented((PyBytes)obj, "title"));
+    private static final PyMethodDescriptor pydesc_bytes_translate = new PyMethodDescriptor(pyglobal_bytes, "translate", obj -> new PyBytes.PyBytesMethodUnimplemented((PyBytes)obj, "translate"));
+    private static final PyMethodDescriptor pydesc_bytes_upper = new PyMethodDescriptor(pyglobal_bytes, "upper", obj -> new PyBytes.PyBytesMethodUnimplemented((PyBytes)obj, "upper"));
+    private static final PyMethodDescriptor pydesc_bytes_zfill = new PyMethodDescriptor(pyglobal_bytes, "zfill", obj -> new PyBytes.PyBytesMethodUnimplemented((PyBytes)obj, "zfill"));
 
     static final class pyfunc_chr extends PyBuiltinFunction {
         pyfunc_chr() { super("chr"); }
@@ -381,7 +489,6 @@ public final class Runtime {
 
     static final class pyclass_dict extends PyBuiltinClass {
         pyclass_dict() { super("dict", PyDict.class); }
-
         @Override public PyDescriptor getDescriptor(String name) {
             switch (name) {
                 case "clear": return pydesc_dict_clear;
@@ -398,7 +505,6 @@ public final class Runtime {
                 default: return null;
             }
         }
-
         @Override public PyDict call(PyObject[] args, PyDict kwargs) {
             if (args.length > 1) {
                 throw new IllegalArgumentException("dict() takes 0 or 1 arguments");
