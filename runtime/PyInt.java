@@ -8,6 +8,15 @@ public final class PyInt extends PyObject {
     public static final PyInt singleton_0 = new PyInt(0);
     public static final PyInt singleton_1 = new PyInt(1);
 
+    protected static final class PyIntMethodUnimplemented extends PyBuiltinMethod<PyInt> {
+        private final String name;
+        PyIntMethodUnimplemented(PyInt _self, String _name) { super(_self); name = _name; }
+        @Override public String methodName() { return name; }
+        @Override public PyObject call(PyObject[] args, PyDict kwargs) {
+            throw new UnsupportedOperationException("int." + name + "() unimplemented");
+        }
+    }
+
     public final long value;
 
     PyInt(long _value) { value = _value; }

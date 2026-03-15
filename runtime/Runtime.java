@@ -674,6 +674,22 @@ public final class Runtime {
 
     static final class pyclass_int extends PyBuiltinClass {
         pyclass_int() { super("int", PyInt.class); }
+        @Override public PyDescriptor getDescriptor(String name) {
+            switch (name) {
+                case "as_integer_ratio": return pydesc_int_as_integer_ratio;
+                case "bit_count": return pydesc_int_bit_count;
+                case "bit_length": return pydesc_int_bit_length;
+                case "conjugate": return pydesc_int_conjugate;
+                // XXX getset_descriptor 'denominator'
+                case "from_bytes": return pydesc_int_from_bytes;
+                // XXX getset_descriptor 'imag'
+                case "is_integer": return pydesc_int_is_integer;
+                // XXX getset_descriptor 'numerator'
+                // XXX getset_descriptor 'real'
+                case "to_bytes": return pydesc_int_to_bytes;
+                default: return null;
+            }
+        }
         @Override public PyInt call(PyObject[] args, PyDict kwargs) {
             requireMaxArgs(args, 2, typeName);
             if ((kwargs != null) && kwargs.boolValue()) {
@@ -746,8 +762,26 @@ public final class Runtime {
             }
             throw new UnsupportedOperationException("don't know how to handle argument to int()");
         }
+        protected static final class PyIntClassMethod_from_bytes extends PyBuiltinMethod<PyType> {
+            PyIntClassMethod_from_bytes(PyType self) { super(self); }
+            @Override public String methodName() { return "from_bytes"; }
+            @Override public PyObject call(PyObject[] args, PyDict kwargs) {
+                throw new UnsupportedOperationException("int.from_bytes() unimplemented");
+            }
+        }
     }
     public static final pyclass_int pyglobal_int = new pyclass_int();
+    private static final PyMethodDescriptor pydesc_int_as_integer_ratio = new PyMethodDescriptor(pyglobal_int, "as_integer_ratio", obj -> new PyInt.PyIntMethodUnimplemented((PyInt)obj, "as_integer_ratio"));
+    private static final PyMethodDescriptor pydesc_int_bit_count = new PyMethodDescriptor(pyglobal_int, "bit_count", obj -> new PyInt.PyIntMethodUnimplemented((PyInt)obj, "bit_count"));
+    private static final PyMethodDescriptor pydesc_int_bit_length = new PyMethodDescriptor(pyglobal_int, "bit_length", obj -> new PyInt.PyIntMethodUnimplemented((PyInt)obj, "bit_length"));
+    private static final PyMethodDescriptor pydesc_int_conjugate = new PyMethodDescriptor(pyglobal_int, "conjugate", obj -> new PyInt.PyIntMethodUnimplemented((PyInt)obj, "conjugate"));
+    private static final PyClassMethodDescriptor pydesc_int_from_bytes = new PyClassMethodDescriptor(pyglobal_int, "from_bytes") {
+        @Override public PyObject get(PyObject instance) {
+            return new pyclass_int.PyIntClassMethod_from_bytes(owner);
+        }
+    };
+    private static final PyMethodDescriptor pydesc_int_is_integer = new PyMethodDescriptor(pyglobal_int, "is_integer", obj -> new PyInt.PyIntMethodUnimplemented((PyInt)obj, "is_integer"));
+    private static final PyMethodDescriptor pydesc_int_to_bytes = new PyMethodDescriptor(pyglobal_int, "to_bytes", obj -> new PyInt.PyIntMethodUnimplemented((PyInt)obj, "to_bytes"));
 
     static final class pyfunc_isinstance extends PyBuiltinFunction {
         pyfunc_isinstance() { super("isinstance"); }
