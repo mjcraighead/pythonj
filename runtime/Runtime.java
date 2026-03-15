@@ -59,7 +59,7 @@ class PyBuiltinClass extends PyType {
 }
 
 abstract class PyDescriptor extends PyTruthyObject {
-    abstract public PyObject bind();
+    abstract public PyObject get(PyObject instance);
 }
 
 class PyMethodDescriptor extends PyDescriptor {
@@ -71,8 +71,12 @@ class PyMethodDescriptor extends PyDescriptor {
         name = _name;
     }
 
-    @Override public final PyObject bind() {
-        return this;
+    @Override public final PyObject get(PyObject instance) {
+        if (instance == null) {
+            return this;
+        } else {
+            throw new UnsupportedOperationException("binding a method descriptor to an instance is unsupported");
+        }
     }
 
     @Override public final String repr() { return "<method " + PyString.reprOf(name) + " of " + PyString.reprOf(owner.name()) + " objects>"; }
@@ -319,7 +323,7 @@ public final class Runtime {
         @Override public PyObject getAttr(String key) {
             var desc = getDescriptor(key);
             if (desc != null) {
-                return desc.bind();
+                return desc.get(null);
             }
             return super.getAttr(key);
         }
@@ -355,7 +359,7 @@ public final class Runtime {
     private static final PyMethodDescriptor pydesc_dict_copy = new PyMethodDescriptor(pyglobal_dict, "copy");
     private static final PyMethodDescriptor pydesc_dict_clear = new PyMethodDescriptor(pyglobal_dict, "clear");
     private static final PyClassMethodDescriptor pydesc_dict_fromkeys = new PyClassMethodDescriptor(pyglobal_dict, "fromkeys") {
-        @Override public final PyObject bind() {
+        @Override public final PyObject get(PyObject instance) {
             return new pyclass_dict.PyDictClassMethod_fromkeys(owner);
         }
     };
@@ -661,7 +665,7 @@ public final class Runtime {
         @Override public PyObject getAttr(String key) {
             var desc = getDescriptor(key);
             if (desc != null) {
-                return desc.bind();
+                return desc.get(null);
             }
             return super.getAttr(key);
         }
@@ -846,7 +850,7 @@ public final class Runtime {
         @Override public PyObject getAttr(String key) {
             var desc = getDescriptor(key);
             if (desc != null) {
-                return desc.bind();
+                return desc.get(null);
             }
             return super.getAttr(key);
         }
@@ -904,7 +908,7 @@ public final class Runtime {
         @Override public PyObject getAttr(String key) {
             var desc = getDescriptor(key);
             if (desc != null) {
-                return desc.bind();
+                return desc.get(null);
             }
             return super.getAttr(key);
         }
@@ -1037,7 +1041,7 @@ public final class Runtime {
         @Override public PyObject getAttr(String key) {
             var desc = getDescriptor(key);
             if (desc != null) {
-                return desc.bind();
+                return desc.get(null);
             }
             return super.getAttr(key);
         }
@@ -1138,7 +1142,7 @@ public final class Runtime {
         @Override public PyObject getAttr(String key) {
             var desc = getDescriptor(key);
             if (desc != null) {
-                return desc.bind();
+                return desc.get(null);
             }
             return super.getAttr(key);
         }

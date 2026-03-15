@@ -433,7 +433,7 @@ public final class PyDict extends PyObject {
         switch (key) {
             case "clear": return new PyDictMethod_clear(this);
             case "copy": return new PyDictMethod_copy(this);
-            case "fromkeys": return type().getAttr(key); // classmethod
+            case "fromkeys": return type().getDescriptor(key).get(this); // classmethod
             case "get": return new PyDictMethod_get(this);
             case "items": return new PyDictMethod_items(this);
             case "keys": return new PyDictMethod_keys(this);
