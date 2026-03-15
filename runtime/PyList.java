@@ -281,18 +281,6 @@ public final class PyList extends PyObject {
         throw unimplementedMethod("delItem");
     }
 
-    @Override public PyObject getAttr(String key) {
-        var desc = type().getDescriptor(key);
-        if (desc != null) {
-            return desc.get(this);
-        }
-        if (key.startsWith("__")) {
-            return super.getAttr(key);
-        } else {
-            throw raiseMissingAttr(key);
-        }
-    }
-
     // NOTE: CPython returns a specialized list_reverseiterator.
     // pythonj intentionally uses the generic reversed iterator, at least for now.
     @Override public final boolean hasIter() { return true; }

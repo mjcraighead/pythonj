@@ -2,7 +2,6 @@
 // Copyright (c) 2012-2026 Matt Craighead
 // SPDX-License-Identifier: MIT
 
-import java.util.NoSuchElementException;
 import java.util.Set;
 
 public abstract class PyObject implements Comparable<PyObject> {
@@ -72,9 +71,16 @@ public abstract class PyObject implements Comparable<PyObject> {
     }
 
     public PyObject getAttr(String key) {
+        var desc = type().getDescriptor(key);
+        if (desc != null) {
+            return desc.get(this);
+        }
+        if (!key.startsWith("__")) { // we assume all of these are handled by descriptors or derived class
+            throw raiseMissingAttr(key);
+        }
         switch (key) {
             case "__class__": return type();
-            default: throw new NoSuchElementException("object does not have attribute " + PyString.reprOf(key));
+            default: throw new UnsupportedOperationException(PyString.reprOf(key) + " attribute is not handled");
         }
     }
     public void setAttr(String key, PyObject value) {

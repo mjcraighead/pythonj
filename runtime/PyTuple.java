@@ -140,18 +140,6 @@ public final class PyTuple extends PyObject {
         }
     }
 
-    @Override public PyObject getAttr(String key) {
-        var desc = type().getDescriptor(key);
-        if (desc != null) {
-            return desc.get(this);
-        }
-        if (key.startsWith("__")) {
-            return super.getAttr(key);
-        } else {
-            throw raiseMissingAttr(key);
-        }
-    }
-
     @Override public final boolean hasIter() { return true; }
     @Override public PyTupleIter iter() { return new PyTupleIter(this); }
     @Override public PyReversed reversed() { return new PyReversed(this); }

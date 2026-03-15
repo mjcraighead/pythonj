@@ -246,18 +246,6 @@ public final class PyString extends PyObject {
         throw PyTypeError.raise(PyString.reprOf(type().name()) + " object doesn't support item deletion");
     }
 
-    @Override public PyObject getAttr(String key) {
-        var desc = type().getDescriptor(key);
-        if (desc != null) {
-            return desc.get(this);
-        }
-        if (key.startsWith("__")) {
-            return super.getAttr(key);
-        } else {
-            throw raiseMissingAttr(key);
-        }
-    }
-
     @Override public final boolean hasIter() { return true; }
     @Override public PyStringIter iter() { return new PyStringIter(this); }
     @Override public PyBuiltinClass type() { return Runtime.pyglobal_str; }

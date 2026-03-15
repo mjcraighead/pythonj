@@ -429,18 +429,6 @@ public final class PyDict extends PyObject {
         }
     }
 
-    @Override public PyObject getAttr(String key) {
-        var desc = type().getDescriptor(key);
-        if (desc != null) {
-            return desc.get(this);
-        }
-        if (key.startsWith("__")) {
-            return super.getAttr(key);
-        } else {
-            throw raiseMissingAttr(key);
-        }
-    }
-
     @Override public final boolean hasIter() { return true; }
     @Override public PyDictIter iter() { return new PyDictIter(items.keySet().iterator()); }
     @Override public PyBuiltinClass type() { return Runtime.pyglobal_dict; }
