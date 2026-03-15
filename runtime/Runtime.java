@@ -6,6 +6,7 @@ import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.function.Function;
 
 abstract class PyTruthyObject extends PyObject {
     @Override public final boolean boolValue() { return true; }
@@ -71,17 +72,19 @@ abstract class PyDescriptor extends PyTruthyObject {
 class PyMemberDescriptor extends PyDescriptor {
     protected final PyType owner;
     protected final String name;
+    protected final Function<PyObject, PyObject> getter;
 
-    protected PyMemberDescriptor(PyType _owner, String _name) {
+    protected PyMemberDescriptor(PyType _owner, String _name, Function<PyObject, PyObject> _getter) {
         owner = _owner;
         name = _name;
+        getter = _getter;
     }
 
     @Override public final PyObject get(PyObject instance) {
         if (instance == null) {
             return this;
         } else {
-            throw new UnsupportedOperationException("binding a member descriptor to an instance is unsupported");
+            return getter.apply(instance);
         }
     }
     @Override public void set(PyObject instance, PyObject value) {
@@ -903,9 +906,9 @@ public final class Runtime {
     public static final pyclass_range pyglobal_range = new pyclass_range();
     private static final PyMethodDescriptor pydesc_range_count = new PyMethodDescriptor(pyglobal_range, "count");
     private static final PyMethodDescriptor pydesc_range_index = new PyMethodDescriptor(pyglobal_range, "index");
-    private static final PyMemberDescriptor pydesc_range_start = new PyMemberDescriptor(pyglobal_range, "start");
-    private static final PyMemberDescriptor pydesc_range_step = new PyMemberDescriptor(pyglobal_range, "step");
-    private static final PyMemberDescriptor pydesc_range_stop = new PyMemberDescriptor(pyglobal_range, "stop");
+    private static final PyMemberDescriptor pydesc_range_start = new PyMemberDescriptor(pyglobal_range, "start", obj -> new PyInt(((PyRange)obj).start));
+    private static final PyMemberDescriptor pydesc_range_step = new PyMemberDescriptor(pyglobal_range, "step", obj -> new PyInt(((PyRange)obj).step));
+    private static final PyMemberDescriptor pydesc_range_stop = new PyMemberDescriptor(pyglobal_range, "stop", obj -> new PyInt(((PyRange)obj).stop));
 
     static final class pyfunc_repr extends PyBuiltinFunction {
         pyfunc_repr() { super("repr"); }

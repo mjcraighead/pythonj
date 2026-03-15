@@ -32,7 +32,7 @@ public final class PyRange extends PyObject {
         @Override public PyBuiltinClass type() { return iter_class_singleton; }
     };
 
-    private final long start, stop, step;
+    protected final long start, stop, step;
 
     PyRange(long _start, long _stop, long _step) {
         if (_step == 0) {
@@ -52,9 +52,9 @@ public final class PyRange extends PyObject {
         switch (key) {
             case "count": throw unimplementedAttr(key);
             case "index": throw unimplementedAttr(key);
-            case "start": return new PyInt(start);
-            case "step": return new PyInt(step);
-            case "stop": return new PyInt(stop);
+            case "start": return type().getDescriptor(key).get(this); // member
+            case "step": return type().getDescriptor(key).get(this); // member
+            case "stop": return type().getDescriptor(key).get(this); // member
             default:
                 if (key.startsWith("__")) {
                     return super.getAttr(key);
