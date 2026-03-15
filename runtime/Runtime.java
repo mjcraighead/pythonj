@@ -1028,6 +1028,15 @@ public final class Runtime {
 
     static final class pyclass_slice extends PyBuiltinClass {
         pyclass_slice() { super("slice", PySlice.class); }
+        @Override public PyDescriptor getDescriptor(String name) {
+            switch (name) {
+                case "indices": return pydesc_slice_indices;
+                case "start": return pydesc_slice_start;
+                case "step": return pydesc_slice_step;
+                case "stop": return pydesc_slice_stop;
+                default: return null;
+            }
+        }
         @Override public PySlice call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, typeName);
             requireMinArgs(args, 1, typeName);
@@ -1048,6 +1057,10 @@ public final class Runtime {
         }
     }
     public static final pyclass_slice pyglobal_slice = new pyclass_slice();
+    private static final PyMethodDescriptor pydesc_slice_indices = new PyMethodDescriptor(pyglobal_slice, "indices", obj -> new PySlice.PySliceMethod_indices((PySlice)obj));
+    private static final PyMemberDescriptor pydesc_slice_start = new PyMemberDescriptor(pyglobal_slice, "start", obj -> ((PySlice)obj).start);
+    private static final PyMemberDescriptor pydesc_slice_step = new PyMemberDescriptor(pyglobal_slice, "step", obj -> ((PySlice)obj).step);
+    private static final PyMemberDescriptor pydesc_slice_stop = new PyMemberDescriptor(pyglobal_slice, "stop", obj -> ((PySlice)obj).stop);
 
     static final class pyfunc_sorted extends PyBuiltinFunction {
         pyfunc_sorted() { super("sorted"); }

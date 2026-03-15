@@ -3,6 +3,16 @@
 // SPDX-License-Identifier: MIT
 
 public final class PySlice extends PyTruthyObject {
+    protected static final class PySliceMethod_indices extends PyBuiltinMethod<PySlice> {
+        PySliceMethod_indices(PySlice _self) { super(_self); }
+        @Override public String methodName() { return "indices"; }
+        @Override public PyTuple call(PyObject[] args, PyDict kwargs) {
+            Runtime.requireNoKwArgs(kwargs, "slice.indices");
+            Runtime.requireExactArgsAlt(args, 1, "slice.indices");
+            return self.pymethod_indices(args[0]);
+        }
+    }
+
     public final PyObject start, stop, step;
 
     PySlice(PyObject _start, PyObject _stop, PyObject _step) {
@@ -31,7 +41,7 @@ public final class PySlice extends PyTruthyObject {
         return String.format("slice(%s, %s, %s)", start.repr(), stop.repr(), step.repr());
     }
 
-    public record Indices(int start, int step, int length) {}
+    public record Indices(int start, int stop, int step, int length) {}
     private static int asIndex(PyObject obj) {
         if (!obj.hasIndex()) {
             throw PyTypeError.raise("slice indices must be integers or None or have an __index__ method");
@@ -87,6 +97,22 @@ public final class PySlice extends PyTruthyObject {
 
             slicelen = (start < stop) ? ((stop - start - 1) / step + 1) : 0;
         }
-        return new Indices(start, step, slicelen);
+        return new Indices(start, stop, step, slicelen);
+    }
+
+    PyTuple pymethod_indices(PyObject lengthArg) {
+        if (!lengthArg.hasIndex()) {
+            throw PyTypeError.raise(PyString.reprOf(lengthArg.type().name()) + " object cannot be interpreted as an integer");
+        }
+        int length = Math.toIntExact(lengthArg.indexValue());
+        if (length < 0) {
+            throw PyValueError.raise("length should not be negative");
+        }
+        Indices indices = computeIndices(length);
+        return new PyTuple(new PyObject[] {
+            new PyInt(indices.start()),
+            new PyInt(indices.stop()),
+            new PyInt(indices.step())
+        });
     }
 }
