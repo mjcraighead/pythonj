@@ -68,6 +68,33 @@ abstract class PyDescriptor extends PyTruthyObject {
     abstract public void delete(PyObject instance);
 }
 
+class PyMemberDescriptor extends PyDescriptor {
+    protected final PyType owner;
+    protected final String name;
+
+    protected PyMemberDescriptor(PyType _owner, String _name) {
+        owner = _owner;
+        name = _name;
+    }
+
+    @Override public final PyObject get(PyObject instance) {
+        if (instance == null) {
+            return this;
+        } else {
+            throw new UnsupportedOperationException("binding a member descriptor to an instance is unsupported");
+        }
+    }
+    @Override public void set(PyObject instance, PyObject value) {
+        throw PyAttributeError.raise("readonly attribute");
+    }
+    @Override public void delete(PyObject instance) {
+        throw PyAttributeError.raise("readonly attribute");
+    }
+
+    @Override public final String repr() { return "<member " + PyString.reprOf(name) + " of " + PyString.reprOf(owner.name()) + " objects>"; }
+    @Override public final PyBuiltinClass type() { return Runtime.pytype_member_descriptor; }
+}
+
 class PyMethodDescriptor extends PyDescriptor {
     protected final PyType owner;
     protected final String name;
@@ -150,10 +177,11 @@ public final class Runtime {
     }
 
     public static final PyBuiltinClass pytype_builtin_function_or_method = new PyBuiltinClass("builtin_function_or_method", PyBuiltinFunctionOrMethod.class);
+    public static final PyBuiltinClass pytype_classmethod_descriptor = new PyBuiltinClass("classmethod_descriptor", PyClassMethodDescriptor.class);
     public static final PyBuiltinClass pytype_function = new PyBuiltinClass("function", PyUserFunction.class);
     public static final PyBuiltinClass pytype_io_BufferedReader = new PyBuiltinClass("_io.BufferedReader", PyBufferedReader.class);
     public static final PyBuiltinClass pytype_io_TextIOWrapper = new PyBuiltinClass("_io.TextIOWrapper", PyTextIOWrapper.class);
-    public static final PyBuiltinClass pytype_classmethod_descriptor = new PyBuiltinClass("classmethod_descriptor", PyClassMethodDescriptor.class);
+    public static final PyBuiltinClass pytype_member_descriptor = new PyBuiltinClass("member_descriptor", PyMemberDescriptor.class);
     public static final PyBuiltinClass pytype_method_descriptor = new PyBuiltinClass("method_descriptor", PyMethodDescriptor.class);
 
     static final class pyfunc_abs extends PyBuiltinFunction {
@@ -845,10 +873,13 @@ public final class Runtime {
 
     static final class pyclass_range extends PyBuiltinClass {
         pyclass_range() { super("range", PyRange.class); }
-        @Override public PyMethodDescriptor getDescriptor(String name) {
+        @Override public PyDescriptor getDescriptor(String name) {
             switch (name) {
                 case "count": return pydesc_range_count;
                 case "index": return pydesc_range_index;
+                case "start": return pydesc_range_start;
+                case "step": return pydesc_range_step;
+                case "stop": return pydesc_range_stop;
                 default: return null;
             }
         }
@@ -872,6 +903,9 @@ public final class Runtime {
     public static final pyclass_range pyglobal_range = new pyclass_range();
     private static final PyMethodDescriptor pydesc_range_count = new PyMethodDescriptor(pyglobal_range, "count");
     private static final PyMethodDescriptor pydesc_range_index = new PyMethodDescriptor(pyglobal_range, "index");
+    private static final PyMemberDescriptor pydesc_range_start = new PyMemberDescriptor(pyglobal_range, "start");
+    private static final PyMemberDescriptor pydesc_range_step = new PyMemberDescriptor(pyglobal_range, "step");
+    private static final PyMemberDescriptor pydesc_range_stop = new PyMemberDescriptor(pyglobal_range, "stop");
 
     static final class pyfunc_repr extends PyBuiltinFunction {
         pyfunc_repr() { super("repr"); }

@@ -63,22 +63,6 @@ public final class PyRange extends PyObject {
                 }
         }
     }
-    @Override public void setAttr(String key, PyObject value) {
-        switch (key) {
-            case "start": throw PyAttributeError.raise("readonly attribute");
-            case "step": throw PyAttributeError.raise("readonly attribute");
-            case "stop": throw PyAttributeError.raise("readonly attribute");
-            default: super.setAttr(key, value); break;
-        }
-    }
-    @Override public void delAttr(String key) {
-        switch (key) {
-            case "start": throw PyAttributeError.raise("readonly attribute");
-            case "step": throw PyAttributeError.raise("readonly attribute");
-            case "stop": throw PyAttributeError.raise("readonly attribute");
-            default: super.delAttr(key); break;
-        }
-    }
 
     @Override public final boolean hasIter() { return true; }
     @Override public PyRangeIter iter() { return new PyRangeIter(this); }
