@@ -41,6 +41,10 @@ class PyBuiltinClass extends PyType {
         instanceClass = _instanceClass;
     }
     @Override public PyObject getAttr(String key) {
+        var desc = getDescriptor(key);
+        if (desc != null) {
+            return desc.get(null);
+        }
         switch (key) {
             case "__name__": return new PyString(typeName);
             default: return super.getAttr(key);
@@ -334,13 +338,6 @@ public final class Runtime {
                 case "values": return pydesc_dict_values;
                 default: return null;
             }
-        }
-        @Override public PyObject getAttr(String key) {
-            var desc = getDescriptor(key);
-            if (desc != null) {
-                return desc.get(null);
-            }
-            return super.getAttr(key);
         }
 
         @Override public PyDict call(PyObject[] args, PyDict kwargs) {
@@ -677,13 +674,6 @@ public final class Runtime {
                 default: return null;
             }
         }
-        @Override public PyObject getAttr(String key) {
-            var desc = getDescriptor(key);
-            if (desc != null) {
-                return desc.get(null);
-            }
-            return super.getAttr(key);
-        }
         @Override public PyList call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, typeName);
             requireMaxArgs(args, 1, typeName);
@@ -862,13 +852,6 @@ public final class Runtime {
                 default: return null;
             }
         }
-        @Override public PyObject getAttr(String key) {
-            var desc = getDescriptor(key);
-            if (desc != null) {
-                return desc.get(null);
-            }
-            return super.getAttr(key);
-        }
         @Override public PyRange call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, typeName);
             requireMinArgs(args, 1, typeName);
@@ -919,13 +902,6 @@ public final class Runtime {
                 case "update": return pydesc_set_update;
                 default: return null;
             }
-        }
-        @Override public PyObject getAttr(String key) {
-            var desc = getDescriptor(key);
-            if (desc != null) {
-                return desc.get(null);
-            }
-            return super.getAttr(key);
         }
         @Override public PySet call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, typeName);
@@ -1053,13 +1029,6 @@ public final class Runtime {
                 default: return null;
             }
         }
-        @Override public PyObject getAttr(String key) {
-            var desc = getDescriptor(key);
-            if (desc != null) {
-                return desc.get(null);
-            }
-            return super.getAttr(key);
-        }
         @Override public PyString call(PyObject[] args, PyDict kwargs) {
             if (args.length > 1) {
                 throw new IllegalArgumentException("str() takes 0 or 1 arguments");
@@ -1153,13 +1122,6 @@ public final class Runtime {
                 case "index": return pydesc_tuple_index;
                 default: return null;
             }
-        }
-        @Override public PyObject getAttr(String key) {
-            var desc = getDescriptor(key);
-            if (desc != null) {
-                return desc.get(null);
-            }
-            return super.getAttr(key);
         }
         @Override public PyTuple call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, typeName);
