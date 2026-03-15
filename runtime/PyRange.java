@@ -64,9 +64,10 @@ public final class PyRange extends PyObject {
         }
     }
     @Override public void setAttr(String key, PyObject value) {
+        if (type().getDescriptor(key) != null) {
+            throw Runtime.raiseNamedReadOnlyAttr(this, key);
+        }
         switch (key) {
-            case "count": throw Runtime.raiseNamedReadOnlyAttr(this, key);
-            case "index": throw Runtime.raiseNamedReadOnlyAttr(this, key);
             case "start": throw PyAttributeError.raise("readonly attribute");
             case "step": throw PyAttributeError.raise("readonly attribute");
             case "stop": throw PyAttributeError.raise("readonly attribute");
@@ -74,9 +75,10 @@ public final class PyRange extends PyObject {
         }
     }
     @Override public void delAttr(String key) {
+        if (type().getDescriptor(key) != null) {
+            throw Runtime.raiseNamedReadOnlyAttr(this, key);
+        }
         switch (key) {
-            case "count": throw Runtime.raiseNamedReadOnlyAttr(this, key);
-            case "index": throw Runtime.raiseNamedReadOnlyAttr(this, key);
             case "start": throw PyAttributeError.raise("readonly attribute");
             case "step": throw PyAttributeError.raise("readonly attribute");
             case "stop": throw PyAttributeError.raise("readonly attribute");

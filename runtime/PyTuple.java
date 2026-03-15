@@ -153,18 +153,16 @@ public final class PyTuple extends PyObject {
         }
     }
     @Override public void setAttr(String key, PyObject value) {
-        switch (key) {
-            case "count": throw Runtime.raiseNamedReadOnlyAttr(this, key);
-            case "index": throw Runtime.raiseNamedReadOnlyAttr(this, key);
-            default: super.setAttr(key, value); break;
+        if (type().getDescriptor(key) != null) {
+            throw Runtime.raiseNamedReadOnlyAttr(this, key);
         }
+        super.setAttr(key, value);
     }
     @Override public void delAttr(String key) {
-        switch (key) {
-            case "count": throw Runtime.raiseNamedReadOnlyAttr(this, key);
-            case "index": throw Runtime.raiseNamedReadOnlyAttr(this, key);
-            default: super.delAttr(key); break;
+        if (type().getDescriptor(key) != null) {
+            throw Runtime.raiseNamedReadOnlyAttr(this, key);
         }
+        super.delAttr(key);
     }
 
     @Override public final boolean hasIter() { return true; }

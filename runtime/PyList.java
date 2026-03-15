@@ -303,36 +303,16 @@ public final class PyList extends PyObject {
         }
     }
     @Override public void setAttr(String key, PyObject value) {
-        switch (key) {
-            case "append": throw Runtime.raiseNamedReadOnlyAttr(this, key);
-            case "clear": throw Runtime.raiseNamedReadOnlyAttr(this, key);
-            case "copy": throw Runtime.raiseNamedReadOnlyAttr(this, key);
-            case "count": throw Runtime.raiseNamedReadOnlyAttr(this, key);
-            case "extend": throw Runtime.raiseNamedReadOnlyAttr(this, key);
-            case "index": throw Runtime.raiseNamedReadOnlyAttr(this, key);
-            case "insert": throw Runtime.raiseNamedReadOnlyAttr(this, key);
-            case "pop": throw Runtime.raiseNamedReadOnlyAttr(this, key);
-            case "remove": throw Runtime.raiseNamedReadOnlyAttr(this, key);
-            case "reverse": throw Runtime.raiseNamedReadOnlyAttr(this, key);
-            case "sort": throw Runtime.raiseNamedReadOnlyAttr(this, key);
-            default: super.setAttr(key, value); break;
+        if (type().getDescriptor(key) != null) {
+            throw Runtime.raiseNamedReadOnlyAttr(this, key);
         }
+        super.setAttr(key, value);
     }
     @Override public void delAttr(String key) {
-        switch (key) {
-            case "append": throw Runtime.raiseNamedReadOnlyAttr(this, key);
-            case "clear": throw Runtime.raiseNamedReadOnlyAttr(this, key);
-            case "copy": throw Runtime.raiseNamedReadOnlyAttr(this, key);
-            case "count": throw Runtime.raiseNamedReadOnlyAttr(this, key);
-            case "extend": throw Runtime.raiseNamedReadOnlyAttr(this, key);
-            case "index": throw Runtime.raiseNamedReadOnlyAttr(this, key);
-            case "insert": throw Runtime.raiseNamedReadOnlyAttr(this, key);
-            case "pop": throw Runtime.raiseNamedReadOnlyAttr(this, key);
-            case "remove": throw Runtime.raiseNamedReadOnlyAttr(this, key);
-            case "reverse": throw Runtime.raiseNamedReadOnlyAttr(this, key);
-            case "sort": throw Runtime.raiseNamedReadOnlyAttr(this, key);
-            default: super.delAttr(key); break;
+        if (type().getDescriptor(key) != null) {
+            throw Runtime.raiseNamedReadOnlyAttr(this, key);
         }
+        super.delAttr(key);
     }
 
     // NOTE: CPython returns a specialized list_reverseiterator.

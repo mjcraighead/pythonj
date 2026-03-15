@@ -24,6 +24,9 @@ abstract class PyType extends PyTruthyObject {
             return super.or(rhs);
         }
     }
+
+    public PyMethodDescriptor getDescriptor(String name) { return null; }
+
     @Override public boolean contains(PyObject rhs) { return defaultContains(rhs); }
 
     public abstract String name();
@@ -275,11 +278,10 @@ public final class Runtime {
     static final class pyclass_dict extends PyBuiltinClass {
         pyclass_dict() { super("dict", PyDict.class); }
 
-        @Override public PyObject getAttr(String key) {
-            switch (key) {
+        @Override public PyMethodDescriptor getDescriptor(String name) {
+            switch (name) {
                 case "clear": return pydesc_dict_clear;
                 case "copy": return pydesc_dict_copy;
-                case "fromkeys": return new PyDictClassMethod_fromkeys(this);
                 case "get": return pydesc_dict_get;
                 case "items": return pydesc_dict_items;
                 case "keys": return pydesc_dict_keys;
@@ -288,6 +290,16 @@ public final class Runtime {
                 case "setdefault": return pydesc_dict_setdefault;
                 case "update": return pydesc_dict_update;
                 case "values": return pydesc_dict_values;
+                default: return null;
+            }
+        }
+        @Override public PyObject getAttr(String key) {
+            var desc = getDescriptor(key);
+            if (desc != null) {
+                return desc;
+            }
+            switch (key) {
+                case "fromkeys": return new PyDictClassMethod_fromkeys(this);
                 default: return super.getAttr(key);
             }
         }
@@ -605,6 +617,29 @@ public final class Runtime {
 
     static final class pyclass_list extends PyBuiltinClass {
         pyclass_list() { super("list", PyList.class); }
+        @Override public PyMethodDescriptor getDescriptor(String name) {
+            switch (name) {
+                case "append": return pydesc_list_append;
+                case "clear": return pydesc_list_clear;
+                case "copy": return pydesc_list_copy;
+                case "count": return pydesc_list_count;
+                case "extend": return pydesc_list_extend;
+                case "index": return pydesc_list_index;
+                case "insert": return pydesc_list_insert;
+                case "pop": return pydesc_list_pop;
+                case "remove": return pydesc_list_remove;
+                case "reverse": return pydesc_list_reverse;
+                case "sort": return pydesc_list_sort;
+                default: return null;
+            }
+        }
+        @Override public PyObject getAttr(String key) {
+            var desc = getDescriptor(key);
+            if (desc != null) {
+                return desc;
+            }
+            return super.getAttr(key);
+        }
         @Override public PyList call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, typeName);
             requireMaxArgs(args, 1, typeName);
@@ -617,6 +652,17 @@ public final class Runtime {
         }
     }
     public static final pyclass_list pyglobal_list = new pyclass_list();
+    private static final PyMethodDescriptor pydesc_list_append = new PyMethodDescriptor(pyglobal_list, "append");
+    private static final PyMethodDescriptor pydesc_list_clear = new PyMethodDescriptor(pyglobal_list, "clear");
+    private static final PyMethodDescriptor pydesc_list_copy = new PyMethodDescriptor(pyglobal_list, "copy");
+    private static final PyMethodDescriptor pydesc_list_count = new PyMethodDescriptor(pyglobal_list, "count");
+    private static final PyMethodDescriptor pydesc_list_extend = new PyMethodDescriptor(pyglobal_list, "extend");
+    private static final PyMethodDescriptor pydesc_list_index = new PyMethodDescriptor(pyglobal_list, "index");
+    private static final PyMethodDescriptor pydesc_list_insert = new PyMethodDescriptor(pyglobal_list, "insert");
+    private static final PyMethodDescriptor pydesc_list_pop = new PyMethodDescriptor(pyglobal_list, "pop");
+    private static final PyMethodDescriptor pydesc_list_remove = new PyMethodDescriptor(pyglobal_list, "remove");
+    private static final PyMethodDescriptor pydesc_list_reverse = new PyMethodDescriptor(pyglobal_list, "reverse");
+    private static final PyMethodDescriptor pydesc_list_sort = new PyMethodDescriptor(pyglobal_list, "sort");
 
     static final class pyfunc_max extends PyBuiltinFunction {
         pyfunc_max() { super("max"); }
@@ -765,6 +811,20 @@ public final class Runtime {
 
     static final class pyclass_range extends PyBuiltinClass {
         pyclass_range() { super("range", PyRange.class); }
+        @Override public PyMethodDescriptor getDescriptor(String name) {
+            switch (name) {
+                case "count": return pydesc_range_count;
+                case "index": return pydesc_range_index;
+                default: return null;
+            }
+        }
+        @Override public PyObject getAttr(String key) {
+            var desc = getDescriptor(key);
+            if (desc != null) {
+                return desc;
+            }
+            return super.getAttr(key);
+        }
         @Override public PyRange call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, typeName);
             requireMinArgs(args, 1, typeName);
@@ -783,6 +843,8 @@ public final class Runtime {
         }
     }
     public static final pyclass_range pyglobal_range = new pyclass_range();
+    private static final PyMethodDescriptor pydesc_range_count = new PyMethodDescriptor(pyglobal_range, "count");
+    private static final PyMethodDescriptor pydesc_range_index = new PyMethodDescriptor(pyglobal_range, "index");
 
     static final class pyfunc_repr extends PyBuiltinFunction {
         pyfunc_repr() { super("repr"); }
@@ -805,6 +867,22 @@ public final class Runtime {
 
     static final class pyclass_set extends PyBuiltinClass {
         pyclass_set() { super("set", PySet.class); }
+        @Override public PyMethodDescriptor getDescriptor(String name) {
+            switch (name) {
+                case "add": return pydesc_set_add;
+                case "clear": return pydesc_set_clear;
+                case "discard": return pydesc_set_discard;
+                case "update": return pydesc_set_update;
+                default: return null;
+            }
+        }
+        @Override public PyObject getAttr(String key) {
+            var desc = getDescriptor(key);
+            if (desc != null) {
+                return desc;
+            }
+            return super.getAttr(key);
+        }
         @Override public PySet call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, typeName);
             requireMaxArgs(args, 1, typeName);
@@ -817,6 +895,10 @@ public final class Runtime {
         }
     }
     public static final pyclass_set pyglobal_set = new pyclass_set();
+    private static final PyMethodDescriptor pydesc_set_add = new PyMethodDescriptor(pyglobal_set, "add");
+    private static final PyMethodDescriptor pydesc_set_clear = new PyMethodDescriptor(pyglobal_set, "clear");
+    private static final PyMethodDescriptor pydesc_set_discard = new PyMethodDescriptor(pyglobal_set, "discard");
+    private static final PyMethodDescriptor pydesc_set_update = new PyMethodDescriptor(pyglobal_set, "update");
 
     static final class pyfunc_setattr extends PyBuiltinFunction {
         pyfunc_setattr() { super("setattr"); }
@@ -875,6 +957,24 @@ public final class Runtime {
 
     static final class pyclass_str extends PyBuiltinClass {
         pyclass_str() { super("str", PyString.class); }
+        @Override public PyMethodDescriptor getDescriptor(String name) {
+            switch (name) {
+                case "find": return pydesc_str_find;
+                case "join": return pydesc_str_join;
+                case "lower": return pydesc_str_lower;
+                case "split": return pydesc_str_split;
+                case "startswith": return pydesc_str_startswith;
+                case "upper": return pydesc_str_upper;
+                default: return null;
+            }
+        }
+        @Override public PyObject getAttr(String key) {
+            var desc = getDescriptor(key);
+            if (desc != null) {
+                return desc;
+            }
+            return super.getAttr(key);
+        }
         @Override public PyString call(PyObject[] args, PyDict kwargs) {
             if (args.length > 1) {
                 throw new IllegalArgumentException("str() takes 0 or 1 arguments");
@@ -889,6 +989,12 @@ public final class Runtime {
         }
     }
     public static final pyclass_str pyglobal_str = new pyclass_str();
+    private static final PyMethodDescriptor pydesc_str_find = new PyMethodDescriptor(pyglobal_str, "find");
+    private static final PyMethodDescriptor pydesc_str_join = new PyMethodDescriptor(pyglobal_str, "join");
+    private static final PyMethodDescriptor pydesc_str_lower = new PyMethodDescriptor(pyglobal_str, "lower");
+    private static final PyMethodDescriptor pydesc_str_split = new PyMethodDescriptor(pyglobal_str, "split");
+    private static final PyMethodDescriptor pydesc_str_startswith = new PyMethodDescriptor(pyglobal_str, "startswith");
+    private static final PyMethodDescriptor pydesc_str_upper = new PyMethodDescriptor(pyglobal_str, "upper");
 
     static final class pyfunc_sum extends PyBuiltinFunction {
         pyfunc_sum() { super("sum"); }
@@ -915,6 +1021,20 @@ public final class Runtime {
 
     static final class pyclass_tuple extends PyBuiltinClass {
         pyclass_tuple() { super("tuple", PyTuple.class); }
+        @Override public PyMethodDescriptor getDescriptor(String name) {
+            switch (name) {
+                case "count": return pydesc_tuple_count;
+                case "index": return pydesc_tuple_index;
+                default: return null;
+            }
+        }
+        @Override public PyObject getAttr(String key) {
+            var desc = getDescriptor(key);
+            if (desc != null) {
+                return desc;
+            }
+            return super.getAttr(key);
+        }
         @Override public PyTuple call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, typeName);
             requireMaxArgs(args, 1, typeName);
@@ -927,6 +1047,8 @@ public final class Runtime {
         }
     }
     public static final pyclass_tuple pyglobal_tuple = new pyclass_tuple();
+    private static final PyMethodDescriptor pydesc_tuple_count = new PyMethodDescriptor(pyglobal_tuple, "count");
+    private static final PyMethodDescriptor pydesc_tuple_index = new PyMethodDescriptor(pyglobal_tuple, "index");
 
     static final class pyclass_type extends PyBuiltinClass {
         pyclass_type() { super("type", PyType.class); }

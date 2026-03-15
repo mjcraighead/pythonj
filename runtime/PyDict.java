@@ -451,34 +451,20 @@ public final class PyDict extends PyObject {
         }
     }
     @Override public void setAttr(String key, PyObject value) {
+        if (type().getDescriptor(key) != null) {
+            throw Runtime.raiseNamedReadOnlyAttr(this, key);
+        }
         switch (key) {
-            case "clear": throw Runtime.raiseNamedReadOnlyAttr(this, key);
-            case "copy": throw Runtime.raiseNamedReadOnlyAttr(this, key);
             case "fromkeys": throw Runtime.raiseNamedReadOnlyAttr(this, key);
-            case "get": throw Runtime.raiseNamedReadOnlyAttr(this, key);
-            case "items": throw Runtime.raiseNamedReadOnlyAttr(this, key);
-            case "keys": throw Runtime.raiseNamedReadOnlyAttr(this, key);
-            case "pop": throw Runtime.raiseNamedReadOnlyAttr(this, key);
-            case "popitem": throw Runtime.raiseNamedReadOnlyAttr(this, key);
-            case "setdefault": throw Runtime.raiseNamedReadOnlyAttr(this, key);
-            case "update": throw Runtime.raiseNamedReadOnlyAttr(this, key);
-            case "values": throw Runtime.raiseNamedReadOnlyAttr(this, key);
             default: super.setAttr(key, value); break;
         }
     }
     @Override public void delAttr(String key) {
+        if (type().getDescriptor(key) != null) {
+            throw Runtime.raiseNamedReadOnlyAttr(this, key);
+        }
         switch (key) {
-            case "clear": throw Runtime.raiseNamedReadOnlyAttr(this, key);
-            case "copy": throw Runtime.raiseNamedReadOnlyAttr(this, key);
             case "fromkeys": throw Runtime.raiseNamedReadOnlyAttr(this, key);
-            case "get": throw Runtime.raiseNamedReadOnlyAttr(this, key);
-            case "items": throw Runtime.raiseNamedReadOnlyAttr(this, key);
-            case "keys": throw Runtime.raiseNamedReadOnlyAttr(this, key);
-            case "pop": throw Runtime.raiseNamedReadOnlyAttr(this, key);
-            case "popitem": throw Runtime.raiseNamedReadOnlyAttr(this, key);
-            case "setdefault": throw Runtime.raiseNamedReadOnlyAttr(this, key);
-            case "update": throw Runtime.raiseNamedReadOnlyAttr(this, key);
-            case "values": throw Runtime.raiseNamedReadOnlyAttr(this, key);
             default: super.delAttr(key); break;
         }
     }
