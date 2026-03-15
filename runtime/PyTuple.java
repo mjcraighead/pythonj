@@ -23,7 +23,7 @@ public final class PyTuple extends PyObject {
         @Override public PyBuiltinClass type() { return iter_class_singleton; }
     };
 
-    private static final class PyTupleMethod_count extends PyBuiltinMethod<PyTuple> {
+    protected static final class PyTupleMethod_count extends PyBuiltinMethod<PyTuple> {
         PyTupleMethod_count(PyTuple _self) { super(_self); }
         @Override public String methodName() { return "count"; }
         @Override public PyInt call(PyObject[] args, PyDict kwargs) {
@@ -32,7 +32,7 @@ public final class PyTuple extends PyObject {
             return self.pymethod_count(args[0]);
         }
     }
-    private static final class PyTupleMethod_index extends PyBuiltinMethod<PyTuple> {
+    protected static final class PyTupleMethod_index extends PyBuiltinMethod<PyTuple> {
         PyTupleMethod_index(PyTuple _self) { super(_self); }
         @Override public String methodName() { return "index"; }
         @Override public PyInt call(PyObject[] args, PyDict kwargs) {
@@ -141,15 +141,14 @@ public final class PyTuple extends PyObject {
     }
 
     @Override public PyObject getAttr(String key) {
-        switch (key) {
-            case "count": return new PyTupleMethod_count(this);
-            case "index": return new PyTupleMethod_index(this);
-            default:
-                if (key.startsWith("__")) {
-                    return super.getAttr(key);
-                } else {
-                    throw raiseMissingAttr(key);
-                }
+        var desc = type().getDescriptor(key);
+        if (desc != null) {
+            return desc.get(this);
+        }
+        if (key.startsWith("__")) {
+            return super.getAttr(key);
+        } else {
+            throw raiseMissingAttr(key);
         }
     }
 

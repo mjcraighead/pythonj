@@ -26,15 +26,15 @@ public final class PyString extends PyObject {
         @Override public PyBuiltinClass type() { return iter_class_singleton; }
     };
 
-    private static final class PyStringMethodUnimplemented extends PyBuiltinMethod<PyString> {
+    protected static final class PyStringMethodUnimplemented extends PyBuiltinMethod<PyString> {
         private final String name;
         PyStringMethodUnimplemented(PyString _self, String _name) { super(_self); name = _name; }
         @Override public String methodName() { return name; }
         @Override public PyObject call(PyObject[] args, PyDict kwargs) {
-            throw unimplementedMethod("str." + name);
+            throw new UnsupportedOperationException("str." + name + "() unimplemented");
         }
     }
-    private static final class PyStringMethod_find extends PyBuiltinMethod<PyString> {
+    protected static final class PyStringMethod_find extends PyBuiltinMethod<PyString> {
         PyStringMethod_find(PyString _self) { super(_self); }
         @Override public String methodName() { return "find"; }
         @Override public PyInt call(PyObject[] args, PyDict kwargs) {
@@ -47,7 +47,7 @@ public final class PyString extends PyObject {
             return self.pymethod_find(sub, start, end);
         }
     }
-    private static final class PyStringMethod_join extends PyBuiltinMethod<PyString> {
+    protected static final class PyStringMethod_join extends PyBuiltinMethod<PyString> {
         PyStringMethod_join(PyString _self) { super(_self); }
         @Override public String methodName() { return "join"; }
         @Override public PyString call(PyObject[] args, PyDict kwargs) {
@@ -56,7 +56,7 @@ public final class PyString extends PyObject {
             return self.pymethod_join(args[0]);
         }
     }
-    private static final class PyStringMethod_lower extends PyBuiltinMethod<PyString> {
+    protected static final class PyStringMethod_lower extends PyBuiltinMethod<PyString> {
         PyStringMethod_lower(PyString _self) { super(_self); }
         @Override public String methodName() { return "lower"; }
         @Override public PyString call(PyObject[] args, PyDict kwargs) {
@@ -65,7 +65,7 @@ public final class PyString extends PyObject {
             return self.pymethod_lower();
         }
     }
-    private static final class PyStringMethod_split extends PyBuiltinMethod<PyString> {
+    protected static final class PyStringMethod_split extends PyBuiltinMethod<PyString> {
         PyStringMethod_split(PyString _self) { super(_self); }
         @Override public String methodName() { return "split"; }
         @Override public PyList call(PyObject[] args, PyDict kwargs) {
@@ -89,7 +89,7 @@ public final class PyString extends PyObject {
             return self.pymethod_split(sep, maxsplit);
         }
     }
-    private static final class PyStringMethod_startswith extends PyBuiltinMethod<PyString> {
+    protected static final class PyStringMethod_startswith extends PyBuiltinMethod<PyString> {
         PyStringMethod_startswith(PyString _self) { super(_self); }
         @Override public String methodName() { return "startswith"; }
         @Override public PyBool call(PyObject[] args, PyDict kwargs) {
@@ -102,7 +102,7 @@ public final class PyString extends PyObject {
             return self.pymethod_startswith(prefix, start, end);
         }
     }
-    private static final class PyStringMethod_upper extends PyBuiltinMethod<PyString> {
+    protected static final class PyStringMethod_upper extends PyBuiltinMethod<PyString> {
         PyStringMethod_upper(PyString _self) { super(_self); }
         @Override public String methodName() { return "upper"; }
         @Override public PyString call(PyObject[] args, PyDict kwargs) {
@@ -247,60 +247,14 @@ public final class PyString extends PyObject {
     }
 
     @Override public PyObject getAttr(String key) {
-        switch (key) {
-            case "capitalize": return new PyStringMethodUnimplemented(this, key);
-            case "casefold": return new PyStringMethodUnimplemented(this, key);
-            case "center": return new PyStringMethodUnimplemented(this, key);
-            case "count": return new PyStringMethodUnimplemented(this, key);
-            case "encode": return new PyStringMethodUnimplemented(this, key);
-            case "endswith": return new PyStringMethodUnimplemented(this, key);
-            case "expandtabs": return new PyStringMethodUnimplemented(this, key);
-            case "find": return new PyStringMethod_find(this);
-            case "format": return new PyStringMethodUnimplemented(this, key);
-            case "format_map": return new PyStringMethodUnimplemented(this, key);
-            case "index": return new PyStringMethodUnimplemented(this, key);
-            case "isalnum": return new PyStringMethodUnimplemented(this, key);
-            case "isalpha": return new PyStringMethodUnimplemented(this, key);
-            case "isascii": return new PyStringMethodUnimplemented(this, key);
-            case "isdecimal": return new PyStringMethodUnimplemented(this, key);
-            case "isdigit": return new PyStringMethodUnimplemented(this, key);
-            case "isidentifier": return new PyStringMethodUnimplemented(this, key);
-            case "islower": return new PyStringMethodUnimplemented(this, key);
-            case "isnumeric": return new PyStringMethodUnimplemented(this, key);
-            case "isprintable": return new PyStringMethodUnimplemented(this, key);
-            case "isspace": return new PyStringMethodUnimplemented(this, key);
-            case "istitle": return new PyStringMethodUnimplemented(this, key);
-            case "isupper": return new PyStringMethodUnimplemented(this, key);
-            case "join": return new PyStringMethod_join(this);
-            case "ljust": return new PyStringMethodUnimplemented(this, key);
-            case "lower": return new PyStringMethod_lower(this);
-            case "lstrip": return new PyStringMethodUnimplemented(this, key);
-            case "maketrans": throw unimplementedAttr(key); // XXX maketrans (static method)
-            case "partition": return new PyStringMethodUnimplemented(this, key);
-            case "removeprefix": return new PyStringMethodUnimplemented(this, key);
-            case "removesuffix": return new PyStringMethodUnimplemented(this, key);
-            case "replace": return new PyStringMethodUnimplemented(this, key);
-            case "rfind": return new PyStringMethodUnimplemented(this, key);
-            case "rindex": return new PyStringMethodUnimplemented(this, key);
-            case "rjust": return new PyStringMethodUnimplemented(this, key);
-            case "rpartition": return new PyStringMethodUnimplemented(this, key);
-            case "rsplit": return new PyStringMethodUnimplemented(this, key);
-            case "rstrip": return new PyStringMethodUnimplemented(this, key);
-            case "split": return new PyStringMethod_split(this);
-            case "splitlines": return new PyStringMethodUnimplemented(this, key);
-            case "startswith": return new PyStringMethod_startswith(this);
-            case "strip": return new PyStringMethodUnimplemented(this, key);
-            case "swapcase": return new PyStringMethodUnimplemented(this, key);
-            case "title": return new PyStringMethodUnimplemented(this, key);
-            case "translate": return new PyStringMethodUnimplemented(this, key);
-            case "upper": return new PyStringMethod_upper(this);
-            case "zfill": return new PyStringMethodUnimplemented(this, key);
-            default:
-                if (key.startsWith("__")) {
-                    return super.getAttr(key);
-                } else {
-                    throw raiseMissingAttr(key);
-                }
+        var desc = type().getDescriptor(key);
+        if (desc != null) {
+            return desc.get(this);
+        }
+        if (key.startsWith("__")) {
+            return super.getAttr(key);
+        } else {
+            throw raiseMissingAttr(key);
         }
     }
 

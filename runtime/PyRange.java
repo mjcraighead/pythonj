@@ -49,18 +49,14 @@ public final class PyRange extends PyObject {
     }
 
     @Override public PyObject getAttr(String key) {
-        switch (key) {
-            case "count": throw unimplementedAttr(key);
-            case "index": throw unimplementedAttr(key);
-            case "start": return type().getDescriptor(key).get(this); // member
-            case "step": return type().getDescriptor(key).get(this); // member
-            case "stop": return type().getDescriptor(key).get(this); // member
-            default:
-                if (key.startsWith("__")) {
-                    return super.getAttr(key);
-                } else {
-                    throw raiseMissingAttr(key);
-                }
+        var desc = type().getDescriptor(key);
+        if (desc != null) {
+            return desc.get(this);
+        }
+        if (key.startsWith("__")) {
+            return super.getAttr(key);
+        } else {
+            throw raiseMissingAttr(key);
         }
     }
 

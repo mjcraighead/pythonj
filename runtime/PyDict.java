@@ -282,7 +282,7 @@ public final class PyDict extends PyObject {
         @Override public PyBuiltinClass type() { return values_class_singleton; }
     };
 
-    private static final class PyDictMethod_clear extends PyBuiltinMethod<PyDict> {
+    protected static final class PyDictMethod_clear extends PyBuiltinMethod<PyDict> {
         PyDictMethod_clear(PyDict _self) { super(_self); }
         @Override public String methodName() { return "clear"; }
         @Override public PyNone call(PyObject[] args, PyDict kwargs) {
@@ -291,7 +291,7 @@ public final class PyDict extends PyObject {
             return self.pymethod_clear();
         }
     }
-    private static final class PyDictMethod_copy extends PyBuiltinMethod<PyDict> {
+    protected static final class PyDictMethod_copy extends PyBuiltinMethod<PyDict> {
         PyDictMethod_copy(PyDict _self) { super(_self); }
         @Override public String methodName() { return "copy"; }
         @Override public PyDict call(PyObject[] args, PyDict kwargs) {
@@ -300,7 +300,7 @@ public final class PyDict extends PyObject {
             return self.pymethod_copy();
         }
     }
-    private static final class PyDictMethod_get extends PyBuiltinMethod<PyDict> {
+    protected static final class PyDictMethod_get extends PyBuiltinMethod<PyDict> {
         PyDictMethod_get(PyDict _self) { super(_self); }
         @Override public String methodName() { return "get"; }
         @Override public PyObject call(PyObject[] args, PyDict kwargs) {
@@ -310,7 +310,7 @@ public final class PyDict extends PyObject {
             return self.pymethod_get(args[0], (args.length == 2) ? args[1] : PyNone.singleton);
         }
     }
-    private static final class PyDictMethod_items extends PyBuiltinMethod<PyDict> {
+    protected static final class PyDictMethod_items extends PyBuiltinMethod<PyDict> {
         PyDictMethod_items(PyDict _self) { super(_self); }
         @Override public String methodName() { return "items"; }
         @Override public PyDictItems call(PyObject[] args, PyDict kwargs) {
@@ -319,7 +319,7 @@ public final class PyDict extends PyObject {
             return self.pymethod_items();
         }
     }
-    private static final class PyDictMethod_keys extends PyBuiltinMethod<PyDict> {
+    protected static final class PyDictMethod_keys extends PyBuiltinMethod<PyDict> {
         PyDictMethod_keys(PyDict _self) { super(_self); }
         @Override public String methodName() { return "keys"; }
         @Override public PyDictKeys call(PyObject[] args, PyDict kwargs) {
@@ -328,7 +328,7 @@ public final class PyDict extends PyObject {
             return self.pymethod_keys();
         }
     }
-    private static final class PyDictMethod_pop extends PyBuiltinMethod<PyDict> {
+    protected static final class PyDictMethod_pop extends PyBuiltinMethod<PyDict> {
         PyDictMethod_pop(PyDict _self) { super(_self); }
         @Override public String methodName() { return "pop"; }
         @Override public PyObject call(PyObject[] args, PyDict kwargs) {
@@ -338,7 +338,7 @@ public final class PyDict extends PyObject {
             return self.pymethod_pop(args[0], (args.length == 2) ? args[1] : null);
         }
     }
-    private static final class PyDictMethod_popitem extends PyBuiltinMethod<PyDict> {
+    protected static final class PyDictMethod_popitem extends PyBuiltinMethod<PyDict> {
         PyDictMethod_popitem(PyDict _self) { super(_self); }
         @Override public String methodName() { return "popitem"; }
         @Override public PyObject call(PyObject[] args, PyDict kwargs) {
@@ -347,7 +347,7 @@ public final class PyDict extends PyObject {
             return self.pymethod_popitem();
         }
     }
-    private static final class PyDictMethod_setdefault extends PyBuiltinMethod<PyDict> {
+    protected static final class PyDictMethod_setdefault extends PyBuiltinMethod<PyDict> {
         PyDictMethod_setdefault(PyDict _self) { super(_self); }
         @Override public String methodName() { return "setdefault"; }
         @Override public PyObject call(PyObject[] args, PyDict kwargs) {
@@ -357,7 +357,7 @@ public final class PyDict extends PyObject {
             return self.pymethod_setdefault(args[0], (args.length == 2) ? args[1] : PyNone.singleton);
         }
     }
-    private static final class PyDictMethod_update extends PyBuiltinMethod<PyDict> {
+    protected static final class PyDictMethod_update extends PyBuiltinMethod<PyDict> {
         PyDictMethod_update(PyDict _self) { super(_self); }
         @Override public String methodName() { return "update"; }
         @Override public PyNone call(PyObject[] args, PyDict kwargs) {
@@ -366,7 +366,7 @@ public final class PyDict extends PyObject {
             return PyNone.singleton;
         }
     }
-    private static final class PyDictMethod_values extends PyBuiltinMethod<PyDict> {
+    protected static final class PyDictMethod_values extends PyBuiltinMethod<PyDict> {
         PyDictMethod_values(PyDict _self) { super(_self); }
         @Override public String methodName() { return "values"; }
         @Override public PyDictValues call(PyObject[] args, PyDict kwargs) {
@@ -430,24 +430,14 @@ public final class PyDict extends PyObject {
     }
 
     @Override public PyObject getAttr(String key) {
-        switch (key) {
-            case "clear": return new PyDictMethod_clear(this);
-            case "copy": return new PyDictMethod_copy(this);
-            case "fromkeys": return type().getDescriptor(key).get(this); // classmethod
-            case "get": return new PyDictMethod_get(this);
-            case "items": return new PyDictMethod_items(this);
-            case "keys": return new PyDictMethod_keys(this);
-            case "pop": return new PyDictMethod_pop(this);
-            case "popitem": return new PyDictMethod_popitem(this);
-            case "setdefault": return new PyDictMethod_setdefault(this);
-            case "update": return new PyDictMethod_update(this);
-            case "values": return new PyDictMethod_values(this);
-            default:
-                if (key.startsWith("__")) {
-                    return super.getAttr(key);
-                } else {
-                    throw raiseMissingAttr(key);
-                }
+        var desc = type().getDescriptor(key);
+        if (desc != null) {
+            return desc.get(this);
+        }
+        if (key.startsWith("__")) {
+            return super.getAttr(key);
+        } else {
+            throw raiseMissingAttr(key);
         }
     }
 

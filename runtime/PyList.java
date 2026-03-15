@@ -19,7 +19,7 @@ public final class PyList extends PyObject {
         @Override public PyBuiltinClass type() { return iter_class_singleton; }
     };
 
-    private static final class PyListMethod_append extends PyBuiltinMethod<PyList> {
+    protected static final class PyListMethod_append extends PyBuiltinMethod<PyList> {
         PyListMethod_append(PyList _self) { super(_self); }
         @Override public String methodName() { return "append"; }
         @Override public PyNone call(PyObject[] args, PyDict kwargs) {
@@ -28,7 +28,7 @@ public final class PyList extends PyObject {
             return self.pymethod_append(args[0]);
         }
     }
-    private static final class PyListMethod_clear extends PyBuiltinMethod<PyList> {
+    protected static final class PyListMethod_clear extends PyBuiltinMethod<PyList> {
         PyListMethod_clear(PyList _self) { super(_self); }
         @Override public String methodName() { return "clear"; }
         @Override public PyNone call(PyObject[] args, PyDict kwargs) {
@@ -37,7 +37,7 @@ public final class PyList extends PyObject {
             return self.pymethod_clear();
         }
     }
-    private static final class PyListMethod_copy extends PyBuiltinMethod<PyList> {
+    protected static final class PyListMethod_copy extends PyBuiltinMethod<PyList> {
         PyListMethod_copy(PyList _self) { super(_self); }
         @Override public String methodName() { return "copy"; }
         @Override public PyList call(PyObject[] args, PyDict kwargs) {
@@ -46,7 +46,7 @@ public final class PyList extends PyObject {
             return self.pymethod_copy();
         }
     }
-    private static final class PyListMethod_count extends PyBuiltinMethod<PyList> {
+    protected static final class PyListMethod_count extends PyBuiltinMethod<PyList> {
         PyListMethod_count(PyList _self) { super(_self); }
         @Override public String methodName() { return "count"; }
         @Override public PyInt call(PyObject[] args, PyDict kwargs) {
@@ -55,7 +55,7 @@ public final class PyList extends PyObject {
             return self.pymethod_count(args[0]);
         }
     }
-    private static final class PyListMethod_extend extends PyBuiltinMethod<PyList> {
+    protected static final class PyListMethod_extend extends PyBuiltinMethod<PyList> {
         PyListMethod_extend(PyList _self) { super(_self); }
         @Override public String methodName() { return "extend"; }
         @Override public PyNone call(PyObject[] args, PyDict kwargs) {
@@ -64,7 +64,7 @@ public final class PyList extends PyObject {
             return self.pymethod_extend(args[0]);
         }
     }
-    private static final class PyListMethod_index extends PyBuiltinMethod<PyList> {
+    protected static final class PyListMethod_index extends PyBuiltinMethod<PyList> {
         PyListMethod_index(PyList _self) { super(_self); }
         @Override public String methodName() { return "index"; }
         @Override public PyInt call(PyObject[] args, PyDict kwargs) {
@@ -77,7 +77,7 @@ public final class PyList extends PyObject {
             return self.pymethod_index(args[0]);
         }
     }
-    private static final class PyListMethod_insert extends PyBuiltinMethod<PyList> {
+    protected static final class PyListMethod_insert extends PyBuiltinMethod<PyList> {
         PyListMethod_insert(PyList _self) { super(_self); }
         @Override public String methodName() { return "insert"; }
         @Override public PyNone call(PyObject[] args, PyDict kwargs) {
@@ -86,7 +86,7 @@ public final class PyList extends PyObject {
             return self.pymethod_insert(args[0], args[1]);
         }
     }
-    private static final class PyListMethod_pop extends PyBuiltinMethod<PyList> {
+    protected static final class PyListMethod_pop extends PyBuiltinMethod<PyList> {
         PyListMethod_pop(PyList _self) { super(_self); }
         @Override public String methodName() { return "pop"; }
         @Override public PyObject call(PyObject[] args, PyDict kwargs) {
@@ -97,7 +97,7 @@ public final class PyList extends PyObject {
             return self.pymethod_pop(index);
         }
     }
-    private static final class PyListMethod_remove extends PyBuiltinMethod<PyList> {
+    protected static final class PyListMethod_remove extends PyBuiltinMethod<PyList> {
         PyListMethod_remove(PyList _self) { super(_self); }
         @Override public String methodName() { return "remove"; }
         @Override public PyNone call(PyObject[] args, PyDict kwargs) {
@@ -106,7 +106,7 @@ public final class PyList extends PyObject {
             return self.pymethod_remove(args[0]);
         }
     }
-    private static final class PyListMethod_reverse extends PyBuiltinMethod<PyList> {
+    protected static final class PyListMethod_reverse extends PyBuiltinMethod<PyList> {
         PyListMethod_reverse(PyList _self) { super(_self); }
         @Override public String methodName() { return "reverse"; }
         @Override public PyNone call(PyObject[] args, PyDict kwargs) {
@@ -115,7 +115,7 @@ public final class PyList extends PyObject {
             return self.pymethod_reverse();
         }
     }
-    private static final class PyListMethod_sort extends PyBuiltinMethod<PyList> {
+    protected static final class PyListMethod_sort extends PyBuiltinMethod<PyList> {
         PyListMethod_sort(PyList _self) { super(_self); }
         @Override public String methodName() { return "sort"; }
         @Override public PyNone call(PyObject[] args, PyDict kwargs) {
@@ -282,24 +282,14 @@ public final class PyList extends PyObject {
     }
 
     @Override public PyObject getAttr(String key) {
-        switch (key) {
-            case "append": return new PyListMethod_append(this);
-            case "clear": return new PyListMethod_clear(this);
-            case "copy": return new PyListMethod_copy(this);
-            case "count": return new PyListMethod_count(this);
-            case "extend": return new PyListMethod_extend(this);
-            case "index": return new PyListMethod_index(this);
-            case "insert": return new PyListMethod_insert(this);
-            case "pop": return new PyListMethod_pop(this);
-            case "remove": return new PyListMethod_remove(this);
-            case "reverse": return new PyListMethod_reverse(this);
-            case "sort": return new PyListMethod_sort(this);
-            default:
-                if (key.startsWith("__")) {
-                    return super.getAttr(key);
-                } else {
-                    throw raiseMissingAttr(key);
-                }
+        var desc = type().getDescriptor(key);
+        if (desc != null) {
+            return desc.get(this);
+        }
+        if (key.startsWith("__")) {
+            return super.getAttr(key);
+        } else {
+            throw raiseMissingAttr(key);
         }
     }
 

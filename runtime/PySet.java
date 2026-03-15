@@ -19,7 +19,15 @@ public final class PySet extends PyObject {
         @Override public PyBuiltinClass type() { return iter_class_singleton; }
     };
 
-    private static final class PySetMethod_add extends PyBuiltinMethod<PySet> {
+    protected static final class PySetMethodUnimplemented extends PyBuiltinMethod<PySet> {
+        private final String name;
+        PySetMethodUnimplemented(PySet _self, String _name) { super(_self); name = _name; }
+        @Override public String methodName() { return name; }
+        @Override public PyObject call(PyObject[] args, PyDict kwargs) {
+            throw new UnsupportedOperationException("set." + name + "() unimplemented");
+        }
+    }
+    protected static final class PySetMethod_add extends PyBuiltinMethod<PySet> {
         PySetMethod_add(PySet _self) { super(_self); }
         @Override public String methodName() { return "add"; }
         @Override public PyNone call(PyObject[] args, PyDict kwargs) {
@@ -28,7 +36,7 @@ public final class PySet extends PyObject {
             return self.pymethod_add(args[0]);
         }
     }
-    private static final class PySetMethod_clear extends PyBuiltinMethod<PySet> {
+    protected static final class PySetMethod_clear extends PyBuiltinMethod<PySet> {
         PySetMethod_clear(PySet _self) { super(_self); }
         @Override public String methodName() { return "clear"; }
         @Override public PyNone call(PyObject[] args, PyDict kwargs) {
@@ -37,7 +45,7 @@ public final class PySet extends PyObject {
             return self.pymethod_clear();
         }
     }
-    private static final class PySetMethod_discard extends PyBuiltinMethod<PySet> {
+    protected static final class PySetMethod_discard extends PyBuiltinMethod<PySet> {
         PySetMethod_discard(PySet _self) { super(_self); }
         @Override public String methodName() { return "discard"; }
         @Override public PyNone call(PyObject[] args, PyDict kwargs) {
@@ -46,7 +54,7 @@ public final class PySet extends PyObject {
             return self.pymethod_discard(args[0]);
         }
     }
-    private static final class PySetMethod_update extends PyBuiltinMethod<PySet> {
+    protected static final class PySetMethod_update extends PyBuiltinMethod<PySet> {
         PySetMethod_update(PySet _self) { super(_self); }
         @Override public String methodName() { return "update"; }
         @Override public PyNone call(PyObject[] args, PyDict kwargs) {
@@ -209,30 +217,14 @@ public final class PySet extends PyObject {
     }
 
     @Override public PyObject getAttr(String key) {
-        switch (key) {
-            case "add": return new PySetMethod_add(this);
-            case "clear": return new PySetMethod_clear(this);
-            case "copy": throw unimplementedAttr(key);
-            case "difference": throw unimplementedAttr(key);
-            case "difference_update": throw unimplementedAttr(key);
-            case "discard": return new PySetMethod_discard(this);
-            case "intersection": throw unimplementedAttr(key);
-            case "intersection_update": throw unimplementedAttr(key);
-            case "isdisjoint": throw unimplementedAttr(key);
-            case "issubset": throw unimplementedAttr(key);
-            case "issuperset": throw unimplementedAttr(key);
-            case "pop": throw unimplementedAttr(key);
-            case "remove": throw unimplementedAttr(key);
-            case "symmetric_difference": throw unimplementedAttr(key);
-            case "symmetric_difference_update": throw unimplementedAttr(key);
-            case "union": throw unimplementedAttr(key);
-            case "update": return new PySetMethod_update(this);
-            default:
-                if (key.startsWith("__")) {
-                    return super.getAttr(key);
-                } else {
-                    throw raiseMissingAttr(key);
-                }
+        var desc = type().getDescriptor(key);
+        if (desc != null) {
+            return desc.get(this);
+        }
+        if (key.startsWith("__")) {
+            return super.getAttr(key);
+        } else {
+            throw raiseMissingAttr(key);
         }
     }
 
