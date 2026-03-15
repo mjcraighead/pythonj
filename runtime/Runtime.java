@@ -103,11 +103,6 @@ class PyMethodDescriptor extends PyDescriptor {
     protected final String name;
     protected final Function<PyObject, PyObject> getter;
 
-    protected PyMethodDescriptor(PyType _owner, String _name) {
-        owner = _owner;
-        name = _name;
-        getter = null;
-    }
     protected PyMethodDescriptor(PyType _owner, String _name, Function<PyObject, PyObject> _getter) {
         owner = _owner;
         name = _name;
@@ -117,10 +112,8 @@ class PyMethodDescriptor extends PyDescriptor {
     @Override public final PyObject get(PyObject instance) {
         if (instance == null) {
             return this;
-        } else if (getter != null) {
-            return getter.apply(instance);
         } else {
-            throw new UnsupportedOperationException("binding a method descriptor to an instance is unsupported");
+            return getter.apply(instance);
         }
     }
     @Override public void set(PyObject instance, PyObject value) {
@@ -913,8 +906,8 @@ public final class Runtime {
         }
     }
     public static final pyclass_range pyglobal_range = new pyclass_range();
-    private static final PyMethodDescriptor pydesc_range_count = new PyMethodDescriptor(pyglobal_range, "count");
-    private static final PyMethodDescriptor pydesc_range_index = new PyMethodDescriptor(pyglobal_range, "index");
+    private static final PyMethodDescriptor pydesc_range_count = new PyMethodDescriptor(pyglobal_range, "count", obj -> new PyRange.PyRangeMethodUnimplemented((PyRange)obj, "count"));
+    private static final PyMethodDescriptor pydesc_range_index = new PyMethodDescriptor(pyglobal_range, "index", obj -> new PyRange.PyRangeMethodUnimplemented((PyRange)obj, "index"));
     private static final PyMemberDescriptor pydesc_range_start = new PyMemberDescriptor(pyglobal_range, "start", obj -> new PyInt(((PyRange)obj).start));
     private static final PyMemberDescriptor pydesc_range_step = new PyMemberDescriptor(pyglobal_range, "step", obj -> new PyInt(((PyRange)obj).step));
     private static final PyMemberDescriptor pydesc_range_stop = new PyMemberDescriptor(pyglobal_range, "stop", obj -> new PyInt(((PyRange)obj).stop));

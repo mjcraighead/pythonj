@@ -32,6 +32,15 @@ public final class PyRange extends PyObject {
         @Override public PyBuiltinClass type() { return iter_class_singleton; }
     };
 
+    protected static final class PyRangeMethodUnimplemented extends PyBuiltinMethod<PyRange> {
+        private final String name;
+        PyRangeMethodUnimplemented(PyRange _self, String _name) { super(_self); name = _name; }
+        @Override public String methodName() { return name; }
+        @Override public PyObject call(PyObject[] args, PyDict kwargs) {
+            throw new UnsupportedOperationException("range." + name + "() unimplemented");
+        }
+    }
+
     protected final long start, stop, step;
 
     PyRange(long _start, long _stop, long _step) {
