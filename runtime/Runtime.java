@@ -41,7 +41,7 @@ class PyBuiltinClass extends PyType {
         typeName = name;
         instanceClass = _instanceClass;
     }
-    @Override public PyObject getAttr(String key) {
+    @Override public final PyObject getAttr(String key) {
         var desc = getDescriptor(key);
         if (desc != null) {
             return desc.get(null);
@@ -60,7 +60,7 @@ class PyBuiltinClass extends PyType {
 
     @Override public final String repr() { return "<class '" + typeName + "'>"; }
     @Override public final Runtime.pyclass_type type() { return Runtime.pyglobal_type; }
-    @Override public String name() { return typeName; }
+    @Override public final String name() { return typeName; }
 }
 
 abstract class PyDescriptor extends PyTruthyObject {
@@ -87,10 +87,10 @@ class PyMemberDescriptor extends PyDescriptor {
             return getter.apply(instance);
         }
     }
-    @Override public void set(PyObject instance, PyObject value) {
+    @Override public final void set(PyObject instance, PyObject value) {
         throw PyAttributeError.raise("readonly attribute");
     }
-    @Override public void delete(PyObject instance) {
+    @Override public final void delete(PyObject instance) {
         throw PyAttributeError.raise("readonly attribute");
     }
 
@@ -116,10 +116,10 @@ class PyMethodDescriptor extends PyDescriptor {
             return getter.apply(instance);
         }
     }
-    @Override public void set(PyObject instance, PyObject value) {
+    @Override public final void set(PyObject instance, PyObject value) {
         throw Runtime.raiseNamedReadOnlyAttr(owner, name);
     }
-    @Override public void delete(PyObject instance) {
+    @Override public final void delete(PyObject instance) {
         throw Runtime.raiseNamedReadOnlyAttr(owner, name);
     }
 
@@ -136,10 +136,10 @@ abstract class PyClassMethodDescriptor extends PyDescriptor {
         name = _name;
     }
 
-    @Override public void set(PyObject instance, PyObject value) {
+    @Override public final void set(PyObject instance, PyObject value) {
         throw Runtime.raiseNamedReadOnlyAttr(owner, name);
     }
-    @Override public void delete(PyObject instance) {
+    @Override public final void delete(PyObject instance) {
         throw Runtime.raiseNamedReadOnlyAttr(owner, name);
     }
 
@@ -161,10 +161,10 @@ class PyStaticMethod extends PyDescriptor {
     @Override public final PyObject get(PyObject instance) {
         return func;
     }
-    @Override public void set(PyObject instance, PyObject value) {
+    @Override public final void set(PyObject instance, PyObject value) {
         throw Runtime.raiseNamedReadOnlyAttr(owner, name);
     }
-    @Override public void delete(PyObject instance) {
+    @Override public final void delete(PyObject instance) {
         throw Runtime.raiseNamedReadOnlyAttr(owner, name);
     }
 
