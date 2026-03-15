@@ -60,6 +60,8 @@ class PyBuiltinClass extends PyType {
 
 abstract class PyDescriptor extends PyTruthyObject {
     abstract public PyObject get(PyObject instance);
+    abstract public void set(PyObject instance, PyObject value);
+    abstract public void delete(PyObject instance);
 }
 
 class PyMethodDescriptor extends PyDescriptor {
@@ -78,6 +80,12 @@ class PyMethodDescriptor extends PyDescriptor {
             throw new UnsupportedOperationException("binding a method descriptor to an instance is unsupported");
         }
     }
+    @Override public void set(PyObject instance, PyObject value) {
+        throw Runtime.raiseNamedReadOnlyAttr(owner, name);
+    }
+    @Override public void delete(PyObject instance) {
+        throw Runtime.raiseNamedReadOnlyAttr(owner, name);
+    }
 
     @Override public final String repr() { return "<method " + PyString.reprOf(name) + " of " + PyString.reprOf(owner.name()) + " objects>"; }
     @Override public final PyBuiltinClass type() { return Runtime.pytype_method_descriptor; }
@@ -90,6 +98,13 @@ abstract class PyClassMethodDescriptor extends PyDescriptor {
     protected PyClassMethodDescriptor(PyType _owner, String _name) {
         owner = _owner;
         name = _name;
+    }
+
+    @Override public void set(PyObject instance, PyObject value) {
+        throw Runtime.raiseNamedReadOnlyAttr(owner, name);
+    }
+    @Override public void delete(PyObject instance) {
+        throw Runtime.raiseNamedReadOnlyAttr(owner, name);
     }
 
     @Override public final String repr() { return "<method " + PyString.reprOf(name) + " of " + PyString.reprOf(owner.name()) + " objects>"; }
@@ -1341,8 +1356,8 @@ public final class Runtime {
             return PyTypeError.raise(s.toString());
         }
     }
-    public static PyRaise raiseNamedReadOnlyAttr(PyObject obj, String key) {
-        return PyAttributeError.raise(PyString.reprOf(obj.type().name()) + " object attribute " + PyString.reprOf(key) + " is read-only");
+    public static PyRaise raiseNamedReadOnlyAttr(PyType owner, String key) {
+        return PyAttributeError.raise(PyString.reprOf(owner.name()) + " object attribute " + PyString.reprOf(key) + " is read-only");
     }
     public static void requireMinArgs(PyObject[] args, int min, String name) {
         if (args.length < min) {

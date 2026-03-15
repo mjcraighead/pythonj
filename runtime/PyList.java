@@ -303,14 +303,18 @@ public final class PyList extends PyObject {
         }
     }
     @Override public void setAttr(String key, PyObject value) {
-        if (type().getDescriptor(key) != null) {
-            throw Runtime.raiseNamedReadOnlyAttr(this, key);
+        var desc = type().getDescriptor(key);
+        if (desc != null) {
+            desc.set(this, value);
+            return;
         }
         super.setAttr(key, value);
     }
     @Override public void delAttr(String key) {
-        if (type().getDescriptor(key) != null) {
-            throw Runtime.raiseNamedReadOnlyAttr(this, key);
+        var desc = type().getDescriptor(key);
+        if (desc != null) {
+            desc.delete(this);
+            return;
         }
         super.delAttr(key);
     }
