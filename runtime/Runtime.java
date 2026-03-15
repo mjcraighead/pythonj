@@ -25,7 +25,7 @@ abstract class PyType extends PyTruthyObject {
         }
     }
 
-    public PyMethodDescriptor getDescriptor(String name) { return null; }
+    public PyDescriptor getDescriptor(String name) { return null; }
 
     @Override public boolean contains(PyObject rhs) { return defaultContains(rhs); }
 
@@ -58,7 +58,11 @@ class PyBuiltinClass extends PyType {
     @Override public String name() { return typeName; }
 }
 
-class PyMethodDescriptor extends PyTruthyObject {
+abstract class PyDescriptor extends PyTruthyObject {
+    abstract public PyObject bind();
+}
+
+class PyMethodDescriptor extends PyDescriptor {
     protected final PyType owner;
     protected final String name;
 
@@ -67,8 +71,25 @@ class PyMethodDescriptor extends PyTruthyObject {
         name = _name;
     }
 
+    @Override public final PyObject bind() {
+        return this;
+    }
+
     @Override public final String repr() { return "<method " + PyString.reprOf(name) + " of " + PyString.reprOf(owner.name()) + " objects>"; }
     @Override public final PyBuiltinClass type() { return Runtime.pytype_method_descriptor; }
+}
+
+abstract class PyClassMethodDescriptor extends PyDescriptor {
+    protected final PyType owner;
+    protected final String name;
+
+    protected PyClassMethodDescriptor(PyType _owner, String _name) {
+        owner = _owner;
+        name = _name;
+    }
+
+    @Override public final String repr() { return "<method " + PyString.reprOf(name) + " of " + PyString.reprOf(owner.name()) + " objects>"; }
+    @Override public final PyBuiltinClass type() { return Runtime.pytype_classmethod_descriptor; }
 }
 
 abstract class PyBuiltinFunctionOrMethod extends PyTruthyObject {
@@ -109,6 +130,7 @@ public final class Runtime {
     public static final PyBuiltinClass pytype_function = new PyBuiltinClass("function", PyUserFunction.class);
     public static final PyBuiltinClass pytype_io_BufferedReader = new PyBuiltinClass("_io.BufferedReader", PyBufferedReader.class);
     public static final PyBuiltinClass pytype_io_TextIOWrapper = new PyBuiltinClass("_io.TextIOWrapper", PyTextIOWrapper.class);
+    public static final PyBuiltinClass pytype_classmethod_descriptor = new PyBuiltinClass("classmethod_descriptor", PyClassMethodDescriptor.class);
     public static final PyBuiltinClass pytype_method_descriptor = new PyBuiltinClass("method_descriptor", PyMethodDescriptor.class);
 
     static final class pyfunc_abs extends PyBuiltinFunction {
@@ -278,10 +300,11 @@ public final class Runtime {
     static final class pyclass_dict extends PyBuiltinClass {
         pyclass_dict() { super("dict", PyDict.class); }
 
-        @Override public PyMethodDescriptor getDescriptor(String name) {
+        @Override public PyDescriptor getDescriptor(String name) {
             switch (name) {
                 case "clear": return pydesc_dict_clear;
                 case "copy": return pydesc_dict_copy;
+                case "fromkeys": return pydesc_dict_fromkeys;
                 case "get": return pydesc_dict_get;
                 case "items": return pydesc_dict_items;
                 case "keys": return pydesc_dict_keys;
@@ -296,12 +319,9 @@ public final class Runtime {
         @Override public PyObject getAttr(String key) {
             var desc = getDescriptor(key);
             if (desc != null) {
-                return desc;
+                return desc.bind();
             }
-            switch (key) {
-                case "fromkeys": return new PyDictClassMethod_fromkeys(this);
-                default: return super.getAttr(key);
-            }
+            return super.getAttr(key);
         }
 
         @Override public PyDict call(PyObject[] args, PyDict kwargs) {
@@ -313,8 +333,8 @@ public final class Runtime {
             return ret;
         }
 
-        static final class PyDictClassMethod_fromkeys extends PyBuiltinMethod<pyclass_dict> {
-            PyDictClassMethod_fromkeys(pyclass_dict _self) { super(_self); }
+        static final class PyDictClassMethod_fromkeys extends PyBuiltinMethod<PyType> {
+            PyDictClassMethod_fromkeys(PyType _self) { super(_self); }
             @Override public String methodName() { return "fromkeys"; }
             @Override public PyDict call(PyObject[] args, PyDict kwargs) {
                 Runtime.requireNoKwArgs(kwargs, "dict.fromkeys");
@@ -334,6 +354,11 @@ public final class Runtime {
     public static final pyclass_dict pyglobal_dict = new pyclass_dict();
     private static final PyMethodDescriptor pydesc_dict_copy = new PyMethodDescriptor(pyglobal_dict, "copy");
     private static final PyMethodDescriptor pydesc_dict_clear = new PyMethodDescriptor(pyglobal_dict, "clear");
+    private static final PyClassMethodDescriptor pydesc_dict_fromkeys = new PyClassMethodDescriptor(pyglobal_dict, "fromkeys") {
+        @Override public final PyObject bind() {
+            return new pyclass_dict.PyDictClassMethod_fromkeys(owner);
+        }
+    };
     private static final PyMethodDescriptor pydesc_dict_get = new PyMethodDescriptor(pyglobal_dict, "get");
     private static final PyMethodDescriptor pydesc_dict_keys = new PyMethodDescriptor(pyglobal_dict, "keys");
     private static final PyMethodDescriptor pydesc_dict_items = new PyMethodDescriptor(pyglobal_dict, "items");
@@ -636,7 +661,7 @@ public final class Runtime {
         @Override public PyObject getAttr(String key) {
             var desc = getDescriptor(key);
             if (desc != null) {
-                return desc;
+                return desc.bind();
             }
             return super.getAttr(key);
         }
@@ -821,7 +846,7 @@ public final class Runtime {
         @Override public PyObject getAttr(String key) {
             var desc = getDescriptor(key);
             if (desc != null) {
-                return desc;
+                return desc.bind();
             }
             return super.getAttr(key);
         }
@@ -879,7 +904,7 @@ public final class Runtime {
         @Override public PyObject getAttr(String key) {
             var desc = getDescriptor(key);
             if (desc != null) {
-                return desc;
+                return desc.bind();
             }
             return super.getAttr(key);
         }
@@ -971,7 +996,7 @@ public final class Runtime {
         @Override public PyObject getAttr(String key) {
             var desc = getDescriptor(key);
             if (desc != null) {
-                return desc;
+                return desc.bind();
             }
             return super.getAttr(key);
         }
@@ -1031,7 +1056,7 @@ public final class Runtime {
         @Override public PyObject getAttr(String key) {
             var desc = getDescriptor(key);
             if (desc != null) {
-                return desc;
+                return desc.bind();
             }
             return super.getAttr(key);
         }

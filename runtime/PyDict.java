@@ -454,19 +454,13 @@ public final class PyDict extends PyObject {
         if (type().getDescriptor(key) != null) {
             throw Runtime.raiseNamedReadOnlyAttr(this, key);
         }
-        switch (key) {
-            case "fromkeys": throw Runtime.raiseNamedReadOnlyAttr(this, key);
-            default: super.setAttr(key, value); break;
-        }
+        super.setAttr(key, value);
     }
     @Override public void delAttr(String key) {
         if (type().getDescriptor(key) != null) {
             throw Runtime.raiseNamedReadOnlyAttr(this, key);
         }
-        switch (key) {
-            case "fromkeys": throw Runtime.raiseNamedReadOnlyAttr(this, key);
-            default: super.delAttr(key); break;
-        }
+        super.delAttr(key);
     }
 
     @Override public final boolean hasIter() { return true; }
