@@ -147,6 +147,31 @@ abstract class PyClassMethodDescriptor extends PyDescriptor {
     @Override public final PyBuiltinClass type() { return Runtime.pytype_classmethod_descriptor; }
 }
 
+class PyStaticMethod extends PyDescriptor {
+    protected final PyType owner;
+    protected final String name;
+    protected final PyObject func;
+
+    protected PyStaticMethod(PyType _owner, String _name, PyObject _func) {
+        owner = _owner;
+        name = _name;
+        func = _func;
+    }
+
+    @Override public final PyObject get(PyObject instance) {
+        return func;
+    }
+    @Override public void set(PyObject instance, PyObject value) {
+        throw Runtime.raiseNamedReadOnlyAttr(owner, name);
+    }
+    @Override public void delete(PyObject instance) {
+        throw Runtime.raiseNamedReadOnlyAttr(owner, name);
+    }
+
+    @Override public final String repr() { return "<staticmethod(" + func.repr() + ")>"; }
+    @Override public final PyBuiltinClass type() { return Runtime.pytype_staticmethod; }
+}
+
 abstract class PyBuiltinFunctionOrMethod extends PyTruthyObject {
     @Override public final PyBuiltinClass type() { return Runtime.pytype_builtin_function_or_method; }
 }
@@ -188,6 +213,7 @@ public final class Runtime {
     public static final PyBuiltinClass pytype_io_TextIOWrapper = new PyBuiltinClass("_io.TextIOWrapper", PyTextIOWrapper.class);
     public static final PyBuiltinClass pytype_member_descriptor = new PyBuiltinClass("member_descriptor", PyMemberDescriptor.class);
     public static final PyBuiltinClass pytype_method_descriptor = new PyBuiltinClass("method_descriptor", PyMethodDescriptor.class);
+    public static final PyBuiltinClass pytype_staticmethod = new PyBuiltinClass("staticmethod", PyStaticMethod.class);
 
     static final class pyfunc_abs extends PyBuiltinFunction {
         pyfunc_abs() { super("abs"); }
@@ -1042,7 +1068,7 @@ public final class Runtime {
 
     static final class pyclass_str extends PyBuiltinClass {
         pyclass_str() { super("str", PyString.class); }
-        @Override public PyMethodDescriptor getDescriptor(String name) {
+        @Override public PyDescriptor getDescriptor(String name) {
             switch (name) {
                 case "capitalize": return pydesc_str_capitalize;
                 case "casefold": return pydesc_str_casefold;
@@ -1071,7 +1097,7 @@ public final class Runtime {
                 case "ljust": return pydesc_str_ljust;
                 case "lower": return pydesc_str_lower;
                 case "lstrip": return pydesc_str_lstrip;
-                case "maketrans": throw new UnsupportedOperationException("str.maketrans unimplemented");
+                case "maketrans": return pydesc_str_maketrans;
                 case "partition": return pydesc_str_partition;
                 case "removeprefix": return pydesc_str_removeprefix;
                 case "removesuffix": return pydesc_str_removesuffix;
@@ -1106,6 +1132,14 @@ public final class Runtime {
             }
             return PyString.empty_singleton;
         }
+
+        static final class PyStringStaticMethod_maketrans extends PyBuiltinMethod<PyType> {
+            PyStringStaticMethod_maketrans(PyType _self) { super(_self); }
+            @Override public String methodName() { return "maketrans"; }
+            @Override public PyObject call(PyObject[] args, PyDict kwargs) {
+                throw new UnsupportedOperationException("str.maketrans unimplemented");
+            }
+        }
     }
     public static final pyclass_str pyglobal_str = new pyclass_str();
     private static final PyMethodDescriptor pydesc_str_capitalize = new PyMethodDescriptor(pyglobal_str, "capitalize", obj -> new PyString.PyStringMethodUnimplemented((PyString)obj, "capitalize"));
@@ -1135,7 +1169,7 @@ public final class Runtime {
     private static final PyMethodDescriptor pydesc_str_ljust = new PyMethodDescriptor(pyglobal_str, "ljust", obj -> new PyString.PyStringMethodUnimplemented((PyString)obj, "ljust"));
     private static final PyMethodDescriptor pydesc_str_lower = new PyMethodDescriptor(pyglobal_str, "lower", obj -> new PyString.PyStringMethod_lower((PyString)obj));
     private static final PyMethodDescriptor pydesc_str_lstrip = new PyMethodDescriptor(pyglobal_str, "lstrip", obj -> new PyString.PyStringMethodUnimplemented((PyString)obj, "lstrip"));
-    // XXX maketrans (static method)
+    private static final PyStaticMethod pydesc_str_maketrans = new PyStaticMethod(pyglobal_str, "maketrans", new pyclass_str.PyStringStaticMethod_maketrans(pyglobal_str));
     private static final PyMethodDescriptor pydesc_str_partition = new PyMethodDescriptor(pyglobal_str, "partition", obj -> new PyString.PyStringMethodUnimplemented((PyString)obj, "partition"));
     private static final PyMethodDescriptor pydesc_str_removeprefix = new PyMethodDescriptor(pyglobal_str, "removeprefix", obj -> new PyString.PyStringMethodUnimplemented((PyString)obj, "removeprefix"));
     private static final PyMethodDescriptor pydesc_str_removesuffix = new PyMethodDescriptor(pyglobal_str, "removesuffix", obj -> new PyString.PyStringMethodUnimplemented((PyString)obj, "removesuffix"));
