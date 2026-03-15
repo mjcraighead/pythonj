@@ -984,12 +984,53 @@ public final class Runtime {
         pyclass_str() { super("str", PyString.class); }
         @Override public PyMethodDescriptor getDescriptor(String name) {
             switch (name) {
+                case "capitalize": return pydesc_str_capitalize;
+                case "casefold": return pydesc_str_casefold;
+                case "center": return pydesc_str_center;
+                case "count": return pydesc_str_count;
+                case "encode": return pydesc_str_encode;
+                case "endswith": return pydesc_str_endswith;
+                case "expandtabs": return pydesc_str_expandtabs;
                 case "find": return pydesc_str_find;
+                case "format": return pydesc_str_format;
+                case "format_map": return pydesc_str_format_map;
+                case "index": return pydesc_str_index;
+                case "isalnum": return pydesc_str_isalnum;
+                case "isalpha": return pydesc_str_isalpha;
+                case "isascii": return pydesc_str_isascii;
+                case "isdecimal": return pydesc_str_isdecimal;
+                case "isdigit": return pydesc_str_isdigit;
+                case "isidentifier": return pydesc_str_isidentifier;
+                case "islower": return pydesc_str_islower;
+                case "isnumeric": return pydesc_str_isnumeric;
+                case "isprintable": return pydesc_str_isprintable;
+                case "isspace": return pydesc_str_isspace;
+                case "istitle": return pydesc_str_istitle;
+                case "isupper": return pydesc_str_isupper;
                 case "join": return pydesc_str_join;
+                case "ljust": return pydesc_str_ljust;
                 case "lower": return pydesc_str_lower;
+                case "lstrip": return pydesc_str_lstrip;
+                // XXX maketrans (static method)
+                case "partition": return pydesc_str_partition;
+                case "removeprefix": return pydesc_str_removeprefix;
+                case "removesuffix": return pydesc_str_removesuffix;
+                case "replace": return pydesc_str_replace;
+                case "rfind": return pydesc_str_rfind;
+                case "rindex": return pydesc_str_rindex;
+                case "rjust": return pydesc_str_rjust;
+                case "rpartition": return pydesc_str_rpartition;
+                case "rsplit": return pydesc_str_rsplit;
+                case "rstrip": return pydesc_str_rstrip;
                 case "split": return pydesc_str_split;
+                case "splitlines": return pydesc_str_splitlines;
                 case "startswith": return pydesc_str_startswith;
+                case "strip": return pydesc_str_strip;
+                case "swapcase": return pydesc_str_swapcase;
+                case "title": return pydesc_str_title;
+                case "translate": return pydesc_str_translate;
                 case "upper": return pydesc_str_upper;
+                case "zfill": return pydesc_str_zfill;
                 default: return null;
             }
         }
@@ -1014,12 +1055,53 @@ public final class Runtime {
         }
     }
     public static final pyclass_str pyglobal_str = new pyclass_str();
+    private static final PyMethodDescriptor pydesc_str_capitalize = new PyMethodDescriptor(pyglobal_str, "capitalize");
+    private static final PyMethodDescriptor pydesc_str_casefold = new PyMethodDescriptor(pyglobal_str, "casefold");
+    private static final PyMethodDescriptor pydesc_str_center = new PyMethodDescriptor(pyglobal_str, "center");
+    private static final PyMethodDescriptor pydesc_str_count = new PyMethodDescriptor(pyglobal_str, "count");
+    private static final PyMethodDescriptor pydesc_str_encode = new PyMethodDescriptor(pyglobal_str, "encode");
+    private static final PyMethodDescriptor pydesc_str_endswith = new PyMethodDescriptor(pyglobal_str, "endswith");
+    private static final PyMethodDescriptor pydesc_str_expandtabs = new PyMethodDescriptor(pyglobal_str, "expandtabs");
     private static final PyMethodDescriptor pydesc_str_find = new PyMethodDescriptor(pyglobal_str, "find");
+    private static final PyMethodDescriptor pydesc_str_format = new PyMethodDescriptor(pyglobal_str, "format");
+    private static final PyMethodDescriptor pydesc_str_format_map = new PyMethodDescriptor(pyglobal_str, "format_map");
+    private static final PyMethodDescriptor pydesc_str_index = new PyMethodDescriptor(pyglobal_str, "index");
+    private static final PyMethodDescriptor pydesc_str_isalnum = new PyMethodDescriptor(pyglobal_str, "isalnum");
+    private static final PyMethodDescriptor pydesc_str_isalpha = new PyMethodDescriptor(pyglobal_str, "isalpha");
+    private static final PyMethodDescriptor pydesc_str_isascii = new PyMethodDescriptor(pyglobal_str, "isascii");
+    private static final PyMethodDescriptor pydesc_str_isdecimal = new PyMethodDescriptor(pyglobal_str, "isdecimal");
+    private static final PyMethodDescriptor pydesc_str_isdigit = new PyMethodDescriptor(pyglobal_str, "isdigit");
+    private static final PyMethodDescriptor pydesc_str_isidentifier = new PyMethodDescriptor(pyglobal_str, "isidentifier");
+    private static final PyMethodDescriptor pydesc_str_islower = new PyMethodDescriptor(pyglobal_str, "islower");
+    private static final PyMethodDescriptor pydesc_str_isnumeric = new PyMethodDescriptor(pyglobal_str, "isnumeric");
+    private static final PyMethodDescriptor pydesc_str_isprintable = new PyMethodDescriptor(pyglobal_str, "isprintable");
+    private static final PyMethodDescriptor pydesc_str_isspace = new PyMethodDescriptor(pyglobal_str, "isspace");
+    private static final PyMethodDescriptor pydesc_str_istitle = new PyMethodDescriptor(pyglobal_str, "istitle");
+    private static final PyMethodDescriptor pydesc_str_isupper = new PyMethodDescriptor(pyglobal_str, "isupper");
     private static final PyMethodDescriptor pydesc_str_join = new PyMethodDescriptor(pyglobal_str, "join");
+    private static final PyMethodDescriptor pydesc_str_ljust = new PyMethodDescriptor(pyglobal_str, "ljust");
     private static final PyMethodDescriptor pydesc_str_lower = new PyMethodDescriptor(pyglobal_str, "lower");
+    private static final PyMethodDescriptor pydesc_str_lstrip = new PyMethodDescriptor(pyglobal_str, "lstrip");
+    // XXX maketrans (static method)
+    private static final PyMethodDescriptor pydesc_str_partition = new PyMethodDescriptor(pyglobal_str, "partition");
+    private static final PyMethodDescriptor pydesc_str_removeprefix = new PyMethodDescriptor(pyglobal_str, "removeprefix");
+    private static final PyMethodDescriptor pydesc_str_removesuffix = new PyMethodDescriptor(pyglobal_str, "removesuffix");
+    private static final PyMethodDescriptor pydesc_str_replace = new PyMethodDescriptor(pyglobal_str, "replace");
+    private static final PyMethodDescriptor pydesc_str_rfind = new PyMethodDescriptor(pyglobal_str, "rfind");
+    private static final PyMethodDescriptor pydesc_str_rindex = new PyMethodDescriptor(pyglobal_str, "rindex");
+    private static final PyMethodDescriptor pydesc_str_rjust = new PyMethodDescriptor(pyglobal_str, "rjust");
+    private static final PyMethodDescriptor pydesc_str_rpartition = new PyMethodDescriptor(pyglobal_str, "rpartition");
+    private static final PyMethodDescriptor pydesc_str_rsplit = new PyMethodDescriptor(pyglobal_str, "rsplit");
+    private static final PyMethodDescriptor pydesc_str_rstrip = new PyMethodDescriptor(pyglobal_str, "rstrip");
     private static final PyMethodDescriptor pydesc_str_split = new PyMethodDescriptor(pyglobal_str, "split");
+    private static final PyMethodDescriptor pydesc_str_splitlines = new PyMethodDescriptor(pyglobal_str, "splitlines");
     private static final PyMethodDescriptor pydesc_str_startswith = new PyMethodDescriptor(pyglobal_str, "startswith");
+    private static final PyMethodDescriptor pydesc_str_strip = new PyMethodDescriptor(pyglobal_str, "strip");
+    private static final PyMethodDescriptor pydesc_str_swapcase = new PyMethodDescriptor(pyglobal_str, "swapcase");
+    private static final PyMethodDescriptor pydesc_str_title = new PyMethodDescriptor(pyglobal_str, "title");
+    private static final PyMethodDescriptor pydesc_str_translate = new PyMethodDescriptor(pyglobal_str, "translate");
     private static final PyMethodDescriptor pydesc_str_upper = new PyMethodDescriptor(pyglobal_str, "upper");
+    private static final PyMethodDescriptor pydesc_str_zfill = new PyMethodDescriptor(pyglobal_str, "zfill");
 
     static final class pyfunc_sum extends PyBuiltinFunction {
         pyfunc_sum() { super("sum"); }
