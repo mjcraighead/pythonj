@@ -69,12 +69,12 @@ abstract class PyDescriptor extends PyTruthyObject {
     abstract public void delete(PyObject instance);
 }
 
-class PyMemberDescriptor extends PyDescriptor {
+abstract class PyGettableDescriptor extends PyDescriptor {
     protected final PyType owner;
     protected final String name;
     protected final Function<PyObject, PyObject> getter;
 
-    protected PyMemberDescriptor(PyType _owner, String _name, Function<PyObject, PyObject> _getter) {
+    protected PyGettableDescriptor(PyType _owner, String _name, Function<PyObject, PyObject> _getter) {
         owner = _owner;
         name = _name;
         getter = _getter;
@@ -86,6 +86,12 @@ class PyMemberDescriptor extends PyDescriptor {
         } else {
             return getter.apply(instance);
         }
+    }
+}
+
+class PyMemberDescriptor extends PyGettableDescriptor {
+    protected PyMemberDescriptor(PyType _owner, String _name, Function<PyObject, PyObject> _getter) {
+        super(_owner, _name, _getter);
     }
     @Override public final void set(PyObject instance, PyObject value) {
         throw PyAttributeError.raise("readonly attribute");
@@ -98,23 +104,24 @@ class PyMemberDescriptor extends PyDescriptor {
     @Override public final PyBuiltinClass type() { return Runtime.pytype_member_descriptor; }
 }
 
-class PyMethodDescriptor extends PyDescriptor {
-    protected final PyType owner;
-    protected final String name;
-    protected final Function<PyObject, PyObject> getter;
-
-    protected PyMethodDescriptor(PyType _owner, String _name, Function<PyObject, PyObject> _getter) {
-        owner = _owner;
-        name = _name;
-        getter = _getter;
+class PyGetSetDescriptor extends PyGettableDescriptor {
+    protected PyGetSetDescriptor(PyType _owner, String _name, Function<PyObject, PyObject> _getter) {
+        super(_owner, _name, _getter);
+    }
+    @Override public final void set(PyObject instance, PyObject value) {
+        throw PyAttributeError.raise("attribute " + PyString.reprOf(name) + " of " + PyString.reprOf(owner.name()) + " objects is not writable");
+    }
+    @Override public final void delete(PyObject instance) {
+        throw PyAttributeError.raise("attribute " + PyString.reprOf(name) + " of " + PyString.reprOf(owner.name()) + " objects is not writable");
     }
 
-    @Override public final PyObject get(PyObject instance) {
-        if (instance == null) {
-            return this;
-        } else {
-            return getter.apply(instance);
-        }
+    @Override public final String repr() { return "<attribute " + PyString.reprOf(name) + " of " + PyString.reprOf(owner.name()) + " objects>"; }
+    @Override public final PyBuiltinClass type() { return Runtime.pytype_getset_descriptor; }
+}
+
+class PyMethodDescriptor extends PyGettableDescriptor {
+    protected PyMethodDescriptor(PyType _owner, String _name, Function<PyObject, PyObject> _getter) {
+        super(_owner, _name, _getter);
     }
     @Override public final void set(PyObject instance, PyObject value) {
         throw Runtime.raiseNamedReadOnlyAttr(owner, name);
@@ -211,6 +218,7 @@ public final class Runtime {
     public static final PyBuiltinClass pytype_function = new PyBuiltinClass("function", PyUserFunction.class);
     public static final PyBuiltinClass pytype_io_BufferedReader = new PyBuiltinClass("_io.BufferedReader", PyBufferedReader.class);
     public static final PyBuiltinClass pytype_io_TextIOWrapper = new PyBuiltinClass("_io.TextIOWrapper", PyTextIOWrapper.class);
+    public static final PyBuiltinClass pytype_getset_descriptor = new PyBuiltinClass("getset_descriptor", PyGetSetDescriptor.class);
     public static final PyBuiltinClass pytype_member_descriptor = new PyBuiltinClass("member_descriptor", PyMemberDescriptor.class);
     public static final PyBuiltinClass pytype_method_descriptor = new PyBuiltinClass("method_descriptor", PyMethodDescriptor.class);
     public static final PyBuiltinClass pytype_staticmethod = new PyBuiltinClass("staticmethod", PyStaticMethod.class);
@@ -680,12 +688,12 @@ public final class Runtime {
                 case "bit_count": return pydesc_int_bit_count;
                 case "bit_length": return pydesc_int_bit_length;
                 case "conjugate": return pydesc_int_conjugate;
-                // XXX getset_descriptor 'denominator'
+                case "denominator": return pydesc_int_denominator;
                 case "from_bytes": return pydesc_int_from_bytes;
-                // XXX getset_descriptor 'imag'
+                case "imag": return pydesc_int_imag;
                 case "is_integer": return pydesc_int_is_integer;
-                // XXX getset_descriptor 'numerator'
-                // XXX getset_descriptor 'real'
+                case "numerator": return pydesc_int_numerator;
+                case "real": return pydesc_int_real;
                 case "to_bytes": return pydesc_int_to_bytes;
                 default: return null;
             }
@@ -775,12 +783,16 @@ public final class Runtime {
     private static final PyMethodDescriptor pydesc_int_bit_count = new PyMethodDescriptor(pyglobal_int, "bit_count", obj -> new PyInt.PyIntMethodUnimplemented((PyInt)obj, "bit_count"));
     private static final PyMethodDescriptor pydesc_int_bit_length = new PyMethodDescriptor(pyglobal_int, "bit_length", obj -> new PyInt.PyIntMethodUnimplemented((PyInt)obj, "bit_length"));
     private static final PyMethodDescriptor pydesc_int_conjugate = new PyMethodDescriptor(pyglobal_int, "conjugate", obj -> new PyInt.PyIntMethodUnimplemented((PyInt)obj, "conjugate"));
+    private static final PyGetSetDescriptor pydesc_int_denominator = new PyGetSetDescriptor(pyglobal_int, "denominator", obj -> PyInt.singleton_1);
     private static final PyClassMethodDescriptor pydesc_int_from_bytes = new PyClassMethodDescriptor(pyglobal_int, "from_bytes") {
         @Override public PyObject get(PyObject instance) {
             return new pyclass_int.PyIntClassMethod_from_bytes(owner);
         }
     };
+    private static final PyGetSetDescriptor pydesc_int_imag = new PyGetSetDescriptor(pyglobal_int, "imag", obj -> PyInt.singleton_0);
     private static final PyMethodDescriptor pydesc_int_is_integer = new PyMethodDescriptor(pyglobal_int, "is_integer", obj -> new PyInt.PyIntMethodUnimplemented((PyInt)obj, "is_integer"));
+    private static final PyGetSetDescriptor pydesc_int_numerator = new PyGetSetDescriptor(pyglobal_int, "numerator", obj -> obj);
+    private static final PyGetSetDescriptor pydesc_int_real = new PyGetSetDescriptor(pyglobal_int, "real", obj -> obj);
     private static final PyMethodDescriptor pydesc_int_to_bytes = new PyMethodDescriptor(pyglobal_int, "to_bytes", obj -> new PyInt.PyIntMethodUnimplemented((PyInt)obj, "to_bytes"));
 
     static final class pyfunc_isinstance extends PyBuiltinFunction {
