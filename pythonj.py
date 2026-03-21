@@ -1321,14 +1321,14 @@ def gen_code(path) -> None:
     for (name, attrs) in spec.items():
         java_name = BUILTIN_TYPES[name]
         java_path = f'runtime/{java_name}.java'
-        begin_tag = f'// BEGIN GENERATED CODE: {java_name}Type\n'
-        end_tag = f'// END GENERATED CODE: {java_name}Type\n'
-
         with open(java_path) as f:
             source_lines = f.readlines()
 
+        begin_tag = f'// BEGIN GENERATED CODE: {java_name}Type\n'
+        end_tag = f'// END GENERATED CODE: {java_name}Type\n'
         begin_index = source_lines.index(begin_tag) + 1
         end_index = source_lines.index(end_tag)
+
         gen_lines = [f'    public static final {java_name}Type singleton = new {java_name}Type();\n']
         for (k, v) in attrs.items():
             if v['kind'] == 'string':
@@ -1361,6 +1361,23 @@ def gen_code(path) -> None:
             '    }\n',
         ]
         source_lines[begin_index:end_index] = gen_lines
+
+        if name in UNIMPLEMENTED_METHODS:
+            begin_tag = f'// BEGIN GENERATED CODE: {java_name}\n'
+            end_tag = f'// END GENERATED CODE: {java_name}\n'
+            begin_index = source_lines.index(begin_tag) + 1
+            end_index = source_lines.index(end_tag)
+            gen_lines = [
+                f'    protected static final class {java_name}MethodUnimplemented extends PyBuiltinMethod<{java_name}> {{\n',
+                '        private final String name;\n',
+                f'        {java_name}MethodUnimplemented(PyObject _self, String _name) {{ super(({java_name})_self); name = _name; }}\n',
+                '        @Override public String methodName() { return name; }\n',
+                '        @Override public PyObject call(PyObject[] args, PyDict kwargs) {\n',
+                f'            throw new UnsupportedOperationException("{name}." + name + "() unimplemented");\n',
+                '        }\n',
+                '    }\n',
+            ]
+            source_lines[begin_index:end_index] = gen_lines
 
         with open(java_path, 'w') as f:
             for line in source_lines:

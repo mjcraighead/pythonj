@@ -99,6 +99,7 @@ public final class PySet extends PyObject {
         @Override public PyBuiltinType type() { return type_singleton; }
     };
 
+// BEGIN GENERATED CODE: PySet
     protected static final class PySetMethodUnimplemented extends PyBuiltinMethod<PySet> {
         private final String name;
         PySetMethodUnimplemented(PyObject _self, String _name) { super((PySet)_self); name = _name; }
@@ -107,6 +108,7 @@ public final class PySet extends PyObject {
             throw new UnsupportedOperationException("set." + name + "() unimplemented");
         }
     }
+// END GENERATED CODE: PySet
     protected static final class PySetMethod_add extends PyBuiltinMethod<PySet> {
         PySetMethod_add(PyObject _self) { super((PySet)_self); }
         @Override public String methodName() { return "add"; }
