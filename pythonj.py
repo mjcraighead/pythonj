@@ -26,22 +26,22 @@ BUILTIN_FUNCTIONS = {
     'setattr', 'sorted', 'sum',
 }
 BUILTIN_TYPES = {
-    'bool': 'PyBoolType',
-    'bytearray': 'PyByteArrayType',
-    'bytes': 'PyBytesType',
-    'dict': 'PyDictType',
-    'enumerate': 'PyEnumerateType',
-    'int': 'PyIntType',
-    'list': 'PyListType',
-    'object': 'PyObjectType',
-    'range': 'PyRangeType',
-    'reversed': 'PyReversedType',
-    'set': 'PySetType',
-    'slice': 'PySliceType',
-    'str': 'PyStringType',
-    'tuple': 'PyTupleType',
-    'type': 'PyTypeType',
-    'zip': 'PyZipType',
+    'bool': 'PyBool',
+    'bytearray': 'PyByteArray',
+    'bytes': 'PyBytes',
+    'dict': 'PyDict',
+    'enumerate': 'PyEnumerate',
+    'int': 'PyInt',
+    'list': 'PyList',
+    'object': 'PyObject',
+    'range': 'PyRange',
+    'reversed': 'PyReversed',
+    'set': 'PySet',
+    'slice': 'PySlice',
+    'str': 'PyString',
+    'tuple': 'PyTuple',
+    'type': 'PyType',
+    'zip': 'PyZip',
 }
 EXCEPTION_TYPES = {
     'ArithmeticError', 'AssertionError', 'AttributeError', 'BaseException', 'Exception', 'IndexError',
@@ -70,12 +70,6 @@ RUNTIME_JAVA_FILES = (
     'PyZip.java',
     'Runtime.java',
 )
-CODEGEN_PATHS = {
-    'range': 'runtime/PyRange.java',
-    'set': 'runtime/PySet.java',
-    'slice': 'runtime/PySlice.java',
-    'tuple': 'runtime/PyTuple.java',
-}
 
 def int_name(i: int) -> str:
     """Return the Java variable name to use for the PyInt singleton with a given value."""
@@ -609,7 +603,7 @@ class PythonjVisitor(ast.NodeVisitor):
         elif self.scope.kind == ScopeKind.FUNCTION and name in self.scope.locals:
             return JavaIdentifier(f'pylocal_{name}')
         elif name in BUILTIN_TYPES:
-            return JavaField(JavaIdentifier(BUILTIN_TYPES[name]), 'singleton')
+            return JavaField(JavaIdentifier(f'{BUILTIN_TYPES[name]}Type'), 'singleton')
         elif name in EXCEPTION_TYPES:
             return JavaField(JavaIdentifier(f'Py{name}Type'), 'singleton')
         elif name in BUILTIN_FUNCTIONS:
@@ -1294,7 +1288,7 @@ class PythonjVisitor(ast.NodeVisitor):
 
 def gen_spec(path: str) -> None:
     spec = {}
-    for name in ['range', 'set', 'slice', 'tuple']:
+    for name in ['list', 'range', 'set', 'slice', 'tuple']:
         obj = getattr(builtins, name)
         attrs = {}
         for (k, v) in obj.__dict__.items():
@@ -1319,9 +1313,9 @@ def gen_code(path) -> None:
         spec = json.load(f)
 
     for (name, attrs) in spec.items():
-        java_path = CODEGEN_PATHS[name]
-        begin_tag = f'// BEGIN GENERATED CODE: {BUILTIN_TYPES[name]}\n'
-        end_tag = f'// END GENERATED CODE: {BUILTIN_TYPES[name]}\n'
+        java_path = f'runtime/{BUILTIN_TYPES[name]}.java'
+        begin_tag = f'// BEGIN GENERATED CODE: {BUILTIN_TYPES[name]}Type\n'
+        end_tag = f'// END GENERATED CODE: {BUILTIN_TYPES[name]}Type\n'
 
         with open(java_path) as f:
             source_lines = f.readlines()

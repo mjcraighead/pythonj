@@ -20,24 +20,42 @@ final class PyListType extends PyBuiltinType {
     private static final PyMethodDescriptor pydesc_remove = new PyMethodDescriptor(singleton, "remove", PyList.PyListMethod_remove::new);
     private static final PyMethodDescriptor pydesc_reverse = new PyMethodDescriptor(singleton, "reverse", PyList.PyListMethod_reverse::new);
     private static final PyMethodDescriptor pydesc_sort = new PyMethodDescriptor(singleton, "sort", PyList.PyListMethod_sort::new);
-
-    private PyListType() { super("list", PyList.class); }
+// BEGIN GENERATED CODE: PyListType
+    private static final PyString pydesc___doc__ = new PyString("Built-in mutable sequence.\n\nIf no argument is given, the constructor creates a new empty list.\nThe argument must be an iterable if specified.");
+    private static final PyAttr attrs[] = new PyAttr[] {
+        new PyAttr("clear", pydesc_clear),
+        new PyAttr("copy", pydesc_copy),
+        new PyAttr("append", pydesc_append),
+        new PyAttr("insert", pydesc_insert),
+        new PyAttr("extend", pydesc_extend),
+        new PyAttr("pop", pydesc_pop),
+        new PyAttr("remove", pydesc_remove),
+        new PyAttr("index", pydesc_index),
+        new PyAttr("count", pydesc_count),
+        new PyAttr("reverse", pydesc_reverse),
+        new PyAttr("sort", pydesc_sort),
+        new PyAttr("__doc__", pydesc___doc__)
+    };
+    @Override public PyAttr[] getAttributes() { return attrs; }
     @Override public PyDescriptor getDescriptor(String name) {
         switch (name) {
-            case "append": return pydesc_append;
             case "clear": return pydesc_clear;
             case "copy": return pydesc_copy;
-            case "count": return pydesc_count;
-            case "extend": return pydesc_extend;
-            case "index": return pydesc_index;
+            case "append": return pydesc_append;
             case "insert": return pydesc_insert;
+            case "extend": return pydesc_extend;
             case "pop": return pydesc_pop;
             case "remove": return pydesc_remove;
+            case "index": return pydesc_index;
+            case "count": return pydesc_count;
             case "reverse": return pydesc_reverse;
             case "sort": return pydesc_sort;
             default: return null;
         }
     }
+// END GENERATED CODE: PyListType
+
+    private PyListType() { super("list", PyList.class); }
     @Override public PyList call(PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, typeName);
         Runtime.requireMaxArgs(args, 1, typeName);
