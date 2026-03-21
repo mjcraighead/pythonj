@@ -22,8 +22,8 @@ final class PyArithmeticErrorType extends PyBuiltinType {
 }
 // END GENERATED CODE: PyArithmeticErrorType
 
-final class PyAssertionErrorType extends PyBuiltinType {
 // BEGIN GENERATED CODE: PyAssertionErrorType
+final class PyAssertionErrorType extends PyBuiltinType {
     public static final PyAssertionErrorType singleton = new PyAssertionErrorType();
     private static final PyString pyattr___doc__ = new PyString("Assertion failed.");
     private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>(1);
@@ -31,7 +31,7 @@ final class PyAssertionErrorType extends PyBuiltinType {
         attrs.put(new PyString("__doc__"), pyattr___doc__);
     }
 
-    private PyAssertionErrorType() { super("AssertionError", PyAssertionError.class); }
+    private PyAssertionErrorType() { super("AssertionError", PyAssertionError.class, PyAssertionError::newObj); }
     @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
     @Override public PyObject lookupAttr(String name) {
         switch (name) {
@@ -39,16 +39,11 @@ final class PyAssertionErrorType extends PyBuiltinType {
             default: return null;
         }
     }
+}
 // END GENERATED CODE: PyAssertionErrorType
 
-    @Override public PyAssertionError call(PyObject[] args, PyDict kwargs) {
-        Runtime.requireNoKwArgs(kwargs, typeName);
-        return new PyAssertionError(args);
-    }
-}
-
-final class PyAttributeErrorType extends PyBuiltinType {
 // BEGIN GENERATED CODE: PyAttributeErrorType
+final class PyAttributeErrorType extends PyBuiltinType {
     public static final PyAttributeErrorType singleton = new PyAttributeErrorType();
     private static final PyMemberDescriptor pyattr_name = new PyMemberDescriptor(singleton, "name", PyAttributeError::pymember_name);
     private static final PyMemberDescriptor pyattr_obj = new PyMemberDescriptor(singleton, "obj", PyAttributeError::pymember_obj);
@@ -60,7 +55,7 @@ final class PyAttributeErrorType extends PyBuiltinType {
         attrs.put(new PyString("__doc__"), pyattr___doc__);
     }
 
-    private PyAttributeErrorType() { super("AttributeError", PyAttributeError.class); }
+    private PyAttributeErrorType() { super("AttributeError", PyAttributeError.class, PyAttributeError::newObj); }
     @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
     @Override public PyObject lookupAttr(String name) {
         switch (name) {
@@ -70,18 +65,11 @@ final class PyAttributeErrorType extends PyBuiltinType {
             default: return null;
         }
     }
+}
 // END GENERATED CODE: PyAttributeErrorType
 
-    @Override public PyAttributeError call(PyObject[] args, PyDict kwargs) {
-        if ((kwargs != null) && kwargs.boolValue()) {
-            throw new IllegalArgumentException("AttributeError() does not accept kwargs");
-        }
-        return new PyAttributeError(args);
-    }
-}
-
-final class PyBaseExceptionType extends PyBuiltinType {
 // BEGIN GENERATED CODE: PyBaseExceptionType
+final class PyBaseExceptionType extends PyBuiltinType {
     public static final PyBaseExceptionType singleton = new PyBaseExceptionType();
     private static final PyMethodDescriptor pyattr_with_traceback = new PyMethodDescriptor(singleton, "with_traceback", obj -> new PyBaseException.PyBaseExceptionMethodUnimplemented(obj, "with_traceback"));
     private static final PyMethodDescriptor pyattr_add_note = new PyMethodDescriptor(singleton, "add_note", obj -> new PyBaseException.PyBaseExceptionMethodUnimplemented(obj, "add_note"));
@@ -95,7 +83,7 @@ final class PyBaseExceptionType extends PyBuiltinType {
         attrs.put(new PyString("__doc__"), pyattr___doc__);
     }
 
-    private PyBaseExceptionType() { super("BaseException", PyBaseException.class); }
+    private PyBaseExceptionType() { super("BaseException", PyBaseException.class, PyBaseException::newObj); }
     @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
     @Override public PyObject lookupAttr(String name) {
         switch (name) {
@@ -106,16 +94,11 @@ final class PyBaseExceptionType extends PyBuiltinType {
             default: return null;
         }
     }
+}
 // END GENERATED CODE: PyBaseExceptionType
 
-    @Override public PyBaseException call(PyObject[] args, PyDict kwargs) {
-        Runtime.requireNoKwArgs(kwargs, typeName);
-        return new PyBaseException(args);
-    }
-}
-
-final class PyExceptionType extends PyBuiltinType {
 // BEGIN GENERATED CODE: PyExceptionType
+final class PyExceptionType extends PyBuiltinType {
     public static final PyExceptionType singleton = new PyExceptionType();
     private static final PyString pyattr___doc__ = new PyString("Common base class for all non-exit exceptions.");
     private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>(1);
@@ -123,7 +106,7 @@ final class PyExceptionType extends PyBuiltinType {
         attrs.put(new PyString("__doc__"), pyattr___doc__);
     }
 
-    private PyExceptionType() { super("Exception", PyException.class); }
+    private PyExceptionType() { super("Exception", PyException.class, PyException::newObj); }
     @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
     @Override public PyObject lookupAttr(String name) {
         switch (name) {
@@ -131,13 +114,8 @@ final class PyExceptionType extends PyBuiltinType {
             default: return null;
         }
     }
-// END GENERATED CODE: PyExceptionType
-
-    @Override public PyException call(PyObject[] args, PyDict kwargs) {
-        Runtime.requireNoKwArgs(kwargs, typeName);
-        return new PyException(args);
-    }
 }
+// END GENERATED CODE: PyExceptionType
 
 final class PyIndexErrorType extends PyBuiltinType {
     public static final PyIndexErrorType singleton = new PyIndexErrorType();
@@ -247,11 +225,21 @@ class PyBaseException extends PyTruthyObject {
     }
 
     static PyObject pygetset_args(PyObject obj) { throw new UnsupportedOperationException("BaseException.args unsupported"); }
+
+    static public PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+        Runtime.requireNoKwArgs(kwargs, type.name());
+        return new PyBaseException(args);
+    }
 }
 
 class PyException extends PyBaseException {
     PyException(PyObject[] _args) { super(_args); }
     @Override public PyBuiltinType type() { return PyExceptionType.singleton; }
+
+    static public PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+        Runtime.requireNoKwArgs(kwargs, type.name());
+        return new PyException(args);
+    }
 }
 
 final class PyAssertionError extends PyException {
@@ -260,6 +248,11 @@ final class PyAssertionError extends PyException {
 
     static PyRaise raise(String msg) {
         return new PyRaise(new PyAssertionError(new PyString(msg)));
+    }
+
+    static public PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+        Runtime.requireNoKwArgs(kwargs, type.name());
+        return new PyAssertionError(args);
     }
 }
 
@@ -276,13 +269,20 @@ final class PyAttributeError extends PyException {
 
     static PyObject pymember_name(PyObject obj) { throw new UnsupportedOperationException("AttributeError.name unsupported"); }
     static PyObject pymember_obj(PyObject obj) { throw new UnsupportedOperationException("AttributeError.obj unsupported"); }
+
+    static public PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+        if ((kwargs != null) && kwargs.boolValue()) {
+            throw new IllegalArgumentException("AttributeError() does not accept kwargs");
+        }
+        return new PyAttributeError(args);
+    }
 }
 
 class PyArithmeticError extends PyException {
     PyArithmeticError(PyObject... _args) { super(_args); }
     @Override public PyBuiltinType type() { return PyArithmeticErrorType.singleton; }
 
-    static public PyArithmeticError newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+    static public PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, type.name());
         return new PyArithmeticError(args);
     }

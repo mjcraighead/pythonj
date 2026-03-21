@@ -1367,7 +1367,8 @@ def gen_code(path) -> None:
         spec = json.load(f)
 
     for (name, attrs) in spec.items():
-        gen_entire_class = name in {'ArithmeticError'} # XXX roll out to the rest
+        # XXX roll out gen_entire_class to the rest
+        gen_entire_class = name in {'ArithmeticError', 'AssertionError', 'AttributeError', 'BaseException', 'Exception'}
         if name == '_io.BufferedReader':
             java_name = 'PyBufferedReader'
             java_path = 'runtime/PyFile.java'
