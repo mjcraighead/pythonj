@@ -9,6 +9,7 @@ final class PySliceType extends PyBuiltinType {
     private static final PyMemberDescriptor pydesc_step = new PyMemberDescriptor(singleton, "step", obj -> ((PySlice)obj).step);
     private static final PyMemberDescriptor pydesc_stop = new PyMemberDescriptor(singleton, "stop", obj -> ((PySlice)obj).stop);
     private static final PyString pydesc___doc__ = new PyString("slice(stop)\nslice(start, stop[, step])\n\nCreate a slice object.  This is used for extended slicing (e.g. a[0:10:2]).");
+// BEGIN GENERATED CODE: PySliceType
     private static final PyAttr attrs[] = new PyAttr[] {
         new PyAttr("indices", pydesc_indices),
         new PyAttr("start", pydesc_start),
@@ -16,6 +17,7 @@ final class PySliceType extends PyBuiltinType {
         new PyAttr("step", pydesc_step),
         new PyAttr("__doc__", pydesc___doc__)
     };
+// END GENERATED CODE: PySliceType
 
     private PySliceType() { super("slice", PySlice.class); }
     @Override public PyDescriptor getDescriptor(String name) {

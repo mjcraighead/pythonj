@@ -5,17 +5,19 @@
 from abc import ABC, abstractmethod
 import argparse
 import ast
+import builtins
 from contextlib import contextmanager
 from dataclasses import dataclass
 import difflib
 from enum import Enum
 import itertools
+import json
 import os
 import shutil
 import subprocess
 import sys
 import time
-from types import NoneType
+from types import MemberDescriptorType, MethodDescriptorType, NoneType
 from typing import Iterator, Optional, TextIO
 
 BUILTIN_FUNCTIONS = {
@@ -68,6 +70,11 @@ RUNTIME_JAVA_FILES = (
     'PyZip.java',
     'Runtime.java',
 )
+CODEGEN_PATHS = {
+    'range': 'runtime/PyRange.java',
+    'slice': 'runtime/PySlice.java',
+    'tuple': 'runtime/PyTuple.java',
+}
 
 def int_name(i: int) -> str:
     """Return the Java variable name to use for the PyInt singleton with a given value."""
@@ -1284,6 +1291,55 @@ class PythonjVisitor(ast.NodeVisitor):
         writer.write('}')
         assert writer.indent == 0, writer.indent
 
+def gen_spec(path: str) -> None:
+    spec = {}
+    for name in ['range', 'slice', 'tuple']:
+        obj = getattr(builtins, name)
+        attrs = {}
+        for (k, v) in obj.__dict__.items():
+            if k.startswith('__') and k not in {'__doc__'}:
+                continue # only extract a subset of dunders
+            if isinstance(v, str):
+                attrs[k] = {'kind': 'string', 'value': v}
+            elif isinstance(v, MemberDescriptorType):
+                attrs[k] = {'kind': 'member'}
+            elif isinstance(v, MethodDescriptorType):
+                attrs[k] = {'kind': 'method'}
+            else:
+                assert False, (name, k, v)
+        spec[name] = attrs
+
+    with open(path, 'w') as f:
+        json.dump(spec, f, indent=2)
+        f.write('\n')
+
+def gen_code(path) -> None:
+    with open(path) as f:
+        spec = json.load(f)
+
+    for (name, attrs) in spec.items():
+        java_path = CODEGEN_PATHS[name]
+        begin_tag = f'// BEGIN GENERATED CODE: {BUILTIN_TYPES[name]}\n'
+        end_tag = f'// END GENERATED CODE: {BUILTIN_TYPES[name]}\n'
+
+        with open(java_path) as f:
+            source_lines = f.readlines()
+
+        begin_index = source_lines.index(begin_tag) + 1
+        end_index = source_lines.index(end_tag)
+        gen_lines = [
+            '    private static final PyAttr attrs[] = new PyAttr[] {\n',
+            '        ',
+            ',\n        '.join(f'new PyAttr("{k}", pydesc_{k})' for k in attrs),
+            '\n',
+            '    };\n',
+        ]
+        source_lines[begin_index:end_index] = gen_lines
+
+        with open(java_path, 'w') as f:
+            for line in source_lines:
+                f.write(line)
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument('py_names', nargs='*', help='names of tests to run')
@@ -1296,6 +1352,13 @@ def main() -> None:
     start = time.perf_counter()
     if os.path.exists('runtime/_out'):
         shutil.rmtree('runtime/_out')
+    os.mkdir('runtime/_out')
+    gen_spec('runtime/_out/spec.json')
+    gen_code('runtime/_out/spec.json')
+    codegen_time = time.perf_counter() - start
+    print(f'{codegen_time=:.3f}')
+
+    start = time.perf_counter()
     if os.path.exists('tests/_out'):
         shutil.rmtree('tests/_out')
     subprocess.check_call(['javac', '-d', '_out', *RUNTIME_JAVA_FILES], cwd='runtime')

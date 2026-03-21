@@ -10,11 +10,13 @@ final class PyTupleType extends PyBuiltinType {
     private static final PyMethodDescriptor pydesc_count = new PyMethodDescriptor(singleton, "count", PyTuple.PyTupleMethod_count::new);
     private static final PyMethodDescriptor pydesc_index = new PyMethodDescriptor(singleton, "index", PyTuple.PyTupleMethod_index::new);
     private static final PyString pydesc___doc__ = new PyString("Built-in immutable sequence.\n\nIf no argument is given, the constructor returns an empty tuple.\nIf iterable is specified the tuple is initialized from iterable's items.\n\nIf the argument is a tuple, the return value is the same object.");
+// BEGIN GENERATED CODE: PyTupleType
     private static final PyAttr attrs[] = new PyAttr[] {
         new PyAttr("index", pydesc_index),
         new PyAttr("count", pydesc_count),
         new PyAttr("__doc__", pydesc___doc__)
     };
+// END GENERATED CODE: PyTupleType
 
     private PyTupleType() { super("tuple", PyTuple.class); }
     @Override public PyDescriptor getDescriptor(String name) {
