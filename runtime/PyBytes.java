@@ -6,6 +6,7 @@ import java.io.ByteArrayOutputStream;
 import java.util.Arrays;
 
 final class PyBytesType extends PyBuiltinType {
+// BEGIN GENERATED CODE: PyBytesType
     public static final PyBytesType singleton = new PyBytesType();
     private static final PyMethodDescriptor pydesc_capitalize = new PyMethodDescriptor(singleton, "capitalize", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "capitalize"));
     private static final PyMethodDescriptor pydesc_center = new PyMethodDescriptor(singleton, "center", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "center"));
@@ -31,9 +32,9 @@ final class PyBytesType extends PyBuiltinType {
     private static final PyMethodDescriptor pydesc_lstrip = new PyMethodDescriptor(singleton, "lstrip", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "lstrip"));
     private static final PyStaticMethod pydesc_maketrans = new PyStaticMethod(singleton, "maketrans", new PyBytesType.PyBytesStaticMethod_maketrans(singleton));
     private static final PyMethodDescriptor pydesc_partition = new PyMethodDescriptor(singleton, "partition", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "partition"));
+    private static final PyMethodDescriptor pydesc_replace = new PyMethodDescriptor(singleton, "replace", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "replace"));
     private static final PyMethodDescriptor pydesc_removeprefix = new PyMethodDescriptor(singleton, "removeprefix", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "removeprefix"));
     private static final PyMethodDescriptor pydesc_removesuffix = new PyMethodDescriptor(singleton, "removesuffix", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "removesuffix"));
-    private static final PyMethodDescriptor pydesc_replace = new PyMethodDescriptor(singleton, "replace", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "replace"));
     private static final PyMethodDescriptor pydesc_rfind = new PyMethodDescriptor(singleton, "rfind", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "rfind"));
     private static final PyMethodDescriptor pydesc_rindex = new PyMethodDescriptor(singleton, "rindex", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "rindex"));
     private static final PyMethodDescriptor pydesc_rjust = new PyMethodDescriptor(singleton, "rjust", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "rjust"));
@@ -49,8 +50,53 @@ final class PyBytesType extends PyBuiltinType {
     private static final PyMethodDescriptor pydesc_translate = new PyMethodDescriptor(singleton, "translate", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "translate"));
     private static final PyMethodDescriptor pydesc_upper = new PyMethodDescriptor(singleton, "upper", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "upper"));
     private static final PyMethodDescriptor pydesc_zfill = new PyMethodDescriptor(singleton, "zfill", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "zfill"));
-
-    private PyBytesType() { super("bytes", PyBytes.class); }
+    private static final PyString pydesc___doc__ = new PyString("bytes(iterable_of_ints) -> bytes\nbytes(string, encoding[, errors]) -> bytes\nbytes(bytes_or_buffer) -> immutable copy of bytes_or_buffer\nbytes(int) -> bytes object of size given by the parameter initialized with null bytes\nbytes() -> empty bytes object\n\nConstruct an immutable array of bytes from:\n  - an iterable yielding integers in range(256)\n  - a text string encoded using the specified encoding\n  - any object implementing the buffer API.\n  - an integer");
+    private static final PyAttr attrs[] = new PyAttr[] {
+        new PyAttr("capitalize", pydesc_capitalize),
+        new PyAttr("center", pydesc_center),
+        new PyAttr("count", pydesc_count),
+        new PyAttr("decode", pydesc_decode),
+        new PyAttr("endswith", pydesc_endswith),
+        new PyAttr("expandtabs", pydesc_expandtabs),
+        new PyAttr("find", pydesc_find),
+        new PyAttr("fromhex", pydesc_fromhex),
+        new PyAttr("hex", pydesc_hex),
+        new PyAttr("index", pydesc_index),
+        new PyAttr("isalnum", pydesc_isalnum),
+        new PyAttr("isalpha", pydesc_isalpha),
+        new PyAttr("isascii", pydesc_isascii),
+        new PyAttr("isdigit", pydesc_isdigit),
+        new PyAttr("islower", pydesc_islower),
+        new PyAttr("isspace", pydesc_isspace),
+        new PyAttr("istitle", pydesc_istitle),
+        new PyAttr("isupper", pydesc_isupper),
+        new PyAttr("join", pydesc_join),
+        new PyAttr("ljust", pydesc_ljust),
+        new PyAttr("lower", pydesc_lower),
+        new PyAttr("lstrip", pydesc_lstrip),
+        new PyAttr("maketrans", pydesc_maketrans),
+        new PyAttr("partition", pydesc_partition),
+        new PyAttr("replace", pydesc_replace),
+        new PyAttr("removeprefix", pydesc_removeprefix),
+        new PyAttr("removesuffix", pydesc_removesuffix),
+        new PyAttr("rfind", pydesc_rfind),
+        new PyAttr("rindex", pydesc_rindex),
+        new PyAttr("rjust", pydesc_rjust),
+        new PyAttr("rpartition", pydesc_rpartition),
+        new PyAttr("rsplit", pydesc_rsplit),
+        new PyAttr("rstrip", pydesc_rstrip),
+        new PyAttr("split", pydesc_split),
+        new PyAttr("splitlines", pydesc_splitlines),
+        new PyAttr("startswith", pydesc_startswith),
+        new PyAttr("strip", pydesc_strip),
+        new PyAttr("swapcase", pydesc_swapcase),
+        new PyAttr("title", pydesc_title),
+        new PyAttr("translate", pydesc_translate),
+        new PyAttr("upper", pydesc_upper),
+        new PyAttr("zfill", pydesc_zfill),
+        new PyAttr("__doc__", pydesc___doc__)
+    };
+    @Override public PyAttr[] getAttributes() { return attrs; }
     @Override public PyDescriptor getDescriptor(String name) {
         switch (name) {
             case "capitalize": return pydesc_capitalize;
@@ -77,9 +123,9 @@ final class PyBytesType extends PyBuiltinType {
             case "lstrip": return pydesc_lstrip;
             case "maketrans": return pydesc_maketrans;
             case "partition": return pydesc_partition;
+            case "replace": return pydesc_replace;
             case "removeprefix": return pydesc_removeprefix;
             case "removesuffix": return pydesc_removesuffix;
-            case "replace": return pydesc_replace;
             case "rfind": return pydesc_rfind;
             case "rindex": return pydesc_rindex;
             case "rjust": return pydesc_rjust;
@@ -98,6 +144,9 @@ final class PyBytesType extends PyBuiltinType {
             default: return null;
         }
     }
+// END GENERATED CODE: PyBytesType
+
+    private PyBytesType() { super("bytes", PyBytes.class); }
     @Override public PyBytes call(PyObject[] args, PyDict kwargs) {
         if (args.length > 1) {
             throw new IllegalArgumentException("bytes() takes 0 or 1 arguments");
@@ -159,14 +208,16 @@ public final class PyBytes extends PyObject {
         @Override public PyBuiltinType type() { return type_singleton; }
     };
 
+// BEGIN GENERATED CODE: PyBytes
     protected static final class PyBytesMethodUnimplemented extends PyBuiltinMethod<PyBytes> {
         private final String name;
-        PyBytesMethodUnimplemented(PyObject self, String name) { super((PyBytes)self); this.name = name; }
+        PyBytesMethodUnimplemented(PyObject _self, String _name) { super((PyBytes)_self); name = _name; }
         @Override public String methodName() { return name; }
         @Override public PyObject call(PyObject[] args, PyDict kwargs) {
             throw new UnsupportedOperationException("bytes." + name + "() unimplemented");
         }
     }
+// END GENERATED CODE: PyBytes
 
     public final byte[] value;
 

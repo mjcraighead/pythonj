@@ -1288,7 +1288,7 @@ class PythonjVisitor(ast.NodeVisitor):
 
 def gen_spec(path: str) -> None:
     spec = {}
-    for name in ['dict', 'list', 'range', 'set', 'slice', 'tuple']:
+    for name in ['bytes', 'dict', 'list', 'range', 'set', 'slice', 'tuple']:
         obj = getattr(builtins, name)
         attrs = {}
         for (k, v) in obj.__dict__.items():
@@ -1302,6 +1302,8 @@ def gen_spec(path: str) -> None:
                 attrs[k] = {'kind': 'method'}
             elif isinstance(v, ClassMethodDescriptorType):
                 attrs[k] = {'kind': 'classmethod'}
+            elif isinstance(v, staticmethod):
+                attrs[k] = {'kind': 'staticmethod'}
             else:
                 assert False, (name, k, v, type(v))
         spec[name] = attrs
@@ -1311,6 +1313,13 @@ def gen_spec(path: str) -> None:
         f.write('\n')
 
 UNIMPLEMENTED_METHODS = {
+    'bytes': {
+        'capitalize', 'center', 'count', 'decode', 'endswith', 'expandtabs', 'find', 'hex', 'index',
+        'isalnum', 'isalpha', 'isascii', 'isdigit', 'islower', 'isspace', 'istitle', 'isupper', 'join',
+        'ljust', 'lower', 'lstrip', 'partition', 'removeprefix', 'removesuffix', 'replace', 'rfind',
+        'rindex', 'rjust', 'rpartition', 'rsplit', 'rstrip', 'split', 'splitlines', 'startswith', 'strip',
+        'swapcase', 'title', 'translate', 'upper', 'zfill',
+    },
     'set': {
         'copy', 'difference', 'difference_update', 'intersection', 'intersection_update', 'isdisjoint', 'issubset',
         'issuperset', 'pop', 'remove', 'symmetric_difference', 'symmetric_difference_update', 'union',
@@ -1346,6 +1355,9 @@ def gen_code(path) -> None:
             elif v['kind'] == 'classmethod':
                 constructor = f'{java_name}Type.{java_name}ClassMethod_{k}::new'
                 gen_lines.append(f"    private static final PyClassMethodDescriptor pydesc_{k} = new PyClassMethodDescriptor(singleton, {java_string_literal(k)}, {constructor});\n")
+            elif v['kind'] == 'staticmethod':
+                constructor = f'new {java_name}Type.{java_name}StaticMethod_{k}(singleton)'
+                gen_lines.append(f'    private static final PyStaticMethod pydesc_{k} = new PyStaticMethod(singleton, {java_string_literal(k)}, {constructor});\n')
             else:
                 assert False, (name, k, v)
         gen_lines += [
@@ -1359,7 +1371,7 @@ def gen_code(path) -> None:
             '        switch (name) {\n',
             *(
                 f'            case {java_string_literal(k)}: return pydesc_{k};\n'
-                for (k, v) in attrs.items() if v['kind'] in {'classmethod', 'member', 'method'}
+                for (k, v) in attrs.items() if v['kind'] != 'string'
             ),
             '            default: return null;\n',
             '        }\n',
