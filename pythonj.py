@@ -1291,7 +1291,7 @@ def gen_spec(path: str) -> None:
     spec = {}
     for name in ['bool', 'bytearray', 'bytes', 'dict', 'enumerate', 'int', 'list', 'object', 'range',
                  'reversed', 'set', 'slice', 'str', 'tuple', 'type', 'zip', '_io.BufferedReader',
-                 '_io.TextIOWrapper']:
+                 '_io.TextIOWrapper', 'ArithmeticError']:
         if name.startswith('_io.'):
             obj = getattr(_io, name.split('.', 1)[1])
         else:
@@ -1371,6 +1371,9 @@ def gen_code(path) -> None:
         elif name == '_io.TextIOWrapper':
             java_name = 'PyTextIOWrapper'
             java_path = 'runtime/PyFile.java'
+        elif name in EXCEPTION_TYPES:
+            java_name = f'Py{name}'
+            java_path = 'runtime/PyExceptions.java'
         else:
             java_name = BUILTIN_TYPES[name]
             if name == 'type':

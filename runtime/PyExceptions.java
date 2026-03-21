@@ -3,7 +3,22 @@
 // SPDX-License-Identifier: MIT
 
 final class PyArithmeticErrorType extends PyBuiltinType {
+// BEGIN GENERATED CODE: PyArithmeticErrorType
     public static final PyArithmeticErrorType singleton = new PyArithmeticErrorType();
+    private static final PyString pyattr___doc__ = new PyString("Base class for arithmetic errors.");
+    private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>(1);
+    static {
+        attrs.put(new PyString("__doc__"), pyattr___doc__);
+    }
+    @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
+    @Override public PyObject lookupAttr(String name) {
+        switch (name) {
+            case "__doc__": return pyattr___doc__;
+            default: return null;
+        }
+    }
+// END GENERATED CODE: PyArithmeticErrorType
+
     private PyArithmeticErrorType() { super("ArithmeticError", PyArithmeticError.class); }
     @Override public PyArithmeticError call(PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, typeName);
