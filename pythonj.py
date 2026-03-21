@@ -1291,7 +1291,8 @@ def gen_spec(path: str) -> None:
     spec = {}
     for name in ['bool', 'bytearray', 'bytes', 'dict', 'enumerate', 'int', 'list', 'object', 'range',
                  'reversed', 'set', 'slice', 'str', 'tuple', 'type', 'zip', '_io.BufferedReader',
-                 '_io.TextIOWrapper', 'ArithmeticError']:
+                 '_io.TextIOWrapper', 'ArithmeticError', 'AssertionError', 'AttributeError', 'BaseException',
+                 'Exception']:
         if name.startswith('_io.'):
             obj = getattr(_io, name.split('.', 1)[1])
         else:
@@ -1359,6 +1360,7 @@ UNIMPLEMENTED_METHODS = {
         'detach', 'fileno', 'flush', 'isatty', 'read', 'readable', 'reconfigure', 'seek', 'seekable', 'tell',
         'truncate', 'writable', 'write',
     },
+    'BaseException': {'add_note', 'with_traceback'},
 }
 def gen_code(path) -> None:
     with open(path) as f:

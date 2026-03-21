@@ -28,8 +28,24 @@ final class PyArithmeticErrorType extends PyBuiltinType {
 }
 
 final class PyAssertionErrorType extends PyBuiltinType {
+// BEGIN GENERATED CODE: PyAssertionErrorType
     public static final PyAssertionErrorType singleton = new PyAssertionErrorType();
+    private static final PyString pyattr___doc__ = new PyString("Assertion failed.");
+    private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>(1);
+    static {
+        attrs.put(new PyString("__doc__"), pyattr___doc__);
+    }
+
     private PyAssertionErrorType() { super("AssertionError", PyAssertionError.class); }
+    @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
+    @Override public PyObject lookupAttr(String name) {
+        switch (name) {
+            case "__doc__": return pyattr___doc__;
+            default: return null;
+        }
+    }
+// END GENERATED CODE: PyAssertionErrorType
+
     @Override public PyAssertionError call(PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, typeName);
         return new PyAssertionError(args);
@@ -37,8 +53,30 @@ final class PyAssertionErrorType extends PyBuiltinType {
 }
 
 final class PyAttributeErrorType extends PyBuiltinType {
+// BEGIN GENERATED CODE: PyAttributeErrorType
     public static final PyAttributeErrorType singleton = new PyAttributeErrorType();
+    private static final PyMemberDescriptor pyattr_name = new PyMemberDescriptor(singleton, "name", PyAttributeError::pymember_name);
+    private static final PyMemberDescriptor pyattr_obj = new PyMemberDescriptor(singleton, "obj", PyAttributeError::pymember_obj);
+    private static final PyString pyattr___doc__ = new PyString("Attribute not found.");
+    private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>(3);
+    static {
+        attrs.put(new PyString("name"), pyattr_name);
+        attrs.put(new PyString("obj"), pyattr_obj);
+        attrs.put(new PyString("__doc__"), pyattr___doc__);
+    }
+
     private PyAttributeErrorType() { super("AttributeError", PyAttributeError.class); }
+    @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
+    @Override public PyObject lookupAttr(String name) {
+        switch (name) {
+            case "name": return pyattr_name;
+            case "obj": return pyattr_obj;
+            case "__doc__": return pyattr___doc__;
+            default: return null;
+        }
+    }
+// END GENERATED CODE: PyAttributeErrorType
+
     @Override public PyAttributeError call(PyObject[] args, PyDict kwargs) {
         if ((kwargs != null) && kwargs.boolValue()) {
             throw new IllegalArgumentException("AttributeError() does not accept kwargs");
@@ -48,8 +86,33 @@ final class PyAttributeErrorType extends PyBuiltinType {
 }
 
 final class PyBaseExceptionType extends PyBuiltinType {
+// BEGIN GENERATED CODE: PyBaseExceptionType
     public static final PyBaseExceptionType singleton = new PyBaseExceptionType();
+    private static final PyMethodDescriptor pyattr_with_traceback = new PyMethodDescriptor(singleton, "with_traceback", obj -> new PyBaseException.PyBaseExceptionMethodUnimplemented(obj, "with_traceback"));
+    private static final PyMethodDescriptor pyattr_add_note = new PyMethodDescriptor(singleton, "add_note", obj -> new PyBaseException.PyBaseExceptionMethodUnimplemented(obj, "add_note"));
+    private static final PyGetSetDescriptor pyattr_args = new PyGetSetDescriptor(singleton, "args", PyBaseException::pygetset_args);
+    private static final PyString pyattr___doc__ = new PyString("Common base class for all exceptions");
+    private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>(4);
+    static {
+        attrs.put(new PyString("with_traceback"), pyattr_with_traceback);
+        attrs.put(new PyString("add_note"), pyattr_add_note);
+        attrs.put(new PyString("args"), pyattr_args);
+        attrs.put(new PyString("__doc__"), pyattr___doc__);
+    }
+
     private PyBaseExceptionType() { super("BaseException", PyBaseException.class); }
+    @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
+    @Override public PyObject lookupAttr(String name) {
+        switch (name) {
+            case "with_traceback": return pyattr_with_traceback;
+            case "add_note": return pyattr_add_note;
+            case "args": return pyattr_args;
+            case "__doc__": return pyattr___doc__;
+            default: return null;
+        }
+    }
+// END GENERATED CODE: PyBaseExceptionType
+
     @Override public PyBaseException call(PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, typeName);
         return new PyBaseException(args);
@@ -57,8 +120,24 @@ final class PyBaseExceptionType extends PyBuiltinType {
 }
 
 final class PyExceptionType extends PyBuiltinType {
+// BEGIN GENERATED CODE: PyExceptionType
     public static final PyExceptionType singleton = new PyExceptionType();
+    private static final PyString pyattr___doc__ = new PyString("Common base class for all non-exit exceptions.");
+    private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>(1);
+    static {
+        attrs.put(new PyString("__doc__"), pyattr___doc__);
+    }
+
     private PyExceptionType() { super("Exception", PyException.class); }
+    @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
+    @Override public PyObject lookupAttr(String name) {
+        switch (name) {
+            case "__doc__": return pyattr___doc__;
+            default: return null;
+        }
+    }
+// END GENERATED CODE: PyExceptionType
+
     @Override public PyException call(PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, typeName);
         return new PyException(args);
@@ -129,6 +208,17 @@ final class PyZeroDivisionErrorType extends PyBuiltinType {
 }
 
 class PyBaseException extends PyTruthyObject {
+// BEGIN GENERATED CODE: PyBaseException
+    protected static final class PyBaseExceptionMethodUnimplemented extends PyBuiltinMethod<PyBaseException> {
+        private final String name;
+        PyBaseExceptionMethodUnimplemented(PyObject _self, String _name) { super((PyBaseException)_self); name = _name; }
+        @Override public String methodName() { return name; }
+        @Override public PyObject call(PyObject[] args, PyDict kwargs) {
+            throw new UnsupportedOperationException("BaseException." + name + "() unimplemented");
+        }
+    }
+// END GENERATED CODE: PyBaseException
+
     protected final PyObject[] args;
     PyBaseException(PyObject[] _args) { args = _args; }
     @Override public PyBuiltinType type() { return PyBaseExceptionType.singleton; }
@@ -160,6 +250,8 @@ class PyBaseException extends PyTruthyObject {
         }
         return s.append(")").toString();
     }
+
+    static PyObject pygetset_args(PyObject obj) { throw new UnsupportedOperationException("BaseException.args unsupported"); }
 }
 
 class PyException extends PyBaseException {
@@ -186,6 +278,9 @@ final class PyAttributeError extends PyException {
     static PyRaise raiseFormat(String fmt, Object... args) {
         return new PyRaise(new PyAttributeError(new PyString(String.format(fmt, args))));
     }
+
+    static PyObject pymember_name(PyObject obj) { throw new UnsupportedOperationException("AttributeError.name unsupported"); }
+    static PyObject pymember_obj(PyObject obj) { throw new UnsupportedOperationException("AttributeError.obj unsupported"); }
 }
 
 class PyArithmeticError extends PyException {
