@@ -116,6 +116,7 @@ final class PyMemberDescriptor extends PyGettableDescriptor {
     protected PyMemberDescriptor(PyType _owner, String _name, Function<PyObject, PyObject> _getter) {
         super(_owner, _name, _getter);
     }
+    @Override public final boolean isDataDescriptor() { return true; }
     @Override public final void set(PyObject instance, PyObject value) {
         throw PyAttributeError.raise("readonly attribute");
     }
@@ -133,6 +134,7 @@ final class PyGetSetDescriptor extends PyGettableDescriptor {
     protected PyGetSetDescriptor(PyType _owner, String _name, Function<PyObject, PyObject> _getter) {
         super(_owner, _name, _getter);
     }
+    @Override public final boolean isDataDescriptor() { return true; }
     @Override public final void set(PyObject instance, PyObject value) {
         throw PyAttributeError.raise("attribute " + PyString.reprOf(name) + " of " + PyString.reprOf(owner.name()) + " objects is not writable");
     }
@@ -149,12 +151,6 @@ final class PyMethodDescriptor extends PyGettableDescriptor {
 
     protected PyMethodDescriptor(PyType _owner, String _name, Function<PyObject, PyObject> _getter) {
         super(_owner, _name, _getter);
-    }
-    @Override public final void set(PyObject instance, PyObject value) {
-        throw Runtime.raiseNamedReadOnlyAttr(owner, name);
-    }
-    @Override public final void delete(PyObject instance) {
-        throw Runtime.raiseNamedReadOnlyAttr(owner, name);
     }
 
     @Override public final String repr() { return "<method " + PyString.reprOf(name) + " of " + PyString.reprOf(owner.name()) + " objects>"; }
@@ -176,12 +172,6 @@ final class PyClassMethodDescriptor extends PyTruthyObject {
     @Override public final PyObject get(PyObject instance) {
         return getter.apply(owner);
     }
-    @Override public final void set(PyObject instance, PyObject value) {
-        throw Runtime.raiseNamedReadOnlyAttr(owner, name);
-    }
-    @Override public final void delete(PyObject instance) {
-        throw Runtime.raiseNamedReadOnlyAttr(owner, name);
-    }
 
     @Override public final String repr() { return "<method " + PyString.reprOf(name) + " of " + PyString.reprOf(owner.name()) + " objects>"; }
     @Override public final PyBuiltinType type() { return type_singleton; }
@@ -202,12 +192,6 @@ final class PyStaticMethod extends PyTruthyObject {
 
     @Override public final PyObject get(PyObject instance) {
         return func;
-    }
-    @Override public final void set(PyObject instance, PyObject value) {
-        throw Runtime.raiseNamedReadOnlyAttr(owner, name);
-    }
-    @Override public final void delete(PyObject instance) {
-        throw Runtime.raiseNamedReadOnlyAttr(owner, name);
     }
 
     @Override public final String repr() { return "<staticmethod(" + func.repr() + ")>"; }
