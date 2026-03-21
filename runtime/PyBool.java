@@ -6,7 +6,21 @@
 // isinstance(False, int) -> False
 // issubclass(bool, int) -> False
 final class PyBoolType extends PyBuiltinType {
+// BEGIN GENERATED CODE: PyBoolType
     public static final PyBoolType singleton = new PyBoolType();
+    private static final PyString pyattr___doc__ = new PyString("Returns True when the argument is true, False otherwise.\nThe builtins True and False are the only two instances of the class bool.\nThe class bool is a subclass of the class int, and cannot be subclassed.");
+    private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>(1);
+    static {
+        attrs.put(new PyString("__doc__"), pyattr___doc__);
+    }
+    @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
+    @Override public PyObject lookupAttr(String name) {
+        switch (name) {
+            case "__doc__": return pyattr___doc__;
+            default: return null;
+        }
+    }
+// END GENERATED CODE: PyBoolType
 
     private PyBoolType() { super("bool", PyBool.class); }
     @Override public PyBool call(PyObject[] args, PyDict kwargs) {

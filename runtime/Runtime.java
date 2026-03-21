@@ -17,6 +17,17 @@ abstract class PyIter extends PyTruthyObject {
 }
 
 abstract class PyType extends PyTruthyObject {
+// BEGIN GENERATED CODE: PyType
+    protected static final class PyTypeMethodUnimplemented extends PyBuiltinMethod<PyType> {
+        private final String name;
+        PyTypeMethodUnimplemented(PyObject _self, String _name) { super((PyType)_self); name = _name; }
+        @Override public String methodName() { return name; }
+        @Override public PyObject call(PyObject[] args, PyDict kwargs) {
+            throw new UnsupportedOperationException("type." + name + "() unimplemented");
+        }
+    }
+// END GENERATED CODE: PyType
+
     @Override public PyObject or(PyObject rhs) {
         if ((rhs instanceof PyType) || (rhs instanceof PyNone)) {
             throw new UnsupportedOperationException("type unions are unsupported");
@@ -31,6 +42,10 @@ abstract class PyType extends PyTruthyObject {
     @Override public boolean contains(PyObject rhs) { return defaultContains(rhs); }
 
     public abstract String name();
+
+    static PyObject pygetset___doc__(PyObject obj) {
+        throw new UnsupportedOperationException("type.__doc__ unimplemented");
+    }
 }
 
 class PyBuiltinType extends PyType {
@@ -73,7 +88,24 @@ class PyBuiltinType extends PyType {
 }
 
 final class PyTypeType extends PyBuiltinType {
+// BEGIN GENERATED CODE: PyTypeType
     public static final PyTypeType singleton = new PyTypeType();
+    private static final PyMethodDescriptor pyattr_mro = new PyMethodDescriptor(singleton, "mro", obj -> new PyType.PyTypeMethodUnimplemented(obj, "mro"));
+    private static final PyGetSetDescriptor pyattr___doc__ = new PyGetSetDescriptor(singleton, "__doc__", PyType::pygetset___doc__);
+    private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>(2);
+    static {
+        attrs.put(new PyString("mro"), pyattr_mro);
+        attrs.put(new PyString("__doc__"), pyattr___doc__);
+    }
+    @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
+    @Override public PyObject lookupAttr(String name) {
+        switch (name) {
+            case "mro": return pyattr_mro;
+            case "__doc__": return pyattr___doc__;
+            default: return null;
+        }
+    }
+// END GENERATED CODE: PyTypeType
 
     private PyTypeType() { super("type", PyType.class); }
     @Override public PyType call(PyObject[] args, PyDict kwargs) {

@@ -1288,7 +1288,8 @@ class PythonjVisitor(ast.NodeVisitor):
 
 def gen_spec(path: str) -> None:
     spec = {}
-    for name in ['bytes', 'dict', 'enumerate', 'int', 'list', 'object', 'range', 'reversed', 'set', 'slice', 'str', 'tuple', 'zip']:
+    for name in ['bool', 'bytearray', 'bytes', 'dict', 'enumerate', 'int', 'list', 'object', 'range',
+                 'reversed', 'set', 'slice', 'str', 'tuple', 'type', 'zip']:
         obj = getattr(builtins, name)
         attrs = {}
         for (k, v) in obj.__dict__.items():
@@ -1315,6 +1316,14 @@ def gen_spec(path: str) -> None:
         f.write('\n')
 
 UNIMPLEMENTED_METHODS = {
+    'bytearray': {
+        'append', 'capitalize', 'center', 'clear', 'copy', 'count', 'decode', 'endswith', 'expandtabs',
+        'extend', 'find', 'hex', 'index', 'insert', 'isalnum', 'isalpha', 'isascii', 'isdigit', 'islower',
+        'isspace', 'istitle', 'isupper', 'join', 'ljust', 'lower', 'lstrip', 'partition', 'pop', 'remove',
+        'replace', 'removeprefix', 'removesuffix', 'resize', 'reverse', 'rfind', 'rindex', 'rjust',
+        'rpartition', 'rsplit', 'rstrip', 'split', 'splitlines', 'startswith', 'strip', 'swapcase', 'title',
+        'translate', 'upper', 'zfill',
+    },
     'bytes': {
         'capitalize', 'center', 'count', 'decode', 'endswith', 'expandtabs', 'find', 'hex', 'index',
         'isalnum', 'isalpha', 'isascii', 'isdigit', 'islower', 'isspace', 'istitle', 'isupper', 'join',
@@ -1336,6 +1345,7 @@ UNIMPLEMENTED_METHODS = {
         'removesuffix', 'replace', 'rfind', 'rindex', 'rjust', 'rpartition', 'rsplit', 'rstrip', 'splitlines',
         'strip', 'swapcase', 'title', 'translate', 'zfill',
     },
+    'type': {'mro'},
 }
 def gen_code(path) -> None:
     with open(path) as f:
@@ -1343,7 +1353,10 @@ def gen_code(path) -> None:
 
     for (name, attrs) in spec.items():
         java_name = BUILTIN_TYPES[name]
-        java_path = f'runtime/{java_name}.java'
+        if name == 'type':
+            java_path = f'runtime/Runtime.java'
+        else:
+            java_path = f'runtime/{java_name}.java'
         with open(java_path) as f:
             source_lines = f.readlines()
 
