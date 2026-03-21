@@ -79,7 +79,7 @@ public final class PyTuple extends PyObject {
     PyTuple(PyObject[] args) { items = args; } // WARNING: takes ownership of args from caller, does not copy
     PyTuple(ArrayList<PyObject> list) { items = Runtime.arrayListToArray(list); }
 
-    static public PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, type.name());
         Runtime.requireMaxArgs(args, 1, type.name());
         if (args.length == 0) {

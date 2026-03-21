@@ -32,7 +32,7 @@ public final class PyReversed extends PyIter {
         len = _obj.len();
     }
 
-    static public PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, type.name());
         Runtime.requireExactArgs(args, 1, type.name());
         return args[0].reversed();

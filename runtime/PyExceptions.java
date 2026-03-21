@@ -226,7 +226,7 @@ class PyBaseException extends PyTruthyObject {
 
     static PyObject pygetset_args(PyObject obj) { throw new UnsupportedOperationException("BaseException.args unsupported"); }
 
-    static public PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, type.name());
         return new PyBaseException(args);
     }
@@ -236,7 +236,7 @@ class PyException extends PyBaseException {
     PyException(PyObject[] _args) { super(_args); }
     @Override public PyBuiltinType type() { return PyExceptionType.singleton; }
 
-    static public PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, type.name());
         return new PyException(args);
     }
@@ -250,7 +250,7 @@ final class PyAssertionError extends PyException {
         return new PyRaise(new PyAssertionError(new PyString(msg)));
     }
 
-    static public PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, type.name());
         return new PyAssertionError(args);
     }
@@ -270,7 +270,7 @@ final class PyAttributeError extends PyException {
     static PyObject pymember_name(PyObject obj) { throw new UnsupportedOperationException("AttributeError.name unsupported"); }
     static PyObject pymember_obj(PyObject obj) { throw new UnsupportedOperationException("AttributeError.obj unsupported"); }
 
-    static public PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
         if ((kwargs != null) && kwargs.boolValue()) {
             throw new IllegalArgumentException("AttributeError() does not accept kwargs");
         }
@@ -282,7 +282,7 @@ class PyArithmeticError extends PyException {
     PyArithmeticError(PyObject... _args) { super(_args); }
     @Override public PyBuiltinType type() { return PyArithmeticErrorType.singleton; }
 
-    static public PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, type.name());
         return new PyArithmeticError(args);
     }

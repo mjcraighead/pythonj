@@ -31,7 +31,7 @@ public final class PyEnumerate extends PyIter {
         i = start;
     }
 
-    static public PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
         // This is quirky, but is intended to match corner cases in CPython enumerate()
         long totalArgs = args.length;
         if (kwargs != null) {

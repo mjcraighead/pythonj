@@ -472,7 +472,7 @@ public final class PyDict extends PyObject {
         }
     }
 
-    static public PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
         if (args.length > 1) {
             throw new IllegalArgumentException("dict() takes 0 or 1 arguments");
         }

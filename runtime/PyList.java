@@ -206,7 +206,7 @@ public final class PyList extends PyObject {
         items = _items; // WARNING: takes ownership of _items from caller, does not copy
     }
 
-    static public PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, type.name());
         Runtime.requireMaxArgs(args, 1, type.name());
         var ret = new PyList();

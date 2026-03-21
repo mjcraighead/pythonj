@@ -94,7 +94,7 @@ public final class PyRange extends PyObject {
         step = _step;
     }
 
-    static public PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, type.name());
         Runtime.requireMinArgs(args, 1, type.name());
         Runtime.requireMaxArgs(args, 3, type.name());
