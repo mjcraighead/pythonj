@@ -18,7 +18,6 @@ import subprocess
 import sys
 import time
 import types
-from types import ClassMethodDescriptorType, GetSetDescriptorType, MemberDescriptorType, MethodDescriptorType, NoneType
 from typing import Iterator, Optional, TextIO
 import _io
 
@@ -730,7 +729,7 @@ class PythonjVisitor(ast.NodeVisitor):
         return JavaCondOp(bool_value(self.visit(node.test)), self.visit(node.body), self.visit(node.orelse))
 
     def visit_Constant(self, node) -> JavaExpr:
-        if isinstance(node.value, (NoneType, bool, int, str, bytes)):
+        if isinstance(node.value, (types.NoneType, bool, int, str, bytes)):
             return JavaPyConstant(node.value)
         else:
             self.error(node.lineno, f'literal {node.value!r} of type {type(node.value).__name__!r} is unsupported')
@@ -1305,13 +1304,13 @@ def gen_spec(spec_path: str) -> None:
                 continue # only extract a subset of dunders
             if isinstance(v, str):
                 attrs[k] = {'kind': 'string', 'value': v}
-            elif isinstance(v, MemberDescriptorType):
+            elif isinstance(v, types.MemberDescriptorType):
                 attrs[k] = {'kind': 'member'}
-            elif isinstance(v, GetSetDescriptorType):
+            elif isinstance(v, types.GetSetDescriptorType):
                 attrs[k] = {'kind': 'getset'}
-            elif isinstance(v, MethodDescriptorType):
+            elif isinstance(v, types.MethodDescriptorType):
                 attrs[k] = {'kind': 'method'}
-            elif isinstance(v, ClassMethodDescriptorType):
+            elif isinstance(v, types.ClassMethodDescriptorType):
                 attrs[k] = {'kind': 'classmethod'}
             elif isinstance(v, staticmethod):
                 attrs[k] = {'kind': 'staticmethod'}
