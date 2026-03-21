@@ -89,7 +89,7 @@ abstract class PyGettableDescriptor extends PyDescriptor {
     }
 }
 
-class PyMemberDescriptor extends PyGettableDescriptor {
+final class PyMemberDescriptor extends PyGettableDescriptor {
     protected PyMemberDescriptor(PyType _owner, String _name, Function<PyObject, PyObject> _getter) {
         super(_owner, _name, _getter);
     }
@@ -104,7 +104,7 @@ class PyMemberDescriptor extends PyGettableDescriptor {
     @Override public final PyBuiltinClass type() { return Runtime.pytype_member_descriptor; }
 }
 
-class PyGetSetDescriptor extends PyGettableDescriptor {
+final class PyGetSetDescriptor extends PyGettableDescriptor {
     protected PyGetSetDescriptor(PyType _owner, String _name, Function<PyObject, PyObject> _getter) {
         super(_owner, _name, _getter);
     }
@@ -119,7 +119,7 @@ class PyGetSetDescriptor extends PyGettableDescriptor {
     @Override public final PyBuiltinClass type() { return Runtime.pytype_getset_descriptor; }
 }
 
-class PyMethodDescriptor extends PyGettableDescriptor {
+final class PyMethodDescriptor extends PyGettableDescriptor {
     protected PyMethodDescriptor(PyType _owner, String _name, Function<PyObject, PyObject> _getter) {
         super(_owner, _name, _getter);
     }
@@ -134,7 +134,7 @@ class PyMethodDescriptor extends PyGettableDescriptor {
     @Override public final PyBuiltinClass type() { return Runtime.pytype_method_descriptor; }
 }
 
-class PyClassMethodDescriptor extends PyDescriptor {
+final class PyClassMethodDescriptor extends PyDescriptor {
     protected final PyType owner;
     protected final String name;
     protected final Function<PyType, PyObject> getter;
@@ -158,7 +158,7 @@ class PyClassMethodDescriptor extends PyDescriptor {
     @Override public final PyBuiltinClass type() { return Runtime.pytype_classmethod_descriptor; }
 }
 
-class PyStaticMethod extends PyDescriptor {
+final class PyStaticMethod extends PyDescriptor {
     protected final PyType owner;
     protected final String name;
     protected final PyObject func;
