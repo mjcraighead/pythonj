@@ -18,7 +18,7 @@ import time
 from types import NoneType
 from typing import Iterator, Optional, TextIO
 
-BUILTIN_PYGLOBALS = {
+BUILTIN_PYFUNC_SINGLETONS = {
     'abs', 'all', 'any', 'ascii', 'chr', 'delattr', 'format', 'getattr', 'hasattr', 'hash', 'hex',
     'isinstance', 'issubclass', 'iter', 'len', 'max', 'min', 'next', 'open', 'ord', 'print', 'repr',
     'setattr', 'sorted', 'sum',
@@ -583,8 +583,8 @@ class PythonjVisitor(ast.NodeVisitor):
             return JavaIdentifier(f'pylocal_{name}')
         elif name in BUILTIN_PYCLASS_SINGLETONS:
             return JavaField(JavaField(JavaIdentifier('Runtime'), f'pyclass_{name}'), 'singleton')
-        elif name in BUILTIN_PYGLOBALS:
-            return JavaField(JavaIdentifier('Runtime'), f'pyglobal_{name}')
+        elif name in BUILTIN_PYFUNC_SINGLETONS:
+            return JavaField(JavaField(JavaIdentifier('Runtime'), f'pyfunc_{name}'), 'singleton')
         else:
             return JavaIdentifier(f'pyglobal_{name}')
 
@@ -738,7 +738,7 @@ class PythonjVisitor(ast.NodeVisitor):
                 elif val.conversion == ord('r'):
                     expr = JavaCreateObject('PyString', [JavaMethodCall(expr, 'repr', [])])
                 elif val.conversion == ord('a'):
-                    expr = JavaMethodCall(JavaField(JavaIdentifier('Runtime'), 'pyglobal_ascii'), 'call', [
+                    expr = JavaMethodCall(JavaField(JavaField(JavaIdentifier('Runtime'), 'pyfunc_ascii'), 'singleton'), 'call', [
                         JavaCreateArray('PyObject', [expr]), JavaIdentifier('null')
                     ])
                 elif val.conversion != -1:
