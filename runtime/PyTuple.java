@@ -144,7 +144,7 @@ public final class PyTuple extends PyObject {
     @Override public final boolean hasIter() { return true; }
     @Override public PyTupleIter iter() { return new PyTupleIter(this); }
     @Override public PyReversed reversed() { return new PyReversed(this); }
-    @Override public PyBuiltinClass type() { return Runtime.pyglobal_tuple; }
+    @Override public PyBuiltinClass type() { return Runtime.pyclass_tuple.singleton; }
 
     @Override public boolean boolValue() { return items.length != 0; }
     @Override public boolean contains(PyObject rhs) {

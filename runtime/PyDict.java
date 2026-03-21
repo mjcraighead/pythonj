@@ -437,7 +437,7 @@ public final class PyDict extends PyObject {
 
     @Override public final boolean hasIter() { return true; }
     @Override public PyDictIter iter() { return new PyDictIter(items.keySet().iterator()); }
-    @Override public PyBuiltinClass type() { return Runtime.pyglobal_dict; }
+    @Override public PyBuiltinClass type() { return Runtime.pyclass_dict.singleton; }
 
     @Override public boolean boolValue() { return !items.isEmpty(); }
     @Override public boolean contains(PyObject rhs) { return items.containsKey(rhs); }

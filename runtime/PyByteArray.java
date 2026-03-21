@@ -152,7 +152,7 @@ public final class PyByteArray extends PyObject {
 
     @Override public final boolean hasIter() { return true; }
     @Override public PyByteArrayIter iter() { return new PyByteArrayIter(this); }
-    @Override public PyBuiltinClass type() { return Runtime.pyglobal_bytearray; }
+    @Override public PyBuiltinClass type() { return Runtime.pyclass_bytearray.singleton; }
 
     @Override public boolean boolValue() { return value.length != 0; }
     @Override public boolean contains(PyObject rhs) {

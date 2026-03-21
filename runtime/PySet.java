@@ -219,7 +219,7 @@ public final class PySet extends PyObject {
 
     @Override public final boolean hasIter() { return true; }
     @Override public PySetIter iter() { return new PySetIter(items.iterator()); }
-    @Override public PyBuiltinClass type() { return Runtime.pyglobal_set; }
+    @Override public PyBuiltinClass type() { return Runtime.pyclass_set.singleton; }
 
     @Override public Set<PyObject> asSetOrNull() { return items; }
     @Override public boolean boolValue() { return !items.isEmpty(); }

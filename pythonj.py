@@ -18,11 +18,14 @@ import time
 from types import NoneType
 from typing import Iterator, Optional, TextIO
 
-BUILTINS = {
-    'abs', 'all', 'any', 'ascii', 'bool', 'bytearray', 'bytes', 'chr', 'delattr', 'dict', 'enumerate', 'format', 'getattr', 'hasattr', 'hash',
-    'hex', 'int', 'isinstance', 'issubclass', 'iter', 'len', 'list', 'max', 'min', 'next', 'object', 'open',
-    'ord', 'print', 'range', 'repr', 'reversed', 'set', 'setattr', 'slice', 'sorted', 'str', 'sum', 'tuple', 'type', 'zip',
+BUILTIN_PYGLOBALS = {
+    'abs', 'all', 'any', 'ascii', 'chr', 'delattr', 'format', 'getattr', 'hasattr', 'hash', 'hex',
+    'isinstance', 'issubclass', 'iter', 'len', 'max', 'min', 'next', 'open', 'ord', 'print', 'repr',
+    'setattr', 'sorted', 'sum',
     'ArithmeticError', 'AssertionError', 'AttributeError', 'BaseException', 'Exception', 'IndexError', 'KeyError', 'LookupError', 'StopIteration', 'TypeError', 'ValueError', 'ZeroDivisionError',
+}
+BUILTIN_PYCLASS_SINGLETONS = {
+    'bool', 'bytearray', 'bytes', 'dict', 'enumerate', 'int', 'list', 'object', 'range', 'reversed', 'set', 'slice', 'str', 'tuple', 'type', 'zip',
 }
 
 RUNTIME_JAVA_FILES = (
@@ -578,7 +581,9 @@ class PythonjVisitor(ast.NodeVisitor):
             return JavaIdentifier('null')
         elif self.scope.kind == ScopeKind.FUNCTION and name in self.scope.locals:
             return JavaIdentifier(f'pylocal_{name}')
-        elif name in BUILTINS:
+        elif name in BUILTIN_PYCLASS_SINGLETONS:
+            return JavaField(JavaField(JavaIdentifier('Runtime'), f'pyclass_{name}'), 'singleton')
+        elif name in BUILTIN_PYGLOBALS:
             return JavaField(JavaIdentifier('Runtime'), f'pyglobal_{name}')
         else:
             return JavaIdentifier(f'pyglobal_{name}')

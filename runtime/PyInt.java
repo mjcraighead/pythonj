@@ -229,7 +229,7 @@ public final class PyInt extends PyObject {
         }
     }
 
-    @Override public PyBuiltinClass type() { return Runtime.pyglobal_int; }
+    @Override public PyBuiltinClass type() { return Runtime.pyclass_int.singleton; }
 
     @Override public boolean boolValue() { return value != 0; }
     @Override public boolean contains(PyObject rhs) { return defaultContains(rhs); }

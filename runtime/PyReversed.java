@@ -20,5 +20,5 @@ public final class PyReversed extends PyIter {
         return obj.getItem(new PyInt(len - 1 - cur));
     }
     @Override public String repr() { return defaultRepr(); }
-    @Override public PyBuiltinClass type() { return Runtime.pyglobal_reversed; }
+    @Override public PyBuiltinClass type() { return Runtime.pyclass_reversed.singleton; }
 }

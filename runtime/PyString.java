@@ -249,7 +249,7 @@ public final class PyString extends PyObject {
 
     @Override public final boolean hasIter() { return true; }
     @Override public PyStringIter iter() { return new PyStringIter(this); }
-    @Override public PyBuiltinClass type() { return Runtime.pyglobal_str; }
+    @Override public PyBuiltinClass type() { return Runtime.pyclass_str.singleton; }
 
     @Override public boolean boolValue() { return !value.isEmpty(); }
     @Override public boolean contains(PyObject rhs) {

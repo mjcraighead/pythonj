@@ -21,7 +21,7 @@ public final class PySlice extends PyTruthyObject {
         step = _step;
     }
 
-    @Override public PyBuiltinClass type() { return Runtime.pyglobal_slice; }
+    @Override public PyBuiltinClass type() { return Runtime.pyclass_slice.singleton; }
 
     @Override public boolean ge(PyObject rhs) { throw unimplementedMethod("ge"); }
     @Override public boolean gt(PyObject rhs) { throw unimplementedMethod("gt"); }

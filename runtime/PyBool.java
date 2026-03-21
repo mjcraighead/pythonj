@@ -167,7 +167,7 @@ public final class PyBool extends PyObject {
         }
     }
 
-    @Override public Runtime.pyclass_bool type() { return Runtime.pyglobal_bool; }
+    @Override public Runtime.pyclass_bool type() { return Runtime.pyclass_bool.singleton; }
 
     @Override public boolean boolValue() { return value; }
     @Override public boolean contains(PyObject rhs) { return defaultContains(rhs); }

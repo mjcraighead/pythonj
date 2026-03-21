@@ -66,7 +66,7 @@ public final class PyRange extends PyObject {
 
     @Override public final boolean hasIter() { return true; }
     @Override public PyRangeIter iter() { return new PyRangeIter(this); }
-    @Override public PyBuiltinClass type() { return Runtime.pyglobal_range; }
+    @Override public PyBuiltinClass type() { return Runtime.pyclass_range.singleton; }
 
     @Override public boolean boolValue() {
         return len() != 0;

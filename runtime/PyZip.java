@@ -28,5 +28,5 @@ public final class PyZip extends PyIter {
 
     @Override public boolean contains(PyObject rhs) { return defaultContains(rhs); }
     @Override public String repr() { return defaultRepr(); }
-    @Override public PyBuiltinClass type() { return Runtime.pyglobal_zip; }
+    @Override public PyBuiltinClass type() { return Runtime.pyclass_zip.singleton; }
 }

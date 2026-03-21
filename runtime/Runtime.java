@@ -59,7 +59,7 @@ class PyBuiltinClass extends PyType {
     }
 
     @Override public final String repr() { return "<class '" + typeName + "'>"; }
-    @Override public final Runtime.pyclass_type type() { return Runtime.pyglobal_type; }
+    @Override public final Runtime.pyclass_type type() { return Runtime.pyclass_type.singleton; }
     @Override public final String name() { return typeName; }
 }
 
@@ -293,6 +293,8 @@ public final class Runtime {
     public static final pyfunc_ascii pyglobal_ascii = new pyfunc_ascii();
 
     static final class pyclass_bool extends PyBuiltinClass {
+        public static final pyclass_bool singleton = new pyclass_bool();
+
         pyclass_bool() { super("bool", PyBool.class); }
         @Override public PyBool call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, typeName);
@@ -303,9 +305,10 @@ public final class Runtime {
             return PyBool.false_singleton;
         }
     }
-    public static final pyclass_bool pyglobal_bool = new pyclass_bool();
 
     static final class pyclass_bytearray extends PyBuiltinClass {
+        public static final pyclass_bytearray singleton = new pyclass_bytearray();
+
         pyclass_bytearray() { super("bytearray", PyByteArray.class); }
         @Override public PyByteArray call(PyObject[] args, PyDict kwargs) {
             if (args.length > 1) {
@@ -333,7 +336,6 @@ public final class Runtime {
             return new PyByteArray(b.toByteArray());
         }
     }
-    public static final pyclass_bytearray pyglobal_bytearray = new pyclass_bytearray();
 
     static final class pyclass_bytes extends PyBuiltinClass {
         public static final pyclass_bytes singleton = new pyclass_bytes();
@@ -469,7 +471,6 @@ public final class Runtime {
             }
         }
     }
-    public static final pyclass_bytes pyglobal_bytes = pyclass_bytes.singleton;
 
     static final class pyfunc_chr extends PyBuiltinFunction {
         pyfunc_chr() { super("chr"); }
@@ -557,9 +558,10 @@ public final class Runtime {
             }
         }
     }
-    public static final pyclass_dict pyglobal_dict = pyclass_dict.singleton;
 
     static final class pyclass_enumerate extends PyBuiltinClass {
+        public static final pyclass_enumerate singleton = new pyclass_enumerate();
+
         pyclass_enumerate() { super("enumerate", PyEnumerate.class); }
         @Override public PyEnumerate call(PyObject[] args, PyDict kwargs) {
             // This is quirky, but is intended to match corner cases in CPython enumerate()
@@ -594,7 +596,6 @@ public final class Runtime {
             }
         }
     }
-    public static final pyclass_enumerate pyglobal_enumerate = new pyclass_enumerate();
 
     static final class pyfunc_format extends PyBuiltinFunction {
         pyfunc_format() { super("format"); }
@@ -793,7 +794,6 @@ public final class Runtime {
             }
         }
     }
-    public static final pyclass_int pyglobal_int = pyclass_int.singleton;
 
     static final class pyfunc_isinstance extends PyBuiltinFunction {
         pyfunc_isinstance() { super("isinstance"); }
@@ -909,7 +909,6 @@ public final class Runtime {
             return ret;
         }
     }
-    public static final pyclass_list pyglobal_list = pyclass_list.singleton;
 
     static final class pyfunc_max extends PyBuiltinFunction {
         pyfunc_max() { super("max"); }
@@ -996,9 +995,9 @@ public final class Runtime {
     public static final pyfunc_next pyglobal_next = new pyfunc_next();
 
     static final class pyclass_object extends PyBuiltinClass {
+        public static final pyclass_object singleton = new pyclass_object();
         pyclass_object() { super("object", PyObject.class); }
     }
-    public static final pyclass_object pyglobal_object = new pyclass_object();
 
     static final class pyfunc_open extends PyBuiltinFunction {
         pyfunc_open() { super("open"); }
@@ -1092,7 +1091,6 @@ public final class Runtime {
             return new PyRange(start, stop, step);
         }
     }
-    public static final pyclass_range pyglobal_range = pyclass_range.singleton;
 
     static final class pyfunc_repr extends PyBuiltinFunction {
         pyfunc_repr() { super("repr"); }
@@ -1104,6 +1102,8 @@ public final class Runtime {
     public static final pyfunc_repr pyglobal_repr = new pyfunc_repr();
 
     static final class pyclass_reversed extends PyBuiltinClass {
+        public static final pyclass_reversed singleton = new pyclass_reversed();
+
         pyclass_reversed() { super("reversed", PyReversed.class); }
         @Override public PyIter call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, typeName);
@@ -1111,7 +1111,6 @@ public final class Runtime {
             return args[0].reversed();
         }
     }
-    public static final pyclass_reversed pyglobal_reversed = new pyclass_reversed();
 
     static final class pyclass_set extends PyBuiltinClass {
         public static final pyclass_set singleton = new pyclass_set();
@@ -1167,7 +1166,6 @@ public final class Runtime {
             return ret;
         }
     }
-    public static final pyclass_set pyglobal_set = pyclass_set.singleton;
 
     static final class pyfunc_setattr extends PyBuiltinFunction {
         pyfunc_setattr() { super("setattr"); }
@@ -1220,7 +1218,6 @@ public final class Runtime {
             return new PySlice(start, stop, step);
         }
     }
-    public static final pyclass_slice pyglobal_slice = pyclass_slice.singleton;
 
     static final class pyfunc_sorted extends PyBuiltinFunction {
         pyfunc_sorted() { super("sorted"); }
@@ -1363,7 +1360,6 @@ public final class Runtime {
             }
         }
     }
-    public static final pyclass_str pyglobal_str = pyclass_str.singleton;
 
     static final class pyfunc_sum extends PyBuiltinFunction {
         pyfunc_sum() { super("sum"); }
@@ -1412,9 +1408,10 @@ public final class Runtime {
             return new PyTuple(list);
         }
     }
-    public static final pyclass_tuple pyglobal_tuple = pyclass_tuple.singleton;
 
     static final class pyclass_type extends PyBuiltinClass {
+        public static final pyclass_type singleton = new pyclass_type();
+
         pyclass_type() { super("type", PyType.class); }
         @Override public PyType call(PyObject[] args, PyDict kwargs) {
             if (args.length != 1) {
@@ -1426,9 +1423,10 @@ public final class Runtime {
             return args[0].type();
         }
     }
-    public static final pyclass_type pyglobal_type = new pyclass_type();
 
     static final class pyclass_zip extends PyBuiltinClass {
+        public static final pyclass_zip singleton = new pyclass_zip();
+
         pyclass_zip() { super("zip", PyZip.class); }
         @Override public PyZip call(PyObject[] args, PyDict kwargs) {
             if ((kwargs != null) && kwargs.boolValue()) {
@@ -1441,7 +1439,6 @@ public final class Runtime {
             return new PyZip(iters);
         }
     }
-    public static final pyclass_zip pyglobal_zip = new pyclass_zip();
 
     static final class pyclass_ArithmeticError extends PyBuiltinClass {
         pyclass_ArithmeticError() { super("ArithmeticError", PyArithmeticError.class); }
