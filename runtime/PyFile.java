@@ -55,6 +55,10 @@ final class PyTextIOWrapper extends PyIter {
         }
     }
 
+    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+        throw new UnsupportedOperationException(type.name() + ".__new__() unimplemented");
+    }
+
     @Override public PyString next() {
         try {
             StringBuilder s = new StringBuilder();
@@ -159,6 +163,10 @@ final class PyBufferedReader extends PyIter {
         } catch (FileNotFoundException e) {
             throw new UncheckedIOException(e);
         }
+    }
+
+    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+        throw new UnsupportedOperationException(type.name() + ".__new__() unimplemented");
     }
 
     @Override public PyBytes next() { throw new UnsupportedOperationException("iterating over binary files not supported"); }

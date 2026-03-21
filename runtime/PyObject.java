@@ -5,6 +5,10 @@
 import java.util.Set;
 
 public abstract class PyObject implements Comparable<PyObject> {
+    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+        throw new UnsupportedOperationException(type.name() + ".__new__() unimplemented");
+    }
+
     // These all take and/or return boxed PyObjects
     public PyObject invert() { throw raiseUnaryOp("unary ~"); }
     public PyObject pos() { throw raiseUnaryOp("unary +"); }

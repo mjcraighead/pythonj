@@ -1382,7 +1382,6 @@ def gen_code(spec_path: str, java_path: str) -> None:
 
     with open(java_path, 'w') as f:
         for (name, attrs) in spec.items():
-            has_newobj = name not in {'object', '_io.BufferedReader', '_io.TextIOWrapper'}
             java_name = get_java_name(name)
             py_name = 'NoneType' if name == 'types.NoneType' else name
 
@@ -1418,8 +1417,6 @@ def gen_code(spec_path: str, java_path: str) -> None:
                 '    }\n',
                 '\n',
                 f'    private {java_name}Type() {{ super({java_string_literal(py_name)}, {java_name}.class, {java_name}::newObj); }}\n'
-                if has_newobj else
-                f'    private {java_name}Type() {{ super({java_string_literal(py_name)}, {java_name}.class); }}\n',
                 '    @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }\n',
                 '    @Override public PyObject lookupAttr(String name) {\n',
                 '        switch (name) {\n',
