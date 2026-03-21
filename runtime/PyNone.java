@@ -5,8 +5,9 @@
 public final class PyNone extends PyObject {
     public static final PyNone singleton = new PyNone();
 
-    private static final PyBuiltinClass type_singleton = new PyNoneType();
     private static final class PyNoneType extends PyBuiltinClass {
+        private static final PyBuiltinClass singleton = new PyNoneType();
+
         PyNoneType() { super("NoneType", PyNone.class); }
         @Override public PyNone call(PyObject[] args, PyDict kwargs) {
             if ((kwargs != null) && kwargs.boolValue()) {
@@ -29,7 +30,7 @@ public final class PyNone extends PyObject {
         }
     }
 
-    @Override public PyBuiltinClass type() { return type_singleton; }
+    @Override public PyBuiltinClass type() { return PyNoneType.singleton; }
 
     @Override public boolean boolValue() { return false; }
     @Override public boolean contains(PyObject rhs) { return defaultContains(rhs); }
