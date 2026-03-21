@@ -8,20 +8,20 @@ import java.util.ArrayList;
 final class PyTupleType extends PyBuiltinType {
 // BEGIN GENERATED CODE: PyTupleType
     public static final PyTupleType singleton = new PyTupleType();
-    private static final PyMethodDescriptor pydesc_index = new PyMethodDescriptor(singleton, "index", PyTuple.PyTupleMethod_index::new);
-    private static final PyMethodDescriptor pydesc_count = new PyMethodDescriptor(singleton, "count", PyTuple.PyTupleMethod_count::new);
-    private static final PyString pydesc___doc__ = new PyString("Built-in immutable sequence.\n\nIf no argument is given, the constructor returns an empty tuple.\nIf iterable is specified the tuple is initialized from iterable's items.\n\nIf the argument is a tuple, the return value is the same object.");
+    private static final PyMethodDescriptor pyattr_index = new PyMethodDescriptor(singleton, "index", PyTuple.PyTupleMethod_index::new);
+    private static final PyMethodDescriptor pyattr_count = new PyMethodDescriptor(singleton, "count", PyTuple.PyTupleMethod_count::new);
+    private static final PyString pyattr___doc__ = new PyString("Built-in immutable sequence.\n\nIf no argument is given, the constructor returns an empty tuple.\nIf iterable is specified the tuple is initialized from iterable's items.\n\nIf the argument is a tuple, the return value is the same object.");
     private static final PyAttr attrs[] = new PyAttr[] {
-        new PyAttr("index", pydesc_index),
-        new PyAttr("count", pydesc_count),
-        new PyAttr("__doc__", pydesc___doc__)
+        new PyAttr("index", pyattr_index),
+        new PyAttr("count", pyattr_count),
+        new PyAttr("__doc__", pyattr___doc__)
     };
     @Override public PyAttr[] getAttributes() { return attrs; }
     @Override public PyObject lookupAttr(String name) {
         switch (name) {
-            case "index": return pydesc_index;
-            case "count": return pydesc_count;
-            case "__doc__": return pydesc___doc__;
+            case "index": return pyattr_index;
+            case "count": return pyattr_count;
+            case "__doc__": return pyattr___doc__;
             default: return null;
         }
     }

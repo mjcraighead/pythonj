@@ -10,65 +10,65 @@ import java.util.Set;
 final class PySetType extends PyBuiltinType {
 // BEGIN GENERATED CODE: PySetType
     public static final PySetType singleton = new PySetType();
-    private static final PyMethodDescriptor pydesc_add = new PyMethodDescriptor(singleton, "add", PySet.PySetMethod_add::new);
-    private static final PyMethodDescriptor pydesc_clear = new PyMethodDescriptor(singleton, "clear", PySet.PySetMethod_clear::new);
-    private static final PyMethodDescriptor pydesc_copy = new PyMethodDescriptor(singleton, "copy", obj -> new PySet.PySetMethodUnimplemented(obj, "copy"));
-    private static final PyMethodDescriptor pydesc_discard = new PyMethodDescriptor(singleton, "discard", PySet.PySetMethod_discard::new);
-    private static final PyMethodDescriptor pydesc_difference = new PyMethodDescriptor(singleton, "difference", obj -> new PySet.PySetMethodUnimplemented(obj, "difference"));
-    private static final PyMethodDescriptor pydesc_difference_update = new PyMethodDescriptor(singleton, "difference_update", obj -> new PySet.PySetMethodUnimplemented(obj, "difference_update"));
-    private static final PyMethodDescriptor pydesc_intersection = new PyMethodDescriptor(singleton, "intersection", obj -> new PySet.PySetMethodUnimplemented(obj, "intersection"));
-    private static final PyMethodDescriptor pydesc_intersection_update = new PyMethodDescriptor(singleton, "intersection_update", obj -> new PySet.PySetMethodUnimplemented(obj, "intersection_update"));
-    private static final PyMethodDescriptor pydesc_isdisjoint = new PyMethodDescriptor(singleton, "isdisjoint", obj -> new PySet.PySetMethodUnimplemented(obj, "isdisjoint"));
-    private static final PyMethodDescriptor pydesc_issubset = new PyMethodDescriptor(singleton, "issubset", obj -> new PySet.PySetMethodUnimplemented(obj, "issubset"));
-    private static final PyMethodDescriptor pydesc_issuperset = new PyMethodDescriptor(singleton, "issuperset", obj -> new PySet.PySetMethodUnimplemented(obj, "issuperset"));
-    private static final PyMethodDescriptor pydesc_pop = new PyMethodDescriptor(singleton, "pop", obj -> new PySet.PySetMethodUnimplemented(obj, "pop"));
-    private static final PyMethodDescriptor pydesc_remove = new PyMethodDescriptor(singleton, "remove", obj -> new PySet.PySetMethodUnimplemented(obj, "remove"));
-    private static final PyMethodDescriptor pydesc_symmetric_difference = new PyMethodDescriptor(singleton, "symmetric_difference", obj -> new PySet.PySetMethodUnimplemented(obj, "symmetric_difference"));
-    private static final PyMethodDescriptor pydesc_symmetric_difference_update = new PyMethodDescriptor(singleton, "symmetric_difference_update", obj -> new PySet.PySetMethodUnimplemented(obj, "symmetric_difference_update"));
-    private static final PyMethodDescriptor pydesc_union = new PyMethodDescriptor(singleton, "union", obj -> new PySet.PySetMethodUnimplemented(obj, "union"));
-    private static final PyMethodDescriptor pydesc_update = new PyMethodDescriptor(singleton, "update", PySet.PySetMethod_update::new);
-    private static final PyString pydesc___doc__ = new PyString("Build an unordered collection of unique elements.");
+    private static final PyMethodDescriptor pyattr_add = new PyMethodDescriptor(singleton, "add", PySet.PySetMethod_add::new);
+    private static final PyMethodDescriptor pyattr_clear = new PyMethodDescriptor(singleton, "clear", PySet.PySetMethod_clear::new);
+    private static final PyMethodDescriptor pyattr_copy = new PyMethodDescriptor(singleton, "copy", obj -> new PySet.PySetMethodUnimplemented(obj, "copy"));
+    private static final PyMethodDescriptor pyattr_discard = new PyMethodDescriptor(singleton, "discard", PySet.PySetMethod_discard::new);
+    private static final PyMethodDescriptor pyattr_difference = new PyMethodDescriptor(singleton, "difference", obj -> new PySet.PySetMethodUnimplemented(obj, "difference"));
+    private static final PyMethodDescriptor pyattr_difference_update = new PyMethodDescriptor(singleton, "difference_update", obj -> new PySet.PySetMethodUnimplemented(obj, "difference_update"));
+    private static final PyMethodDescriptor pyattr_intersection = new PyMethodDescriptor(singleton, "intersection", obj -> new PySet.PySetMethodUnimplemented(obj, "intersection"));
+    private static final PyMethodDescriptor pyattr_intersection_update = new PyMethodDescriptor(singleton, "intersection_update", obj -> new PySet.PySetMethodUnimplemented(obj, "intersection_update"));
+    private static final PyMethodDescriptor pyattr_isdisjoint = new PyMethodDescriptor(singleton, "isdisjoint", obj -> new PySet.PySetMethodUnimplemented(obj, "isdisjoint"));
+    private static final PyMethodDescriptor pyattr_issubset = new PyMethodDescriptor(singleton, "issubset", obj -> new PySet.PySetMethodUnimplemented(obj, "issubset"));
+    private static final PyMethodDescriptor pyattr_issuperset = new PyMethodDescriptor(singleton, "issuperset", obj -> new PySet.PySetMethodUnimplemented(obj, "issuperset"));
+    private static final PyMethodDescriptor pyattr_pop = new PyMethodDescriptor(singleton, "pop", obj -> new PySet.PySetMethodUnimplemented(obj, "pop"));
+    private static final PyMethodDescriptor pyattr_remove = new PyMethodDescriptor(singleton, "remove", obj -> new PySet.PySetMethodUnimplemented(obj, "remove"));
+    private static final PyMethodDescriptor pyattr_symmetric_difference = new PyMethodDescriptor(singleton, "symmetric_difference", obj -> new PySet.PySetMethodUnimplemented(obj, "symmetric_difference"));
+    private static final PyMethodDescriptor pyattr_symmetric_difference_update = new PyMethodDescriptor(singleton, "symmetric_difference_update", obj -> new PySet.PySetMethodUnimplemented(obj, "symmetric_difference_update"));
+    private static final PyMethodDescriptor pyattr_union = new PyMethodDescriptor(singleton, "union", obj -> new PySet.PySetMethodUnimplemented(obj, "union"));
+    private static final PyMethodDescriptor pyattr_update = new PyMethodDescriptor(singleton, "update", PySet.PySetMethod_update::new);
+    private static final PyString pyattr___doc__ = new PyString("Build an unordered collection of unique elements.");
     private static final PyAttr attrs[] = new PyAttr[] {
-        new PyAttr("add", pydesc_add),
-        new PyAttr("clear", pydesc_clear),
-        new PyAttr("copy", pydesc_copy),
-        new PyAttr("discard", pydesc_discard),
-        new PyAttr("difference", pydesc_difference),
-        new PyAttr("difference_update", pydesc_difference_update),
-        new PyAttr("intersection", pydesc_intersection),
-        new PyAttr("intersection_update", pydesc_intersection_update),
-        new PyAttr("isdisjoint", pydesc_isdisjoint),
-        new PyAttr("issubset", pydesc_issubset),
-        new PyAttr("issuperset", pydesc_issuperset),
-        new PyAttr("pop", pydesc_pop),
-        new PyAttr("remove", pydesc_remove),
-        new PyAttr("symmetric_difference", pydesc_symmetric_difference),
-        new PyAttr("symmetric_difference_update", pydesc_symmetric_difference_update),
-        new PyAttr("union", pydesc_union),
-        new PyAttr("update", pydesc_update),
-        new PyAttr("__doc__", pydesc___doc__)
+        new PyAttr("add", pyattr_add),
+        new PyAttr("clear", pyattr_clear),
+        new PyAttr("copy", pyattr_copy),
+        new PyAttr("discard", pyattr_discard),
+        new PyAttr("difference", pyattr_difference),
+        new PyAttr("difference_update", pyattr_difference_update),
+        new PyAttr("intersection", pyattr_intersection),
+        new PyAttr("intersection_update", pyattr_intersection_update),
+        new PyAttr("isdisjoint", pyattr_isdisjoint),
+        new PyAttr("issubset", pyattr_issubset),
+        new PyAttr("issuperset", pyattr_issuperset),
+        new PyAttr("pop", pyattr_pop),
+        new PyAttr("remove", pyattr_remove),
+        new PyAttr("symmetric_difference", pyattr_symmetric_difference),
+        new PyAttr("symmetric_difference_update", pyattr_symmetric_difference_update),
+        new PyAttr("union", pyattr_union),
+        new PyAttr("update", pyattr_update),
+        new PyAttr("__doc__", pyattr___doc__)
     };
     @Override public PyAttr[] getAttributes() { return attrs; }
     @Override public PyObject lookupAttr(String name) {
         switch (name) {
-            case "add": return pydesc_add;
-            case "clear": return pydesc_clear;
-            case "copy": return pydesc_copy;
-            case "discard": return pydesc_discard;
-            case "difference": return pydesc_difference;
-            case "difference_update": return pydesc_difference_update;
-            case "intersection": return pydesc_intersection;
-            case "intersection_update": return pydesc_intersection_update;
-            case "isdisjoint": return pydesc_isdisjoint;
-            case "issubset": return pydesc_issubset;
-            case "issuperset": return pydesc_issuperset;
-            case "pop": return pydesc_pop;
-            case "remove": return pydesc_remove;
-            case "symmetric_difference": return pydesc_symmetric_difference;
-            case "symmetric_difference_update": return pydesc_symmetric_difference_update;
-            case "union": return pydesc_union;
-            case "update": return pydesc_update;
-            case "__doc__": return pydesc___doc__;
+            case "add": return pyattr_add;
+            case "clear": return pyattr_clear;
+            case "copy": return pyattr_copy;
+            case "discard": return pyattr_discard;
+            case "difference": return pyattr_difference;
+            case "difference_update": return pyattr_difference_update;
+            case "intersection": return pyattr_intersection;
+            case "intersection_update": return pyattr_intersection_update;
+            case "isdisjoint": return pyattr_isdisjoint;
+            case "issubset": return pyattr_issubset;
+            case "issuperset": return pyattr_issuperset;
+            case "pop": return pyattr_pop;
+            case "remove": return pyattr_remove;
+            case "symmetric_difference": return pyattr_symmetric_difference;
+            case "symmetric_difference_update": return pyattr_symmetric_difference_update;
+            case "union": return pyattr_union;
+            case "update": return pyattr_update;
+            case "__doc__": return pyattr___doc__;
             default: return null;
         }
     }

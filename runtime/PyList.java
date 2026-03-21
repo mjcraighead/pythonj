@@ -10,47 +10,47 @@ import java.util.Iterator;
 final class PyListType extends PyBuiltinType {
 // BEGIN GENERATED CODE: PyListType
     public static final PyListType singleton = new PyListType();
-    private static final PyMethodDescriptor pydesc_clear = new PyMethodDescriptor(singleton, "clear", PyList.PyListMethod_clear::new);
-    private static final PyMethodDescriptor pydesc_copy = new PyMethodDescriptor(singleton, "copy", PyList.PyListMethod_copy::new);
-    private static final PyMethodDescriptor pydesc_append = new PyMethodDescriptor(singleton, "append", PyList.PyListMethod_append::new);
-    private static final PyMethodDescriptor pydesc_insert = new PyMethodDescriptor(singleton, "insert", PyList.PyListMethod_insert::new);
-    private static final PyMethodDescriptor pydesc_extend = new PyMethodDescriptor(singleton, "extend", PyList.PyListMethod_extend::new);
-    private static final PyMethodDescriptor pydesc_pop = new PyMethodDescriptor(singleton, "pop", PyList.PyListMethod_pop::new);
-    private static final PyMethodDescriptor pydesc_remove = new PyMethodDescriptor(singleton, "remove", PyList.PyListMethod_remove::new);
-    private static final PyMethodDescriptor pydesc_index = new PyMethodDescriptor(singleton, "index", PyList.PyListMethod_index::new);
-    private static final PyMethodDescriptor pydesc_count = new PyMethodDescriptor(singleton, "count", PyList.PyListMethod_count::new);
-    private static final PyMethodDescriptor pydesc_reverse = new PyMethodDescriptor(singleton, "reverse", PyList.PyListMethod_reverse::new);
-    private static final PyMethodDescriptor pydesc_sort = new PyMethodDescriptor(singleton, "sort", PyList.PyListMethod_sort::new);
-    private static final PyString pydesc___doc__ = new PyString("Built-in mutable sequence.\n\nIf no argument is given, the constructor creates a new empty list.\nThe argument must be an iterable if specified.");
+    private static final PyMethodDescriptor pyattr_clear = new PyMethodDescriptor(singleton, "clear", PyList.PyListMethod_clear::new);
+    private static final PyMethodDescriptor pyattr_copy = new PyMethodDescriptor(singleton, "copy", PyList.PyListMethod_copy::new);
+    private static final PyMethodDescriptor pyattr_append = new PyMethodDescriptor(singleton, "append", PyList.PyListMethod_append::new);
+    private static final PyMethodDescriptor pyattr_insert = new PyMethodDescriptor(singleton, "insert", PyList.PyListMethod_insert::new);
+    private static final PyMethodDescriptor pyattr_extend = new PyMethodDescriptor(singleton, "extend", PyList.PyListMethod_extend::new);
+    private static final PyMethodDescriptor pyattr_pop = new PyMethodDescriptor(singleton, "pop", PyList.PyListMethod_pop::new);
+    private static final PyMethodDescriptor pyattr_remove = new PyMethodDescriptor(singleton, "remove", PyList.PyListMethod_remove::new);
+    private static final PyMethodDescriptor pyattr_index = new PyMethodDescriptor(singleton, "index", PyList.PyListMethod_index::new);
+    private static final PyMethodDescriptor pyattr_count = new PyMethodDescriptor(singleton, "count", PyList.PyListMethod_count::new);
+    private static final PyMethodDescriptor pyattr_reverse = new PyMethodDescriptor(singleton, "reverse", PyList.PyListMethod_reverse::new);
+    private static final PyMethodDescriptor pyattr_sort = new PyMethodDescriptor(singleton, "sort", PyList.PyListMethod_sort::new);
+    private static final PyString pyattr___doc__ = new PyString("Built-in mutable sequence.\n\nIf no argument is given, the constructor creates a new empty list.\nThe argument must be an iterable if specified.");
     private static final PyAttr attrs[] = new PyAttr[] {
-        new PyAttr("clear", pydesc_clear),
-        new PyAttr("copy", pydesc_copy),
-        new PyAttr("append", pydesc_append),
-        new PyAttr("insert", pydesc_insert),
-        new PyAttr("extend", pydesc_extend),
-        new PyAttr("pop", pydesc_pop),
-        new PyAttr("remove", pydesc_remove),
-        new PyAttr("index", pydesc_index),
-        new PyAttr("count", pydesc_count),
-        new PyAttr("reverse", pydesc_reverse),
-        new PyAttr("sort", pydesc_sort),
-        new PyAttr("__doc__", pydesc___doc__)
+        new PyAttr("clear", pyattr_clear),
+        new PyAttr("copy", pyattr_copy),
+        new PyAttr("append", pyattr_append),
+        new PyAttr("insert", pyattr_insert),
+        new PyAttr("extend", pyattr_extend),
+        new PyAttr("pop", pyattr_pop),
+        new PyAttr("remove", pyattr_remove),
+        new PyAttr("index", pyattr_index),
+        new PyAttr("count", pyattr_count),
+        new PyAttr("reverse", pyattr_reverse),
+        new PyAttr("sort", pyattr_sort),
+        new PyAttr("__doc__", pyattr___doc__)
     };
     @Override public PyAttr[] getAttributes() { return attrs; }
     @Override public PyObject lookupAttr(String name) {
         switch (name) {
-            case "clear": return pydesc_clear;
-            case "copy": return pydesc_copy;
-            case "append": return pydesc_append;
-            case "insert": return pydesc_insert;
-            case "extend": return pydesc_extend;
-            case "pop": return pydesc_pop;
-            case "remove": return pydesc_remove;
-            case "index": return pydesc_index;
-            case "count": return pydesc_count;
-            case "reverse": return pydesc_reverse;
-            case "sort": return pydesc_sort;
-            case "__doc__": return pydesc___doc__;
+            case "clear": return pyattr_clear;
+            case "copy": return pyattr_copy;
+            case "append": return pyattr_append;
+            case "insert": return pyattr_insert;
+            case "extend": return pyattr_extend;
+            case "pop": return pyattr_pop;
+            case "remove": return pyattr_remove;
+            case "index": return pyattr_index;
+            case "count": return pyattr_count;
+            case "reverse": return pyattr_reverse;
+            case "sort": return pyattr_sort;
+            case "__doc__": return pyattr___doc__;
             default: return null;
         }
     }

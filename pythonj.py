@@ -1355,36 +1355,36 @@ def gen_code(path) -> None:
         gen_lines = [f'    public static final {java_name}Type singleton = new {java_name}Type();\n']
         for (k, v) in attrs.items():
             if v['kind'] == 'string':
-                gen_lines.append(f"    private static final PyString pydesc_{k} = new PyString({java_string_literal(v['value'])});\n")
+                gen_lines.append(f"    private static final PyString pyattr_{k} = new PyString({java_string_literal(v['value'])});\n")
             elif v['kind'] == 'member':
-                gen_lines.append(f"    private static final PyMemberDescriptor pydesc_{k} = new PyMemberDescriptor(singleton, {java_string_literal(k)}, {java_name}::pymember_{k});\n")
+                gen_lines.append(f"    private static final PyMemberDescriptor pyattr_{k} = new PyMemberDescriptor(singleton, {java_string_literal(k)}, {java_name}::pymember_{k});\n")
             elif v['kind'] == 'getset':
-                gen_lines.append(f"    private static final PyGetSetDescriptor pydesc_{k} = new PyGetSetDescriptor(singleton, {java_string_literal(k)}, {java_name}::pygetset_{k});\n")
+                gen_lines.append(f"    private static final PyGetSetDescriptor pyattr_{k} = new PyGetSetDescriptor(singleton, {java_string_literal(k)}, {java_name}::pygetset_{k});\n")
             elif v['kind'] == 'method':
                 if name in UNIMPLEMENTED_METHODS and k in UNIMPLEMENTED_METHODS[name]:
                     constructor = f'obj -> new {java_name}.{java_name}MethodUnimplemented(obj, {java_string_literal(k)})'
                 else:
                     constructor = f'{java_name}.{java_name}Method_{k}::new'
-                gen_lines.append(f"    private static final PyMethodDescriptor pydesc_{k} = new PyMethodDescriptor(singleton, {java_string_literal(k)}, {constructor});\n")
+                gen_lines.append(f"    private static final PyMethodDescriptor pyattr_{k} = new PyMethodDescriptor(singleton, {java_string_literal(k)}, {constructor});\n")
             elif v['kind'] == 'classmethod':
                 constructor = f'{java_name}Type.{java_name}ClassMethod_{k}::new'
-                gen_lines.append(f"    private static final PyClassMethodDescriptor pydesc_{k} = new PyClassMethodDescriptor(singleton, {java_string_literal(k)}, {constructor});\n")
+                gen_lines.append(f"    private static final PyClassMethodDescriptor pyattr_{k} = new PyClassMethodDescriptor(singleton, {java_string_literal(k)}, {constructor});\n")
             elif v['kind'] == 'staticmethod':
                 constructor = f'new {java_name}Type.{java_name}StaticMethod_{k}(singleton)'
-                gen_lines.append(f'    private static final PyStaticMethod pydesc_{k} = new PyStaticMethod(singleton, {java_string_literal(k)}, {constructor});\n')
+                gen_lines.append(f'    private static final PyStaticMethod pyattr_{k} = new PyStaticMethod(singleton, {java_string_literal(k)}, {constructor});\n')
             else:
                 assert False, (name, k, v)
         gen_lines += [
             '    private static final PyAttr attrs[] = new PyAttr[] {\n',
             '        ',
-            ',\n        '.join(f'new PyAttr("{k}", pydesc_{k})' for k in attrs),
+            ',\n        '.join(f'new PyAttr("{k}", pyattr_{k})' for k in attrs),
             '\n',
             '    };\n',
             '    @Override public PyAttr[] getAttributes() { return attrs; }\n',
             '    @Override public PyObject lookupAttr(String name) {\n',
             '        switch (name) {\n',
             *(
-                f'            case {java_string_literal(k)}: return pydesc_{k};\n'
+                f'            case {java_string_literal(k)}: return pyattr_{k};\n'
                 for (k, v) in attrs.items()
             ),
             '            default: return null;\n',
