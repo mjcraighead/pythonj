@@ -90,6 +90,8 @@ abstract class PyGettableDescriptor extends PyDescriptor {
 }
 
 final class PyMemberDescriptor extends PyGettableDescriptor {
+    private static final PyBuiltinClass type_singleton = new PyBuiltinClass("member_descriptor", PyMemberDescriptor.class);
+
     protected PyMemberDescriptor(PyType _owner, String _name, Function<PyObject, PyObject> _getter) {
         super(_owner, _name, _getter);
     }
@@ -101,10 +103,12 @@ final class PyMemberDescriptor extends PyGettableDescriptor {
     }
 
     @Override public final String repr() { return "<member " + PyString.reprOf(name) + " of " + PyString.reprOf(owner.name()) + " objects>"; }
-    @Override public final PyBuiltinClass type() { return Runtime.pytype_member_descriptor; }
+    @Override public final PyBuiltinClass type() { return type_singleton; }
 }
 
 final class PyGetSetDescriptor extends PyGettableDescriptor {
+    private static final PyBuiltinClass type_singleton = new PyBuiltinClass("getset_descriptor", PyGetSetDescriptor.class);
+
     protected PyGetSetDescriptor(PyType _owner, String _name, Function<PyObject, PyObject> _getter) {
         super(_owner, _name, _getter);
     }
@@ -116,10 +120,12 @@ final class PyGetSetDescriptor extends PyGettableDescriptor {
     }
 
     @Override public final String repr() { return "<attribute " + PyString.reprOf(name) + " of " + PyString.reprOf(owner.name()) + " objects>"; }
-    @Override public final PyBuiltinClass type() { return Runtime.pytype_getset_descriptor; }
+    @Override public final PyBuiltinClass type() { return type_singleton; }
 }
 
 final class PyMethodDescriptor extends PyGettableDescriptor {
+    private static final PyBuiltinClass type_singleton = new PyBuiltinClass("method_descriptor", PyMethodDescriptor.class);
+
     protected PyMethodDescriptor(PyType _owner, String _name, Function<PyObject, PyObject> _getter) {
         super(_owner, _name, _getter);
     }
@@ -131,10 +137,12 @@ final class PyMethodDescriptor extends PyGettableDescriptor {
     }
 
     @Override public final String repr() { return "<method " + PyString.reprOf(name) + " of " + PyString.reprOf(owner.name()) + " objects>"; }
-    @Override public final PyBuiltinClass type() { return Runtime.pytype_method_descriptor; }
+    @Override public final PyBuiltinClass type() { return type_singleton; }
 }
 
 final class PyClassMethodDescriptor extends PyDescriptor {
+    private static final PyBuiltinClass type_singleton = new PyBuiltinClass("classmethod_descriptor", PyClassMethodDescriptor.class);
+
     protected final PyType owner;
     protected final String name;
     protected final Function<PyType, PyObject> getter;
@@ -155,10 +163,12 @@ final class PyClassMethodDescriptor extends PyDescriptor {
     }
 
     @Override public final String repr() { return "<method " + PyString.reprOf(name) + " of " + PyString.reprOf(owner.name()) + " objects>"; }
-    @Override public final PyBuiltinClass type() { return Runtime.pytype_classmethod_descriptor; }
+    @Override public final PyBuiltinClass type() { return type_singleton; }
 }
 
 final class PyStaticMethod extends PyDescriptor {
+    private static final PyBuiltinClass type_singleton = new PyBuiltinClass("staticmethod", PyStaticMethod.class);
+
     protected final PyType owner;
     protected final String name;
     protected final PyObject func;
@@ -180,11 +190,12 @@ final class PyStaticMethod extends PyDescriptor {
     }
 
     @Override public final String repr() { return "<staticmethod(" + func.repr() + ")>"; }
-    @Override public final PyBuiltinClass type() { return Runtime.pytype_staticmethod; }
+    @Override public final PyBuiltinClass type() { return type_singleton; }
 }
 
 abstract class PyBuiltinFunctionOrMethod extends PyTruthyObject {
-    @Override public final PyBuiltinClass type() { return Runtime.pytype_builtin_function_or_method; }
+    private static final PyBuiltinClass type_singleton = new PyBuiltinClass("builtin_function_or_method", PyBuiltinFunctionOrMethod.class);
+    @Override public final PyBuiltinClass type() { return type_singleton; }
 }
 
 abstract class PyBuiltinMethod<T extends PyObject> extends PyBuiltinFunctionOrMethod {
@@ -197,9 +208,10 @@ abstract class PyBuiltinMethod<T extends PyObject> extends PyBuiltinFunctionOrMe
 }
 
 abstract class PyUserFunction extends PyTruthyObject {
+    private static final PyBuiltinClass type_singleton = new PyBuiltinClass("function", PyUserFunction.class);
     private final String funcName;
     protected PyUserFunction(String name) { funcName = name; }
-    @Override public PyBuiltinClass type() { return Runtime.pytype_function; }
+    @Override public PyBuiltinClass type() { return type_singleton; }
     @Override public String repr() { return "<function " + funcName + ">"; }
 }
 
@@ -216,16 +228,6 @@ public final class Runtime {
             return args[0];
         }
     }
-
-    public static final PyBuiltinClass pytype_builtin_function_or_method = new PyBuiltinClass("builtin_function_or_method", PyBuiltinFunctionOrMethod.class);
-    public static final PyBuiltinClass pytype_classmethod_descriptor = new PyBuiltinClass("classmethod_descriptor", PyClassMethodDescriptor.class);
-    public static final PyBuiltinClass pytype_function = new PyBuiltinClass("function", PyUserFunction.class);
-    public static final PyBuiltinClass pytype_io_BufferedReader = new PyBuiltinClass("_io.BufferedReader", PyBufferedReader.class);
-    public static final PyBuiltinClass pytype_io_TextIOWrapper = new PyBuiltinClass("_io.TextIOWrapper", PyTextIOWrapper.class);
-    public static final PyBuiltinClass pytype_getset_descriptor = new PyBuiltinClass("getset_descriptor", PyGetSetDescriptor.class);
-    public static final PyBuiltinClass pytype_member_descriptor = new PyBuiltinClass("member_descriptor", PyMemberDescriptor.class);
-    public static final PyBuiltinClass pytype_method_descriptor = new PyBuiltinClass("method_descriptor", PyMethodDescriptor.class);
-    public static final PyBuiltinClass pytype_staticmethod = new PyBuiltinClass("staticmethod", PyStaticMethod.class);
 
     static final class pyfunc_abs extends PyBuiltinFunction {
         pyfunc_abs() { super("abs"); }

@@ -5,8 +5,9 @@
 import java.util.Arrays;
 
 public final class PyByteArray extends PyObject {
-    private static final PyBuiltinClass iter_class_singleton = new PyBuiltinClass("bytearray_iterator", PyByteArrayIter.class);
     static final class PyByteArrayIter extends PyIter {
+        private static final PyBuiltinClass type_singleton = new PyBuiltinClass("bytearray_iterator", PyByteArrayIter.class);
+
         private byte[] b;
         private int index = 0;
 
@@ -19,7 +20,7 @@ public final class PyByteArray extends PyObject {
             return new PyInt(b[index++] & 0xFF);
         }
         @Override public String repr() { return defaultRepr(); }
-        @Override public PyBuiltinClass type() { return iter_class_singleton; }
+        @Override public PyBuiltinClass type() { return type_singleton; }
     };
 
     protected byte[] value;

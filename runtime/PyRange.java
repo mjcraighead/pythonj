@@ -3,8 +3,9 @@
 // SPDX-License-Identifier: MIT
 
 public final class PyRange extends PyObject {
-    private static final PyBuiltinClass iter_class_singleton = new PyBuiltinClass("range_iterator", PyRangeIter.class);
     static final class PyRangeIter extends PyIter {
+        private static final PyBuiltinClass type_singleton = new PyBuiltinClass("range_iterator", PyRangeIter.class);
+
         private long start;
         private final long stop, step;
 
@@ -29,7 +30,7 @@ public final class PyRange extends PyObject {
             return ret;
         }
         @Override public String repr() { return defaultRepr(); }
-        @Override public PyBuiltinClass type() { return iter_class_singleton; }
+        @Override public PyBuiltinClass type() { return type_singleton; }
     };
 
     protected static final class PyRangeMethod_count extends PyBuiltinMethod<PyRange> {

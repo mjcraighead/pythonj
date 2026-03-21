@@ -6,8 +6,9 @@ import java.util.Arrays;
 import java.util.ArrayList;
 
 public final class PyTuple extends PyObject {
-    private static final PyBuiltinClass iter_class_singleton = new PyBuiltinClass("tuple_iterator", PyTupleIter.class);
     static final class PyTupleIter extends PyIter {
+        private static final PyBuiltinClass type_singleton = new PyBuiltinClass("tuple_iterator", PyTupleIter.class);
+
         private final PyObject[] items;
         private int index = 0;
 
@@ -20,7 +21,7 @@ public final class PyTuple extends PyObject {
             return items[index++];
         }
         @Override public String repr() { return defaultRepr(); }
-        @Override public PyBuiltinClass type() { return iter_class_singleton; }
+        @Override public PyBuiltinClass type() { return type_singleton; }
     };
 
     protected static final class PyTupleMethod_count extends PyBuiltinMethod<PyTuple> {

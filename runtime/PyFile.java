@@ -11,6 +11,8 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 
 final class PyTextIOWrapper extends PyIter {
+    private static final PyBuiltinClass type_singleton = new PyBuiltinClass("_io.TextIOWrapper", PyTextIOWrapper.class);
+
     private static final class PyTextIOWrapperMethod_close extends PyBuiltinMethod<PyTextIOWrapper> {
         PyTextIOWrapperMethod_close(PyTextIOWrapper _self) { super(_self); }
         @Override public String methodName() { return "close"; }
@@ -71,7 +73,7 @@ final class PyTextIOWrapper extends PyIter {
             throw new UncheckedIOException(e);
         }
     }
-    @Override public PyType type() { return Runtime.pytype_io_TextIOWrapper; }
+    @Override public PyType type() { return type_singleton; }
 
     @Override public PyTextIOWrapper enter() { return this; }
     @Override public void exit() { pymethod_close(); }
@@ -103,6 +105,8 @@ final class PyTextIOWrapper extends PyIter {
 }
 
 final class PyBufferedReader extends PyIter {
+    private static final PyBuiltinClass type_singleton = new PyBuiltinClass("_io.BufferedReader", PyBufferedReader.class);
+
     private static final class PyBufferedReaderMethod_close extends PyBuiltinMethod<PyBufferedReader> {
         PyBufferedReaderMethod_close(PyBufferedReader _self) { super(_self); }
         @Override public String methodName() { return "close"; }
@@ -138,7 +142,7 @@ final class PyBufferedReader extends PyIter {
     }
 
     @Override public PyBytes next() { throw new UnsupportedOperationException("iterating over binary files not supported"); }
-    @Override public PyType type() { return Runtime.pytype_io_BufferedReader; }
+    @Override public PyType type() { return type_singleton; }
 
     @Override public PyBufferedReader enter() { return this; }
     @Override public void exit() { pymethod_close(); }

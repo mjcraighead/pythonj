@@ -8,15 +8,16 @@ import java.util.Iterator;
 import java.util.Set;
 
 public final class PySet extends PyObject {
-    private static final PyBuiltinClass iter_class_singleton = new PyBuiltinClass("set_iterator", PySetIter.class);
     static final class PySetIter extends PyIter {
+        private static final PyBuiltinClass type_singleton = new PyBuiltinClass("set_iterator", PySetIter.class);
+
         private final Iterator<PyObject> it;
 
         PySetIter(Iterator<PyObject> _it) { it = _it; }
 
         @Override public PyObject next() { return it.hasNext() ? it.next() : null; }
         @Override public String repr() { return defaultRepr(); }
-        @Override public PyBuiltinClass type() { return iter_class_singleton; }
+        @Override public PyBuiltinClass type() { return type_singleton; }
     };
 
     protected static final class PySetMethodUnimplemented extends PyBuiltinMethod<PySet> {

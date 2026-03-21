@@ -7,8 +7,9 @@ import java.util.Locale;
 public final class PyString extends PyObject {
     public static final PyString empty_singleton = new PyString("");
 
-    private static final PyBuiltinClass iter_class_singleton = new PyBuiltinClass("str_iterator", PyStringIter.class);
     static final class PyStringIter extends PyIter {
+        private static final PyBuiltinClass type_singleton = new PyBuiltinClass("str_iterator", PyStringIter.class);
+
         private final String s;
         private int index = 0;
 
@@ -23,7 +24,7 @@ public final class PyString extends PyObject {
             return ret;
         }
         @Override public String repr() { return defaultRepr(); }
-        @Override public PyBuiltinClass type() { return iter_class_singleton; }
+        @Override public PyBuiltinClass type() { return type_singleton; }
     };
 
     protected static final class PyStringMethodUnimplemented extends PyBuiltinMethod<PyString> {
