@@ -28,14 +28,14 @@ public final class PyString extends PyObject {
 
     protected static final class PyStringMethodUnimplemented extends PyBuiltinMethod<PyString> {
         private final String name;
-        PyStringMethodUnimplemented(PyString _self, String _name) { super(_self); name = _name; }
+        PyStringMethodUnimplemented(PyObject _self, String _name) { super((PyString)_self); name = _name; }
         @Override public String methodName() { return name; }
         @Override public PyObject call(PyObject[] args, PyDict kwargs) {
             throw new UnsupportedOperationException("str." + name + "() unimplemented");
         }
     }
     protected static final class PyStringMethod_find extends PyBuiltinMethod<PyString> {
-        PyStringMethod_find(PyString _self) { super(_self); }
+        PyStringMethod_find(PyObject _self) { super((PyString)_self); }
         @Override public String methodName() { return "find"; }
         @Override public PyInt call(PyObject[] args, PyDict kwargs) {
             Runtime.requireNoKwArgs(kwargs, "str.find");
@@ -48,7 +48,7 @@ public final class PyString extends PyObject {
         }
     }
     protected static final class PyStringMethod_join extends PyBuiltinMethod<PyString> {
-        PyStringMethod_join(PyString _self) { super(_self); }
+        PyStringMethod_join(PyObject _self) { super((PyString)_self); }
         @Override public String methodName() { return "join"; }
         @Override public PyString call(PyObject[] args, PyDict kwargs) {
             Runtime.requireNoKwArgs(kwargs, "str.join");
@@ -57,7 +57,7 @@ public final class PyString extends PyObject {
         }
     }
     protected static final class PyStringMethod_lower extends PyBuiltinMethod<PyString> {
-        PyStringMethod_lower(PyString _self) { super(_self); }
+        PyStringMethod_lower(PyObject _self) { super((PyString)_self); }
         @Override public String methodName() { return "lower"; }
         @Override public PyString call(PyObject[] args, PyDict kwargs) {
             Runtime.requireNoKwArgs(kwargs, "str.lower");
@@ -66,7 +66,7 @@ public final class PyString extends PyObject {
         }
     }
     protected static final class PyStringMethod_split extends PyBuiltinMethod<PyString> {
-        PyStringMethod_split(PyString _self) { super(_self); }
+        PyStringMethod_split(PyObject _self) { super((PyString)_self); }
         @Override public String methodName() { return "split"; }
         @Override public PyList call(PyObject[] args, PyDict kwargs) {
             if ((kwargs != null) && kwargs.boolValue()) { // XXX Handle more cases correctly here
@@ -90,7 +90,7 @@ public final class PyString extends PyObject {
         }
     }
     protected static final class PyStringMethod_startswith extends PyBuiltinMethod<PyString> {
-        PyStringMethod_startswith(PyString _self) { super(_self); }
+        PyStringMethod_startswith(PyObject _self) { super((PyString)_self); }
         @Override public String methodName() { return "startswith"; }
         @Override public PyBool call(PyObject[] args, PyDict kwargs) {
             Runtime.requireNoKwArgs(kwargs, "str.startswith");
@@ -103,7 +103,7 @@ public final class PyString extends PyObject {
         }
     }
     protected static final class PyStringMethod_upper extends PyBuiltinMethod<PyString> {
-        PyStringMethod_upper(PyString _self) { super(_self); }
+        PyStringMethod_upper(PyObject _self) { super((PyString)_self); }
         @Override public String methodName() { return "upper"; }
         @Override public PyString call(PyObject[] args, PyDict kwargs) {
             Runtime.requireNoKwArgs(kwargs, "str.upper");

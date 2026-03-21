@@ -24,7 +24,7 @@ public final class PyBytes extends PyObject {
 
     protected static final class PyBytesMethodUnimplemented extends PyBuiltinMethod<PyBytes> {
         private final String name;
-        PyBytesMethodUnimplemented(PyBytes self, String name) { super(self); this.name = name; }
+        PyBytesMethodUnimplemented(PyObject self, String name) { super((PyBytes)self); this.name = name; }
         @Override public String methodName() { return name; }
         @Override public PyObject call(PyObject[] args, PyDict kwargs) {
             throw new UnsupportedOperationException("bytes." + name + "() unimplemented");

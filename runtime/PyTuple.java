@@ -24,7 +24,7 @@ public final class PyTuple extends PyObject {
     };
 
     protected static final class PyTupleMethod_count extends PyBuiltinMethod<PyTuple> {
-        PyTupleMethod_count(PyTuple _self) { super(_self); }
+        PyTupleMethod_count(PyObject _self) { super((PyTuple)_self); }
         @Override public String methodName() { return "count"; }
         @Override public PyInt call(PyObject[] args, PyDict kwargs) {
             Runtime.requireNoKwArgs(kwargs, "tuple.count");
@@ -33,7 +33,7 @@ public final class PyTuple extends PyObject {
         }
     }
     protected static final class PyTupleMethod_index extends PyBuiltinMethod<PyTuple> {
-        PyTupleMethod_index(PyTuple _self) { super(_self); }
+        PyTupleMethod_index(PyObject _self) { super((PyTuple)_self); }
         @Override public String methodName() { return "index"; }
         @Override public PyInt call(PyObject[] args, PyDict kwargs) {
             Runtime.requireNoKwArgs(kwargs, "tuple.index");

@@ -4,7 +4,7 @@
 
 public final class PySlice extends PyTruthyObject {
     protected static final class PySliceMethod_indices extends PyBuiltinMethod<PySlice> {
-        PySliceMethod_indices(PySlice _self) { super(_self); }
+        PySliceMethod_indices(PyObject _self) { super((PySlice)_self); }
         @Override public String methodName() { return "indices"; }
         @Override public PyTuple call(PyObject[] args, PyDict kwargs) {
             Runtime.requireNoKwArgs(kwargs, "slice.indices");

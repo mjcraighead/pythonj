@@ -283,7 +283,7 @@ public final class PyDict extends PyObject {
     };
 
     protected static final class PyDictMethod_clear extends PyBuiltinMethod<PyDict> {
-        PyDictMethod_clear(PyDict _self) { super(_self); }
+        PyDictMethod_clear(PyObject _self) { super((PyDict)_self); }
         @Override public String methodName() { return "clear"; }
         @Override public PyNone call(PyObject[] args, PyDict kwargs) {
             Runtime.requireNoKwArgs(kwargs, "dict.clear");
@@ -292,7 +292,7 @@ public final class PyDict extends PyObject {
         }
     }
     protected static final class PyDictMethod_copy extends PyBuiltinMethod<PyDict> {
-        PyDictMethod_copy(PyDict _self) { super(_self); }
+        PyDictMethod_copy(PyObject _self) { super((PyDict)_self); }
         @Override public String methodName() { return "copy"; }
         @Override public PyDict call(PyObject[] args, PyDict kwargs) {
             Runtime.requireNoKwArgs(kwargs, "dict.copy");
@@ -301,7 +301,7 @@ public final class PyDict extends PyObject {
         }
     }
     protected static final class PyDictMethod_get extends PyBuiltinMethod<PyDict> {
-        PyDictMethod_get(PyDict _self) { super(_self); }
+        PyDictMethod_get(PyObject _self) { super((PyDict)_self); }
         @Override public String methodName() { return "get"; }
         @Override public PyObject call(PyObject[] args, PyDict kwargs) {
             Runtime.requireNoKwArgs(kwargs, "dict.get");
@@ -311,7 +311,7 @@ public final class PyDict extends PyObject {
         }
     }
     protected static final class PyDictMethod_items extends PyBuiltinMethod<PyDict> {
-        PyDictMethod_items(PyDict _self) { super(_self); }
+        PyDictMethod_items(PyObject _self) { super((PyDict)_self); }
         @Override public String methodName() { return "items"; }
         @Override public PyDictItems call(PyObject[] args, PyDict kwargs) {
             Runtime.requireNoKwArgs(kwargs, "dict.items");
@@ -320,7 +320,7 @@ public final class PyDict extends PyObject {
         }
     }
     protected static final class PyDictMethod_keys extends PyBuiltinMethod<PyDict> {
-        PyDictMethod_keys(PyDict _self) { super(_self); }
+        PyDictMethod_keys(PyObject _self) { super((PyDict)_self); }
         @Override public String methodName() { return "keys"; }
         @Override public PyDictKeys call(PyObject[] args, PyDict kwargs) {
             Runtime.requireNoKwArgs(kwargs, "dict.keys");
@@ -329,7 +329,7 @@ public final class PyDict extends PyObject {
         }
     }
     protected static final class PyDictMethod_pop extends PyBuiltinMethod<PyDict> {
-        PyDictMethod_pop(PyDict _self) { super(_self); }
+        PyDictMethod_pop(PyObject _self) { super((PyDict)_self); }
         @Override public String methodName() { return "pop"; }
         @Override public PyObject call(PyObject[] args, PyDict kwargs) {
             Runtime.requireNoKwArgs(kwargs, "dict.pop");
@@ -339,7 +339,7 @@ public final class PyDict extends PyObject {
         }
     }
     protected static final class PyDictMethod_popitem extends PyBuiltinMethod<PyDict> {
-        PyDictMethod_popitem(PyDict _self) { super(_self); }
+        PyDictMethod_popitem(PyObject _self) { super((PyDict)_self); }
         @Override public String methodName() { return "popitem"; }
         @Override public PyObject call(PyObject[] args, PyDict kwargs) {
             Runtime.requireNoKwArgs(kwargs, "dict.popitem");
@@ -348,7 +348,7 @@ public final class PyDict extends PyObject {
         }
     }
     protected static final class PyDictMethod_setdefault extends PyBuiltinMethod<PyDict> {
-        PyDictMethod_setdefault(PyDict _self) { super(_self); }
+        PyDictMethod_setdefault(PyObject _self) { super((PyDict)_self); }
         @Override public String methodName() { return "setdefault"; }
         @Override public PyObject call(PyObject[] args, PyDict kwargs) {
             Runtime.requireNoKwArgs(kwargs, "dict.setdefault");
@@ -358,7 +358,7 @@ public final class PyDict extends PyObject {
         }
     }
     protected static final class PyDictMethod_update extends PyBuiltinMethod<PyDict> {
-        PyDictMethod_update(PyDict _self) { super(_self); }
+        PyDictMethod_update(PyObject _self) { super((PyDict)_self); }
         @Override public String methodName() { return "update"; }
         @Override public PyNone call(PyObject[] args, PyDict kwargs) {
             Runtime.requireMaxArgs(args, 1, "update");
@@ -367,7 +367,7 @@ public final class PyDict extends PyObject {
         }
     }
     protected static final class PyDictMethod_values extends PyBuiltinMethod<PyDict> {
-        PyDictMethod_values(PyDict _self) { super(_self); }
+        PyDictMethod_values(PyObject _self) { super((PyDict)_self); }
         @Override public String methodName() { return "values"; }
         @Override public PyDictValues call(PyObject[] args, PyDict kwargs) {
             Runtime.requireNoKwArgs(kwargs, "dict.values");

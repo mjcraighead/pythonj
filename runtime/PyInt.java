@@ -10,7 +10,7 @@ public final class PyInt extends PyObject {
 
     protected static final class PyIntMethodUnimplemented extends PyBuiltinMethod<PyInt> {
         private final String name;
-        PyIntMethodUnimplemented(PyInt _self, String _name) { super(_self); name = _name; }
+        PyIntMethodUnimplemented(PyObject _self, String _name) { super((PyInt)_self); name = _name; }
         @Override public String methodName() { return name; }
         @Override public PyObject call(PyObject[] args, PyDict kwargs) {
             throw new UnsupportedOperationException("int." + name + "() unimplemented");
