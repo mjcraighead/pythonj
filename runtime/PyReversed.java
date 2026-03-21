@@ -3,7 +3,21 @@
 // SPDX-License-Identifier: MIT
 
 final class PyReversedType extends PyBuiltinType {
+// BEGIN GENERATED CODE: PyReversedType
     public static final PyReversedType singleton = new PyReversedType();
+    private static final PyString pyattr___doc__ = new PyString("Return a reverse iterator over the values of the given sequence.");
+    private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>();
+    static {
+        attrs.put(new PyString("__doc__"), pyattr___doc__);
+    }
+    @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
+    @Override public PyObject lookupAttr(String name) {
+        switch (name) {
+            case "__doc__": return pyattr___doc__;
+            default: return null;
+        }
+    }
+// END GENERATED CODE: PyReversedType
 
     private PyReversedType() { super("reversed", PyReversed.class); }
     @Override public PyIter call(PyObject[] args, PyDict kwargs) {

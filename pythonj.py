@@ -1288,7 +1288,7 @@ class PythonjVisitor(ast.NodeVisitor):
 
 def gen_spec(path: str) -> None:
     spec = {}
-    for name in ['bytes', 'dict', 'int', 'list', 'object', 'range', 'set', 'slice', 'str', 'tuple']:
+    for name in ['bytes', 'dict', 'enumerate', 'int', 'list', 'object', 'range', 'reversed', 'set', 'slice', 'str', 'tuple', 'zip']:
         obj = getattr(builtins, name)
         attrs = {}
         for (k, v) in obj.__dict__.items():

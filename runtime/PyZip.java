@@ -5,7 +5,21 @@
 import java.util.ArrayList;
 
 final class PyZipType extends PyBuiltinType {
+// BEGIN GENERATED CODE: PyZipType
     public static final PyZipType singleton = new PyZipType();
+    private static final PyString pyattr___doc__ = new PyString("The zip object yields n-length tuples, where n is the number of iterables\npassed as positional arguments to zip().  The i-th element in every tuple\ncomes from the i-th iterable argument to zip().  This continues until the\nshortest argument is exhausted.\n\nIf strict is true and one of the arguments is exhausted before the others,\nraise a ValueError.\n\n   >>> list(zip('abcdefg', range(3), range(4)))\n   [('a', 0, 0), ('b', 1, 1), ('c', 2, 2)]");
+    private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>();
+    static {
+        attrs.put(new PyString("__doc__"), pyattr___doc__);
+    }
+    @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
+    @Override public PyObject lookupAttr(String name) {
+        switch (name) {
+            case "__doc__": return pyattr___doc__;
+            default: return null;
+        }
+    }
+// END GENERATED CODE: PyZipType
 
     private PyZipType() { super("zip", PyZip.class); }
     @Override public PyZip call(PyObject[] args, PyDict kwargs) {

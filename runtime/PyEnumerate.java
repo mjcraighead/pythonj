@@ -3,7 +3,21 @@
 // SPDX-License-Identifier: MIT
 
 final class PyEnumerateType extends PyBuiltinType {
+// BEGIN GENERATED CODE: PyEnumerateType
     public static final PyEnumerateType singleton = new PyEnumerateType();
+    private static final PyString pyattr___doc__ = new PyString("Return an enumerate object.\n\n  iterable\n    an object supporting iteration\n\nThe enumerate object yields pairs containing a count (from start, which\ndefaults to zero) and a value yielded by the iterable argument.\n\nenumerate is useful for obtaining an indexed list:\n    (0, seq[0]), (1, seq[1]), (2, seq[2]), ...");
+    private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>();
+    static {
+        attrs.put(new PyString("__doc__"), pyattr___doc__);
+    }
+    @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
+    @Override public PyObject lookupAttr(String name) {
+        switch (name) {
+            case "__doc__": return pyattr___doc__;
+            default: return null;
+        }
+    }
+// END GENERATED CODE: PyEnumerateType
 
     private PyEnumerateType() { super("enumerate", PyEnumerate.class); }
     @Override public PyEnumerate call(PyObject[] args, PyDict kwargs) {
