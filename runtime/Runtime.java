@@ -1076,8 +1076,8 @@ public final class Runtime {
         }
     }
     public static final pyclass_range pyglobal_range = new pyclass_range();
-    private static final PyMethodDescriptor pydesc_range_count = new PyMethodDescriptor(pyglobal_range, "count", obj -> new PyRange.PyRangeMethodUnimplemented(obj, "count"));
-    private static final PyMethodDescriptor pydesc_range_index = new PyMethodDescriptor(pyglobal_range, "index", obj -> new PyRange.PyRangeMethodUnimplemented(obj, "index"));
+    private static final PyMethodDescriptor pydesc_range_count = new PyMethodDescriptor(pyglobal_range, "count", PyRange.PyRangeMethod_count::new);
+    private static final PyMethodDescriptor pydesc_range_index = new PyMethodDescriptor(pyglobal_range, "index", PyRange.PyRangeMethod_index::new);
     private static final PyMemberDescriptor pydesc_range_start = new PyMemberDescriptor(pyglobal_range, "start", obj -> new PyInt(((PyRange)obj).start));
     private static final PyMemberDescriptor pydesc_range_step = new PyMemberDescriptor(pyglobal_range, "step", obj -> new PyInt(((PyRange)obj).step));
     private static final PyMemberDescriptor pydesc_range_stop = new PyMemberDescriptor(pyglobal_range, "stop", obj -> new PyInt(((PyRange)obj).stop));
