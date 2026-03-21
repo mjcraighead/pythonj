@@ -4,8 +4,8 @@
 
 import java.util.Locale;
 
-final class PyStringType extends PyBuiltinType {
 // BEGIN GENERATED CODE: PyStringType
+final class PyStringType extends PyBuiltinType {
     public static final PyStringType singleton = new PyStringType();
     private static final PyMethodDescriptor pyattr_encode = new PyMethodDescriptor(singleton, "encode", obj -> new PyString.PyStringMethodUnimplemented(obj, "encode"));
     private static final PyMethodDescriptor pyattr_replace = new PyMethodDescriptor(singleton, "replace", obj -> new PyString.PyStringMethodUnimplemented(obj, "replace"));
@@ -107,7 +107,7 @@ final class PyStringType extends PyBuiltinType {
         attrs.put(new PyString("__doc__"), pyattr___doc__);
     }
 
-    private PyStringType() { super("str", PyString.class); }
+    private PyStringType() { super("str", PyString.class, PyString::newObj); }
     @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
     @Override public PyObject lookupAttr(String name) {
         switch (name) {
@@ -162,21 +162,8 @@ final class PyStringType extends PyBuiltinType {
             default: return null;
         }
     }
-// END GENERATED CODE: PyStringType
-
-    @Override public PyString call(PyObject[] args, PyDict kwargs) {
-        if (args.length > 1) {
-            throw new IllegalArgumentException("str() takes 0 or 1 arguments");
-        }
-        if ((kwargs != null) && kwargs.boolValue()) {
-            throw new IllegalArgumentException("str() does not accept kwargs");
-        }
-        if (args.length == 1) {
-            return new PyString(args[0].str());
-        }
-        return PyString.empty_singleton;
-    }
 }
+// END GENERATED CODE: PyStringType
 
 final class PyStringStaticMethod_maketrans extends PyBuiltinMethod<PyType> {
     PyStringStaticMethod_maketrans(PyType _self) { super(_self); }
@@ -300,6 +287,19 @@ public final class PyString extends PyObject {
     public final String value;
 
     PyString(String _value) { value = _value; }
+
+    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+        if (args.length > 1) {
+            throw new IllegalArgumentException("str() takes 0 or 1 arguments");
+        }
+        if ((kwargs != null) && kwargs.boolValue()) {
+            throw new IllegalArgumentException("str() does not accept kwargs");
+        }
+        if (args.length == 1) {
+            return new PyString(args[0].str());
+        }
+        return PyString.empty_singleton;
+    }
 
     @Override public PyString add(PyObject rhs) {
         if (rhs instanceof PyString rhsStr) {
