@@ -4,6 +4,7 @@
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Map;
 import java.util.function.Function;
 
 abstract class PyTruthyObject extends PyObject {
@@ -15,8 +16,6 @@ abstract class PyIter extends PyTruthyObject {
     @Override public final PyIter iter() { return this; }
 }
 
-record PyAttr(String name, PyObject value) {}
-
 abstract class PyType extends PyTruthyObject {
     @Override public PyObject or(PyObject rhs) {
         if ((rhs instanceof PyType) || (rhs instanceof PyNone)) {
@@ -26,7 +25,7 @@ abstract class PyType extends PyTruthyObject {
         }
     }
 
-    public PyAttr[] getAttributes() { return null; }
+    public Map<PyObject, PyObject> getAttributes() { return null; }
     public PyObject lookupAttr(String name) { return null; }
 
     @Override public boolean contains(PyObject rhs) { return defaultContains(rhs); }
@@ -54,9 +53,7 @@ class PyBuiltinType extends PyType {
                     throw new UnsupportedOperationException(name() + ".__dict__ is not implemented");
                 }
                 PyDict ret = new PyDict(); // XXX This should return a mappingproxy singleton, not a PyDict snapshot
-                for (var x: attrs) {
-                    ret.items.put(new PyString(x.name()), x.value());
-                }
+                ret.items.putAll(attrs);
                 return ret;
             }
             case "__name__": return new PyString(typeName);

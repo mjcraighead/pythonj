@@ -11,15 +11,16 @@ final class PyRangeType extends PyBuiltinType {
     private static final PyMemberDescriptor pyattr_stop = new PyMemberDescriptor(singleton, "stop", PyRange::pymember_stop);
     private static final PyMemberDescriptor pyattr_step = new PyMemberDescriptor(singleton, "step", PyRange::pymember_step);
     private static final PyString pyattr___doc__ = new PyString("range(stop) -> range object\nrange(start, stop[, step]) -> range object\n\nReturn an object that produces a sequence of integers from start (inclusive)\nto stop (exclusive) by step.  range(i, j) produces i, i+1, i+2, ..., j-1.\nstart defaults to 0, and stop is omitted!  range(4) produces 0, 1, 2, 3.\nThese are exactly the valid indices for a list of 4 elements.\nWhen step is given, it specifies the increment (or decrement).");
-    private static final PyAttr attrs[] = new PyAttr[] {
-        new PyAttr("count", pyattr_count),
-        new PyAttr("index", pyattr_index),
-        new PyAttr("start", pyattr_start),
-        new PyAttr("stop", pyattr_stop),
-        new PyAttr("step", pyattr_step),
-        new PyAttr("__doc__", pyattr___doc__)
-    };
-    @Override public PyAttr[] getAttributes() { return attrs; }
+    private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>();
+    static {
+        attrs.put(new PyString("count"), pyattr_count);
+        attrs.put(new PyString("index"), pyattr_index);
+        attrs.put(new PyString("start"), pyattr_start);
+        attrs.put(new PyString("stop"), pyattr_stop);
+        attrs.put(new PyString("step"), pyattr_step);
+        attrs.put(new PyString("__doc__"), pyattr___doc__);
+    }
+    @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
     @Override public PyObject lookupAttr(String name) {
         switch (name) {
             case "count": return pyattr_count;

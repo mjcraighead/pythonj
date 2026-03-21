@@ -55,57 +55,58 @@ final class PyStringType extends PyBuiltinType {
     private static final PyMethodDescriptor pyattr_format_map = new PyMethodDescriptor(singleton, "format_map", obj -> new PyString.PyStringMethodUnimplemented(obj, "format_map"));
     private static final PyStaticMethod pyattr_maketrans = new PyStaticMethod(singleton, "maketrans", new PyStringType.PyStringStaticMethod_maketrans(singleton));
     private static final PyString pyattr___doc__ = new PyString("str(object='') -> str\nstr(bytes_or_buffer[, encoding[, errors]]) -> str\n\nCreate a new string object from the given object. If encoding or\nerrors is specified, then the object must expose a data buffer\nthat will be decoded using the given encoding and error handler.\nOtherwise, returns the result of object.__str__() (if defined)\nor repr(object).\nencoding defaults to 'utf-8'.\nerrors defaults to 'strict'.");
-    private static final PyAttr attrs[] = new PyAttr[] {
-        new PyAttr("encode", pyattr_encode),
-        new PyAttr("replace", pyattr_replace),
-        new PyAttr("split", pyattr_split),
-        new PyAttr("rsplit", pyattr_rsplit),
-        new PyAttr("join", pyattr_join),
-        new PyAttr("capitalize", pyattr_capitalize),
-        new PyAttr("casefold", pyattr_casefold),
-        new PyAttr("title", pyattr_title),
-        new PyAttr("center", pyattr_center),
-        new PyAttr("count", pyattr_count),
-        new PyAttr("expandtabs", pyattr_expandtabs),
-        new PyAttr("find", pyattr_find),
-        new PyAttr("partition", pyattr_partition),
-        new PyAttr("index", pyattr_index),
-        new PyAttr("ljust", pyattr_ljust),
-        new PyAttr("lower", pyattr_lower),
-        new PyAttr("lstrip", pyattr_lstrip),
-        new PyAttr("rfind", pyattr_rfind),
-        new PyAttr("rindex", pyattr_rindex),
-        new PyAttr("rjust", pyattr_rjust),
-        new PyAttr("rstrip", pyattr_rstrip),
-        new PyAttr("rpartition", pyattr_rpartition),
-        new PyAttr("splitlines", pyattr_splitlines),
-        new PyAttr("strip", pyattr_strip),
-        new PyAttr("swapcase", pyattr_swapcase),
-        new PyAttr("translate", pyattr_translate),
-        new PyAttr("upper", pyattr_upper),
-        new PyAttr("startswith", pyattr_startswith),
-        new PyAttr("endswith", pyattr_endswith),
-        new PyAttr("removeprefix", pyattr_removeprefix),
-        new PyAttr("removesuffix", pyattr_removesuffix),
-        new PyAttr("isascii", pyattr_isascii),
-        new PyAttr("islower", pyattr_islower),
-        new PyAttr("isupper", pyattr_isupper),
-        new PyAttr("istitle", pyattr_istitle),
-        new PyAttr("isspace", pyattr_isspace),
-        new PyAttr("isdecimal", pyattr_isdecimal),
-        new PyAttr("isdigit", pyattr_isdigit),
-        new PyAttr("isnumeric", pyattr_isnumeric),
-        new PyAttr("isalpha", pyattr_isalpha),
-        new PyAttr("isalnum", pyattr_isalnum),
-        new PyAttr("isidentifier", pyattr_isidentifier),
-        new PyAttr("isprintable", pyattr_isprintable),
-        new PyAttr("zfill", pyattr_zfill),
-        new PyAttr("format", pyattr_format),
-        new PyAttr("format_map", pyattr_format_map),
-        new PyAttr("maketrans", pyattr_maketrans),
-        new PyAttr("__doc__", pyattr___doc__)
-    };
-    @Override public PyAttr[] getAttributes() { return attrs; }
+    private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>();
+    static {
+        attrs.put(new PyString("encode"), pyattr_encode);
+        attrs.put(new PyString("replace"), pyattr_replace);
+        attrs.put(new PyString("split"), pyattr_split);
+        attrs.put(new PyString("rsplit"), pyattr_rsplit);
+        attrs.put(new PyString("join"), pyattr_join);
+        attrs.put(new PyString("capitalize"), pyattr_capitalize);
+        attrs.put(new PyString("casefold"), pyattr_casefold);
+        attrs.put(new PyString("title"), pyattr_title);
+        attrs.put(new PyString("center"), pyattr_center);
+        attrs.put(new PyString("count"), pyattr_count);
+        attrs.put(new PyString("expandtabs"), pyattr_expandtabs);
+        attrs.put(new PyString("find"), pyattr_find);
+        attrs.put(new PyString("partition"), pyattr_partition);
+        attrs.put(new PyString("index"), pyattr_index);
+        attrs.put(new PyString("ljust"), pyattr_ljust);
+        attrs.put(new PyString("lower"), pyattr_lower);
+        attrs.put(new PyString("lstrip"), pyattr_lstrip);
+        attrs.put(new PyString("rfind"), pyattr_rfind);
+        attrs.put(new PyString("rindex"), pyattr_rindex);
+        attrs.put(new PyString("rjust"), pyattr_rjust);
+        attrs.put(new PyString("rstrip"), pyattr_rstrip);
+        attrs.put(new PyString("rpartition"), pyattr_rpartition);
+        attrs.put(new PyString("splitlines"), pyattr_splitlines);
+        attrs.put(new PyString("strip"), pyattr_strip);
+        attrs.put(new PyString("swapcase"), pyattr_swapcase);
+        attrs.put(new PyString("translate"), pyattr_translate);
+        attrs.put(new PyString("upper"), pyattr_upper);
+        attrs.put(new PyString("startswith"), pyattr_startswith);
+        attrs.put(new PyString("endswith"), pyattr_endswith);
+        attrs.put(new PyString("removeprefix"), pyattr_removeprefix);
+        attrs.put(new PyString("removesuffix"), pyattr_removesuffix);
+        attrs.put(new PyString("isascii"), pyattr_isascii);
+        attrs.put(new PyString("islower"), pyattr_islower);
+        attrs.put(new PyString("isupper"), pyattr_isupper);
+        attrs.put(new PyString("istitle"), pyattr_istitle);
+        attrs.put(new PyString("isspace"), pyattr_isspace);
+        attrs.put(new PyString("isdecimal"), pyattr_isdecimal);
+        attrs.put(new PyString("isdigit"), pyattr_isdigit);
+        attrs.put(new PyString("isnumeric"), pyattr_isnumeric);
+        attrs.put(new PyString("isalpha"), pyattr_isalpha);
+        attrs.put(new PyString("isalnum"), pyattr_isalnum);
+        attrs.put(new PyString("isidentifier"), pyattr_isidentifier);
+        attrs.put(new PyString("isprintable"), pyattr_isprintable);
+        attrs.put(new PyString("zfill"), pyattr_zfill);
+        attrs.put(new PyString("format"), pyattr_format);
+        attrs.put(new PyString("format_map"), pyattr_format_map);
+        attrs.put(new PyString("maketrans"), pyattr_maketrans);
+        attrs.put(new PyString("__doc__"), pyattr___doc__);
+    }
+    @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
     @Override public PyObject lookupAttr(String name) {
         switch (name) {
             case "encode": return pyattr_encode;

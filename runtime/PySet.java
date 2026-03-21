@@ -28,27 +28,28 @@ final class PySetType extends PyBuiltinType {
     private static final PyMethodDescriptor pyattr_union = new PyMethodDescriptor(singleton, "union", obj -> new PySet.PySetMethodUnimplemented(obj, "union"));
     private static final PyMethodDescriptor pyattr_update = new PyMethodDescriptor(singleton, "update", PySet.PySetMethod_update::new);
     private static final PyString pyattr___doc__ = new PyString("Build an unordered collection of unique elements.");
-    private static final PyAttr attrs[] = new PyAttr[] {
-        new PyAttr("add", pyattr_add),
-        new PyAttr("clear", pyattr_clear),
-        new PyAttr("copy", pyattr_copy),
-        new PyAttr("discard", pyattr_discard),
-        new PyAttr("difference", pyattr_difference),
-        new PyAttr("difference_update", pyattr_difference_update),
-        new PyAttr("intersection", pyattr_intersection),
-        new PyAttr("intersection_update", pyattr_intersection_update),
-        new PyAttr("isdisjoint", pyattr_isdisjoint),
-        new PyAttr("issubset", pyattr_issubset),
-        new PyAttr("issuperset", pyattr_issuperset),
-        new PyAttr("pop", pyattr_pop),
-        new PyAttr("remove", pyattr_remove),
-        new PyAttr("symmetric_difference", pyattr_symmetric_difference),
-        new PyAttr("symmetric_difference_update", pyattr_symmetric_difference_update),
-        new PyAttr("union", pyattr_union),
-        new PyAttr("update", pyattr_update),
-        new PyAttr("__doc__", pyattr___doc__)
-    };
-    @Override public PyAttr[] getAttributes() { return attrs; }
+    private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>();
+    static {
+        attrs.put(new PyString("add"), pyattr_add);
+        attrs.put(new PyString("clear"), pyattr_clear);
+        attrs.put(new PyString("copy"), pyattr_copy);
+        attrs.put(new PyString("discard"), pyattr_discard);
+        attrs.put(new PyString("difference"), pyattr_difference);
+        attrs.put(new PyString("difference_update"), pyattr_difference_update);
+        attrs.put(new PyString("intersection"), pyattr_intersection);
+        attrs.put(new PyString("intersection_update"), pyattr_intersection_update);
+        attrs.put(new PyString("isdisjoint"), pyattr_isdisjoint);
+        attrs.put(new PyString("issubset"), pyattr_issubset);
+        attrs.put(new PyString("issuperset"), pyattr_issuperset);
+        attrs.put(new PyString("pop"), pyattr_pop);
+        attrs.put(new PyString("remove"), pyattr_remove);
+        attrs.put(new PyString("symmetric_difference"), pyattr_symmetric_difference);
+        attrs.put(new PyString("symmetric_difference_update"), pyattr_symmetric_difference_update);
+        attrs.put(new PyString("union"), pyattr_union);
+        attrs.put(new PyString("update"), pyattr_update);
+        attrs.put(new PyString("__doc__"), pyattr___doc__);
+    }
+    @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
     @Override public PyObject lookupAttr(String name) {
         switch (name) {
             case "add": return pyattr_add;

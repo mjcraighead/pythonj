@@ -23,21 +23,22 @@ final class PyDictType extends PyBuiltinType {
     private static final PyMethodDescriptor pyattr_clear = new PyMethodDescriptor(singleton, "clear", PyDict.PyDictMethod_clear::new);
     private static final PyMethodDescriptor pyattr_copy = new PyMethodDescriptor(singleton, "copy", PyDict.PyDictMethod_copy::new);
     private static final PyString pyattr___doc__ = new PyString("dict() -> new empty dictionary\ndict(mapping) -> new dictionary initialized from a mapping object's\n    (key, value) pairs\ndict(iterable) -> new dictionary initialized as if via:\n    d = {}\n    for k, v in iterable:\n        d[k] = v\ndict(**kwargs) -> new dictionary initialized with the name=value pairs\n    in the keyword argument list.  For example:  dict(one=1, two=2)");
-    private static final PyAttr attrs[] = new PyAttr[] {
-        new PyAttr("get", pyattr_get),
-        new PyAttr("setdefault", pyattr_setdefault),
-        new PyAttr("pop", pyattr_pop),
-        new PyAttr("popitem", pyattr_popitem),
-        new PyAttr("keys", pyattr_keys),
-        new PyAttr("items", pyattr_items),
-        new PyAttr("values", pyattr_values),
-        new PyAttr("update", pyattr_update),
-        new PyAttr("fromkeys", pyattr_fromkeys),
-        new PyAttr("clear", pyattr_clear),
-        new PyAttr("copy", pyattr_copy),
-        new PyAttr("__doc__", pyattr___doc__)
-    };
-    @Override public PyAttr[] getAttributes() { return attrs; }
+    private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>();
+    static {
+        attrs.put(new PyString("get"), pyattr_get);
+        attrs.put(new PyString("setdefault"), pyattr_setdefault);
+        attrs.put(new PyString("pop"), pyattr_pop);
+        attrs.put(new PyString("popitem"), pyattr_popitem);
+        attrs.put(new PyString("keys"), pyattr_keys);
+        attrs.put(new PyString("items"), pyattr_items);
+        attrs.put(new PyString("values"), pyattr_values);
+        attrs.put(new PyString("update"), pyattr_update);
+        attrs.put(new PyString("fromkeys"), pyattr_fromkeys);
+        attrs.put(new PyString("clear"), pyattr_clear);
+        attrs.put(new PyString("copy"), pyattr_copy);
+        attrs.put(new PyString("__doc__"), pyattr___doc__);
+    }
+    @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
     @Override public PyObject lookupAttr(String name) {
         switch (name) {
             case "get": return pyattr_get;

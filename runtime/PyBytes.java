@@ -51,52 +51,53 @@ final class PyBytesType extends PyBuiltinType {
     private static final PyMethodDescriptor pyattr_upper = new PyMethodDescriptor(singleton, "upper", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "upper"));
     private static final PyMethodDescriptor pyattr_zfill = new PyMethodDescriptor(singleton, "zfill", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "zfill"));
     private static final PyString pyattr___doc__ = new PyString("bytes(iterable_of_ints) -> bytes\nbytes(string, encoding[, errors]) -> bytes\nbytes(bytes_or_buffer) -> immutable copy of bytes_or_buffer\nbytes(int) -> bytes object of size given by the parameter initialized with null bytes\nbytes() -> empty bytes object\n\nConstruct an immutable array of bytes from:\n  - an iterable yielding integers in range(256)\n  - a text string encoded using the specified encoding\n  - any object implementing the buffer API.\n  - an integer");
-    private static final PyAttr attrs[] = new PyAttr[] {
-        new PyAttr("capitalize", pyattr_capitalize),
-        new PyAttr("center", pyattr_center),
-        new PyAttr("count", pyattr_count),
-        new PyAttr("decode", pyattr_decode),
-        new PyAttr("endswith", pyattr_endswith),
-        new PyAttr("expandtabs", pyattr_expandtabs),
-        new PyAttr("find", pyattr_find),
-        new PyAttr("fromhex", pyattr_fromhex),
-        new PyAttr("hex", pyattr_hex),
-        new PyAttr("index", pyattr_index),
-        new PyAttr("isalnum", pyattr_isalnum),
-        new PyAttr("isalpha", pyattr_isalpha),
-        new PyAttr("isascii", pyattr_isascii),
-        new PyAttr("isdigit", pyattr_isdigit),
-        new PyAttr("islower", pyattr_islower),
-        new PyAttr("isspace", pyattr_isspace),
-        new PyAttr("istitle", pyattr_istitle),
-        new PyAttr("isupper", pyattr_isupper),
-        new PyAttr("join", pyattr_join),
-        new PyAttr("ljust", pyattr_ljust),
-        new PyAttr("lower", pyattr_lower),
-        new PyAttr("lstrip", pyattr_lstrip),
-        new PyAttr("maketrans", pyattr_maketrans),
-        new PyAttr("partition", pyattr_partition),
-        new PyAttr("replace", pyattr_replace),
-        new PyAttr("removeprefix", pyattr_removeprefix),
-        new PyAttr("removesuffix", pyattr_removesuffix),
-        new PyAttr("rfind", pyattr_rfind),
-        new PyAttr("rindex", pyattr_rindex),
-        new PyAttr("rjust", pyattr_rjust),
-        new PyAttr("rpartition", pyattr_rpartition),
-        new PyAttr("rsplit", pyattr_rsplit),
-        new PyAttr("rstrip", pyattr_rstrip),
-        new PyAttr("split", pyattr_split),
-        new PyAttr("splitlines", pyattr_splitlines),
-        new PyAttr("startswith", pyattr_startswith),
-        new PyAttr("strip", pyattr_strip),
-        new PyAttr("swapcase", pyattr_swapcase),
-        new PyAttr("title", pyattr_title),
-        new PyAttr("translate", pyattr_translate),
-        new PyAttr("upper", pyattr_upper),
-        new PyAttr("zfill", pyattr_zfill),
-        new PyAttr("__doc__", pyattr___doc__)
-    };
-    @Override public PyAttr[] getAttributes() { return attrs; }
+    private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>();
+    static {
+        attrs.put(new PyString("capitalize"), pyattr_capitalize);
+        attrs.put(new PyString("center"), pyattr_center);
+        attrs.put(new PyString("count"), pyattr_count);
+        attrs.put(new PyString("decode"), pyattr_decode);
+        attrs.put(new PyString("endswith"), pyattr_endswith);
+        attrs.put(new PyString("expandtabs"), pyattr_expandtabs);
+        attrs.put(new PyString("find"), pyattr_find);
+        attrs.put(new PyString("fromhex"), pyattr_fromhex);
+        attrs.put(new PyString("hex"), pyattr_hex);
+        attrs.put(new PyString("index"), pyattr_index);
+        attrs.put(new PyString("isalnum"), pyattr_isalnum);
+        attrs.put(new PyString("isalpha"), pyattr_isalpha);
+        attrs.put(new PyString("isascii"), pyattr_isascii);
+        attrs.put(new PyString("isdigit"), pyattr_isdigit);
+        attrs.put(new PyString("islower"), pyattr_islower);
+        attrs.put(new PyString("isspace"), pyattr_isspace);
+        attrs.put(new PyString("istitle"), pyattr_istitle);
+        attrs.put(new PyString("isupper"), pyattr_isupper);
+        attrs.put(new PyString("join"), pyattr_join);
+        attrs.put(new PyString("ljust"), pyattr_ljust);
+        attrs.put(new PyString("lower"), pyattr_lower);
+        attrs.put(new PyString("lstrip"), pyattr_lstrip);
+        attrs.put(new PyString("maketrans"), pyattr_maketrans);
+        attrs.put(new PyString("partition"), pyattr_partition);
+        attrs.put(new PyString("replace"), pyattr_replace);
+        attrs.put(new PyString("removeprefix"), pyattr_removeprefix);
+        attrs.put(new PyString("removesuffix"), pyattr_removesuffix);
+        attrs.put(new PyString("rfind"), pyattr_rfind);
+        attrs.put(new PyString("rindex"), pyattr_rindex);
+        attrs.put(new PyString("rjust"), pyattr_rjust);
+        attrs.put(new PyString("rpartition"), pyattr_rpartition);
+        attrs.put(new PyString("rsplit"), pyattr_rsplit);
+        attrs.put(new PyString("rstrip"), pyattr_rstrip);
+        attrs.put(new PyString("split"), pyattr_split);
+        attrs.put(new PyString("splitlines"), pyattr_splitlines);
+        attrs.put(new PyString("startswith"), pyattr_startswith);
+        attrs.put(new PyString("strip"), pyattr_strip);
+        attrs.put(new PyString("swapcase"), pyattr_swapcase);
+        attrs.put(new PyString("title"), pyattr_title);
+        attrs.put(new PyString("translate"), pyattr_translate);
+        attrs.put(new PyString("upper"), pyattr_upper);
+        attrs.put(new PyString("zfill"), pyattr_zfill);
+        attrs.put(new PyString("__doc__"), pyattr___doc__);
+    }
+    @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
     @Override public PyObject lookupAttr(String name) {
         switch (name) {
             case "capitalize": return pyattr_capitalize;

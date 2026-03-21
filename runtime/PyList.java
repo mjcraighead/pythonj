@@ -22,21 +22,22 @@ final class PyListType extends PyBuiltinType {
     private static final PyMethodDescriptor pyattr_reverse = new PyMethodDescriptor(singleton, "reverse", PyList.PyListMethod_reverse::new);
     private static final PyMethodDescriptor pyattr_sort = new PyMethodDescriptor(singleton, "sort", PyList.PyListMethod_sort::new);
     private static final PyString pyattr___doc__ = new PyString("Built-in mutable sequence.\n\nIf no argument is given, the constructor creates a new empty list.\nThe argument must be an iterable if specified.");
-    private static final PyAttr attrs[] = new PyAttr[] {
-        new PyAttr("clear", pyattr_clear),
-        new PyAttr("copy", pyattr_copy),
-        new PyAttr("append", pyattr_append),
-        new PyAttr("insert", pyattr_insert),
-        new PyAttr("extend", pyattr_extend),
-        new PyAttr("pop", pyattr_pop),
-        new PyAttr("remove", pyattr_remove),
-        new PyAttr("index", pyattr_index),
-        new PyAttr("count", pyattr_count),
-        new PyAttr("reverse", pyattr_reverse),
-        new PyAttr("sort", pyattr_sort),
-        new PyAttr("__doc__", pyattr___doc__)
-    };
-    @Override public PyAttr[] getAttributes() { return attrs; }
+    private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>();
+    static {
+        attrs.put(new PyString("clear"), pyattr_clear);
+        attrs.put(new PyString("copy"), pyattr_copy);
+        attrs.put(new PyString("append"), pyattr_append);
+        attrs.put(new PyString("insert"), pyattr_insert);
+        attrs.put(new PyString("extend"), pyattr_extend);
+        attrs.put(new PyString("pop"), pyattr_pop);
+        attrs.put(new PyString("remove"), pyattr_remove);
+        attrs.put(new PyString("index"), pyattr_index);
+        attrs.put(new PyString("count"), pyattr_count);
+        attrs.put(new PyString("reverse"), pyattr_reverse);
+        attrs.put(new PyString("sort"), pyattr_sort);
+        attrs.put(new PyString("__doc__"), pyattr___doc__);
+    }
+    @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
     @Override public PyObject lookupAttr(String name) {
         switch (name) {
             case "clear": return pyattr_clear;

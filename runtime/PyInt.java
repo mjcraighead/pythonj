@@ -17,21 +17,22 @@ final class PyIntType extends PyBuiltinType {
     private static final PyGetSetDescriptor pyattr_numerator = new PyGetSetDescriptor(singleton, "numerator", PyInt::pygetset_numerator);
     private static final PyGetSetDescriptor pyattr_denominator = new PyGetSetDescriptor(singleton, "denominator", PyInt::pygetset_denominator);
     private static final PyString pyattr___doc__ = new PyString("int([x]) -> integer\nint(x, base=10) -> integer\n\nConvert a number or string to an integer, or return 0 if no arguments\nare given.  If x is a number, return x.__int__().  For floating-point\nnumbers, this truncates towards zero.\n\nIf x is not a number or if base is given, then x must be a string,\nbytes, or bytearray instance representing an integer literal in the\ngiven base.  The literal can be preceded by '+' or '-' and be surrounded\nby whitespace.  The base defaults to 10.  Valid bases are 0 and 2-36.\nBase 0 means to interpret the base from the string as an integer literal.\n>>> int('0b100', base=0)\n4");
-    private static final PyAttr attrs[] = new PyAttr[] {
-        new PyAttr("conjugate", pyattr_conjugate),
-        new PyAttr("bit_length", pyattr_bit_length),
-        new PyAttr("bit_count", pyattr_bit_count),
-        new PyAttr("to_bytes", pyattr_to_bytes),
-        new PyAttr("from_bytes", pyattr_from_bytes),
-        new PyAttr("as_integer_ratio", pyattr_as_integer_ratio),
-        new PyAttr("is_integer", pyattr_is_integer),
-        new PyAttr("real", pyattr_real),
-        new PyAttr("imag", pyattr_imag),
-        new PyAttr("numerator", pyattr_numerator),
-        new PyAttr("denominator", pyattr_denominator),
-        new PyAttr("__doc__", pyattr___doc__)
-    };
-    @Override public PyAttr[] getAttributes() { return attrs; }
+    private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>();
+    static {
+        attrs.put(new PyString("conjugate"), pyattr_conjugate);
+        attrs.put(new PyString("bit_length"), pyattr_bit_length);
+        attrs.put(new PyString("bit_count"), pyattr_bit_count);
+        attrs.put(new PyString("to_bytes"), pyattr_to_bytes);
+        attrs.put(new PyString("from_bytes"), pyattr_from_bytes);
+        attrs.put(new PyString("as_integer_ratio"), pyattr_as_integer_ratio);
+        attrs.put(new PyString("is_integer"), pyattr_is_integer);
+        attrs.put(new PyString("real"), pyattr_real);
+        attrs.put(new PyString("imag"), pyattr_imag);
+        attrs.put(new PyString("numerator"), pyattr_numerator);
+        attrs.put(new PyString("denominator"), pyattr_denominator);
+        attrs.put(new PyString("__doc__"), pyattr___doc__);
+    }
+    @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
     @Override public PyObject lookupAttr(String name) {
         switch (name) {
             case "conjugate": return pyattr_conjugate;

@@ -1375,12 +1375,11 @@ def gen_code(path) -> None:
             else:
                 assert False, (name, k, v)
         gen_lines += [
-            '    private static final PyAttr attrs[] = new PyAttr[] {\n',
-            '        ',
-            ',\n        '.join(f'new PyAttr("{k}", pyattr_{k})' for k in attrs),
-            '\n',
-            '    };\n',
-            '    @Override public PyAttr[] getAttributes() { return attrs; }\n',
+            '    private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>();\n',
+            '    static {\n',
+            *(f'        attrs.put(new PyString("{k}"), pyattr_{k});\n' for k in attrs),
+            '    }\n',
+            '    @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }\n',
             '    @Override public PyObject lookupAttr(String name) {\n',
             '        switch (name) {\n',
             *(

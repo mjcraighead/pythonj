@@ -10,14 +10,15 @@ final class PySliceType extends PyBuiltinType {
     private static final PyMemberDescriptor pyattr_stop = new PyMemberDescriptor(singleton, "stop", PySlice::pymember_stop);
     private static final PyMemberDescriptor pyattr_step = new PyMemberDescriptor(singleton, "step", PySlice::pymember_step);
     private static final PyString pyattr___doc__ = new PyString("slice(stop)\nslice(start, stop[, step])\n\nCreate a slice object.  This is used for extended slicing (e.g. a[0:10:2]).");
-    private static final PyAttr attrs[] = new PyAttr[] {
-        new PyAttr("indices", pyattr_indices),
-        new PyAttr("start", pyattr_start),
-        new PyAttr("stop", pyattr_stop),
-        new PyAttr("step", pyattr_step),
-        new PyAttr("__doc__", pyattr___doc__)
-    };
-    @Override public PyAttr[] getAttributes() { return attrs; }
+    private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>();
+    static {
+        attrs.put(new PyString("indices"), pyattr_indices);
+        attrs.put(new PyString("start"), pyattr_start);
+        attrs.put(new PyString("stop"), pyattr_stop);
+        attrs.put(new PyString("step"), pyattr_step);
+        attrs.put(new PyString("__doc__"), pyattr___doc__);
+    }
+    @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
     @Override public PyObject lookupAttr(String name) {
         switch (name) {
             case "indices": return pyattr_indices;
