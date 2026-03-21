@@ -863,7 +863,7 @@ public final class Runtime {
 
     static final class pyclass_list extends PyBuiltinClass {
         pyclass_list() { super("list", PyList.class); }
-        @Override public PyMethodDescriptor getDescriptor(String name) {
+        @Override public PyDescriptor getDescriptor(String name) {
             switch (name) {
                 case "append": return pydesc_list_append;
                 case "clear": return pydesc_list_clear;
@@ -1105,7 +1105,7 @@ public final class Runtime {
 
     static final class pyclass_set extends PyBuiltinClass {
         pyclass_set() { super("set", PySet.class); }
-        @Override public PyMethodDescriptor getDescriptor(String name) {
+        @Override public PyDescriptor getDescriptor(String name) {
             switch (name) {
                 case "add": return pydesc_set_add;
                 case "clear": return pydesc_set_clear;
@@ -1374,7 +1374,7 @@ public final class Runtime {
 
     static final class pyclass_tuple extends PyBuiltinClass {
         pyclass_tuple() { super("tuple", PyTuple.class); }
-        @Override public PyMethodDescriptor getDescriptor(String name) {
+        @Override public PyDescriptor getDescriptor(String name) {
             switch (name) {
                 case "count": return pydesc_tuple_count;
                 case "index": return pydesc_tuple_index;
