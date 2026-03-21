@@ -19,6 +19,7 @@ import sys
 import time
 from types import ClassMethodDescriptorType, GetSetDescriptorType, MemberDescriptorType, MethodDescriptorType, NoneType
 from typing import Iterator, Optional, TextIO
+import _io
 
 BUILTIN_FUNCTIONS = {
     'abs', 'all', 'any', 'ascii', 'chr', 'delattr', 'format', 'getattr', 'hasattr', 'hash', 'hex',
@@ -1289,8 +1290,12 @@ class PythonjVisitor(ast.NodeVisitor):
 def gen_spec(path: str) -> None:
     spec = {}
     for name in ['bool', 'bytearray', 'bytes', 'dict', 'enumerate', 'int', 'list', 'object', 'range',
-                 'reversed', 'set', 'slice', 'str', 'tuple', 'type', 'zip']:
-        obj = getattr(builtins, name)
+                 'reversed', 'set', 'slice', 'str', 'tuple', 'type', 'zip', '_io.BufferedReader',
+                 '_io.TextIOWrapper']:
+        if name.startswith('_io.'):
+            obj = getattr(_io, name.split('.', 1)[1])
+        else:
+            obj = getattr(builtins, name)
         attrs = {}
         for (k, v) in obj.__dict__.items():
             if k.startswith('__') and k not in {'__doc__'}:
@@ -1346,17 +1351,32 @@ UNIMPLEMENTED_METHODS = {
         'strip', 'swapcase', 'title', 'translate', 'zfill',
     },
     'type': {'mro'},
+    '_io.BufferedReader': {
+        '_dealloc_warn', 'detach', 'fileno', 'flush', 'isatty', 'peek', 'read1', 'readable', 'readinto',
+        'readinto1', 'readline', 'seek', 'seekable', 'tell', 'truncate',
+    },
+    '_io.TextIOWrapper': {
+        'detach', 'fileno', 'flush', 'isatty', 'read', 'readable', 'reconfigure', 'seek', 'seekable', 'tell',
+        'truncate', 'writable', 'write',
+    },
 }
 def gen_code(path) -> None:
     with open(path) as f:
         spec = json.load(f)
 
     for (name, attrs) in spec.items():
-        java_name = BUILTIN_TYPES[name]
-        if name == 'type':
-            java_path = f'runtime/Runtime.java'
+        if name == '_io.BufferedReader':
+            java_name = 'PyBufferedReader'
+            java_path = 'runtime/PyFile.java'
+        elif name == '_io.TextIOWrapper':
+            java_name = 'PyTextIOWrapper'
+            java_path = 'runtime/PyFile.java'
         else:
-            java_path = f'runtime/{java_name}.java'
+            java_name = BUILTIN_TYPES[name]
+            if name == 'type':
+                java_path = f'runtime/Runtime.java'
+            else:
+                java_path = f'runtime/{java_name}.java'
         with open(java_path) as f:
             source_lines = f.readlines()
 
