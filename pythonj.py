@@ -1375,7 +1375,7 @@ def gen_code(path) -> None:
             else:
                 assert False, (name, k, v)
         gen_lines += [
-            '    private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>();\n',
+            f'    private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>({len(attrs)});\n',
             '    static {\n',
             *(f'        attrs.put(new PyString("{k}"), pyattr_{k});\n' for k in attrs),
             '    }\n',

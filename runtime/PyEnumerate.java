@@ -6,7 +6,7 @@ final class PyEnumerateType extends PyBuiltinType {
 // BEGIN GENERATED CODE: PyEnumerateType
     public static final PyEnumerateType singleton = new PyEnumerateType();
     private static final PyString pyattr___doc__ = new PyString("Return an enumerate object.\n\n  iterable\n    an object supporting iteration\n\nThe enumerate object yields pairs containing a count (from start, which\ndefaults to zero) and a value yielded by the iterable argument.\n\nenumerate is useful for obtaining an indexed list:\n    (0, seq[0]), (1, seq[1]), (2, seq[2]), ...");
-    private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>();
+    private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>(1);
     static {
         attrs.put(new PyString("__doc__"), pyattr___doc__);
     }

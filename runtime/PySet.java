@@ -28,7 +28,7 @@ final class PySetType extends PyBuiltinType {
     private static final PyMethodDescriptor pyattr_union = new PyMethodDescriptor(singleton, "union", obj -> new PySet.PySetMethodUnimplemented(obj, "union"));
     private static final PyMethodDescriptor pyattr_update = new PyMethodDescriptor(singleton, "update", PySet.PySetMethod_update::new);
     private static final PyString pyattr___doc__ = new PyString("Build an unordered collection of unique elements.");
-    private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>();
+    private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>(18);
     static {
         attrs.put(new PyString("add"), pyattr_add);
         attrs.put(new PyString("clear"), pyattr_clear);

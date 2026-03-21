@@ -17,7 +17,7 @@ final class PyIntType extends PyBuiltinType {
     private static final PyGetSetDescriptor pyattr_numerator = new PyGetSetDescriptor(singleton, "numerator", PyInt::pygetset_numerator);
     private static final PyGetSetDescriptor pyattr_denominator = new PyGetSetDescriptor(singleton, "denominator", PyInt::pygetset_denominator);
     private static final PyString pyattr___doc__ = new PyString("int([x]) -> integer\nint(x, base=10) -> integer\n\nConvert a number or string to an integer, or return 0 if no arguments\nare given.  If x is a number, return x.__int__().  For floating-point\nnumbers, this truncates towards zero.\n\nIf x is not a number or if base is given, then x must be a string,\nbytes, or bytearray instance representing an integer literal in the\ngiven base.  The literal can be preceded by '+' or '-' and be surrounded\nby whitespace.  The base defaults to 10.  Valid bases are 0 and 2-36.\nBase 0 means to interpret the base from the string as an integer literal.\n>>> int('0b100', base=0)\n4");
-    private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>();
+    private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>(12);
     static {
         attrs.put(new PyString("conjugate"), pyattr_conjugate);
         attrs.put(new PyString("bit_length"), pyattr_bit_length);

@@ -11,7 +11,7 @@ final class PyTupleType extends PyBuiltinType {
     private static final PyMethodDescriptor pyattr_index = new PyMethodDescriptor(singleton, "index", PyTuple.PyTupleMethod_index::new);
     private static final PyMethodDescriptor pyattr_count = new PyMethodDescriptor(singleton, "count", PyTuple.PyTupleMethod_count::new);
     private static final PyString pyattr___doc__ = new PyString("Built-in immutable sequence.\n\nIf no argument is given, the constructor returns an empty tuple.\nIf iterable is specified the tuple is initialized from iterable's items.\n\nIf the argument is a tuple, the return value is the same object.");
-    private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>();
+    private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>(3);
     static {
         attrs.put(new PyString("index"), pyattr_index);
         attrs.put(new PyString("count"), pyattr_count);

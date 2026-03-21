@@ -6,7 +6,7 @@ final class PyReversedType extends PyBuiltinType {
 // BEGIN GENERATED CODE: PyReversedType
     public static final PyReversedType singleton = new PyReversedType();
     private static final PyString pyattr___doc__ = new PyString("Return a reverse iterator over the values of the given sequence.");
-    private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>();
+    private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>(1);
     static {
         attrs.put(new PyString("__doc__"), pyattr___doc__);
     }

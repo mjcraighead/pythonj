@@ -11,7 +11,7 @@ final class PyRangeType extends PyBuiltinType {
     private static final PyMemberDescriptor pyattr_stop = new PyMemberDescriptor(singleton, "stop", PyRange::pymember_stop);
     private static final PyMemberDescriptor pyattr_step = new PyMemberDescriptor(singleton, "step", PyRange::pymember_step);
     private static final PyString pyattr___doc__ = new PyString("range(stop) -> range object\nrange(start, stop[, step]) -> range object\n\nReturn an object that produces a sequence of integers from start (inclusive)\nto stop (exclusive) by step.  range(i, j) produces i, i+1, i+2, ..., j-1.\nstart defaults to 0, and stop is omitted!  range(4) produces 0, 1, 2, 3.\nThese are exactly the valid indices for a list of 4 elements.\nWhen step is given, it specifies the increment (or decrement).");
-    private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>();
+    private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>(6);
     static {
         attrs.put(new PyString("count"), pyattr_count);
         attrs.put(new PyString("index"), pyattr_index);

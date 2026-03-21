@@ -10,7 +10,7 @@ final class PySliceType extends PyBuiltinType {
     private static final PyMemberDescriptor pyattr_stop = new PyMemberDescriptor(singleton, "stop", PySlice::pymember_stop);
     private static final PyMemberDescriptor pyattr_step = new PyMemberDescriptor(singleton, "step", PySlice::pymember_step);
     private static final PyString pyattr___doc__ = new PyString("slice(stop)\nslice(start, stop[, step])\n\nCreate a slice object.  This is used for extended slicing (e.g. a[0:10:2]).");
-    private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>();
+    private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>(5);
     static {
         attrs.put(new PyString("indices"), pyattr_indices);
         attrs.put(new PyString("start"), pyattr_start);

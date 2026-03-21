@@ -8,7 +8,7 @@ final class PyObjectType extends PyBuiltinType {
 // BEGIN GENERATED CODE: PyObjectType
     public static final PyObjectType singleton = new PyObjectType();
     private static final PyString pyattr___doc__ = new PyString("The base class of the class hierarchy.\n\nWhen called, it accepts no arguments and returns a new featureless\ninstance that has no instance attributes and cannot be given any.\n");
-    private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>();
+    private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>(1);
     static {
         attrs.put(new PyString("__doc__"), pyattr___doc__);
     }

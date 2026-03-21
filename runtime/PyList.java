@@ -22,7 +22,7 @@ final class PyListType extends PyBuiltinType {
     private static final PyMethodDescriptor pyattr_reverse = new PyMethodDescriptor(singleton, "reverse", PyList.PyListMethod_reverse::new);
     private static final PyMethodDescriptor pyattr_sort = new PyMethodDescriptor(singleton, "sort", PyList.PyListMethod_sort::new);
     private static final PyString pyattr___doc__ = new PyString("Built-in mutable sequence.\n\nIf no argument is given, the constructor creates a new empty list.\nThe argument must be an iterable if specified.");
-    private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>();
+    private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>(12);
     static {
         attrs.put(new PyString("clear"), pyattr_clear);
         attrs.put(new PyString("copy"), pyattr_copy);
