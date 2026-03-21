@@ -9,6 +9,15 @@ final class PyRangeType extends PyBuiltinType {
     private static final PyMemberDescriptor pydesc_start = new PyMemberDescriptor(singleton, "start", obj -> new PyInt(((PyRange)obj).start));
     private static final PyMemberDescriptor pydesc_step = new PyMemberDescriptor(singleton, "step", obj -> new PyInt(((PyRange)obj).step));
     private static final PyMemberDescriptor pydesc_stop = new PyMemberDescriptor(singleton, "stop", obj -> new PyInt(((PyRange)obj).stop));
+    private static final PyString pydesc___doc__ = new PyString("range(stop) -> range object\nrange(start, stop[, step]) -> range object\n\nReturn an object that produces a sequence of integers from start (inclusive)\nto stop (exclusive) by step.  range(i, j) produces i, i+1, i+2, ..., j-1.\nstart defaults to 0, and stop is omitted!  range(4) produces 0, 1, 2, 3.\nThese are exactly the valid indices for a list of 4 elements.\nWhen step is given, it specifies the increment (or decrement).");
+    private static final PyAttr attrs[] = new PyAttr[] {
+        new PyAttr("count", pydesc_count),
+        new PyAttr("index", pydesc_index),
+        new PyAttr("start", pydesc_start),
+        new PyAttr("stop", pydesc_stop),
+        new PyAttr("step", pydesc_step),
+        new PyAttr("__doc__", pydesc___doc__)
+    };
 
     private PyRangeType() { super("range", PyRange.class); }
     @Override public PyDescriptor getDescriptor(String name) {
@@ -21,6 +30,7 @@ final class PyRangeType extends PyBuiltinType {
             default: return null;
         }
     }
+    @Override public PyAttr[] getAttributes() { return attrs; }
     @Override public PyRange call(PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, typeName);
         Runtime.requireMinArgs(args, 1, typeName);

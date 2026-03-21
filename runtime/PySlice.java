@@ -8,6 +8,14 @@ final class PySliceType extends PyBuiltinType {
     private static final PyMemberDescriptor pydesc_start = new PyMemberDescriptor(singleton, "start", obj -> ((PySlice)obj).start);
     private static final PyMemberDescriptor pydesc_step = new PyMemberDescriptor(singleton, "step", obj -> ((PySlice)obj).step);
     private static final PyMemberDescriptor pydesc_stop = new PyMemberDescriptor(singleton, "stop", obj -> ((PySlice)obj).stop);
+    private static final PyString pydesc___doc__ = new PyString("slice(stop)\nslice(start, stop[, step])\n\nCreate a slice object.  This is used for extended slicing (e.g. a[0:10:2]).");
+    private static final PyAttr attrs[] = new PyAttr[] {
+        new PyAttr("indices", pydesc_indices),
+        new PyAttr("start", pydesc_start),
+        new PyAttr("stop", pydesc_stop),
+        new PyAttr("step", pydesc_step),
+        new PyAttr("__doc__", pydesc___doc__)
+    };
 
     private PySliceType() { super("slice", PySlice.class); }
     @Override public PyDescriptor getDescriptor(String name) {
@@ -19,6 +27,7 @@ final class PySliceType extends PyBuiltinType {
             default: return null;
         }
     }
+    @Override public PyAttr[] getAttributes() { return attrs; }
     @Override public PySlice call(PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, typeName);
         Runtime.requireMinArgs(args, 1, typeName);

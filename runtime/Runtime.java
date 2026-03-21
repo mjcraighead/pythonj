@@ -15,6 +15,8 @@ abstract class PyIter extends PyTruthyObject {
     @Override public final PyIter iter() { return this; }
 }
 
+record PyAttr(String name, PyObject value) {}
+
 abstract class PyType extends PyTruthyObject {
     @Override public PyObject or(PyObject rhs) {
         if ((rhs instanceof PyType) || (rhs instanceof PyNone)) {
@@ -25,6 +27,7 @@ abstract class PyType extends PyTruthyObject {
     }
 
     public PyDescriptor getDescriptor(String name) { return null; }
+    public PyAttr[] getAttributes() { return null; }
 
     @Override public boolean contains(PyObject rhs) { return defaultContains(rhs); }
 
@@ -45,6 +48,17 @@ class PyBuiltinType extends PyType {
             return desc.get(null);
         }
         switch (key) {
+            case "__dict__": {
+                var attrs = getAttributes();
+                if (attrs == null) {
+                    throw new UnsupportedOperationException(name() + ".__dict__ is not implemented");
+                }
+                PyDict ret = new PyDict(); // XXX This should return a mappingproxy singleton, not a PyDict snapshot
+                for (var x: attrs) {
+                    ret.items.put(new PyString(x.name()), x.value());
+                }
+                return ret;
+            }
             case "__name__": return new PyString(typeName);
             default: return super.getAttr(key);
         }
