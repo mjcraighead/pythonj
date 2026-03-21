@@ -23,8 +23,25 @@ BUILTIN_PYFUNC_SINGLETONS = {
     'isinstance', 'issubclass', 'iter', 'len', 'max', 'min', 'next', 'open', 'ord', 'print', 'repr',
     'setattr', 'sorted', 'sum',
 }
-BUILTIN_PYCLASS_SINGLETONS = {
-    'bool', 'bytearray', 'bytes', 'dict', 'enumerate', 'int', 'list', 'object', 'range', 'reversed', 'set', 'slice', 'str', 'tuple', 'type', 'zip',
+BUILTIN_TYPES = {
+    'bool': 'PyBoolType',
+    'bytearray': 'PyByteArrayType',
+    'bytes': 'PyBytesType',
+    'dict': 'PyDictType',
+    'enumerate': 'PyEnumerateType',
+    'int': 'PyIntType',
+    'list': 'PyListType',
+    'object': 'PyObjectType',
+    'range': 'PyRangeType',
+    'reversed': 'PyReversedType',
+    'set': 'PySetType',
+    'slice': 'PySliceType',
+    'str': 'PyStringType',
+    'tuple': 'PyTupleType',
+    'type': 'PyTypeType',
+    'zip': 'PyZipType',
+}
+EXCEPTION_TYPES = {
     'ArithmeticError', 'AssertionError', 'AttributeError', 'BaseException', 'Exception', 'IndexError', 'KeyError', 'LookupError', 'StopIteration', 'TypeError', 'ValueError', 'ZeroDivisionError',
 }
 
@@ -581,8 +598,10 @@ class PythonjVisitor(ast.NodeVisitor):
             return JavaIdentifier('null')
         elif self.scope.kind == ScopeKind.FUNCTION and name in self.scope.locals:
             return JavaIdentifier(f'pylocal_{name}')
-        elif name in BUILTIN_PYCLASS_SINGLETONS:
-            return JavaField(JavaField(JavaIdentifier('Runtime'), f'pyclass_{name}'), 'singleton')
+        elif name in BUILTIN_TYPES:
+            return JavaField(JavaIdentifier(BUILTIN_TYPES[name]), 'singleton')
+        elif name in EXCEPTION_TYPES:
+            return JavaField(JavaIdentifier(f'Py{name}Type'), 'singleton')
         elif name in BUILTIN_PYFUNC_SINGLETONS:
             return JavaField(JavaField(JavaIdentifier('Runtime'), f'pyfunc_{name}'), 'singleton')
         else:

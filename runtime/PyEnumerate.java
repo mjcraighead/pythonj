@@ -2,6 +2,44 @@
 // Copyright (c) 2012-2026 Matt Craighead
 // SPDX-License-Identifier: MIT
 
+final class PyEnumerateType extends PyBuiltinClass {
+    public static final PyEnumerateType singleton = new PyEnumerateType();
+
+    PyEnumerateType() { super("enumerate", PyEnumerate.class); }
+    @Override public PyEnumerate call(PyObject[] args, PyDict kwargs) {
+        // This is quirky, but is intended to match corner cases in CPython enumerate()
+        long totalArgs = args.length;
+        if (kwargs != null) {
+            totalArgs += kwargs.items.size();
+        }
+        if ((totalArgs == 1) || (totalArgs == 2)) {
+            PyObject iterable = (args.length >= 1) ? args[0] : null;
+            PyObject start = (args.length >= 2) ? args[1] : null;
+            if (kwargs != null) {
+                for (var x: kwargs.items.entrySet()) {
+                    PyString key = (PyString)x.getKey(); // PyString validated at call site
+                    if ((key.value.equals("iterable")) && (iterable == null)) {
+                        iterable = x.getValue();
+                    } else if ((totalArgs == 2) && (key.value.equals("start")) && (start == null)) {
+                        start = x.getValue();
+                    } else {
+                        throw PyTypeError.raiseFormat("%s is an invalid keyword argument for enumerate()", key.repr());
+                    }
+                }
+            }
+            if (iterable == null) {
+                throw PyTypeError.raise("enumerate() missing required argument 'iterable'");
+            }
+            long startIndex = (start != null) ? start.indexValue() : 0;
+            return new PyEnumerate(iterable.iter(), startIndex);
+        } else if (args.length == 0) {
+            throw PyTypeError.raise("enumerate() missing required argument 'iterable'");
+        } else {
+            throw PyTypeError.raiseFormat("enumerate() takes at most 2 arguments (%d given)", totalArgs);
+        }
+    }
+}
+
 public final class PyEnumerate extends PyIter {
     private final PyObject iter;
     private long i;
@@ -23,5 +61,5 @@ public final class PyEnumerate extends PyIter {
 
     @Override public boolean contains(PyObject rhs) { return defaultContains(rhs); }
     @Override public String repr() { return defaultRepr(); }
-    @Override public PyBuiltinClass type() { return Runtime.pyclass_enumerate.singleton; }
+    @Override public PyBuiltinClass type() { return PyEnumerateType.singleton; }
 }

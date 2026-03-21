@@ -5,6 +5,20 @@
 // Note intentional compatibility break: this is not a subclass of PyInt, so:
 // isinstance(False, int) -> False
 // issubclass(bool, int) -> False
+final class PyBoolType extends PyBuiltinClass {
+    public static final PyBoolType singleton = new PyBoolType();
+
+    PyBoolType() { super("bool", PyBool.class); }
+    @Override public PyBool call(PyObject[] args, PyDict kwargs) {
+        Runtime.requireNoKwArgs(kwargs, typeName);
+        Runtime.requireMaxArgs(args, 1, typeName);
+        if (args.length == 1) {
+            return PyBool.create(args[0].boolValue());
+        }
+        return PyBool.false_singleton;
+    }
+}
+
 public final class PyBool extends PyObject {
     public static final PyBool false_singleton = new PyBool(false);
     public static final PyBool true_singleton = new PyBool(true);
@@ -167,7 +181,7 @@ public final class PyBool extends PyObject {
         }
     }
 
-    @Override public Runtime.pyclass_bool type() { return Runtime.pyclass_bool.singleton; }
+    @Override public PyBoolType type() { return PyBoolType.singleton; }
 
     @Override public boolean boolValue() { return value; }
     @Override public boolean contains(PyObject rhs) { return defaultContains(rhs); }

@@ -2,6 +2,43 @@
 // Copyright (c) 2012-2026 Matt Craighead
 // SPDX-License-Identifier: MIT
 
+final class PyRangeType extends PyBuiltinClass {
+    public static final PyRangeType singleton = new PyRangeType();
+    private static final PyMethodDescriptor pydesc_count = new PyMethodDescriptor(singleton, "count", PyRange.PyRangeMethod_count::new);
+    private static final PyMethodDescriptor pydesc_index = new PyMethodDescriptor(singleton, "index", PyRange.PyRangeMethod_index::new);
+    private static final PyMemberDescriptor pydesc_start = new PyMemberDescriptor(singleton, "start", obj -> new PyInt(((PyRange)obj).start));
+    private static final PyMemberDescriptor pydesc_step = new PyMemberDescriptor(singleton, "step", obj -> new PyInt(((PyRange)obj).step));
+    private static final PyMemberDescriptor pydesc_stop = new PyMemberDescriptor(singleton, "stop", obj -> new PyInt(((PyRange)obj).stop));
+
+    PyRangeType() { super("range", PyRange.class); }
+    @Override public PyDescriptor getDescriptor(String name) {
+        switch (name) {
+            case "count": return pydesc_count;
+            case "index": return pydesc_index;
+            case "start": return pydesc_start;
+            case "step": return pydesc_step;
+            case "stop": return pydesc_stop;
+            default: return null;
+        }
+    }
+    @Override public PyRange call(PyObject[] args, PyDict kwargs) {
+        Runtime.requireNoKwArgs(kwargs, typeName);
+        Runtime.requireMinArgs(args, 1, typeName);
+        Runtime.requireMaxArgs(args, 3, typeName);
+        long start = 0, stop, step = 1;
+        if (args.length == 1) {
+            stop = args[0].indexValue();
+        } else {
+            start = args[0].indexValue();
+            stop = args[1].indexValue();
+            if (args.length == 3) {
+                step = args[2].indexValue();
+            }
+        }
+        return new PyRange(start, stop, step);
+    }
+}
+
 public final class PyRange extends PyObject {
     static final class PyRangeIter extends PyIter {
         private static final PyBuiltinClass type_singleton = new PyBuiltinClass("range_iterator", PyRangeIter.class);
@@ -66,7 +103,7 @@ public final class PyRange extends PyObject {
 
     @Override public final boolean hasIter() { return true; }
     @Override public PyRangeIter iter() { return new PyRangeIter(this); }
-    @Override public PyBuiltinClass type() { return Runtime.pyclass_range.singleton; }
+    @Override public PyBuiltinClass type() { return PyRangeType.singleton; }
 
     @Override public boolean boolValue() {
         return len() != 0;

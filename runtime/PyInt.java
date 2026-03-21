@@ -2,6 +2,118 @@
 // Copyright (c) 2012-2026 Matt Craighead
 // SPDX-License-Identifier: MIT
 
+final class PyIntType extends PyBuiltinClass {
+    public static final PyIntType singleton = new PyIntType();
+    private static final PyMethodDescriptor pydesc_as_integer_ratio = new PyMethodDescriptor(singleton, "as_integer_ratio", obj -> new PyInt.PyIntMethodUnimplemented(obj, "as_integer_ratio"));
+    private static final PyMethodDescriptor pydesc_bit_count = new PyMethodDescriptor(singleton, "bit_count", obj -> new PyInt.PyIntMethodUnimplemented(obj, "bit_count"));
+    private static final PyMethodDescriptor pydesc_bit_length = new PyMethodDescriptor(singleton, "bit_length", obj -> new PyInt.PyIntMethodUnimplemented(obj, "bit_length"));
+    private static final PyMethodDescriptor pydesc_conjugate = new PyMethodDescriptor(singleton, "conjugate", obj -> new PyInt.PyIntMethodUnimplemented(obj, "conjugate"));
+    private static final PyGetSetDescriptor pydesc_denominator = new PyGetSetDescriptor(singleton, "denominator", obj -> PyInt.singleton_1);
+    private static final PyClassMethodDescriptor pydesc_from_bytes = new PyClassMethodDescriptor(singleton, "from_bytes", PyIntType.PyIntClassMethod_from_bytes::new);
+    private static final PyGetSetDescriptor pydesc_imag = new PyGetSetDescriptor(singleton, "imag", obj -> PyInt.singleton_0);
+    private static final PyMethodDescriptor pydesc_is_integer = new PyMethodDescriptor(singleton, "is_integer", obj -> new PyInt.PyIntMethodUnimplemented(obj, "is_integer"));
+    private static final PyGetSetDescriptor pydesc_numerator = new PyGetSetDescriptor(singleton, "numerator", obj -> obj);
+    private static final PyGetSetDescriptor pydesc_real = new PyGetSetDescriptor(singleton, "real", obj -> obj);
+    private static final PyMethodDescriptor pydesc_to_bytes = new PyMethodDescriptor(singleton, "to_bytes", obj -> new PyInt.PyIntMethodUnimplemented(obj, "to_bytes"));
+
+    PyIntType() { super("int", PyInt.class); }
+    @Override public PyDescriptor getDescriptor(String name) {
+        switch (name) {
+            case "as_integer_ratio": return pydesc_as_integer_ratio;
+            case "bit_count": return pydesc_bit_count;
+            case "bit_length": return pydesc_bit_length;
+            case "conjugate": return pydesc_conjugate;
+            case "denominator": return pydesc_denominator;
+            case "from_bytes": return pydesc_from_bytes;
+            case "imag": return pydesc_imag;
+            case "is_integer": return pydesc_is_integer;
+            case "numerator": return pydesc_numerator;
+            case "real": return pydesc_real;
+            case "to_bytes": return pydesc_to_bytes;
+            default: return null;
+        }
+    }
+    @Override public PyInt call(PyObject[] args, PyDict kwargs) {
+        Runtime.requireMaxArgs(args, 2, typeName);
+        if ((kwargs != null) && kwargs.boolValue()) {
+            throw new IllegalArgumentException("int() does not accept kwargs");
+        }
+        if (args.length == 0) {
+            return PyInt.singleton_0;
+        }
+        PyObject arg0 = args[0];
+        // XXX should always call intValue when length is 1
+        if (arg0 instanceof PyInt arg0_int) {
+            if (args.length > 1) {
+                throw new IllegalArgumentException("int() cannot accept a base when passed an int");
+            }
+            return arg0_int;
+        }
+        if (arg0 instanceof PyBool) {
+            if (args.length > 1) {
+                throw new IllegalArgumentException("int() cannot accept a base when passed a bool");
+            }
+            return new PyInt(arg0.intValue());
+        }
+        if (arg0 instanceof PyString arg0_str) {
+            long base = 10;
+            if (args.length > 1) {
+                PyObject arg1 = args[1];
+                if (arg1.hasIndex()) {
+                    base = arg1.indexValue();
+                } else {
+                    throw new IllegalArgumentException("base must be an int");
+                }
+                if ((base < 0) || (base == 1) || (base > 36)) {
+                    throw new IllegalArgumentException("base must be 0 or 2-36");
+                }
+                if (base == 0) {
+                    throw new UnsupportedOperationException("base 0 unsupported at present");
+                }
+            }
+            String s = arg0_str.value;
+            int i = 0;
+            while (s.charAt(i) == ' ') {
+                i++;
+            }
+            long sign = 1;
+            if (s.charAt(i) == '-') {
+                i++;
+                sign = -1;
+            } else if (s.charAt(i) == '+') {
+                i++;
+            }
+            long value = 0;
+            while (i < s.length()) {
+                long digit;
+                char c = s.charAt(i++);
+                if ((c >= '0') && (c <= '9')) {
+                    digit = c - '0';
+                } else if ((c >= 'a') && (c <= 'z')) {
+                    digit = c - 'a' + 10;
+                } else if ((c >= 'A') && (c <= 'Z')) {
+                    digit = c - 'A' + 10;
+                } else {
+                    throw new IllegalArgumentException("unexpected digit");
+                }
+                if (digit >= base) {
+                    throw new IllegalArgumentException("digit not valid in base");
+                }
+                value = value*base + digit;
+            }
+            return new PyInt(sign*value);
+        }
+        throw new UnsupportedOperationException("don't know how to handle argument to int()");
+    }
+    protected static final class PyIntClassMethod_from_bytes extends PyBuiltinMethod<PyType> {
+        PyIntClassMethod_from_bytes(PyType self) { super(self); }
+        @Override public String methodName() { return "from_bytes"; }
+        @Override public PyObject call(PyObject[] args, PyDict kwargs) {
+            throw new UnsupportedOperationException("int.from_bytes() unimplemented");
+        }
+    }
+}
+
 // XXX Should probably pre-intern [-5,256] to match CPython
 public final class PyInt extends PyObject {
     public static final PyInt singleton_neg1 = new PyInt(-1);
@@ -229,7 +341,7 @@ public final class PyInt extends PyObject {
         }
     }
 
-    @Override public PyBuiltinClass type() { return Runtime.pyclass_int.singleton; }
+    @Override public PyBuiltinClass type() { return PyIntType.singleton; }
 
     @Override public boolean boolValue() { return value != 0; }
     @Override public boolean contains(PyObject rhs) { return defaultContains(rhs); }

@@ -7,6 +7,49 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 
+final class PyListType extends PyBuiltinClass {
+    public static final PyListType singleton = new PyListType();
+    private static final PyMethodDescriptor pydesc_append = new PyMethodDescriptor(singleton, "append", PyList.PyListMethod_append::new);
+    private static final PyMethodDescriptor pydesc_clear = new PyMethodDescriptor(singleton, "clear", PyList.PyListMethod_clear::new);
+    private static final PyMethodDescriptor pydesc_copy = new PyMethodDescriptor(singleton, "copy", PyList.PyListMethod_copy::new);
+    private static final PyMethodDescriptor pydesc_count = new PyMethodDescriptor(singleton, "count", PyList.PyListMethod_count::new);
+    private static final PyMethodDescriptor pydesc_extend = new PyMethodDescriptor(singleton, "extend", PyList.PyListMethod_extend::new);
+    private static final PyMethodDescriptor pydesc_index = new PyMethodDescriptor(singleton, "index", PyList.PyListMethod_index::new);
+    private static final PyMethodDescriptor pydesc_insert = new PyMethodDescriptor(singleton, "insert", PyList.PyListMethod_insert::new);
+    private static final PyMethodDescriptor pydesc_pop = new PyMethodDescriptor(singleton, "pop", PyList.PyListMethod_pop::new);
+    private static final PyMethodDescriptor pydesc_remove = new PyMethodDescriptor(singleton, "remove", PyList.PyListMethod_remove::new);
+    private static final PyMethodDescriptor pydesc_reverse = new PyMethodDescriptor(singleton, "reverse", PyList.PyListMethod_reverse::new);
+    private static final PyMethodDescriptor pydesc_sort = new PyMethodDescriptor(singleton, "sort", PyList.PyListMethod_sort::new);
+
+    PyListType() { super("list", PyList.class); }
+    @Override public PyDescriptor getDescriptor(String name) {
+        switch (name) {
+            case "append": return pydesc_append;
+            case "clear": return pydesc_clear;
+            case "copy": return pydesc_copy;
+            case "count": return pydesc_count;
+            case "extend": return pydesc_extend;
+            case "index": return pydesc_index;
+            case "insert": return pydesc_insert;
+            case "pop": return pydesc_pop;
+            case "remove": return pydesc_remove;
+            case "reverse": return pydesc_reverse;
+            case "sort": return pydesc_sort;
+            default: return null;
+        }
+    }
+    @Override public PyList call(PyObject[] args, PyDict kwargs) {
+        Runtime.requireNoKwArgs(kwargs, typeName);
+        Runtime.requireMaxArgs(args, 1, typeName);
+        var ret = new PyList();
+        if (args.length == 0) {
+            return ret;
+        }
+        Runtime.addIterableToCollection(ret.items, args[0]);
+        return ret;
+    }
+}
+
 public final class PyList extends PyObject {
     static final class PyListIter extends PyIter {
         private static final PyBuiltinClass type_singleton = new PyBuiltinClass("list_iterator", PyListIter.class);
@@ -287,7 +330,7 @@ public final class PyList extends PyObject {
     @Override public final boolean hasIter() { return true; }
     @Override public PyListIter iter() { return new PyListIter(items.iterator()); }
     @Override public PyReversed reversed() { return new PyReversed(this); }
-    @Override public PyBuiltinClass type() { return Runtime.pyclass_list.singleton; }
+    @Override public PyBuiltinClass type() { return PyListType.singleton; }
 
     @Override public boolean boolValue() { return !items.isEmpty(); }
     @Override public boolean contains(PyObject rhs) { return items.contains(rhs); }

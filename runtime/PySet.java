@@ -7,6 +7,61 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
+final class PySetType extends PyBuiltinClass {
+    public static final PySetType singleton = new PySetType();
+    private static final PyMethodDescriptor pydesc_add = new PyMethodDescriptor(singleton, "add", PySet.PySetMethod_add::new);
+    private static final PyMethodDescriptor pydesc_clear = new PyMethodDescriptor(singleton, "clear", PySet.PySetMethod_clear::new);
+    private static final PyMethodDescriptor pydesc_copy = new PyMethodDescriptor(singleton, "copy", obj -> new PySet.PySetMethodUnimplemented(obj, "copy"));
+    private static final PyMethodDescriptor pydesc_difference = new PyMethodDescriptor(singleton, "difference", obj -> new PySet.PySetMethodUnimplemented(obj, "difference"));
+    private static final PyMethodDescriptor pydesc_difference_update = new PyMethodDescriptor(singleton, "difference_update", obj -> new PySet.PySetMethodUnimplemented(obj, "difference_update"));
+    private static final PyMethodDescriptor pydesc_discard = new PyMethodDescriptor(singleton, "discard", PySet.PySetMethod_discard::new);
+    private static final PyMethodDescriptor pydesc_intersection = new PyMethodDescriptor(singleton, "intersection", obj -> new PySet.PySetMethodUnimplemented(obj, "intersection"));
+    private static final PyMethodDescriptor pydesc_intersection_update = new PyMethodDescriptor(singleton, "intersection_update", obj -> new PySet.PySetMethodUnimplemented(obj, "intersection_update"));
+    private static final PyMethodDescriptor pydesc_isdisjoint = new PyMethodDescriptor(singleton, "isdisjoint", obj -> new PySet.PySetMethodUnimplemented(obj, "isdisjoint"));
+    private static final PyMethodDescriptor pydesc_issubset = new PyMethodDescriptor(singleton, "issubset", obj -> new PySet.PySetMethodUnimplemented(obj, "issubset"));
+    private static final PyMethodDescriptor pydesc_issuperset = new PyMethodDescriptor(singleton, "issuperset", obj -> new PySet.PySetMethodUnimplemented(obj, "issuperset"));
+    private static final PyMethodDescriptor pydesc_pop = new PyMethodDescriptor(singleton, "pop", obj -> new PySet.PySetMethodUnimplemented(obj, "pop"));
+    private static final PyMethodDescriptor pydesc_remove = new PyMethodDescriptor(singleton, "remove", obj -> new PySet.PySetMethodUnimplemented(obj, "remove"));
+    private static final PyMethodDescriptor pydesc_symmetric_difference = new PyMethodDescriptor(singleton, "symmetric_difference", obj -> new PySet.PySetMethodUnimplemented(obj, "symmetric_difference"));
+    private static final PyMethodDescriptor pydesc_symmetric_difference_update = new PyMethodDescriptor(singleton, "symmetric_difference_update", obj -> new PySet.PySetMethodUnimplemented(obj, "symmetric_difference_update"));
+    private static final PyMethodDescriptor pydesc_union = new PyMethodDescriptor(singleton, "union", obj -> new PySet.PySetMethodUnimplemented(obj, "union"));
+    private static final PyMethodDescriptor pydesc_update = new PyMethodDescriptor(singleton, "update", PySet.PySetMethod_update::new);
+
+    PySetType() { super("set", PySet.class); }
+    @Override public PyDescriptor getDescriptor(String name) {
+        switch (name) {
+            case "add": return pydesc_add;
+            case "clear": return pydesc_clear;
+            case "copy": return pydesc_copy;
+            case "difference": return pydesc_difference;
+            case "difference_update": return pydesc_difference_update;
+            case "discard": return pydesc_discard;
+            case "intersection": return pydesc_intersection;
+            case "intersection_update": return pydesc_intersection_update;
+            case "isdisjoint": return pydesc_isdisjoint;
+            case "issubset": return pydesc_issubset;
+            case "issuperset": return pydesc_issuperset;
+            case "pop": return pydesc_pop;
+            case "remove": return pydesc_remove;
+            case "symmetric_difference": return pydesc_symmetric_difference;
+            case "symmetric_difference_update": return pydesc_symmetric_difference_update;
+            case "union": return pydesc_union;
+            case "update": return pydesc_update;
+            default: return null;
+        }
+    }
+    @Override public PySet call(PyObject[] args, PyDict kwargs) {
+        Runtime.requireNoKwArgs(kwargs, typeName);
+        Runtime.requireMaxArgs(args, 1, typeName);
+        var ret = new PySet();
+        if (args.length == 0) {
+            return ret;
+        }
+        Runtime.addIterableToCollection(ret.items, args[0]);
+        return ret;
+    }
+}
+
 public final class PySet extends PyObject {
     static final class PySetIter extends PyIter {
         private static final PyBuiltinClass type_singleton = new PyBuiltinClass("set_iterator", PySetIter.class);
@@ -219,7 +274,7 @@ public final class PySet extends PyObject {
 
     @Override public final boolean hasIter() { return true; }
     @Override public PySetIter iter() { return new PySetIter(items.iterator()); }
-    @Override public PyBuiltinClass type() { return Runtime.pyclass_set.singleton; }
+    @Override public PyBuiltinClass type() { return PySetType.singleton; }
 
     @Override public Set<PyObject> asSetOrNull() { return items; }
     @Override public boolean boolValue() { return !items.isEmpty(); }

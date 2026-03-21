@@ -2,7 +2,39 @@
 // Copyright (c) 2012-2026 Matt Craighead
 // SPDX-License-Identifier: MIT
 
+import java.io.ByteArrayOutputStream;
 import java.util.Arrays;
+
+final class PyByteArrayType extends PyBuiltinClass {
+    public static final PyByteArrayType singleton = new PyByteArrayType();
+
+    PyByteArrayType() { super("bytearray", PyByteArray.class); }
+    @Override public PyByteArray call(PyObject[] args, PyDict kwargs) {
+        if (args.length > 1) {
+            throw new IllegalArgumentException("bytearray() takes 0 or 1 arguments");
+        }
+        if ((kwargs != null) && kwargs.boolValue()) {
+            throw new IllegalArgumentException("bytearray() does not accept kwargs");
+        }
+        if (args.length == 0) {
+            return new PyByteArray(new byte[0]);
+        }
+        PyObject arg = args[0];
+        if (arg.hasIndex()) {
+            return new PyByteArray(new byte[Math.toIntExact(arg.indexValue())]);
+        }
+        var b = new ByteArrayOutputStream();
+        var iter = arg.iter();
+        for (var item = iter.next(); item != null; item = iter.next()) {
+            long i = item.indexValue();
+            if ((i < 0) || (i >= 256)) {
+                throw new IllegalArgumentException("invalid byte value");
+            }
+            b.write((int)i);
+        }
+        return new PyByteArray(b.toByteArray());
+    }
+}
 
 public final class PyByteArray extends PyObject {
     static final class PyByteArrayIter extends PyIter {
@@ -152,7 +184,7 @@ public final class PyByteArray extends PyObject {
 
     @Override public final boolean hasIter() { return true; }
     @Override public PyByteArrayIter iter() { return new PyByteArrayIter(this); }
-    @Override public PyBuiltinClass type() { return Runtime.pyclass_bytearray.singleton; }
+    @Override public PyBuiltinClass type() { return PyByteArrayType.singleton; }
 
     @Override public boolean boolValue() { return value.length != 0; }
     @Override public boolean contains(PyObject rhs) {

@@ -4,6 +4,11 @@
 
 import java.util.Set;
 
+final class PyObjectType extends PyBuiltinClass {
+    public static final PyObjectType singleton = new PyObjectType();
+    PyObjectType() { super("object", PyObject.class); }
+}
+
 public abstract class PyObject implements Comparable<PyObject> {
     // These all take and/or return boxed PyObjects
     public PyObject invert() { throw raiseUnaryOp("unary ~"); }

@@ -2,6 +2,43 @@
 // Copyright (c) 2012-2026 Matt Craighead
 // SPDX-License-Identifier: MIT
 
+final class PySliceType extends PyBuiltinClass {
+    public static final PySliceType singleton = new PySliceType();
+    private static final PyMethodDescriptor pydesc_indices = new PyMethodDescriptor(singleton, "indices", PySlice.PySliceMethod_indices::new);
+    private static final PyMemberDescriptor pydesc_start = new PyMemberDescriptor(singleton, "start", obj -> ((PySlice)obj).start);
+    private static final PyMemberDescriptor pydesc_step = new PyMemberDescriptor(singleton, "step", obj -> ((PySlice)obj).step);
+    private static final PyMemberDescriptor pydesc_stop = new PyMemberDescriptor(singleton, "stop", obj -> ((PySlice)obj).stop);
+
+    PySliceType() { super("slice", PySlice.class); }
+    @Override public PyDescriptor getDescriptor(String name) {
+        switch (name) {
+            case "indices": return pydesc_indices;
+            case "start": return pydesc_start;
+            case "step": return pydesc_step;
+            case "stop": return pydesc_stop;
+            default: return null;
+        }
+    }
+    @Override public PySlice call(PyObject[] args, PyDict kwargs) {
+        Runtime.requireNoKwArgs(kwargs, typeName);
+        Runtime.requireMinArgs(args, 1, typeName);
+        Runtime.requireMaxArgs(args, 3, typeName);
+        PyObject start = PyNone.singleton;
+        PyObject stop;
+        PyObject step = PyNone.singleton;
+        if (args.length == 1) {
+            stop = args[0];
+        } else {
+            start = args[0];
+            stop = args[1];
+            if (args.length == 3) {
+                step = args[2];
+            }
+        }
+        return new PySlice(start, stop, step);
+    }
+}
+
 public final class PySlice extends PyTruthyObject {
     protected static final class PySliceMethod_indices extends PyBuiltinMethod<PySlice> {
         PySliceMethod_indices(PyObject _self) { super((PySlice)_self); }
@@ -21,7 +58,7 @@ public final class PySlice extends PyTruthyObject {
         step = _step;
     }
 
-    @Override public PyBuiltinClass type() { return Runtime.pyclass_slice.singleton; }
+    @Override public PyBuiltinClass type() { return PySliceType.singleton; }
 
     @Override public boolean ge(PyObject rhs) { throw unimplementedMethod("ge"); }
     @Override public boolean gt(PyObject rhs) { throw unimplementedMethod("gt"); }

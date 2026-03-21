@@ -4,6 +4,131 @@
 
 import java.util.Locale;
 
+final class PyStringType extends PyBuiltinClass {
+    public static final PyStringType singleton = new PyStringType();
+    private static final PyMethodDescriptor pydesc_capitalize = new PyMethodDescriptor(singleton, "capitalize", obj -> new PyString.PyStringMethodUnimplemented(obj, "capitalize"));
+    private static final PyMethodDescriptor pydesc_casefold = new PyMethodDescriptor(singleton, "casefold", obj -> new PyString.PyStringMethodUnimplemented(obj, "casefold"));
+    private static final PyMethodDescriptor pydesc_center = new PyMethodDescriptor(singleton, "center", obj -> new PyString.PyStringMethodUnimplemented(obj, "center"));
+    private static final PyMethodDescriptor pydesc_count = new PyMethodDescriptor(singleton, "count", obj -> new PyString.PyStringMethodUnimplemented(obj, "count"));
+    private static final PyMethodDescriptor pydesc_encode = new PyMethodDescriptor(singleton, "encode", obj -> new PyString.PyStringMethodUnimplemented(obj, "encode"));
+    private static final PyMethodDescriptor pydesc_endswith = new PyMethodDescriptor(singleton, "endswith", obj -> new PyString.PyStringMethodUnimplemented(obj, "endswith"));
+    private static final PyMethodDescriptor pydesc_expandtabs = new PyMethodDescriptor(singleton, "expandtabs", obj -> new PyString.PyStringMethodUnimplemented(obj, "expandtabs"));
+    private static final PyMethodDescriptor pydesc_find = new PyMethodDescriptor(singleton, "find", PyString.PyStringMethod_find::new);
+    private static final PyMethodDescriptor pydesc_format = new PyMethodDescriptor(singleton, "format", obj -> new PyString.PyStringMethodUnimplemented(obj, "format"));
+    private static final PyMethodDescriptor pydesc_format_map = new PyMethodDescriptor(singleton, "format_map", obj -> new PyString.PyStringMethodUnimplemented(obj, "format_map"));
+    private static final PyMethodDescriptor pydesc_index = new PyMethodDescriptor(singleton, "index", obj -> new PyString.PyStringMethodUnimplemented(obj, "index"));
+    private static final PyMethodDescriptor pydesc_isalnum = new PyMethodDescriptor(singleton, "isalnum", obj -> new PyString.PyStringMethodUnimplemented(obj, "isalnum"));
+    private static final PyMethodDescriptor pydesc_isalpha = new PyMethodDescriptor(singleton, "isalpha", obj -> new PyString.PyStringMethodUnimplemented(obj, "isalpha"));
+    private static final PyMethodDescriptor pydesc_isascii = new PyMethodDescriptor(singleton, "isascii", obj -> new PyString.PyStringMethodUnimplemented(obj, "isascii"));
+    private static final PyMethodDescriptor pydesc_isdecimal = new PyMethodDescriptor(singleton, "isdecimal", obj -> new PyString.PyStringMethodUnimplemented(obj, "isdecimal"));
+    private static final PyMethodDescriptor pydesc_isdigit = new PyMethodDescriptor(singleton, "isdigit", obj -> new PyString.PyStringMethodUnimplemented(obj, "isdigit"));
+    private static final PyMethodDescriptor pydesc_isidentifier = new PyMethodDescriptor(singleton, "isidentifier", obj -> new PyString.PyStringMethodUnimplemented(obj, "isidentifier"));
+    private static final PyMethodDescriptor pydesc_islower = new PyMethodDescriptor(singleton, "islower", obj -> new PyString.PyStringMethodUnimplemented(obj, "islower"));
+    private static final PyMethodDescriptor pydesc_isnumeric = new PyMethodDescriptor(singleton, "isnumeric", obj -> new PyString.PyStringMethodUnimplemented(obj, "isnumeric"));
+    private static final PyMethodDescriptor pydesc_isprintable = new PyMethodDescriptor(singleton, "isprintable", obj -> new PyString.PyStringMethodUnimplemented(obj, "isprintable"));
+    private static final PyMethodDescriptor pydesc_isspace = new PyMethodDescriptor(singleton, "isspace", obj -> new PyString.PyStringMethodUnimplemented(obj, "isspace"));
+    private static final PyMethodDescriptor pydesc_istitle = new PyMethodDescriptor(singleton, "istitle", obj -> new PyString.PyStringMethodUnimplemented(obj, "istitle"));
+    private static final PyMethodDescriptor pydesc_isupper = new PyMethodDescriptor(singleton, "isupper", obj -> new PyString.PyStringMethodUnimplemented(obj, "isupper"));
+    private static final PyMethodDescriptor pydesc_join = new PyMethodDescriptor(singleton, "join", PyString.PyStringMethod_join::new);
+    private static final PyMethodDescriptor pydesc_ljust = new PyMethodDescriptor(singleton, "ljust", obj -> new PyString.PyStringMethodUnimplemented(obj, "ljust"));
+    private static final PyMethodDescriptor pydesc_lower = new PyMethodDescriptor(singleton, "lower", PyString.PyStringMethod_lower::new);
+    private static final PyMethodDescriptor pydesc_lstrip = new PyMethodDescriptor(singleton, "lstrip", obj -> new PyString.PyStringMethodUnimplemented(obj, "lstrip"));
+    private static final PyStaticMethod pydesc_maketrans = new PyStaticMethod(singleton, "maketrans", new PyStringType.PyStringStaticMethod_maketrans(singleton));
+    private static final PyMethodDescriptor pydesc_partition = new PyMethodDescriptor(singleton, "partition", obj -> new PyString.PyStringMethodUnimplemented(obj, "partition"));
+    private static final PyMethodDescriptor pydesc_removeprefix = new PyMethodDescriptor(singleton, "removeprefix", obj -> new PyString.PyStringMethodUnimplemented(obj, "removeprefix"));
+    private static final PyMethodDescriptor pydesc_removesuffix = new PyMethodDescriptor(singleton, "removesuffix", obj -> new PyString.PyStringMethodUnimplemented(obj, "removesuffix"));
+    private static final PyMethodDescriptor pydesc_replace = new PyMethodDescriptor(singleton, "replace", obj -> new PyString.PyStringMethodUnimplemented(obj, "replace"));
+    private static final PyMethodDescriptor pydesc_rfind = new PyMethodDescriptor(singleton, "rfind", obj -> new PyString.PyStringMethodUnimplemented(obj, "rfind"));
+    private static final PyMethodDescriptor pydesc_rindex = new PyMethodDescriptor(singleton, "rindex", obj -> new PyString.PyStringMethodUnimplemented(obj, "rindex"));
+    private static final PyMethodDescriptor pydesc_rjust = new PyMethodDescriptor(singleton, "rjust", obj -> new PyString.PyStringMethodUnimplemented(obj, "rjust"));
+    private static final PyMethodDescriptor pydesc_rpartition = new PyMethodDescriptor(singleton, "rpartition", obj -> new PyString.PyStringMethodUnimplemented(obj, "rpartition"));
+    private static final PyMethodDescriptor pydesc_rsplit = new PyMethodDescriptor(singleton, "rsplit", obj -> new PyString.PyStringMethodUnimplemented(obj, "rsplit"));
+    private static final PyMethodDescriptor pydesc_rstrip = new PyMethodDescriptor(singleton, "rstrip", obj -> new PyString.PyStringMethodUnimplemented(obj, "rstrip"));
+    private static final PyMethodDescriptor pydesc_split = new PyMethodDescriptor(singleton, "split", PyString.PyStringMethod_split::new);
+    private static final PyMethodDescriptor pydesc_splitlines = new PyMethodDescriptor(singleton, "splitlines", obj -> new PyString.PyStringMethodUnimplemented(obj, "splitlines"));
+    private static final PyMethodDescriptor pydesc_startswith = new PyMethodDescriptor(singleton, "startswith", PyString.PyStringMethod_startswith::new);
+    private static final PyMethodDescriptor pydesc_strip = new PyMethodDescriptor(singleton, "strip", obj -> new PyString.PyStringMethodUnimplemented(obj, "strip"));
+    private static final PyMethodDescriptor pydesc_swapcase = new PyMethodDescriptor(singleton, "swapcase", obj -> new PyString.PyStringMethodUnimplemented(obj, "swapcase"));
+    private static final PyMethodDescriptor pydesc_title = new PyMethodDescriptor(singleton, "title", obj -> new PyString.PyStringMethodUnimplemented(obj, "title"));
+    private static final PyMethodDescriptor pydesc_translate = new PyMethodDescriptor(singleton, "translate", obj -> new PyString.PyStringMethodUnimplemented(obj, "translate"));
+    private static final PyMethodDescriptor pydesc_upper = new PyMethodDescriptor(singleton, "upper", PyString.PyStringMethod_upper::new);
+    private static final PyMethodDescriptor pydesc_zfill = new PyMethodDescriptor(singleton, "zfill", obj -> new PyString.PyStringMethodUnimplemented(obj, "zfill"));
+
+    PyStringType() { super("str", PyString.class); }
+    @Override public PyDescriptor getDescriptor(String name) {
+        switch (name) {
+            case "capitalize": return pydesc_capitalize;
+            case "casefold": return pydesc_casefold;
+            case "center": return pydesc_center;
+            case "count": return pydesc_count;
+            case "encode": return pydesc_encode;
+            case "endswith": return pydesc_endswith;
+            case "expandtabs": return pydesc_expandtabs;
+            case "find": return pydesc_find;
+            case "format": return pydesc_format;
+            case "format_map": return pydesc_format_map;
+            case "index": return pydesc_index;
+            case "isalnum": return pydesc_isalnum;
+            case "isalpha": return pydesc_isalpha;
+            case "isascii": return pydesc_isascii;
+            case "isdecimal": return pydesc_isdecimal;
+            case "isdigit": return pydesc_isdigit;
+            case "isidentifier": return pydesc_isidentifier;
+            case "islower": return pydesc_islower;
+            case "isnumeric": return pydesc_isnumeric;
+            case "isprintable": return pydesc_isprintable;
+            case "isspace": return pydesc_isspace;
+            case "istitle": return pydesc_istitle;
+            case "isupper": return pydesc_isupper;
+            case "join": return pydesc_join;
+            case "ljust": return pydesc_ljust;
+            case "lower": return pydesc_lower;
+            case "lstrip": return pydesc_lstrip;
+            case "maketrans": return pydesc_maketrans;
+            case "partition": return pydesc_partition;
+            case "removeprefix": return pydesc_removeprefix;
+            case "removesuffix": return pydesc_removesuffix;
+            case "replace": return pydesc_replace;
+            case "rfind": return pydesc_rfind;
+            case "rindex": return pydesc_rindex;
+            case "rjust": return pydesc_rjust;
+            case "rpartition": return pydesc_rpartition;
+            case "rsplit": return pydesc_rsplit;
+            case "rstrip": return pydesc_rstrip;
+            case "split": return pydesc_split;
+            case "splitlines": return pydesc_splitlines;
+            case "startswith": return pydesc_startswith;
+            case "strip": return pydesc_strip;
+            case "swapcase": return pydesc_swapcase;
+            case "title": return pydesc_title;
+            case "translate": return pydesc_translate;
+            case "upper": return pydesc_upper;
+            case "zfill": return pydesc_zfill;
+            default: return null;
+        }
+    }
+    @Override public PyString call(PyObject[] args, PyDict kwargs) {
+        if (args.length > 1) {
+            throw new IllegalArgumentException("str() takes 0 or 1 arguments");
+        }
+        if ((kwargs != null) && kwargs.boolValue()) {
+            throw new IllegalArgumentException("str() does not accept kwargs");
+        }
+        if (args.length == 1) {
+            return new PyString(args[0].str());
+        }
+        return PyString.empty_singleton;
+    }
+
+    static final class PyStringStaticMethod_maketrans extends PyBuiltinMethod<PyType> {
+        PyStringStaticMethod_maketrans(PyType _self) { super(_self); }
+        @Override public String methodName() { return "maketrans"; }
+        @Override public PyObject call(PyObject[] args, PyDict kwargs) {
+            throw new UnsupportedOperationException("str.maketrans unimplemented");
+        }
+    }
+}
+
 public final class PyString extends PyObject {
     public static final PyString empty_singleton = new PyString("");
 
@@ -249,7 +374,7 @@ public final class PyString extends PyObject {
 
     @Override public final boolean hasIter() { return true; }
     @Override public PyStringIter iter() { return new PyStringIter(this); }
-    @Override public PyBuiltinClass type() { return Runtime.pyclass_str.singleton; }
+    @Override public PyBuiltinClass type() { return PyStringType.singleton; }
 
     @Override public boolean boolValue() { return !value.isEmpty(); }
     @Override public boolean contains(PyObject rhs) {

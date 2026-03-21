@@ -8,6 +8,65 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
+final class PyDictType extends PyBuiltinClass {
+    public static final PyDictType singleton = new PyDictType();
+    private static final PyMethodDescriptor pydesc_clear = new PyMethodDescriptor(singleton, "clear", PyDict.PyDictMethod_clear::new);
+    private static final PyMethodDescriptor pydesc_copy = new PyMethodDescriptor(singleton, "copy", PyDict.PyDictMethod_copy::new);
+    private static final PyClassMethodDescriptor pydesc_fromkeys = new PyClassMethodDescriptor(singleton, "fromkeys", PyDictType.PyDictClassMethod_fromkeys::new);
+    private static final PyMethodDescriptor pydesc_get = new PyMethodDescriptor(singleton, "get", PyDict.PyDictMethod_get::new);
+    private static final PyMethodDescriptor pydesc_keys = new PyMethodDescriptor(singleton, "keys", PyDict.PyDictMethod_keys::new);
+    private static final PyMethodDescriptor pydesc_items = new PyMethodDescriptor(singleton, "items", PyDict.PyDictMethod_items::new);
+    private static final PyMethodDescriptor pydesc_pop = new PyMethodDescriptor(singleton, "pop", PyDict.PyDictMethod_pop::new);
+    private static final PyMethodDescriptor pydesc_popitem = new PyMethodDescriptor(singleton, "popitem", PyDict.PyDictMethod_popitem::new);
+    private static final PyMethodDescriptor pydesc_setdefault = new PyMethodDescriptor(singleton, "setdefault", PyDict.PyDictMethod_setdefault::new);
+    private static final PyMethodDescriptor pydesc_update = new PyMethodDescriptor(singleton, "update", PyDict.PyDictMethod_update::new);
+    private static final PyMethodDescriptor pydesc_values = new PyMethodDescriptor(singleton, "values", PyDict.PyDictMethod_values::new);
+
+    PyDictType() { super("dict", PyDict.class); }
+    @Override public PyDescriptor getDescriptor(String name) {
+        switch (name) {
+            case "clear": return pydesc_clear;
+            case "copy": return pydesc_copy;
+            case "fromkeys": return pydesc_fromkeys;
+            case "get": return pydesc_get;
+            case "items": return pydesc_items;
+            case "keys": return pydesc_keys;
+            case "pop": return pydesc_pop;
+            case "popitem": return pydesc_popitem;
+            case "setdefault": return pydesc_setdefault;
+            case "update": return pydesc_update;
+            case "values": return pydesc_values;
+            default: return null;
+        }
+    }
+    @Override public PyDict call(PyObject[] args, PyDict kwargs) {
+        if (args.length > 1) {
+            throw new IllegalArgumentException("dict() takes 0 or 1 arguments");
+        }
+        var ret = new PyDict();
+        ret.pymethod_update(args, kwargs);
+        return ret;
+    }
+
+    static final class PyDictClassMethod_fromkeys extends PyBuiltinMethod<PyType> {
+        PyDictClassMethod_fromkeys(PyType _self) { super(_self); }
+        @Override public String methodName() { return "fromkeys"; }
+        @Override public PyDict call(PyObject[] args, PyDict kwargs) {
+            Runtime.requireNoKwArgs(kwargs, "dict.fromkeys");
+            Runtime.requireMinArgs(args, 1, "fromkeys");
+            Runtime.requireMaxArgs(args, 2, "fromkeys");
+            PyObject iterable = args[0];
+            PyObject value = (args.length == 2) ? args[1] : PyNone.singleton;
+            var ret = new PyDict();
+            var iter = iterable.iter();
+            for (var key = iter.next(); key != null; key = iter.next()) {
+                ret.items.put(key, value);
+            }
+            return ret;
+        }
+    }
+}
+
 public final class PyDict extends PyObject {
     static final class PyDictIter extends PyIter {
         private static final PyBuiltinClass type_singleton = new PyBuiltinClass("dict_keyiterator", PyDictIter.class);
@@ -437,7 +496,7 @@ public final class PyDict extends PyObject {
 
     @Override public final boolean hasIter() { return true; }
     @Override public PyDictIter iter() { return new PyDictIter(items.keySet().iterator()); }
-    @Override public PyBuiltinClass type() { return Runtime.pyclass_dict.singleton; }
+    @Override public PyBuiltinClass type() { return PyDictType.singleton; }
 
     @Override public boolean boolValue() { return !items.isEmpty(); }
     @Override public boolean contains(PyObject rhs) { return items.containsKey(rhs); }

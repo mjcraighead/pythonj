@@ -4,6 +4,22 @@
 
 import java.util.ArrayList;
 
+final class PyZipType extends PyBuiltinClass {
+    public static final PyZipType singleton = new PyZipType();
+
+    PyZipType() { super("zip", PyZip.class); }
+    @Override public PyZip call(PyObject[] args, PyDict kwargs) {
+        if ((kwargs != null) && kwargs.boolValue()) {
+            throw new IllegalArgumentException("zip() does not accept kwargs");
+        }
+        PyIter iters[] = new PyIter[args.length];
+        for (int i = 0; i < args.length; i++) {
+            iters[i] = args[i].iter();
+        }
+        return new PyZip(iters);
+    }
+}
+
 public final class PyZip extends PyIter {
     private final PyIter[] iters;
 
@@ -28,5 +44,5 @@ public final class PyZip extends PyIter {
 
     @Override public boolean contains(PyObject rhs) { return defaultContains(rhs); }
     @Override public String repr() { return defaultRepr(); }
-    @Override public PyBuiltinClass type() { return Runtime.pyclass_zip.singleton; }
+    @Override public PyBuiltinClass type() { return PyZipType.singleton; }
 }
