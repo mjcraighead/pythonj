@@ -22,10 +22,10 @@ BUILTIN_PYGLOBALS = {
     'abs', 'all', 'any', 'ascii', 'chr', 'delattr', 'format', 'getattr', 'hasattr', 'hash', 'hex',
     'isinstance', 'issubclass', 'iter', 'len', 'max', 'min', 'next', 'open', 'ord', 'print', 'repr',
     'setattr', 'sorted', 'sum',
-    'ArithmeticError', 'AssertionError', 'AttributeError', 'BaseException', 'Exception', 'IndexError', 'KeyError', 'LookupError', 'StopIteration', 'TypeError', 'ValueError', 'ZeroDivisionError',
 }
 BUILTIN_PYCLASS_SINGLETONS = {
     'bool', 'bytearray', 'bytes', 'dict', 'enumerate', 'int', 'list', 'object', 'range', 'reversed', 'set', 'slice', 'str', 'tuple', 'type', 'zip',
+    'ArithmeticError', 'AssertionError', 'AttributeError', 'BaseException', 'Exception', 'IndexError', 'KeyError', 'LookupError', 'StopIteration', 'TypeError', 'ValueError', 'ZeroDivisionError',
 }
 
 RUNTIME_JAVA_FILES = (

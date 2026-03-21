@@ -1441,24 +1441,25 @@ public final class Runtime {
     }
 
     static final class pyclass_ArithmeticError extends PyBuiltinClass {
+        public static final pyclass_ArithmeticError singleton = new pyclass_ArithmeticError();
         pyclass_ArithmeticError() { super("ArithmeticError", PyArithmeticError.class); }
         @Override public PyArithmeticError call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, typeName);
             return new PyArithmeticError(args);
         }
     }
-    public static final pyclass_ArithmeticError pyglobal_ArithmeticError = new pyclass_ArithmeticError();
 
     static final class pyclass_AssertionError extends PyBuiltinClass {
+        public static final pyclass_AssertionError singleton = new pyclass_AssertionError();
         pyclass_AssertionError() { super("AssertionError", PyAssertionError.class); }
         @Override public PyAssertionError call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, typeName);
             return new PyAssertionError(args);
         }
     }
-    public static final pyclass_AssertionError pyglobal_AssertionError = new pyclass_AssertionError();
 
     static final class pyclass_AttributeError extends PyBuiltinClass {
+        public static final pyclass_AttributeError singleton = new pyclass_AttributeError();
         pyclass_AttributeError() { super("AttributeError", PyAttributeError.class); }
         @Override public PyAttributeError call(PyObject[] args, PyDict kwargs) {
             if ((kwargs != null) && kwargs.boolValue()) {
@@ -1467,88 +1468,87 @@ public final class Runtime {
             return new PyAttributeError(args);
         }
     }
-    public static final pyclass_AttributeError pyglobal_AttributeError = new pyclass_AttributeError();
 
     static final class pyclass_BaseException extends PyBuiltinClass {
+        public static final pyclass_BaseException singleton = new pyclass_BaseException();
         pyclass_BaseException() { super("BaseException", PyBaseException.class); }
         @Override public PyBaseException call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, typeName);
             return new PyBaseException(args);
         }
     }
-    public static final pyclass_BaseException pyglobal_BaseException = new pyclass_BaseException();
 
     static final class pyclass_Exception extends PyBuiltinClass {
+        public static final pyclass_Exception singleton = new pyclass_Exception();
         pyclass_Exception() { super("Exception", PyException.class); }
         @Override public PyException call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, typeName);
             return new PyException(args);
         }
     }
-    public static final pyclass_Exception pyglobal_Exception = new pyclass_Exception();
 
     static final class pyclass_IndexError extends PyBuiltinClass {
+        public static final pyclass_IndexError singleton = new pyclass_IndexError();
         pyclass_IndexError() { super("IndexError", PyIndexError.class); }
         @Override public PyIndexError call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, typeName);
             return new PyIndexError(args);
         }
     }
-    public static final pyclass_IndexError pyglobal_IndexError = new pyclass_IndexError();
 
     static final class pyclass_KeyError extends PyBuiltinClass {
+        public static final pyclass_KeyError singleton = new pyclass_KeyError();
         pyclass_KeyError() { super("KeyError", PyKeyError.class); }
         @Override public PyKeyError call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, typeName);
             return new PyKeyError(args);
         }
     }
-    public static final pyclass_KeyError pyglobal_KeyError = new pyclass_KeyError();
 
     static final class pyclass_LookupError extends PyBuiltinClass {
+        public static final pyclass_LookupError singleton = new pyclass_LookupError();
         pyclass_LookupError() { super("LookupError", PyLookupError.class); }
         @Override public PyLookupError call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, typeName);
             return new PyLookupError(args);
         }
     }
-    public static final pyclass_LookupError pyglobal_LookupError = new pyclass_LookupError();
 
     static final class pyclass_StopIteration extends PyBuiltinClass {
+        public static final pyclass_StopIteration singleton = new pyclass_StopIteration();
         pyclass_StopIteration() { super("StopIteration", PyStopIteration.class); }
         @Override public PyStopIteration call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, typeName);
             return new PyStopIteration(args);
         }
     }
-    public static final pyclass_StopIteration pyglobal_StopIteration = new pyclass_StopIteration();
 
     static final class pyclass_TypeError extends PyBuiltinClass {
+        public static final pyclass_TypeError singleton = new pyclass_TypeError();
         pyclass_TypeError() { super("TypeError", PyTypeError.class); }
         @Override public PyTypeError call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, typeName);
             return new PyTypeError(args);
         }
     }
-    public static final pyclass_TypeError pyglobal_TypeError = new pyclass_TypeError();
 
     static final class pyclass_ValueError extends PyBuiltinClass {
+        public static final pyclass_ValueError singleton = new pyclass_ValueError();
         pyclass_ValueError() { super("ValueError", PyValueError.class); }
         @Override public PyValueError call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, typeName);
             return new PyValueError(args);
         }
     }
-    public static final pyclass_ValueError pyglobal_ValueError = new pyclass_ValueError();
 
     static final class pyclass_ZeroDivisionError extends PyBuiltinClass {
+        public static final pyclass_ZeroDivisionError singleton = new pyclass_ZeroDivisionError();
         pyclass_ZeroDivisionError() { super("ZeroDivisionError", PyZeroDivisionError.class); }
         @Override public PyZeroDivisionError call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, typeName);
             return new PyZeroDivisionError(args);
         }
     }
-    public static final pyclass_ZeroDivisionError pyglobal_ZeroDivisionError = new pyclass_ZeroDivisionError();
 
     // Helper functions used by the builtins and code generator
     public static void requireNoKwArgs(PyDict kwargs, String name) {
