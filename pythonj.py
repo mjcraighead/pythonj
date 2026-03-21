@@ -18,7 +18,7 @@ import time
 from types import NoneType
 from typing import Iterator, Optional, TextIO
 
-BUILTIN_PYFUNC_SINGLETONS = {
+BUILTIN_FUNCTIONS = {
     'abs', 'all', 'any', 'ascii', 'chr', 'delattr', 'format', 'getattr', 'hasattr', 'hash', 'hex',
     'isinstance', 'issubclass', 'iter', 'len', 'max', 'min', 'next', 'open', 'ord', 'print', 'repr',
     'setattr', 'sorted', 'sum',
@@ -47,6 +47,7 @@ EXCEPTION_TYPES = {
 
 RUNTIME_JAVA_FILES = (
     'PyBool.java',
+    'PyBuiltinFunctions.java',
     'PyByteArray.java',
     'PyBytes.java',
     'PyDict.java',
@@ -602,8 +603,8 @@ class PythonjVisitor(ast.NodeVisitor):
             return JavaField(JavaIdentifier(BUILTIN_TYPES[name]), 'singleton')
         elif name in EXCEPTION_TYPES:
             return JavaField(JavaIdentifier(f'Py{name}Type'), 'singleton')
-        elif name in BUILTIN_PYFUNC_SINGLETONS:
-            return JavaField(JavaField(JavaIdentifier('Runtime'), f'pyfunc_{name}'), 'singleton')
+        elif name in BUILTIN_FUNCTIONS:
+            return JavaField(JavaIdentifier(f'PyBuiltinFunction_{name}'), 'singleton')
         else:
             return JavaIdentifier(f'pyglobal_{name}')
 
@@ -757,7 +758,7 @@ class PythonjVisitor(ast.NodeVisitor):
                 elif val.conversion == ord('r'):
                     expr = JavaCreateObject('PyString', [JavaMethodCall(expr, 'repr', [])])
                 elif val.conversion == ord('a'):
-                    expr = JavaMethodCall(JavaField(JavaField(JavaIdentifier('Runtime'), 'pyfunc_ascii'), 'singleton'), 'call', [
+                    expr = JavaMethodCall(JavaField(JavaIdentifier('PyBuiltinFunction_ascii'), 'singleton'), 'call', [
                         JavaCreateArray('PyObject', [expr]), JavaIdentifier('null')
                     ])
                 elif val.conversion != -1:
