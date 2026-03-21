@@ -134,15 +134,19 @@ class PyMethodDescriptor extends PyGettableDescriptor {
     @Override public final PyBuiltinClass type() { return Runtime.pytype_method_descriptor; }
 }
 
-abstract class PyClassMethodDescriptor extends PyDescriptor {
+class PyClassMethodDescriptor extends PyDescriptor {
     protected final PyType owner;
     protected final String name;
+    protected final Function<PyType, PyObject> getter;
 
-    protected PyClassMethodDescriptor(PyType _owner, String _name) {
+    protected PyClassMethodDescriptor(PyType _owner, String _name, Function<PyType, PyObject> _getter) {
         owner = _owner;
         name = _name;
+        getter = _getter;
     }
-
+    @Override public final PyObject get(PyObject instance) {
+        return getter.apply(owner);
+    }
     @Override public final void set(PyObject instance, PyObject value) {
         throw Runtime.raiseNamedReadOnlyAttr(owner, name);
     }
@@ -427,11 +431,7 @@ public final class Runtime {
     private static final PyMethodDescriptor pydesc_bytes_endswith = new PyMethodDescriptor(pyglobal_bytes, "endswith", obj -> new PyBytes.PyBytesMethodUnimplemented((PyBytes)obj, "endswith"));
     private static final PyMethodDescriptor pydesc_bytes_expandtabs = new PyMethodDescriptor(pyglobal_bytes, "expandtabs", obj -> new PyBytes.PyBytesMethodUnimplemented((PyBytes)obj, "expandtabs"));
     private static final PyMethodDescriptor pydesc_bytes_find = new PyMethodDescriptor(pyglobal_bytes, "find", obj -> new PyBytes.PyBytesMethodUnimplemented((PyBytes)obj, "find"));
-    private static final PyClassMethodDescriptor pydesc_bytes_fromhex = new PyClassMethodDescriptor(pyglobal_bytes, "fromhex") {
-        @Override public PyObject get(PyObject instance) {
-            return new pyclass_bytes.PyBytesClassMethod_fromhex(owner);
-        }
-    };
+    private static final PyClassMethodDescriptor pydesc_bytes_fromhex = new PyClassMethodDescriptor(pyglobal_bytes, "fromhex", pyclass_bytes.PyBytesClassMethod_fromhex::new);
     private static final PyMethodDescriptor pydesc_bytes_hex = new PyMethodDescriptor(pyglobal_bytes, "hex", obj -> new PyBytes.PyBytesMethodUnimplemented((PyBytes)obj, "hex"));
     private static final PyMethodDescriptor pydesc_bytes_index = new PyMethodDescriptor(pyglobal_bytes, "index", obj -> new PyBytes.PyBytesMethodUnimplemented((PyBytes)obj, "index"));
     private static final PyMethodDescriptor pydesc_bytes_isalnum = new PyMethodDescriptor(pyglobal_bytes, "isalnum", obj -> new PyBytes.PyBytesMethodUnimplemented((PyBytes)obj, "isalnum"));
@@ -541,13 +541,9 @@ public final class Runtime {
         }
     }
     public static final pyclass_dict pyglobal_dict = new pyclass_dict();
-    private static final PyMethodDescriptor pydesc_dict_copy = new PyMethodDescriptor(pyglobal_dict, "copy", obj -> new PyDict.PyDictMethod_copy((PyDict)obj));
     private static final PyMethodDescriptor pydesc_dict_clear = new PyMethodDescriptor(pyglobal_dict, "clear", obj -> new PyDict.PyDictMethod_clear((PyDict)obj));
-    private static final PyClassMethodDescriptor pydesc_dict_fromkeys = new PyClassMethodDescriptor(pyglobal_dict, "fromkeys") {
-        @Override public final PyObject get(PyObject instance) {
-            return new pyclass_dict.PyDictClassMethod_fromkeys(owner);
-        }
-    };
+    private static final PyMethodDescriptor pydesc_dict_copy = new PyMethodDescriptor(pyglobal_dict, "copy", obj -> new PyDict.PyDictMethod_copy((PyDict)obj));
+    private static final PyClassMethodDescriptor pydesc_dict_fromkeys = new PyClassMethodDescriptor(pyglobal_dict, "fromkeys", pyclass_dict.PyDictClassMethod_fromkeys::new);
     private static final PyMethodDescriptor pydesc_dict_get = new PyMethodDescriptor(pyglobal_dict, "get", obj -> new PyDict.PyDictMethod_get((PyDict)obj));
     private static final PyMethodDescriptor pydesc_dict_keys = new PyMethodDescriptor(pyglobal_dict, "keys", obj -> new PyDict.PyDictMethod_keys((PyDict)obj));
     private static final PyMethodDescriptor pydesc_dict_items = new PyMethodDescriptor(pyglobal_dict, "items", obj -> new PyDict.PyDictMethod_items((PyDict)obj));
@@ -784,11 +780,7 @@ public final class Runtime {
     private static final PyMethodDescriptor pydesc_int_bit_length = new PyMethodDescriptor(pyglobal_int, "bit_length", obj -> new PyInt.PyIntMethodUnimplemented((PyInt)obj, "bit_length"));
     private static final PyMethodDescriptor pydesc_int_conjugate = new PyMethodDescriptor(pyglobal_int, "conjugate", obj -> new PyInt.PyIntMethodUnimplemented((PyInt)obj, "conjugate"));
     private static final PyGetSetDescriptor pydesc_int_denominator = new PyGetSetDescriptor(pyglobal_int, "denominator", obj -> PyInt.singleton_1);
-    private static final PyClassMethodDescriptor pydesc_int_from_bytes = new PyClassMethodDescriptor(pyglobal_int, "from_bytes") {
-        @Override public PyObject get(PyObject instance) {
-            return new pyclass_int.PyIntClassMethod_from_bytes(owner);
-        }
-    };
+    private static final PyClassMethodDescriptor pydesc_int_from_bytes = new PyClassMethodDescriptor(pyglobal_int, "from_bytes", pyclass_int.PyIntClassMethod_from_bytes::new);
     private static final PyGetSetDescriptor pydesc_int_imag = new PyGetSetDescriptor(pyglobal_int, "imag", obj -> PyInt.singleton_0);
     private static final PyMethodDescriptor pydesc_int_is_integer = new PyMethodDescriptor(pyglobal_int, "is_integer", obj -> new PyInt.PyIntMethodUnimplemented((PyInt)obj, "is_integer"));
     private static final PyGetSetDescriptor pydesc_int_numerator = new PyGetSetDescriptor(pyglobal_int, "numerator", obj -> obj);
