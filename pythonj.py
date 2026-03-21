@@ -1290,8 +1290,9 @@ class PythonjVisitor(ast.NodeVisitor):
 def gen_spec(spec_path: str) -> None:
     spec = {}
     for name in ['bool', 'bytearray', 'bytes', 'dict', 'enumerate', 'int', 'list', 'object', 'range',
-                 'reversed', 'set', 'slice', 'str', 'tuple', 'type', 'zip', 'types.MemberDescriptorType',
-                 'types.NoneType', '_io.BufferedReader', '_io.TextIOWrapper', *sorted(EXCEPTION_TYPES)]:
+                 'reversed', 'set', 'slice', 'str', 'tuple', 'type', 'zip',
+                 'types.GetSetDescriptorType', 'types.MemberDescriptorType', 'types.NoneType',
+                 '_io.BufferedReader', '_io.TextIOWrapper', *sorted(EXCEPTION_TYPES)]:
         if name.startswith('_io.'):
             obj = getattr(_io, name.split('.', 1)[1])
         elif name.startswith('types.'):
@@ -1365,14 +1366,10 @@ UNIMPLEMENTED_METHODS = {
 }
 
 def get_java_name(name: str) -> str:
-    if name == '_io.BufferedReader':
-        return 'PyBufferedReader'
-    elif name == '_io.TextIOWrapper':
-        return 'PyTextIOWrapper'
-    elif name == 'types.NoneType':
-        return 'PyNone'
-    elif name == 'types.MemberDescriptorType':
-        return 'PyMemberDescriptor'
+    if name.startswith('_io.'):
+        return f"Py{name.split('.', 1)[1]}" # _io.Foo -> PyFoo + PyFooType
+    elif name.startswith('types.') and name.endswith('Type'):
+        return f"Py{name[:-4].split('.', 1)[1]}" # types.FooType -> PyFoo + PyFooType
     elif name in EXCEPTION_TYPES:
         return f'Py{name}'
     else:
@@ -1386,8 +1383,9 @@ def gen_code(spec_path: str, java_path: str) -> None:
         for (name, attrs) in spec.items():
             java_name = get_java_name(name)
             match name:
-                case 'types.NoneType': py_name = 'NoneType'
+                case 'types.GetSetDescriptorType': py_name = 'getset_descriptor'
                 case 'types.MemberDescriptorType': py_name = 'member_descriptor'
+                case 'types.NoneType': py_name = 'NoneType'
                 case _: py_name = name
 
             gen_lines = [
