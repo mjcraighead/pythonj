@@ -117,29 +117,6 @@ class PyBuiltinType extends PyType {
     @Override public final String name() { return typeName; }
 }
 
-// BEGIN GENERATED CODE: PyTypeType
-final class PyTypeType extends PyBuiltinType {
-    public static final PyTypeType singleton = new PyTypeType();
-    private static final PyMethodDescriptor pyattr_mro = new PyMethodDescriptor(singleton, "mro", obj -> new PyType.PyTypeMethodUnimplemented(obj, "mro"));
-    private static final PyGetSetDescriptor pyattr___doc__ = new PyGetSetDescriptor(singleton, "__doc__", PyType::pygetset___doc__);
-    private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>(2);
-    static {
-        attrs.put(new PyString("mro"), pyattr_mro);
-        attrs.put(new PyString("__doc__"), pyattr___doc__);
-    }
-
-    private PyTypeType() { super("type", PyType.class, PyType::newObj); }
-    @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
-    @Override public PyObject lookupAttr(String name) {
-        switch (name) {
-            case "mro": return pyattr_mro;
-            case "__doc__": return pyattr___doc__;
-            default: return null;
-        }
-    }
-}
-// END GENERATED CODE: PyTypeType
-
 abstract class PyGettableDescriptor extends PyTruthyObject {
     protected final PyType owner;
     protected final String name;

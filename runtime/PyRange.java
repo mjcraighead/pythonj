@@ -2,41 +2,6 @@
 // Copyright (c) 2012-2026 Matt Craighead
 // SPDX-License-Identifier: MIT
 
-// BEGIN GENERATED CODE: PyRangeType
-final class PyRangeType extends PyBuiltinType {
-    public static final PyRangeType singleton = new PyRangeType();
-    private static final PyMethodDescriptor pyattr_count = new PyMethodDescriptor(singleton, "count", PyRange.PyRangeMethod_count::new);
-    private static final PyMethodDescriptor pyattr_index = new PyMethodDescriptor(singleton, "index", PyRange.PyRangeMethod_index::new);
-    private static final PyMemberDescriptor pyattr_start = new PyMemberDescriptor(singleton, "start", PyRange::pymember_start);
-    private static final PyMemberDescriptor pyattr_stop = new PyMemberDescriptor(singleton, "stop", PyRange::pymember_stop);
-    private static final PyMemberDescriptor pyattr_step = new PyMemberDescriptor(singleton, "step", PyRange::pymember_step);
-    private static final PyString pyattr___doc__ = new PyString("range(stop) -> range object\nrange(start, stop[, step]) -> range object\n\nReturn an object that produces a sequence of integers from start (inclusive)\nto stop (exclusive) by step.  range(i, j) produces i, i+1, i+2, ..., j-1.\nstart defaults to 0, and stop is omitted!  range(4) produces 0, 1, 2, 3.\nThese are exactly the valid indices for a list of 4 elements.\nWhen step is given, it specifies the increment (or decrement).");
-    private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>(6);
-    static {
-        attrs.put(new PyString("count"), pyattr_count);
-        attrs.put(new PyString("index"), pyattr_index);
-        attrs.put(new PyString("start"), pyattr_start);
-        attrs.put(new PyString("stop"), pyattr_stop);
-        attrs.put(new PyString("step"), pyattr_step);
-        attrs.put(new PyString("__doc__"), pyattr___doc__);
-    }
-
-    private PyRangeType() { super("range", PyRange.class, PyRange::newObj); }
-    @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
-    @Override public PyObject lookupAttr(String name) {
-        switch (name) {
-            case "count": return pyattr_count;
-            case "index": return pyattr_index;
-            case "start": return pyattr_start;
-            case "stop": return pyattr_stop;
-            case "step": return pyattr_step;
-            case "__doc__": return pyattr___doc__;
-            default: return null;
-        }
-    }
-}
-// END GENERATED CODE: PyRangeType
-
 public final class PyRange extends PyObject {
     static final class PyRangeIter extends PyIter {
         private static final PyBuiltinType type_singleton = new PyBuiltinType("range_iterator", PyRangeIter.class);

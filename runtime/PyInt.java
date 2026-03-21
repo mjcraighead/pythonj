@@ -2,59 +2,6 @@
 // Copyright (c) 2012-2026 Matt Craighead
 // SPDX-License-Identifier: MIT
 
-// BEGIN GENERATED CODE: PyIntType
-final class PyIntType extends PyBuiltinType {
-    public static final PyIntType singleton = new PyIntType();
-    private static final PyMethodDescriptor pyattr_conjugate = new PyMethodDescriptor(singleton, "conjugate", obj -> new PyInt.PyIntMethodUnimplemented(obj, "conjugate"));
-    private static final PyMethodDescriptor pyattr_bit_length = new PyMethodDescriptor(singleton, "bit_length", obj -> new PyInt.PyIntMethodUnimplemented(obj, "bit_length"));
-    private static final PyMethodDescriptor pyattr_bit_count = new PyMethodDescriptor(singleton, "bit_count", obj -> new PyInt.PyIntMethodUnimplemented(obj, "bit_count"));
-    private static final PyMethodDescriptor pyattr_to_bytes = new PyMethodDescriptor(singleton, "to_bytes", obj -> new PyInt.PyIntMethodUnimplemented(obj, "to_bytes"));
-    private static final PyClassMethodDescriptor pyattr_from_bytes = new PyClassMethodDescriptor(singleton, "from_bytes", PyIntClassMethod_from_bytes::new);
-    private static final PyMethodDescriptor pyattr_as_integer_ratio = new PyMethodDescriptor(singleton, "as_integer_ratio", obj -> new PyInt.PyIntMethodUnimplemented(obj, "as_integer_ratio"));
-    private static final PyMethodDescriptor pyattr_is_integer = new PyMethodDescriptor(singleton, "is_integer", obj -> new PyInt.PyIntMethodUnimplemented(obj, "is_integer"));
-    private static final PyGetSetDescriptor pyattr_real = new PyGetSetDescriptor(singleton, "real", PyInt::pygetset_real);
-    private static final PyGetSetDescriptor pyattr_imag = new PyGetSetDescriptor(singleton, "imag", PyInt::pygetset_imag);
-    private static final PyGetSetDescriptor pyattr_numerator = new PyGetSetDescriptor(singleton, "numerator", PyInt::pygetset_numerator);
-    private static final PyGetSetDescriptor pyattr_denominator = new PyGetSetDescriptor(singleton, "denominator", PyInt::pygetset_denominator);
-    private static final PyString pyattr___doc__ = new PyString("int([x]) -> integer\nint(x, base=10) -> integer\n\nConvert a number or string to an integer, or return 0 if no arguments\nare given.  If x is a number, return x.__int__().  For floating-point\nnumbers, this truncates towards zero.\n\nIf x is not a number or if base is given, then x must be a string,\nbytes, or bytearray instance representing an integer literal in the\ngiven base.  The literal can be preceded by '+' or '-' and be surrounded\nby whitespace.  The base defaults to 10.  Valid bases are 0 and 2-36.\nBase 0 means to interpret the base from the string as an integer literal.\n>>> int('0b100', base=0)\n4");
-    private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>(12);
-    static {
-        attrs.put(new PyString("conjugate"), pyattr_conjugate);
-        attrs.put(new PyString("bit_length"), pyattr_bit_length);
-        attrs.put(new PyString("bit_count"), pyattr_bit_count);
-        attrs.put(new PyString("to_bytes"), pyattr_to_bytes);
-        attrs.put(new PyString("from_bytes"), pyattr_from_bytes);
-        attrs.put(new PyString("as_integer_ratio"), pyattr_as_integer_ratio);
-        attrs.put(new PyString("is_integer"), pyattr_is_integer);
-        attrs.put(new PyString("real"), pyattr_real);
-        attrs.put(new PyString("imag"), pyattr_imag);
-        attrs.put(new PyString("numerator"), pyattr_numerator);
-        attrs.put(new PyString("denominator"), pyattr_denominator);
-        attrs.put(new PyString("__doc__"), pyattr___doc__);
-    }
-
-    private PyIntType() { super("int", PyInt.class, PyInt::newObj); }
-    @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
-    @Override public PyObject lookupAttr(String name) {
-        switch (name) {
-            case "conjugate": return pyattr_conjugate;
-            case "bit_length": return pyattr_bit_length;
-            case "bit_count": return pyattr_bit_count;
-            case "to_bytes": return pyattr_to_bytes;
-            case "from_bytes": return pyattr_from_bytes;
-            case "as_integer_ratio": return pyattr_as_integer_ratio;
-            case "is_integer": return pyattr_is_integer;
-            case "real": return pyattr_real;
-            case "imag": return pyattr_imag;
-            case "numerator": return pyattr_numerator;
-            case "denominator": return pyattr_denominator;
-            case "__doc__": return pyattr___doc__;
-            default: return null;
-        }
-    }
-}
-// END GENERATED CODE: PyIntType
-
 final class PyIntClassMethod_from_bytes extends PyBuiltinMethod<PyType> {
     PyIntClassMethod_from_bytes(PyType self) { super(self); }
     @Override public String methodName() { return "from_bytes"; }

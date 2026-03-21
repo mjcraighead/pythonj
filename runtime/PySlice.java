@@ -2,38 +2,6 @@
 // Copyright (c) 2012-2026 Matt Craighead
 // SPDX-License-Identifier: MIT
 
-// BEGIN GENERATED CODE: PySliceType
-final class PySliceType extends PyBuiltinType {
-    public static final PySliceType singleton = new PySliceType();
-    private static final PyMethodDescriptor pyattr_indices = new PyMethodDescriptor(singleton, "indices", PySlice.PySliceMethod_indices::new);
-    private static final PyMemberDescriptor pyattr_start = new PyMemberDescriptor(singleton, "start", PySlice::pymember_start);
-    private static final PyMemberDescriptor pyattr_stop = new PyMemberDescriptor(singleton, "stop", PySlice::pymember_stop);
-    private static final PyMemberDescriptor pyattr_step = new PyMemberDescriptor(singleton, "step", PySlice::pymember_step);
-    private static final PyString pyattr___doc__ = new PyString("slice(stop)\nslice(start, stop[, step])\n\nCreate a slice object.  This is used for extended slicing (e.g. a[0:10:2]).");
-    private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>(5);
-    static {
-        attrs.put(new PyString("indices"), pyattr_indices);
-        attrs.put(new PyString("start"), pyattr_start);
-        attrs.put(new PyString("stop"), pyattr_stop);
-        attrs.put(new PyString("step"), pyattr_step);
-        attrs.put(new PyString("__doc__"), pyattr___doc__);
-    }
-
-    private PySliceType() { super("slice", PySlice.class, PySlice::newObj); }
-    @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
-    @Override public PyObject lookupAttr(String name) {
-        switch (name) {
-            case "indices": return pyattr_indices;
-            case "start": return pyattr_start;
-            case "stop": return pyattr_stop;
-            case "step": return pyattr_step;
-            case "__doc__": return pyattr___doc__;
-            default: return null;
-        }
-    }
-}
-// END GENERATED CODE: PySliceType
-
 public final class PySlice extends PyTruthyObject {
     protected static final class PySliceMethod_indices extends PyBuiltinMethod<PySlice> {
         PySliceMethod_indices(PyObject _self) { super((PySlice)_self); }

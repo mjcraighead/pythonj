@@ -1288,7 +1288,7 @@ class PythonjVisitor(ast.NodeVisitor):
         writer.write('}')
         assert writer.indent == 0, writer.indent
 
-def gen_spec(path: str) -> None:
+def gen_spec(spec_path: str) -> None:
     spec = {}
     for name in ['bool', 'bytearray', 'bytes', 'dict', 'enumerate', 'int', 'list', 'object', 'range',
                  'reversed', 'set', 'slice', 'str', 'tuple', 'type', 'zip', 'types.NoneType',
@@ -1319,7 +1319,7 @@ def gen_spec(path: str) -> None:
                 assert False, (name, k, v, type(v))
         spec[name] = attrs
 
-    with open(path, 'w') as f:
+    with open(spec_path, 'w') as f:
         json.dump(spec, f, indent=2)
         f.write('\n')
 
@@ -1364,103 +1364,115 @@ UNIMPLEMENTED_METHODS = {
     },
     'BaseException': {'add_note', 'with_traceback'},
 }
-def gen_code(path) -> None:
-    with open(path) as f:
+
+def get_java_name(name: str) -> str:
+    if name == '_io.BufferedReader':
+        return 'PyBufferedReader'
+    elif name == '_io.TextIOWrapper':
+        return 'PyTextIOWrapper'
+    elif name == 'types.NoneType':
+        return 'PyNone'
+    elif name in EXCEPTION_TYPES:
+        return f'Py{name}'
+    else:
+        return BUILTIN_TYPES[name]
+
+def gen_code(spec_path: str, java_path: str) -> None:
+    with open(spec_path) as f:
         spec = json.load(f)
 
-    for (name, attrs) in spec.items():
-        has_newobj = name not in {'object', '_io.BufferedReader', '_io.TextIOWrapper'}
-        if name == '_io.BufferedReader':
-            java_name = 'PyBufferedReader'
+    with open(java_path, 'w') as f:
+        for (name, attrs) in spec.items():
+            has_newobj = name not in {'object', '_io.BufferedReader', '_io.TextIOWrapper'}
+            java_name = get_java_name(name)
+            py_name = 'NoneType' if name == 'types.NoneType' else name
+
+            gen_lines = [
+                f'final class {java_name}Type extends PyBuiltinType {{\n',
+                f'    public static final {java_name}Type singleton = new {java_name}Type();\n',
+            ]
+            for (k, v) in attrs.items():
+                if v['kind'] == 'string':
+                    gen_lines.append(f"    private static final PyString pyattr_{k} = new PyString({java_string_literal(v['value'])});\n")
+                elif v['kind'] == 'member':
+                    gen_lines.append(f"    private static final PyMemberDescriptor pyattr_{k} = new PyMemberDescriptor(singleton, {java_string_literal(k)}, {java_name}::pymember_{k});\n")
+                elif v['kind'] == 'getset':
+                    gen_lines.append(f"    private static final PyGetSetDescriptor pyattr_{k} = new PyGetSetDescriptor(singleton, {java_string_literal(k)}, {java_name}::pygetset_{k});\n")
+                elif v['kind'] == 'method':
+                    if name in UNIMPLEMENTED_METHODS and k in UNIMPLEMENTED_METHODS[name]:
+                        constructor = f'obj -> new {java_name}.{java_name}MethodUnimplemented(obj, {java_string_literal(k)})'
+                    else:
+                        constructor = f'{java_name}.{java_name}Method_{k}::new'
+                    gen_lines.append(f"    private static final PyMethodDescriptor pyattr_{k} = new PyMethodDescriptor(singleton, {java_string_literal(k)}, {constructor});\n")
+                elif v['kind'] == 'classmethod':
+                    constructor = f'{java_name}ClassMethod_{k}::new'
+                    gen_lines.append(f"    private static final PyClassMethodDescriptor pyattr_{k} = new PyClassMethodDescriptor(singleton, {java_string_literal(k)}, {constructor});\n")
+                elif v['kind'] == 'staticmethod':
+                    constructor = f'new {java_name}StaticMethod_{k}(singleton)'
+                    gen_lines.append(f'    private static final PyStaticMethod pyattr_{k} = new PyStaticMethod(singleton, {java_string_literal(k)}, {constructor});\n')
+                else:
+                    assert False, (name, k, v)
+            gen_lines += [
+                f'    private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>({len(attrs)});\n',
+                '    static {\n',
+                *(f'        attrs.put(new PyString("{k}"), pyattr_{k});\n' for k in attrs),
+                '    }\n',
+                '\n',
+                f'    private {java_name}Type() {{ super({java_string_literal(py_name)}, {java_name}.class, {java_name}::newObj); }}\n'
+                if has_newobj else
+                f'    private {java_name}Type() {{ super({java_string_literal(py_name)}, {java_name}.class); }}\n',
+                '    @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }\n',
+                '    @Override public PyObject lookupAttr(String name) {\n',
+                '        switch (name) {\n',
+                *(
+                    f'            case {java_string_literal(k)}: return pyattr_{k};\n'
+                    for (k, v) in attrs.items()
+                ),
+                '            default: return null;\n',
+                '        }\n',
+                '    }\n',
+                '}\n',
+                '\n',
+            ]
+
+            for line in gen_lines:
+                f.write(line)
+
+def gen_code_inline(spec_path: str) -> None:
+    with open(spec_path) as f:
+        spec = json.load(f)
+
+    for name in spec:
+        if name not in UNIMPLEMENTED_METHODS:
+            continue
+
+        java_name = get_java_name(name)
+        if name in {'_io.BufferedReader', '_io.TextIOWrapper'}:
             java_path = 'runtime/PyFile.java'
-        elif name == '_io.TextIOWrapper':
-            java_name = 'PyTextIOWrapper'
-            java_path = 'runtime/PyFile.java'
-        elif name == 'types.NoneType':
-            java_name = 'PyNone'
-            java_path = 'runtime/PyNone.java'
         elif name in EXCEPTION_TYPES:
-            java_name = f'Py{name}'
             java_path = 'runtime/PyExceptions.java'
+        elif name == 'type':
+            java_path = f'runtime/Runtime.java'
         else:
-            java_name = BUILTIN_TYPES[name]
-            if name == 'type':
-                java_path = f'runtime/Runtime.java'
-            else:
-                java_path = f'runtime/{java_name}.java'
-        py_name = 'NoneType' if name == 'types.NoneType' else name
+            java_path = f'runtime/{java_name}.java'
         with open(java_path) as f:
             source_lines = f.readlines()
 
-        begin_tag = f'// BEGIN GENERATED CODE: {java_name}Type\n'
-        end_tag = f'// END GENERATED CODE: {java_name}Type\n'
+        begin_tag = f'// BEGIN GENERATED CODE: {java_name}\n'
+        end_tag = f'// END GENERATED CODE: {java_name}\n'
         begin_index = source_lines.index(begin_tag) + 1
         end_index = source_lines.index(end_tag)
-
         gen_lines = [
-            f'final class {java_name}Type extends PyBuiltinType {{\n',
-            f'    public static final {java_name}Type singleton = new {java_name}Type();\n',
-        ]
-        for (k, v) in attrs.items():
-            if v['kind'] == 'string':
-                gen_lines.append(f"    private static final PyString pyattr_{k} = new PyString({java_string_literal(v['value'])});\n")
-            elif v['kind'] == 'member':
-                gen_lines.append(f"    private static final PyMemberDescriptor pyattr_{k} = new PyMemberDescriptor(singleton, {java_string_literal(k)}, {java_name}::pymember_{k});\n")
-            elif v['kind'] == 'getset':
-                gen_lines.append(f"    private static final PyGetSetDescriptor pyattr_{k} = new PyGetSetDescriptor(singleton, {java_string_literal(k)}, {java_name}::pygetset_{k});\n")
-            elif v['kind'] == 'method':
-                if name in UNIMPLEMENTED_METHODS and k in UNIMPLEMENTED_METHODS[name]:
-                    constructor = f'obj -> new {java_name}.{java_name}MethodUnimplemented(obj, {java_string_literal(k)})'
-                else:
-                    constructor = f'{java_name}.{java_name}Method_{k}::new'
-                gen_lines.append(f"    private static final PyMethodDescriptor pyattr_{k} = new PyMethodDescriptor(singleton, {java_string_literal(k)}, {constructor});\n")
-            elif v['kind'] == 'classmethod':
-                constructor = f'{java_name}ClassMethod_{k}::new'
-                gen_lines.append(f"    private static final PyClassMethodDescriptor pyattr_{k} = new PyClassMethodDescriptor(singleton, {java_string_literal(k)}, {constructor});\n")
-            elif v['kind'] == 'staticmethod':
-                constructor = f'new {java_name}StaticMethod_{k}(singleton)'
-                gen_lines.append(f'    private static final PyStaticMethod pyattr_{k} = new PyStaticMethod(singleton, {java_string_literal(k)}, {constructor});\n')
-            else:
-                assert False, (name, k, v)
-        gen_lines += [
-            f'    private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>({len(attrs)});\n',
-            '    static {\n',
-            *(f'        attrs.put(new PyString("{k}"), pyattr_{k});\n' for k in attrs),
-            '    }\n',
-            '\n',
-            f'    private {java_name}Type() {{ super({java_string_literal(py_name)}, {java_name}.class, {java_name}::newObj); }}\n'
-            if has_newobj else
-            f'    private {java_name}Type() {{ super({java_string_literal(py_name)}, {java_name}.class); }}\n',
-            '    @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }\n',
-            '    @Override public PyObject lookupAttr(String name) {\n',
-            '        switch (name) {\n',
-            *(
-                f'            case {java_string_literal(k)}: return pyattr_{k};\n'
-                for (k, v) in attrs.items()
-            ),
-            '            default: return null;\n',
+            f'    protected static final class {java_name}MethodUnimplemented extends PyBuiltinMethod<{java_name}> {{\n',
+            '        private final String name;\n',
+            f'        {java_name}MethodUnimplemented(PyObject _self, String _name) {{ super(({java_name})_self); name = _name; }}\n',
+            '        @Override public String methodName() { return name; }\n',
+            '        @Override public PyObject call(PyObject[] args, PyDict kwargs) {\n',
+            f'            throw new UnsupportedOperationException("{name}." + name + "() unimplemented");\n',
             '        }\n',
             '    }\n',
-            '}\n',
         ]
         source_lines[begin_index:end_index] = gen_lines
-
-        if name in UNIMPLEMENTED_METHODS:
-            begin_tag = f'// BEGIN GENERATED CODE: {java_name}\n'
-            end_tag = f'// END GENERATED CODE: {java_name}\n'
-            begin_index = source_lines.index(begin_tag) + 1
-            end_index = source_lines.index(end_tag)
-            gen_lines = [
-                f'    protected static final class {java_name}MethodUnimplemented extends PyBuiltinMethod<{java_name}> {{\n',
-                '        private final String name;\n',
-                f'        {java_name}MethodUnimplemented(PyObject _self, String _name) {{ super(({java_name})_self); name = _name; }}\n',
-                '        @Override public String methodName() { return name; }\n',
-                '        @Override public PyObject call(PyObject[] args, PyDict kwargs) {\n',
-                f'            throw new UnsupportedOperationException("{name}." + name + "() unimplemented");\n',
-                '        }\n',
-                '    }\n',
-            ]
-            source_lines[begin_index:end_index] = gen_lines
 
         with open(java_path, 'w') as f:
             for line in source_lines:
@@ -1480,14 +1492,15 @@ def main() -> None:
         shutil.rmtree('runtime/_out')
     os.mkdir('runtime/_out')
     gen_spec('runtime/_out/spec.json')
-    gen_code('runtime/_out/spec.json')
+    gen_code('runtime/_out/spec.json', 'runtime/_out/PyGenerated.java')
+    gen_code_inline('runtime/_out/spec.json')
     codegen_time = time.perf_counter() - start
     print(f'{codegen_time=:.3f}')
 
     start = time.perf_counter()
     if os.path.exists('tests/_out'):
         shutil.rmtree('tests/_out')
-    subprocess.check_call(['javac', '-d', '_out', *RUNTIME_JAVA_FILES], cwd='runtime')
+    subprocess.check_call(['javac', '-d', '_out', *RUNTIME_JAVA_FILES, '_out/PyGenerated.java'], cwd='runtime')
     os.makedirs('tests/_out', exist_ok=True)
     subprocess.check_call(['jar', '--create', '--file', 'tests/_out/pythonj.jar', '--date=1980-01-01T00:00:02Z', '-C', 'runtime/_out', '.'])
     initial_javac_time = time.perf_counter() - start

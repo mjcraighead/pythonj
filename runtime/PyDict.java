@@ -8,59 +8,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
-// BEGIN GENERATED CODE: PyDictType
-final class PyDictType extends PyBuiltinType {
-    public static final PyDictType singleton = new PyDictType();
-    private static final PyMethodDescriptor pyattr_get = new PyMethodDescriptor(singleton, "get", PyDict.PyDictMethod_get::new);
-    private static final PyMethodDescriptor pyattr_setdefault = new PyMethodDescriptor(singleton, "setdefault", PyDict.PyDictMethod_setdefault::new);
-    private static final PyMethodDescriptor pyattr_pop = new PyMethodDescriptor(singleton, "pop", PyDict.PyDictMethod_pop::new);
-    private static final PyMethodDescriptor pyattr_popitem = new PyMethodDescriptor(singleton, "popitem", PyDict.PyDictMethod_popitem::new);
-    private static final PyMethodDescriptor pyattr_keys = new PyMethodDescriptor(singleton, "keys", PyDict.PyDictMethod_keys::new);
-    private static final PyMethodDescriptor pyattr_items = new PyMethodDescriptor(singleton, "items", PyDict.PyDictMethod_items::new);
-    private static final PyMethodDescriptor pyattr_values = new PyMethodDescriptor(singleton, "values", PyDict.PyDictMethod_values::new);
-    private static final PyMethodDescriptor pyattr_update = new PyMethodDescriptor(singleton, "update", PyDict.PyDictMethod_update::new);
-    private static final PyClassMethodDescriptor pyattr_fromkeys = new PyClassMethodDescriptor(singleton, "fromkeys", PyDictClassMethod_fromkeys::new);
-    private static final PyMethodDescriptor pyattr_clear = new PyMethodDescriptor(singleton, "clear", PyDict.PyDictMethod_clear::new);
-    private static final PyMethodDescriptor pyattr_copy = new PyMethodDescriptor(singleton, "copy", PyDict.PyDictMethod_copy::new);
-    private static final PyString pyattr___doc__ = new PyString("dict() -> new empty dictionary\ndict(mapping) -> new dictionary initialized from a mapping object's\n    (key, value) pairs\ndict(iterable) -> new dictionary initialized as if via:\n    d = {}\n    for k, v in iterable:\n        d[k] = v\ndict(**kwargs) -> new dictionary initialized with the name=value pairs\n    in the keyword argument list.  For example:  dict(one=1, two=2)");
-    private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>(12);
-    static {
-        attrs.put(new PyString("get"), pyattr_get);
-        attrs.put(new PyString("setdefault"), pyattr_setdefault);
-        attrs.put(new PyString("pop"), pyattr_pop);
-        attrs.put(new PyString("popitem"), pyattr_popitem);
-        attrs.put(new PyString("keys"), pyattr_keys);
-        attrs.put(new PyString("items"), pyattr_items);
-        attrs.put(new PyString("values"), pyattr_values);
-        attrs.put(new PyString("update"), pyattr_update);
-        attrs.put(new PyString("fromkeys"), pyattr_fromkeys);
-        attrs.put(new PyString("clear"), pyattr_clear);
-        attrs.put(new PyString("copy"), pyattr_copy);
-        attrs.put(new PyString("__doc__"), pyattr___doc__);
-    }
-
-    private PyDictType() { super("dict", PyDict.class, PyDict::newObj); }
-    @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
-    @Override public PyObject lookupAttr(String name) {
-        switch (name) {
-            case "get": return pyattr_get;
-            case "setdefault": return pyattr_setdefault;
-            case "pop": return pyattr_pop;
-            case "popitem": return pyattr_popitem;
-            case "keys": return pyattr_keys;
-            case "items": return pyattr_items;
-            case "values": return pyattr_values;
-            case "update": return pyattr_update;
-            case "fromkeys": return pyattr_fromkeys;
-            case "clear": return pyattr_clear;
-            case "copy": return pyattr_copy;
-            case "__doc__": return pyattr___doc__;
-            default: return null;
-        }
-    }
-}
-// END GENERATED CODE: PyDictType
-
 final class PyDictClassMethod_fromkeys extends PyBuiltinMethod<PyType> {
     PyDictClassMethod_fromkeys(PyType _self) { super(_self); }
     @Override public String methodName() { return "fromkeys"; }

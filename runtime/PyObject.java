@@ -4,26 +4,6 @@
 
 import java.util.Set;
 
-// BEGIN GENERATED CODE: PyObjectType
-final class PyObjectType extends PyBuiltinType {
-    public static final PyObjectType singleton = new PyObjectType();
-    private static final PyString pyattr___doc__ = new PyString("The base class of the class hierarchy.\n\nWhen called, it accepts no arguments and returns a new featureless\ninstance that has no instance attributes and cannot be given any.\n");
-    private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>(1);
-    static {
-        attrs.put(new PyString("__doc__"), pyattr___doc__);
-    }
-
-    private PyObjectType() { super("object", PyObject.class); }
-    @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
-    @Override public PyObject lookupAttr(String name) {
-        switch (name) {
-            case "__doc__": return pyattr___doc__;
-            default: return null;
-        }
-    }
-}
-// END GENERATED CODE: PyObjectType
-
 public abstract class PyObject implements Comparable<PyObject> {
     // These all take and/or return boxed PyObjects
     public PyObject invert() { throw raiseUnaryOp("unary ~"); }

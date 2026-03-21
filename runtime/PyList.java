@@ -7,59 +7,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 
-// BEGIN GENERATED CODE: PyListType
-final class PyListType extends PyBuiltinType {
-    public static final PyListType singleton = new PyListType();
-    private static final PyMethodDescriptor pyattr_clear = new PyMethodDescriptor(singleton, "clear", PyList.PyListMethod_clear::new);
-    private static final PyMethodDescriptor pyattr_copy = new PyMethodDescriptor(singleton, "copy", PyList.PyListMethod_copy::new);
-    private static final PyMethodDescriptor pyattr_append = new PyMethodDescriptor(singleton, "append", PyList.PyListMethod_append::new);
-    private static final PyMethodDescriptor pyattr_insert = new PyMethodDescriptor(singleton, "insert", PyList.PyListMethod_insert::new);
-    private static final PyMethodDescriptor pyattr_extend = new PyMethodDescriptor(singleton, "extend", PyList.PyListMethod_extend::new);
-    private static final PyMethodDescriptor pyattr_pop = new PyMethodDescriptor(singleton, "pop", PyList.PyListMethod_pop::new);
-    private static final PyMethodDescriptor pyattr_remove = new PyMethodDescriptor(singleton, "remove", PyList.PyListMethod_remove::new);
-    private static final PyMethodDescriptor pyattr_index = new PyMethodDescriptor(singleton, "index", PyList.PyListMethod_index::new);
-    private static final PyMethodDescriptor pyattr_count = new PyMethodDescriptor(singleton, "count", PyList.PyListMethod_count::new);
-    private static final PyMethodDescriptor pyattr_reverse = new PyMethodDescriptor(singleton, "reverse", PyList.PyListMethod_reverse::new);
-    private static final PyMethodDescriptor pyattr_sort = new PyMethodDescriptor(singleton, "sort", PyList.PyListMethod_sort::new);
-    private static final PyString pyattr___doc__ = new PyString("Built-in mutable sequence.\n\nIf no argument is given, the constructor creates a new empty list.\nThe argument must be an iterable if specified.");
-    private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>(12);
-    static {
-        attrs.put(new PyString("clear"), pyattr_clear);
-        attrs.put(new PyString("copy"), pyattr_copy);
-        attrs.put(new PyString("append"), pyattr_append);
-        attrs.put(new PyString("insert"), pyattr_insert);
-        attrs.put(new PyString("extend"), pyattr_extend);
-        attrs.put(new PyString("pop"), pyattr_pop);
-        attrs.put(new PyString("remove"), pyattr_remove);
-        attrs.put(new PyString("index"), pyattr_index);
-        attrs.put(new PyString("count"), pyattr_count);
-        attrs.put(new PyString("reverse"), pyattr_reverse);
-        attrs.put(new PyString("sort"), pyattr_sort);
-        attrs.put(new PyString("__doc__"), pyattr___doc__);
-    }
-
-    private PyListType() { super("list", PyList.class, PyList::newObj); }
-    @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
-    @Override public PyObject lookupAttr(String name) {
-        switch (name) {
-            case "clear": return pyattr_clear;
-            case "copy": return pyattr_copy;
-            case "append": return pyattr_append;
-            case "insert": return pyattr_insert;
-            case "extend": return pyattr_extend;
-            case "pop": return pyattr_pop;
-            case "remove": return pyattr_remove;
-            case "index": return pyattr_index;
-            case "count": return pyattr_count;
-            case "reverse": return pyattr_reverse;
-            case "sort": return pyattr_sort;
-            case "__doc__": return pyattr___doc__;
-            default: return null;
-        }
-    }
-}
-// END GENERATED CODE: PyListType
-
 public final class PyList extends PyObject {
     static final class PyListIter extends PyIter {
         private static final PyBuiltinType type_singleton = new PyBuiltinType("list_iterator", PyListIter.class);
