@@ -1367,6 +1367,7 @@ def gen_code(path) -> None:
         spec = json.load(f)
 
     for (name, attrs) in spec.items():
+        gen_entire_class = name in {'ArithmeticError'} # XXX roll out to the rest
         if name == '_io.BufferedReader':
             java_name = 'PyBufferedReader'
             java_path = 'runtime/PyFile.java'
@@ -1390,7 +1391,10 @@ def gen_code(path) -> None:
         begin_index = source_lines.index(begin_tag) + 1
         end_index = source_lines.index(end_tag)
 
-        gen_lines = [f'    public static final {java_name}Type singleton = new {java_name}Type();\n']
+        gen_lines = []
+        if gen_entire_class:
+            gen_lines.append(f'final class {java_name}Type extends PyBuiltinType {{\n')
+        gen_lines.append(f'    public static final {java_name}Type singleton = new {java_name}Type();\n')
         for (k, v) in attrs.items():
             if v['kind'] == 'string':
                 gen_lines.append(f"    private static final PyString pyattr_{k} = new PyString({java_string_literal(v['value'])});\n")
@@ -1418,6 +1422,8 @@ def gen_code(path) -> None:
             *(f'        attrs.put(new PyString("{k}"), pyattr_{k});\n' for k in attrs),
             '    }\n',
             '\n',
+            f'    private {java_name}Type() {{ super({java_string_literal(name)}, {java_name}.class, {java_name}::newObj); }}\n'
+            if gen_entire_class else
             f'    private {java_name}Type() {{ super({java_string_literal(name)}, {java_name}.class); }}\n',
             '    @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }\n',
             '    @Override public PyObject lookupAttr(String name) {\n',
@@ -1430,6 +1436,8 @@ def gen_code(path) -> None:
             '        }\n',
             '    }\n',
         ]
+        if gen_entire_class:
+            gen_lines.append('}\n')
         source_lines[begin_index:end_index] = gen_lines
 
         if name in UNIMPLEMENTED_METHODS:

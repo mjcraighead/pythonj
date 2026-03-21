@@ -2,8 +2,8 @@
 // Copyright (c) 2012-2026 Matt Craighead
 // SPDX-License-Identifier: MIT
 
-final class PyArithmeticErrorType extends PyBuiltinType {
 // BEGIN GENERATED CODE: PyArithmeticErrorType
+final class PyArithmeticErrorType extends PyBuiltinType {
     public static final PyArithmeticErrorType singleton = new PyArithmeticErrorType();
     private static final PyString pyattr___doc__ = new PyString("Base class for arithmetic errors.");
     private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>(1);
@@ -11,7 +11,7 @@ final class PyArithmeticErrorType extends PyBuiltinType {
         attrs.put(new PyString("__doc__"), pyattr___doc__);
     }
 
-    private PyArithmeticErrorType() { super("ArithmeticError", PyArithmeticError.class); }
+    private PyArithmeticErrorType() { super("ArithmeticError", PyArithmeticError.class, PyArithmeticError::newObj); }
     @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
     @Override public PyObject lookupAttr(String name) {
         switch (name) {
@@ -19,13 +19,8 @@ final class PyArithmeticErrorType extends PyBuiltinType {
             default: return null;
         }
     }
-// END GENERATED CODE: PyArithmeticErrorType
-
-    @Override public PyArithmeticError call(PyObject[] args, PyDict kwargs) {
-        Runtime.requireNoKwArgs(kwargs, typeName);
-        return new PyArithmeticError(args);
-    }
 }
+// END GENERATED CODE: PyArithmeticErrorType
 
 final class PyAssertionErrorType extends PyBuiltinType {
 // BEGIN GENERATED CODE: PyAssertionErrorType
@@ -286,6 +281,11 @@ final class PyAttributeError extends PyException {
 class PyArithmeticError extends PyException {
     PyArithmeticError(PyObject... _args) { super(_args); }
     @Override public PyBuiltinType type() { return PyArithmeticErrorType.singleton; }
+
+    static public PyArithmeticError newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+        Runtime.requireNoKwArgs(kwargs, type.name());
+        return new PyArithmeticError(args);
+    }
 }
 final class PyZeroDivisionError extends PyArithmeticError {
     PyZeroDivisionError(PyObject... _args) { super(_args); }
