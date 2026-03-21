@@ -26,6 +26,30 @@ final class PySetType extends PyBuiltinType {
     private static final PyMethodDescriptor pydesc_symmetric_difference_update = new PyMethodDescriptor(singleton, "symmetric_difference_update", obj -> new PySet.PySetMethodUnimplemented(obj, "symmetric_difference_update"));
     private static final PyMethodDescriptor pydesc_union = new PyMethodDescriptor(singleton, "union", obj -> new PySet.PySetMethodUnimplemented(obj, "union"));
     private static final PyMethodDescriptor pydesc_update = new PyMethodDescriptor(singleton, "update", PySet.PySetMethod_update::new);
+// BEGIN GENERATED CODE: PySetType
+    private static final PyString pydesc___doc__ = new PyString("Build an unordered collection of unique elements.");
+    private static final PyAttr attrs[] = new PyAttr[] {
+        new PyAttr("add", pydesc_add),
+        new PyAttr("clear", pydesc_clear),
+        new PyAttr("copy", pydesc_copy),
+        new PyAttr("discard", pydesc_discard),
+        new PyAttr("difference", pydesc_difference),
+        new PyAttr("difference_update", pydesc_difference_update),
+        new PyAttr("intersection", pydesc_intersection),
+        new PyAttr("intersection_update", pydesc_intersection_update),
+        new PyAttr("isdisjoint", pydesc_isdisjoint),
+        new PyAttr("issubset", pydesc_issubset),
+        new PyAttr("issuperset", pydesc_issuperset),
+        new PyAttr("pop", pydesc_pop),
+        new PyAttr("remove", pydesc_remove),
+        new PyAttr("symmetric_difference", pydesc_symmetric_difference),
+        new PyAttr("symmetric_difference_update", pydesc_symmetric_difference_update),
+        new PyAttr("union", pydesc_union),
+        new PyAttr("update", pydesc_update),
+        new PyAttr("__doc__", pydesc___doc__)
+    };
+    @Override public PyAttr[] getAttributes() { return attrs; }
+// END GENERATED CODE: PySetType
 
     private PySetType() { super("set", PySet.class); }
     @Override public PyDescriptor getDescriptor(String name) {

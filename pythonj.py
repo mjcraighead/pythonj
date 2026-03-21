@@ -72,6 +72,7 @@ RUNTIME_JAVA_FILES = (
 )
 CODEGEN_PATHS = {
     'range': 'runtime/PyRange.java',
+    'set': 'runtime/PySet.java',
     'slice': 'runtime/PySlice.java',
     'tuple': 'runtime/PyTuple.java',
 }
@@ -1293,7 +1294,7 @@ class PythonjVisitor(ast.NodeVisitor):
 
 def gen_spec(path: str) -> None:
     spec = {}
-    for name in ['range', 'slice', 'tuple']:
+    for name in ['range', 'set', 'slice', 'tuple']:
         obj = getattr(builtins, name)
         attrs = {}
         for (k, v) in obj.__dict__.items():
@@ -1327,12 +1328,17 @@ def gen_code(path) -> None:
 
         begin_index = source_lines.index(begin_tag) + 1
         end_index = source_lines.index(end_tag)
-        gen_lines = [
+        gen_lines = []
+        for (k, v) in attrs.items():
+            if v['kind'] == 'string':
+                gen_lines.append(f"    private static final PyString pydesc_{k} = new PyString({java_string_literal(v['value'])});\n")
+        gen_lines += [
             '    private static final PyAttr attrs[] = new PyAttr[] {\n',
             '        ',
             ',\n        '.join(f'new PyAttr("{k}", pydesc_{k})' for k in attrs),
             '\n',
             '    };\n',
+            '    @Override public PyAttr[] getAttributes() { return attrs; }\n',
         ]
         source_lines[begin_index:end_index] = gen_lines
 
