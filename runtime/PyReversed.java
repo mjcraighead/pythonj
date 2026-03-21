@@ -2,8 +2,8 @@
 // Copyright (c) 2012-2026 Matt Craighead
 // SPDX-License-Identifier: MIT
 
-final class PyReversedType extends PyBuiltinType {
 // BEGIN GENERATED CODE: PyReversedType
+final class PyReversedType extends PyBuiltinType {
     public static final PyReversedType singleton = new PyReversedType();
     private static final PyString pyattr___doc__ = new PyString("Return a reverse iterator over the values of the given sequence.");
     private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>(1);
@@ -11,7 +11,7 @@ final class PyReversedType extends PyBuiltinType {
         attrs.put(new PyString("__doc__"), pyattr___doc__);
     }
 
-    private PyReversedType() { super("reversed", PyReversed.class); }
+    private PyReversedType() { super("reversed", PyReversed.class, PyReversed::newObj); }
     @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
     @Override public PyObject lookupAttr(String name) {
         switch (name) {
@@ -19,14 +19,8 @@ final class PyReversedType extends PyBuiltinType {
             default: return null;
         }
     }
-// END GENERATED CODE: PyReversedType
-
-    @Override public PyIter call(PyObject[] args, PyDict kwargs) {
-        Runtime.requireNoKwArgs(kwargs, typeName);
-        Runtime.requireExactArgs(args, 1, typeName);
-        return args[0].reversed();
-    }
 }
+// END GENERATED CODE: PyReversedType
 
 public final class PyReversed extends PyIter {
     private final PyObject obj;
@@ -36,6 +30,12 @@ public final class PyReversed extends PyIter {
     PyReversed(PyObject _obj) {
         obj = _obj;
         len = _obj.len();
+    }
+
+    static public PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+        Runtime.requireNoKwArgs(kwargs, type.name());
+        Runtime.requireExactArgs(args, 1, type.name());
+        return args[0].reversed();
     }
 
     @Override public PyObject next() {

@@ -2,8 +2,8 @@
 // Copyright (c) 2012-2026 Matt Craighead
 // SPDX-License-Identifier: MIT
 
-final class PyRangeType extends PyBuiltinType {
 // BEGIN GENERATED CODE: PyRangeType
+final class PyRangeType extends PyBuiltinType {
     public static final PyRangeType singleton = new PyRangeType();
     private static final PyMethodDescriptor pyattr_count = new PyMethodDescriptor(singleton, "count", PyRange.PyRangeMethod_count::new);
     private static final PyMethodDescriptor pyattr_index = new PyMethodDescriptor(singleton, "index", PyRange.PyRangeMethod_index::new);
@@ -21,7 +21,7 @@ final class PyRangeType extends PyBuiltinType {
         attrs.put(new PyString("__doc__"), pyattr___doc__);
     }
 
-    private PyRangeType() { super("range", PyRange.class); }
+    private PyRangeType() { super("range", PyRange.class, PyRange::newObj); }
     @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
     @Override public PyObject lookupAttr(String name) {
         switch (name) {
@@ -34,25 +34,8 @@ final class PyRangeType extends PyBuiltinType {
             default: return null;
         }
     }
-// END GENERATED CODE: PyRangeType
-
-    @Override public PyRange call(PyObject[] args, PyDict kwargs) {
-        Runtime.requireNoKwArgs(kwargs, typeName);
-        Runtime.requireMinArgs(args, 1, typeName);
-        Runtime.requireMaxArgs(args, 3, typeName);
-        long start = 0, stop, step = 1;
-        if (args.length == 1) {
-            stop = args[0].indexValue();
-        } else {
-            start = args[0].indexValue();
-            stop = args[1].indexValue();
-            if (args.length == 3) {
-                step = args[2].indexValue();
-            }
-        }
-        return new PyRange(start, stop, step);
-    }
 }
+// END GENERATED CODE: PyRangeType
 
 public final class PyRange extends PyObject {
     static final class PyRangeIter extends PyIter {
@@ -109,6 +92,23 @@ public final class PyRange extends PyObject {
         start = _start;
         stop = _stop;
         step = _step;
+    }
+
+    static public PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+        Runtime.requireNoKwArgs(kwargs, type.name());
+        Runtime.requireMinArgs(args, 1, type.name());
+        Runtime.requireMaxArgs(args, 3, type.name());
+        long start = 0, stop, step = 1;
+        if (args.length == 1) {
+            stop = args[0].indexValue();
+        } else {
+            start = args[0].indexValue();
+            stop = args[1].indexValue();
+            if (args.length == 3) {
+                step = args[2].indexValue();
+            }
+        }
+        return new PyRange(start, stop, step);
     }
 
     @Override public PyInt getItem(PyObject key) { throw unimplementedMethod("getItem"); }

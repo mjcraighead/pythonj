@@ -4,8 +4,8 @@
 
 import java.util.ArrayList;
 
-final class PyZipType extends PyBuiltinType {
 // BEGIN GENERATED CODE: PyZipType
+final class PyZipType extends PyBuiltinType {
     public static final PyZipType singleton = new PyZipType();
     private static final PyString pyattr___doc__ = new PyString("The zip object yields n-length tuples, where n is the number of iterables\npassed as positional arguments to zip().  The i-th element in every tuple\ncomes from the i-th iterable argument to zip().  This continues until the\nshortest argument is exhausted.\n\nIf strict is true and one of the arguments is exhausted before the others,\nraise a ValueError.\n\n   >>> list(zip('abcdefg', range(3), range(4)))\n   [('a', 0, 0), ('b', 1, 1), ('c', 2, 2)]");
     private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>(1);
@@ -13,7 +13,7 @@ final class PyZipType extends PyBuiltinType {
         attrs.put(new PyString("__doc__"), pyattr___doc__);
     }
 
-    private PyZipType() { super("zip", PyZip.class); }
+    private PyZipType() { super("zip", PyZip.class, PyZip::newObj); }
     @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
     @Override public PyObject lookupAttr(String name) {
         switch (name) {
@@ -21,9 +21,17 @@ final class PyZipType extends PyBuiltinType {
             default: return null;
         }
     }
+}
 // END GENERATED CODE: PyZipType
 
-    @Override public PyZip call(PyObject[] args, PyDict kwargs) {
+public final class PyZip extends PyIter {
+    private final PyIter[] iters;
+
+    PyZip(PyIter[] _iters) {
+        iters = _iters; // WARNING: takes ownership of _iters from caller, does not copy
+    }
+
+    static public PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
         if ((kwargs != null) && kwargs.boolValue()) {
             throw new IllegalArgumentException("zip() does not accept kwargs");
         }
@@ -32,14 +40,6 @@ final class PyZipType extends PyBuiltinType {
             iters[i] = args[i].iter();
         }
         return new PyZip(iters);
-    }
-}
-
-public final class PyZip extends PyIter {
-    private final PyIter[] iters;
-
-    PyZip(PyIter[] _iters) {
-        iters = _iters; // WARNING: takes ownership of _iters from caller, does not copy
     }
 
     @Override public PyTuple next() {

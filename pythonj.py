@@ -1368,7 +1368,10 @@ def gen_code(path) -> None:
 
     for (name, attrs) in spec.items():
         # XXX roll out gen_entire_class to the rest
-        gen_entire_class = name in {'ArithmeticError', 'AssertionError', 'AttributeError', 'BaseException', 'Exception'}
+        gen_entire_class = name in {
+            'enumerate', 'list', 'range', 'reversed', 'slice', 'tuple', 'zip',
+            'ArithmeticError', 'AssertionError', 'AttributeError', 'BaseException', 'Exception',
+        }
         if name == '_io.BufferedReader':
             java_name = 'PyBufferedReader'
             java_path = 'runtime/PyFile.java'

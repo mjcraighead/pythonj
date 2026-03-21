@@ -5,8 +5,8 @@
 import java.util.Arrays;
 import java.util.ArrayList;
 
-final class PyTupleType extends PyBuiltinType {
 // BEGIN GENERATED CODE: PyTupleType
+final class PyTupleType extends PyBuiltinType {
     public static final PyTupleType singleton = new PyTupleType();
     private static final PyMethodDescriptor pyattr_index = new PyMethodDescriptor(singleton, "index", PyTuple.PyTupleMethod_index::new);
     private static final PyMethodDescriptor pyattr_count = new PyMethodDescriptor(singleton, "count", PyTuple.PyTupleMethod_count::new);
@@ -18,7 +18,7 @@ final class PyTupleType extends PyBuiltinType {
         attrs.put(new PyString("__doc__"), pyattr___doc__);
     }
 
-    private PyTupleType() { super("tuple", PyTuple.class); }
+    private PyTupleType() { super("tuple", PyTuple.class, PyTuple::newObj); }
     @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
     @Override public PyObject lookupAttr(String name) {
         switch (name) {
@@ -28,19 +28,8 @@ final class PyTupleType extends PyBuiltinType {
             default: return null;
         }
     }
-// END GENERATED CODE: PyTupleType
-
-    @Override public PyTuple call(PyObject[] args, PyDict kwargs) {
-        Runtime.requireNoKwArgs(kwargs, typeName);
-        Runtime.requireMaxArgs(args, 1, typeName);
-        if (args.length == 0) {
-            return new PyTuple();
-        }
-        var list = new ArrayList<PyObject>();
-        Runtime.addIterableToCollection(list, args[0]);
-        return new PyTuple(list);
-    }
 }
+// END GENERATED CODE: PyTupleType
 
 public final class PyTuple extends PyObject {
     static final class PyTupleIter extends PyIter {
@@ -89,6 +78,17 @@ public final class PyTuple extends PyObject {
     PyTuple() { items = new PyObject[] {}; }
     PyTuple(PyObject[] args) { items = args; } // WARNING: takes ownership of args from caller, does not copy
     PyTuple(ArrayList<PyObject> list) { items = Runtime.arrayListToArray(list); }
+
+    static public PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+        Runtime.requireNoKwArgs(kwargs, type.name());
+        Runtime.requireMaxArgs(args, 1, type.name());
+        if (args.length == 0) {
+            return new PyTuple();
+        }
+        var list = new ArrayList<PyObject>();
+        Runtime.addIterableToCollection(list, args[0]);
+        return new PyTuple(list);
+    }
 
     public static PyObject[] add(PyObject[] lhs, PyObject[] rhs) {
         int newLength = Math.addExact(lhs.length, rhs.length);

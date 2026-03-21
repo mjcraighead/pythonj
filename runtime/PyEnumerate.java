@@ -2,8 +2,8 @@
 // Copyright (c) 2012-2026 Matt Craighead
 // SPDX-License-Identifier: MIT
 
-final class PyEnumerateType extends PyBuiltinType {
 // BEGIN GENERATED CODE: PyEnumerateType
+final class PyEnumerateType extends PyBuiltinType {
     public static final PyEnumerateType singleton = new PyEnumerateType();
     private static final PyString pyattr___doc__ = new PyString("Return an enumerate object.\n\n  iterable\n    an object supporting iteration\n\nThe enumerate object yields pairs containing a count (from start, which\ndefaults to zero) and a value yielded by the iterable argument.\n\nenumerate is useful for obtaining an indexed list:\n    (0, seq[0]), (1, seq[1]), (2, seq[2]), ...");
     private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>(1);
@@ -11,7 +11,7 @@ final class PyEnumerateType extends PyBuiltinType {
         attrs.put(new PyString("__doc__"), pyattr___doc__);
     }
 
-    private PyEnumerateType() { super("enumerate", PyEnumerate.class); }
+    private PyEnumerateType() { super("enumerate", PyEnumerate.class, PyEnumerate::newObj); }
     @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
     @Override public PyObject lookupAttr(String name) {
         switch (name) {
@@ -19,9 +19,19 @@ final class PyEnumerateType extends PyBuiltinType {
             default: return null;
         }
     }
+}
 // END GENERATED CODE: PyEnumerateType
 
-    @Override public PyEnumerate call(PyObject[] args, PyDict kwargs) {
+public final class PyEnumerate extends PyIter {
+    private final PyObject iter;
+    private long i;
+
+    PyEnumerate(PyObject _iter, long start) {
+        iter = _iter;
+        i = start;
+    }
+
+    static public PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
         // This is quirky, but is intended to match corner cases in CPython enumerate()
         long totalArgs = args.length;
         if (kwargs != null) {
@@ -52,16 +62,6 @@ final class PyEnumerateType extends PyBuiltinType {
         } else {
             throw PyTypeError.raiseFormat("enumerate() takes at most 2 arguments (%d given)", totalArgs);
         }
-    }
-}
-
-public final class PyEnumerate extends PyIter {
-    private final PyObject iter;
-    private long i;
-
-    PyEnumerate(PyObject _iter, long start) {
-        iter = _iter;
-        i = start;
     }
 
     @Override public PyTuple next() {

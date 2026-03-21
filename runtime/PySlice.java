@@ -2,8 +2,8 @@
 // Copyright (c) 2012-2026 Matt Craighead
 // SPDX-License-Identifier: MIT
 
-final class PySliceType extends PyBuiltinType {
 // BEGIN GENERATED CODE: PySliceType
+final class PySliceType extends PyBuiltinType {
     public static final PySliceType singleton = new PySliceType();
     private static final PyMethodDescriptor pyattr_indices = new PyMethodDescriptor(singleton, "indices", PySlice.PySliceMethod_indices::new);
     private static final PyMemberDescriptor pyattr_start = new PyMemberDescriptor(singleton, "start", PySlice::pymember_start);
@@ -19,7 +19,7 @@ final class PySliceType extends PyBuiltinType {
         attrs.put(new PyString("__doc__"), pyattr___doc__);
     }
 
-    private PySliceType() { super("slice", PySlice.class); }
+    private PySliceType() { super("slice", PySlice.class, PySlice::newObj); }
     @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
     @Override public PyObject lookupAttr(String name) {
         switch (name) {
@@ -31,27 +31,8 @@ final class PySliceType extends PyBuiltinType {
             default: return null;
         }
     }
-// END GENERATED CODE: PySliceType
-
-    @Override public PySlice call(PyObject[] args, PyDict kwargs) {
-        Runtime.requireNoKwArgs(kwargs, typeName);
-        Runtime.requireMinArgs(args, 1, typeName);
-        Runtime.requireMaxArgs(args, 3, typeName);
-        PyObject start = PyNone.singleton;
-        PyObject stop;
-        PyObject step = PyNone.singleton;
-        if (args.length == 1) {
-            stop = args[0];
-        } else {
-            start = args[0];
-            stop = args[1];
-            if (args.length == 3) {
-                step = args[2];
-            }
-        }
-        return new PySlice(start, stop, step);
-    }
 }
+// END GENERATED CODE: PySliceType
 
 public final class PySlice extends PyTruthyObject {
     protected static final class PySliceMethod_indices extends PyBuiltinMethod<PySlice> {
@@ -70,6 +51,25 @@ public final class PySlice extends PyTruthyObject {
         start = _start;
         stop = _stop;
         step = _step;
+    }
+
+    static public PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+        Runtime.requireNoKwArgs(kwargs, type.name());
+        Runtime.requireMinArgs(args, 1, type.name());
+        Runtime.requireMaxArgs(args, 3, type.name());
+        PyObject start = PyNone.singleton;
+        PyObject stop;
+        PyObject step = PyNone.singleton;
+        if (args.length == 1) {
+            stop = args[0];
+        } else {
+            start = args[0];
+            stop = args[1];
+            if (args.length == 3) {
+                step = args[2];
+            }
+        }
+        return new PySlice(start, stop, step);
     }
 
     @Override public PyBuiltinType type() { return PySliceType.singleton; }

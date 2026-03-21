@@ -7,8 +7,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 
-final class PyListType extends PyBuiltinType {
 // BEGIN GENERATED CODE: PyListType
+final class PyListType extends PyBuiltinType {
     public static final PyListType singleton = new PyListType();
     private static final PyMethodDescriptor pyattr_clear = new PyMethodDescriptor(singleton, "clear", PyList.PyListMethod_clear::new);
     private static final PyMethodDescriptor pyattr_copy = new PyMethodDescriptor(singleton, "copy", PyList.PyListMethod_copy::new);
@@ -38,7 +38,7 @@ final class PyListType extends PyBuiltinType {
         attrs.put(new PyString("__doc__"), pyattr___doc__);
     }
 
-    private PyListType() { super("list", PyList.class); }
+    private PyListType() { super("list", PyList.class, PyList::newObj); }
     @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
     @Override public PyObject lookupAttr(String name) {
         switch (name) {
@@ -57,19 +57,8 @@ final class PyListType extends PyBuiltinType {
             default: return null;
         }
     }
-// END GENERATED CODE: PyListType
-
-    @Override public PyList call(PyObject[] args, PyDict kwargs) {
-        Runtime.requireNoKwArgs(kwargs, typeName);
-        Runtime.requireMaxArgs(args, 1, typeName);
-        var ret = new PyList();
-        if (args.length == 0) {
-            return ret;
-        }
-        Runtime.addIterableToCollection(ret.items, args[0]);
-        return ret;
-    }
 }
+// END GENERATED CODE: PyListType
 
 public final class PyList extends PyObject {
     static final class PyListIter extends PyIter {
@@ -215,6 +204,17 @@ public final class PyList extends PyObject {
     }
     PyList(ArrayList<PyObject> _items) {
         items = _items; // WARNING: takes ownership of _items from caller, does not copy
+    }
+
+    static public PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+        Runtime.requireNoKwArgs(kwargs, type.name());
+        Runtime.requireMaxArgs(args, 1, type.name());
+        var ret = new PyList();
+        if (args.length == 0) {
+            return ret;
+        }
+        Runtime.addIterableToCollection(ret.items, args[0]);
+        return ret;
     }
 
     static int compare(ArrayList<PyObject> lhs, ArrayList<PyObject> rhs) {
