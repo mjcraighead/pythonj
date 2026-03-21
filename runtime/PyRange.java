@@ -20,19 +20,19 @@ final class PyRangeType extends PyBuiltinType {
         new PyAttr("__doc__", pydesc___doc__)
     };
     @Override public PyAttr[] getAttributes() { return attrs; }
-// END GENERATED CODE: PyRangeType
-
-    private PyRangeType() { super("range", PyRange.class); }
     @Override public PyDescriptor getDescriptor(String name) {
         switch (name) {
             case "count": return pydesc_count;
             case "index": return pydesc_index;
             case "start": return pydesc_start;
-            case "step": return pydesc_step;
             case "stop": return pydesc_stop;
+            case "step": return pydesc_step;
             default: return null;
         }
     }
+// END GENERATED CODE: PyRangeType
+
+    private PyRangeType() { super("range", PyRange.class); }
     @Override public PyRange call(PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, typeName);
         Runtime.requireMinArgs(args, 1, typeName);

@@ -49,17 +49,14 @@ final class PySetType extends PyBuiltinType {
         new PyAttr("__doc__", pydesc___doc__)
     };
     @Override public PyAttr[] getAttributes() { return attrs; }
-// END GENERATED CODE: PySetType
-
-    private PySetType() { super("set", PySet.class); }
     @Override public PyDescriptor getDescriptor(String name) {
         switch (name) {
             case "add": return pydesc_add;
             case "clear": return pydesc_clear;
             case "copy": return pydesc_copy;
+            case "discard": return pydesc_discard;
             case "difference": return pydesc_difference;
             case "difference_update": return pydesc_difference_update;
-            case "discard": return pydesc_discard;
             case "intersection": return pydesc_intersection;
             case "intersection_update": return pydesc_intersection_update;
             case "isdisjoint": return pydesc_isdisjoint;
@@ -74,6 +71,9 @@ final class PySetType extends PyBuiltinType {
             default: return null;
         }
     }
+// END GENERATED CODE: PySetType
+
+    private PySetType() { super("set", PySet.class); }
     @Override public PySet call(PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, typeName);
         Runtime.requireMaxArgs(args, 1, typeName);

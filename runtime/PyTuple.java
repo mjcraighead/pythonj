@@ -17,16 +17,16 @@ final class PyTupleType extends PyBuiltinType {
         new PyAttr("__doc__", pydesc___doc__)
     };
     @Override public PyAttr[] getAttributes() { return attrs; }
-// END GENERATED CODE: PyTupleType
-
-    private PyTupleType() { super("tuple", PyTuple.class); }
     @Override public PyDescriptor getDescriptor(String name) {
         switch (name) {
-            case "count": return pydesc_count;
             case "index": return pydesc_index;
+            case "count": return pydesc_count;
             default: return null;
         }
     }
+// END GENERATED CODE: PyTupleType
+
+    private PyTupleType() { super("tuple", PyTuple.class); }
     @Override public PyTuple call(PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, typeName);
         Runtime.requireMaxArgs(args, 1, typeName);

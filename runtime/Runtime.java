@@ -26,8 +26,8 @@ abstract class PyType extends PyTruthyObject {
         }
     }
 
-    public PyDescriptor getDescriptor(String name) { return null; }
     public PyAttr[] getAttributes() { return null; }
+    public PyDescriptor getDescriptor(String name) { return null; }
 
     @Override public boolean contains(PyObject rhs) { return defaultContains(rhs); }
 
