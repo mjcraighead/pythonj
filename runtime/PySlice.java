@@ -3,8 +3,8 @@
 // SPDX-License-Identifier: MIT
 
 final class PySliceType extends PyBuiltinType {
-    public static final PySliceType singleton = new PySliceType();
 // BEGIN GENERATED CODE: PySliceType
+    public static final PySliceType singleton = new PySliceType();
     private static final PyMethodDescriptor pydesc_indices = new PyMethodDescriptor(singleton, "indices", PySlice.PySliceMethod_indices::new);
     private static final PyMemberDescriptor pydesc_start = new PyMemberDescriptor(singleton, "start", PySlice::pymember_start);
     private static final PyMemberDescriptor pydesc_stop = new PyMemberDescriptor(singleton, "stop", PySlice::pymember_stop);

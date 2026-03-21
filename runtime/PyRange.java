@@ -3,8 +3,8 @@
 // SPDX-License-Identifier: MIT
 
 final class PyRangeType extends PyBuiltinType {
-    public static final PyRangeType singleton = new PyRangeType();
 // BEGIN GENERATED CODE: PyRangeType
+    public static final PyRangeType singleton = new PyRangeType();
     private static final PyMethodDescriptor pydesc_count = new PyMethodDescriptor(singleton, "count", PyRange.PyRangeMethod_count::new);
     private static final PyMethodDescriptor pydesc_index = new PyMethodDescriptor(singleton, "index", PyRange.PyRangeMethod_index::new);
     private static final PyMemberDescriptor pydesc_start = new PyMemberDescriptor(singleton, "start", PyRange::pymember_start);

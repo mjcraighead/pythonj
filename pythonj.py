@@ -1329,7 +1329,7 @@ def gen_code(path) -> None:
 
         begin_index = source_lines.index(begin_tag) + 1
         end_index = source_lines.index(end_tag)
-        gen_lines = []
+        gen_lines = [f'    public static final {java_name}Type singleton = new {java_name}Type();\n']
         for (k, v) in attrs.items():
             if v['kind'] == 'string':
                 gen_lines.append(f"    private static final PyString pydesc_{k} = new PyString({java_string_literal(v['value'])});\n")

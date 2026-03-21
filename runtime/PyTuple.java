@@ -6,8 +6,8 @@ import java.util.Arrays;
 import java.util.ArrayList;
 
 final class PyTupleType extends PyBuiltinType {
-    public static final PyTupleType singleton = new PyTupleType();
 // BEGIN GENERATED CODE: PyTupleType
+    public static final PyTupleType singleton = new PyTupleType();
     private static final PyMethodDescriptor pydesc_index = new PyMethodDescriptor(singleton, "index", PyTuple.PyTupleMethod_index::new);
     private static final PyMethodDescriptor pydesc_count = new PyMethodDescriptor(singleton, "count", PyTuple.PyTupleMethod_count::new);
     private static final PyString pydesc___doc__ = new PyString("Built-in immutable sequence.\n\nIf no argument is given, the constructor returns an empty tuple.\nIf iterable is specified the tuple is initialized from iterable's items.\n\nIf the argument is a tuple, the return value is the same object.");

@@ -8,8 +8,8 @@ import java.util.Iterator;
 import java.util.Set;
 
 final class PySetType extends PyBuiltinType {
-    public static final PySetType singleton = new PySetType();
 // BEGIN GENERATED CODE: PySetType
+    public static final PySetType singleton = new PySetType();
     private static final PyMethodDescriptor pydesc_add = new PyMethodDescriptor(singleton, "add", PySet.PySetMethod_add::new);
     private static final PyMethodDescriptor pydesc_clear = new PyMethodDescriptor(singleton, "clear", PySet.PySetMethod_clear::new);
     private static final PyMethodDescriptor pydesc_copy = new PyMethodDescriptor(singleton, "copy", obj -> new PySet.PySetMethodUnimplemented(obj, "copy"));

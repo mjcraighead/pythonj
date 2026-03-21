@@ -8,8 +8,8 @@ import java.util.Collections;
 import java.util.Iterator;
 
 final class PyListType extends PyBuiltinType {
-    public static final PyListType singleton = new PyListType();
 // BEGIN GENERATED CODE: PyListType
+    public static final PyListType singleton = new PyListType();
     private static final PyMethodDescriptor pydesc_clear = new PyMethodDescriptor(singleton, "clear", PyList.PyListMethod_clear::new);
     private static final PyMethodDescriptor pydesc_copy = new PyMethodDescriptor(singleton, "copy", PyList.PyListMethod_copy::new);
     private static final PyMethodDescriptor pydesc_append = new PyMethodDescriptor(singleton, "append", PyList.PyListMethod_append::new);
