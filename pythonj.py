@@ -1291,8 +1291,8 @@ def gen_spec(spec_path: str) -> None:
     spec = {}
     for name in ['bool', 'bytearray', 'bytes', 'dict', 'enumerate', 'int', 'list', 'object', 'range',
                  'reversed', 'set', 'slice', 'str', 'tuple', 'type', 'zip',
-                 'types.GetSetDescriptorType', 'types.MemberDescriptorType', 'types.NoneType',
-                 '_io.BufferedReader', '_io.TextIOWrapper', *sorted(EXCEPTION_TYPES)]:
+                 'types.GetSetDescriptorType', 'types.MemberDescriptorType', 'types.MethodDescriptorType',
+                 'types.NoneType', '_io.BufferedReader', '_io.TextIOWrapper', *sorted(EXCEPTION_TYPES)]:
         if name.startswith('_io.'):
             obj = getattr(_io, name.split('.', 1)[1])
         elif name.startswith('types.'):
@@ -1303,20 +1303,21 @@ def gen_spec(spec_path: str) -> None:
         for (k, v) in obj.__dict__.items():
             if k.startswith('__') and k not in {'__doc__'}:
                 continue # only extract a subset of dunders
-            if isinstance(v, str):
+            v_type = type(v)
+            if v_type is str:
                 attrs[k] = {'kind': 'string', 'value': v}
-            elif isinstance(v, types.MemberDescriptorType):
+            elif v_type is types.MemberDescriptorType:
                 attrs[k] = {'kind': 'member'}
-            elif isinstance(v, types.GetSetDescriptorType):
+            elif v_type is types.GetSetDescriptorType:
                 attrs[k] = {'kind': 'getset'}
-            elif isinstance(v, types.MethodDescriptorType):
+            elif v_type is types.MethodDescriptorType:
                 attrs[k] = {'kind': 'method'}
-            elif isinstance(v, types.ClassMethodDescriptorType):
+            elif v_type is types.ClassMethodDescriptorType:
                 attrs[k] = {'kind': 'classmethod'}
-            elif isinstance(v, staticmethod):
+            elif v_type is staticmethod:
                 attrs[k] = {'kind': 'staticmethod'}
             else:
-                assert False, (name, k, v, type(v))
+                assert False, (name, k, v, v_type)
         spec[name] = attrs
 
     with open(spec_path, 'w') as f:
@@ -1385,6 +1386,7 @@ def gen_code(spec_path: str, java_path: str) -> None:
             match name:
                 case 'types.GetSetDescriptorType': py_name = 'getset_descriptor'
                 case 'types.MemberDescriptorType': py_name = 'member_descriptor'
+                case 'types.MethodDescriptorType': py_name = 'method_descriptor'
                 case 'types.NoneType': py_name = 'NoneType'
                 case _: py_name = name
 
