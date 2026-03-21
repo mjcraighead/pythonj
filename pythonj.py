@@ -22,7 +22,7 @@ from typing import Iterator, Optional, TextIO
 import _io
 
 BUILTIN_FUNCTIONS = {
-    'abs', 'all', 'any', 'ascii', 'chr', 'delattr', 'format', 'getattr', 'hasattr', 'hash', 'hex',
+    'abs', 'all', 'any', 'ascii', 'chr', 'delattr', 'dir', 'format', 'getattr', 'hasattr', 'hash', 'hex',
     'isinstance', 'issubclass', 'iter', 'len', 'max', 'min', 'next', 'open', 'ord', 'print', 'repr',
     'setattr', 'sorted', 'sum',
 }
