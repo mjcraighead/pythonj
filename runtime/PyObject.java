@@ -5,7 +5,21 @@
 import java.util.Set;
 
 final class PyObjectType extends PyBuiltinType {
+// BEGIN GENERATED CODE: PyObjectType
     public static final PyObjectType singleton = new PyObjectType();
+    private static final PyString pydesc___doc__ = new PyString("The base class of the class hierarchy.\n\nWhen called, it accepts no arguments and returns a new featureless\ninstance that has no instance attributes and cannot be given any.\n");
+    private static final PyAttr attrs[] = new PyAttr[] {
+        new PyAttr("__doc__", pydesc___doc__)
+    };
+    @Override public PyAttr[] getAttributes() { return attrs; }
+    @Override public PyObject lookupAttr(String name) {
+        switch (name) {
+            case "__doc__": return pydesc___doc__;
+            default: return null;
+        }
+    }
+// END GENERATED CODE: PyObjectType
+
     private PyObjectType() { super("object", PyObject.class); }
 }
 
