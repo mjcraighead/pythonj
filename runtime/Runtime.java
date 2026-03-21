@@ -336,6 +336,50 @@ public final class Runtime {
     public static final pyclass_bytearray pyglobal_bytearray = new pyclass_bytearray();
 
     static final class pyclass_bytes extends PyBuiltinClass {
+        public static final pyclass_bytes singleton = new pyclass_bytes();
+        private static final PyMethodDescriptor pydesc_bytes_capitalize = new PyMethodDescriptor(singleton, "capitalize", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "capitalize"));
+        private static final PyMethodDescriptor pydesc_bytes_center = new PyMethodDescriptor(singleton, "center", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "center"));
+        private static final PyMethodDescriptor pydesc_bytes_count = new PyMethodDescriptor(singleton, "count", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "count"));
+        private static final PyMethodDescriptor pydesc_bytes_decode = new PyMethodDescriptor(singleton, "decode", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "decode"));
+        private static final PyMethodDescriptor pydesc_bytes_endswith = new PyMethodDescriptor(singleton, "endswith", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "endswith"));
+        private static final PyMethodDescriptor pydesc_bytes_expandtabs = new PyMethodDescriptor(singleton, "expandtabs", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "expandtabs"));
+        private static final PyMethodDescriptor pydesc_bytes_find = new PyMethodDescriptor(singleton, "find", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "find"));
+        private static final PyClassMethodDescriptor pydesc_bytes_fromhex = new PyClassMethodDescriptor(singleton, "fromhex", pyclass_bytes.PyBytesClassMethod_fromhex::new);
+        private static final PyMethodDescriptor pydesc_bytes_hex = new PyMethodDescriptor(singleton, "hex", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "hex"));
+        private static final PyMethodDescriptor pydesc_bytes_index = new PyMethodDescriptor(singleton, "index", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "index"));
+        private static final PyMethodDescriptor pydesc_bytes_isalnum = new PyMethodDescriptor(singleton, "isalnum", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "isalnum"));
+        private static final PyMethodDescriptor pydesc_bytes_isalpha = new PyMethodDescriptor(singleton, "isalpha", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "isalpha"));
+        private static final PyMethodDescriptor pydesc_bytes_isascii = new PyMethodDescriptor(singleton, "isascii", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "isascii"));
+        private static final PyMethodDescriptor pydesc_bytes_isdigit = new PyMethodDescriptor(singleton, "isdigit", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "isdigit"));
+        private static final PyMethodDescriptor pydesc_bytes_islower = new PyMethodDescriptor(singleton, "islower", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "islower"));
+        private static final PyMethodDescriptor pydesc_bytes_isspace = new PyMethodDescriptor(singleton, "isspace", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "isspace"));
+        private static final PyMethodDescriptor pydesc_bytes_istitle = new PyMethodDescriptor(singleton, "istitle", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "istitle"));
+        private static final PyMethodDescriptor pydesc_bytes_isupper = new PyMethodDescriptor(singleton, "isupper", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "isupper"));
+        private static final PyMethodDescriptor pydesc_bytes_join = new PyMethodDescriptor(singleton, "join", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "join"));
+        private static final PyMethodDescriptor pydesc_bytes_ljust = new PyMethodDescriptor(singleton, "ljust", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "ljust"));
+        private static final PyMethodDescriptor pydesc_bytes_lower = new PyMethodDescriptor(singleton, "lower", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "lower"));
+        private static final PyMethodDescriptor pydesc_bytes_lstrip = new PyMethodDescriptor(singleton, "lstrip", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "lstrip"));
+        private static final PyStaticMethod pydesc_bytes_maketrans = new PyStaticMethod(singleton, "maketrans", new pyclass_bytes.PyBytesStaticMethod_maketrans(singleton));
+        private static final PyMethodDescriptor pydesc_bytes_partition = new PyMethodDescriptor(singleton, "partition", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "partition"));
+        private static final PyMethodDescriptor pydesc_bytes_removeprefix = new PyMethodDescriptor(singleton, "removeprefix", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "removeprefix"));
+        private static final PyMethodDescriptor pydesc_bytes_removesuffix = new PyMethodDescriptor(singleton, "removesuffix", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "removesuffix"));
+        private static final PyMethodDescriptor pydesc_bytes_replace = new PyMethodDescriptor(singleton, "replace", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "replace"));
+        private static final PyMethodDescriptor pydesc_bytes_rfind = new PyMethodDescriptor(singleton, "rfind", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "rfind"));
+        private static final PyMethodDescriptor pydesc_bytes_rindex = new PyMethodDescriptor(singleton, "rindex", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "rindex"));
+        private static final PyMethodDescriptor pydesc_bytes_rjust = new PyMethodDescriptor(singleton, "rjust", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "rjust"));
+        private static final PyMethodDescriptor pydesc_bytes_rpartition = new PyMethodDescriptor(singleton, "rpartition", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "rpartition"));
+        private static final PyMethodDescriptor pydesc_bytes_rsplit = new PyMethodDescriptor(singleton, "rsplit", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "rsplit"));
+        private static final PyMethodDescriptor pydesc_bytes_rstrip = new PyMethodDescriptor(singleton, "rstrip", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "rstrip"));
+        private static final PyMethodDescriptor pydesc_bytes_split = new PyMethodDescriptor(singleton, "split", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "split"));
+        private static final PyMethodDescriptor pydesc_bytes_splitlines = new PyMethodDescriptor(singleton, "splitlines", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "splitlines"));
+        private static final PyMethodDescriptor pydesc_bytes_startswith = new PyMethodDescriptor(singleton, "startswith", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "startswith"));
+        private static final PyMethodDescriptor pydesc_bytes_strip = new PyMethodDescriptor(singleton, "strip", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "strip"));
+        private static final PyMethodDescriptor pydesc_bytes_swapcase = new PyMethodDescriptor(singleton, "swapcase", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "swapcase"));
+        private static final PyMethodDescriptor pydesc_bytes_title = new PyMethodDescriptor(singleton, "title", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "title"));
+        private static final PyMethodDescriptor pydesc_bytes_translate = new PyMethodDescriptor(singleton, "translate", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "translate"));
+        private static final PyMethodDescriptor pydesc_bytes_upper = new PyMethodDescriptor(singleton, "upper", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "upper"));
+        private static final PyMethodDescriptor pydesc_bytes_zfill = new PyMethodDescriptor(singleton, "zfill", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "zfill"));
+
         pyclass_bytes() { super("bytes", PyBytes.class); }
         @Override public PyDescriptor getDescriptor(String name) {
             switch (name) {
@@ -425,49 +469,7 @@ public final class Runtime {
             }
         }
     }
-    public static final pyclass_bytes pyglobal_bytes = new pyclass_bytes();
-    private static final PyMethodDescriptor pydesc_bytes_capitalize = new PyMethodDescriptor(pyglobal_bytes, "capitalize", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "capitalize"));
-    private static final PyMethodDescriptor pydesc_bytes_center = new PyMethodDescriptor(pyglobal_bytes, "center", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "center"));
-    private static final PyMethodDescriptor pydesc_bytes_count = new PyMethodDescriptor(pyglobal_bytes, "count", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "count"));
-    private static final PyMethodDescriptor pydesc_bytes_decode = new PyMethodDescriptor(pyglobal_bytes, "decode", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "decode"));
-    private static final PyMethodDescriptor pydesc_bytes_endswith = new PyMethodDescriptor(pyglobal_bytes, "endswith", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "endswith"));
-    private static final PyMethodDescriptor pydesc_bytes_expandtabs = new PyMethodDescriptor(pyglobal_bytes, "expandtabs", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "expandtabs"));
-    private static final PyMethodDescriptor pydesc_bytes_find = new PyMethodDescriptor(pyglobal_bytes, "find", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "find"));
-    private static final PyClassMethodDescriptor pydesc_bytes_fromhex = new PyClassMethodDescriptor(pyglobal_bytes, "fromhex", pyclass_bytes.PyBytesClassMethod_fromhex::new);
-    private static final PyMethodDescriptor pydesc_bytes_hex = new PyMethodDescriptor(pyglobal_bytes, "hex", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "hex"));
-    private static final PyMethodDescriptor pydesc_bytes_index = new PyMethodDescriptor(pyglobal_bytes, "index", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "index"));
-    private static final PyMethodDescriptor pydesc_bytes_isalnum = new PyMethodDescriptor(pyglobal_bytes, "isalnum", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "isalnum"));
-    private static final PyMethodDescriptor pydesc_bytes_isalpha = new PyMethodDescriptor(pyglobal_bytes, "isalpha", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "isalpha"));
-    private static final PyMethodDescriptor pydesc_bytes_isascii = new PyMethodDescriptor(pyglobal_bytes, "isascii", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "isascii"));
-    private static final PyMethodDescriptor pydesc_bytes_isdigit = new PyMethodDescriptor(pyglobal_bytes, "isdigit", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "isdigit"));
-    private static final PyMethodDescriptor pydesc_bytes_islower = new PyMethodDescriptor(pyglobal_bytes, "islower", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "islower"));
-    private static final PyMethodDescriptor pydesc_bytes_isspace = new PyMethodDescriptor(pyglobal_bytes, "isspace", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "isspace"));
-    private static final PyMethodDescriptor pydesc_bytes_istitle = new PyMethodDescriptor(pyglobal_bytes, "istitle", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "istitle"));
-    private static final PyMethodDescriptor pydesc_bytes_isupper = new PyMethodDescriptor(pyglobal_bytes, "isupper", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "isupper"));
-    private static final PyMethodDescriptor pydesc_bytes_join = new PyMethodDescriptor(pyglobal_bytes, "join", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "join"));
-    private static final PyMethodDescriptor pydesc_bytes_ljust = new PyMethodDescriptor(pyglobal_bytes, "ljust", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "ljust"));
-    private static final PyMethodDescriptor pydesc_bytes_lower = new PyMethodDescriptor(pyglobal_bytes, "lower", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "lower"));
-    private static final PyMethodDescriptor pydesc_bytes_lstrip = new PyMethodDescriptor(pyglobal_bytes, "lstrip", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "lstrip"));
-    private static final PyStaticMethod pydesc_bytes_maketrans = new PyStaticMethod(pyglobal_bytes, "maketrans", new pyclass_bytes.PyBytesStaticMethod_maketrans(pyglobal_bytes));
-    private static final PyMethodDescriptor pydesc_bytes_partition = new PyMethodDescriptor(pyglobal_bytes, "partition", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "partition"));
-    private static final PyMethodDescriptor pydesc_bytes_removeprefix = new PyMethodDescriptor(pyglobal_bytes, "removeprefix", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "removeprefix"));
-    private static final PyMethodDescriptor pydesc_bytes_removesuffix = new PyMethodDescriptor(pyglobal_bytes, "removesuffix", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "removesuffix"));
-    private static final PyMethodDescriptor pydesc_bytes_replace = new PyMethodDescriptor(pyglobal_bytes, "replace", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "replace"));
-    private static final PyMethodDescriptor pydesc_bytes_rfind = new PyMethodDescriptor(pyglobal_bytes, "rfind", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "rfind"));
-    private static final PyMethodDescriptor pydesc_bytes_rindex = new PyMethodDescriptor(pyglobal_bytes, "rindex", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "rindex"));
-    private static final PyMethodDescriptor pydesc_bytes_rjust = new PyMethodDescriptor(pyglobal_bytes, "rjust", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "rjust"));
-    private static final PyMethodDescriptor pydesc_bytes_rpartition = new PyMethodDescriptor(pyglobal_bytes, "rpartition", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "rpartition"));
-    private static final PyMethodDescriptor pydesc_bytes_rsplit = new PyMethodDescriptor(pyglobal_bytes, "rsplit", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "rsplit"));
-    private static final PyMethodDescriptor pydesc_bytes_rstrip = new PyMethodDescriptor(pyglobal_bytes, "rstrip", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "rstrip"));
-    private static final PyMethodDescriptor pydesc_bytes_split = new PyMethodDescriptor(pyglobal_bytes, "split", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "split"));
-    private static final PyMethodDescriptor pydesc_bytes_splitlines = new PyMethodDescriptor(pyglobal_bytes, "splitlines", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "splitlines"));
-    private static final PyMethodDescriptor pydesc_bytes_startswith = new PyMethodDescriptor(pyglobal_bytes, "startswith", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "startswith"));
-    private static final PyMethodDescriptor pydesc_bytes_strip = new PyMethodDescriptor(pyglobal_bytes, "strip", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "strip"));
-    private static final PyMethodDescriptor pydesc_bytes_swapcase = new PyMethodDescriptor(pyglobal_bytes, "swapcase", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "swapcase"));
-    private static final PyMethodDescriptor pydesc_bytes_title = new PyMethodDescriptor(pyglobal_bytes, "title", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "title"));
-    private static final PyMethodDescriptor pydesc_bytes_translate = new PyMethodDescriptor(pyglobal_bytes, "translate", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "translate"));
-    private static final PyMethodDescriptor pydesc_bytes_upper = new PyMethodDescriptor(pyglobal_bytes, "upper", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "upper"));
-    private static final PyMethodDescriptor pydesc_bytes_zfill = new PyMethodDescriptor(pyglobal_bytes, "zfill", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "zfill"));
+    public static final pyclass_bytes pyglobal_bytes = pyclass_bytes.singleton;
 
     static final class pyfunc_chr extends PyBuiltinFunction {
         pyfunc_chr() { super("chr"); }
@@ -498,6 +500,19 @@ public final class Runtime {
     public static final pyfunc_delattr pyglobal_delattr = new pyfunc_delattr();
 
     static final class pyclass_dict extends PyBuiltinClass {
+        public static final pyclass_dict singleton = new pyclass_dict();
+        private static final PyMethodDescriptor pydesc_dict_clear = new PyMethodDescriptor(singleton, "clear", PyDict.PyDictMethod_clear::new);
+        private static final PyMethodDescriptor pydesc_dict_copy = new PyMethodDescriptor(singleton, "copy", PyDict.PyDictMethod_copy::new);
+        private static final PyClassMethodDescriptor pydesc_dict_fromkeys = new PyClassMethodDescriptor(singleton, "fromkeys", pyclass_dict.PyDictClassMethod_fromkeys::new);
+        private static final PyMethodDescriptor pydesc_dict_get = new PyMethodDescriptor(singleton, "get", PyDict.PyDictMethod_get::new);
+        private static final PyMethodDescriptor pydesc_dict_keys = new PyMethodDescriptor(singleton, "keys", PyDict.PyDictMethod_keys::new);
+        private static final PyMethodDescriptor pydesc_dict_items = new PyMethodDescriptor(singleton, "items", PyDict.PyDictMethod_items::new);
+        private static final PyMethodDescriptor pydesc_dict_pop = new PyMethodDescriptor(singleton, "pop", PyDict.PyDictMethod_pop::new);
+        private static final PyMethodDescriptor pydesc_dict_popitem = new PyMethodDescriptor(singleton, "popitem", PyDict.PyDictMethod_popitem::new);
+        private static final PyMethodDescriptor pydesc_dict_setdefault = new PyMethodDescriptor(singleton, "setdefault", PyDict.PyDictMethod_setdefault::new);
+        private static final PyMethodDescriptor pydesc_dict_update = new PyMethodDescriptor(singleton, "update", PyDict.PyDictMethod_update::new);
+        private static final PyMethodDescriptor pydesc_dict_values = new PyMethodDescriptor(singleton, "values", PyDict.PyDictMethod_values::new);
+
         pyclass_dict() { super("dict", PyDict.class); }
         @Override public PyDescriptor getDescriptor(String name) {
             switch (name) {
@@ -542,18 +557,7 @@ public final class Runtime {
             }
         }
     }
-    public static final pyclass_dict pyglobal_dict = new pyclass_dict();
-    private static final PyMethodDescriptor pydesc_dict_clear = new PyMethodDescriptor(pyglobal_dict, "clear", PyDict.PyDictMethod_clear::new);
-    private static final PyMethodDescriptor pydesc_dict_copy = new PyMethodDescriptor(pyglobal_dict, "copy", PyDict.PyDictMethod_copy::new);
-    private static final PyClassMethodDescriptor pydesc_dict_fromkeys = new PyClassMethodDescriptor(pyglobal_dict, "fromkeys", pyclass_dict.PyDictClassMethod_fromkeys::new);
-    private static final PyMethodDescriptor pydesc_dict_get = new PyMethodDescriptor(pyglobal_dict, "get", PyDict.PyDictMethod_get::new);
-    private static final PyMethodDescriptor pydesc_dict_keys = new PyMethodDescriptor(pyglobal_dict, "keys", PyDict.PyDictMethod_keys::new);
-    private static final PyMethodDescriptor pydesc_dict_items = new PyMethodDescriptor(pyglobal_dict, "items", PyDict.PyDictMethod_items::new);
-    private static final PyMethodDescriptor pydesc_dict_pop = new PyMethodDescriptor(pyglobal_dict, "pop", PyDict.PyDictMethod_pop::new);
-    private static final PyMethodDescriptor pydesc_dict_popitem = new PyMethodDescriptor(pyglobal_dict, "popitem", PyDict.PyDictMethod_popitem::new);
-    private static final PyMethodDescriptor pydesc_dict_setdefault = new PyMethodDescriptor(pyglobal_dict, "setdefault", PyDict.PyDictMethod_setdefault::new);
-    private static final PyMethodDescriptor pydesc_dict_update = new PyMethodDescriptor(pyglobal_dict, "update", PyDict.PyDictMethod_update::new);
-    private static final PyMethodDescriptor pydesc_dict_values = new PyMethodDescriptor(pyglobal_dict, "values", PyDict.PyDictMethod_values::new);
+    public static final pyclass_dict pyglobal_dict = pyclass_dict.singleton;
 
     static final class pyclass_enumerate extends PyBuiltinClass {
         pyclass_enumerate() { super("enumerate", PyEnumerate.class); }
@@ -679,6 +683,19 @@ public final class Runtime {
     public static final pyfunc_hex pyglobal_hex = new pyfunc_hex();
 
     static final class pyclass_int extends PyBuiltinClass {
+        public static final pyclass_int singleton = new pyclass_int();
+        private static final PyMethodDescriptor pydesc_int_as_integer_ratio = new PyMethodDescriptor(singleton, "as_integer_ratio", obj -> new PyInt.PyIntMethodUnimplemented(obj, "as_integer_ratio"));
+        private static final PyMethodDescriptor pydesc_int_bit_count = new PyMethodDescriptor(singleton, "bit_count", obj -> new PyInt.PyIntMethodUnimplemented(obj, "bit_count"));
+        private static final PyMethodDescriptor pydesc_int_bit_length = new PyMethodDescriptor(singleton, "bit_length", obj -> new PyInt.PyIntMethodUnimplemented(obj, "bit_length"));
+        private static final PyMethodDescriptor pydesc_int_conjugate = new PyMethodDescriptor(singleton, "conjugate", obj -> new PyInt.PyIntMethodUnimplemented(obj, "conjugate"));
+        private static final PyGetSetDescriptor pydesc_int_denominator = new PyGetSetDescriptor(singleton, "denominator", obj -> PyInt.singleton_1);
+        private static final PyClassMethodDescriptor pydesc_int_from_bytes = new PyClassMethodDescriptor(singleton, "from_bytes", pyclass_int.PyIntClassMethod_from_bytes::new);
+        private static final PyGetSetDescriptor pydesc_int_imag = new PyGetSetDescriptor(singleton, "imag", obj -> PyInt.singleton_0);
+        private static final PyMethodDescriptor pydesc_int_is_integer = new PyMethodDescriptor(singleton, "is_integer", obj -> new PyInt.PyIntMethodUnimplemented(obj, "is_integer"));
+        private static final PyGetSetDescriptor pydesc_int_numerator = new PyGetSetDescriptor(singleton, "numerator", obj -> obj);
+        private static final PyGetSetDescriptor pydesc_int_real = new PyGetSetDescriptor(singleton, "real", obj -> obj);
+        private static final PyMethodDescriptor pydesc_int_to_bytes = new PyMethodDescriptor(singleton, "to_bytes", obj -> new PyInt.PyIntMethodUnimplemented(obj, "to_bytes"));
+
         pyclass_int() { super("int", PyInt.class); }
         @Override public PyDescriptor getDescriptor(String name) {
             switch (name) {
@@ -776,18 +793,7 @@ public final class Runtime {
             }
         }
     }
-    public static final pyclass_int pyglobal_int = new pyclass_int();
-    private static final PyMethodDescriptor pydesc_int_as_integer_ratio = new PyMethodDescriptor(pyglobal_int, "as_integer_ratio", obj -> new PyInt.PyIntMethodUnimplemented(obj, "as_integer_ratio"));
-    private static final PyMethodDescriptor pydesc_int_bit_count = new PyMethodDescriptor(pyglobal_int, "bit_count", obj -> new PyInt.PyIntMethodUnimplemented(obj, "bit_count"));
-    private static final PyMethodDescriptor pydesc_int_bit_length = new PyMethodDescriptor(pyglobal_int, "bit_length", obj -> new PyInt.PyIntMethodUnimplemented(obj, "bit_length"));
-    private static final PyMethodDescriptor pydesc_int_conjugate = new PyMethodDescriptor(pyglobal_int, "conjugate", obj -> new PyInt.PyIntMethodUnimplemented(obj, "conjugate"));
-    private static final PyGetSetDescriptor pydesc_int_denominator = new PyGetSetDescriptor(pyglobal_int, "denominator", obj -> PyInt.singleton_1);
-    private static final PyClassMethodDescriptor pydesc_int_from_bytes = new PyClassMethodDescriptor(pyglobal_int, "from_bytes", pyclass_int.PyIntClassMethod_from_bytes::new);
-    private static final PyGetSetDescriptor pydesc_int_imag = new PyGetSetDescriptor(pyglobal_int, "imag", obj -> PyInt.singleton_0);
-    private static final PyMethodDescriptor pydesc_int_is_integer = new PyMethodDescriptor(pyglobal_int, "is_integer", obj -> new PyInt.PyIntMethodUnimplemented(obj, "is_integer"));
-    private static final PyGetSetDescriptor pydesc_int_numerator = new PyGetSetDescriptor(pyglobal_int, "numerator", obj -> obj);
-    private static final PyGetSetDescriptor pydesc_int_real = new PyGetSetDescriptor(pyglobal_int, "real", obj -> obj);
-    private static final PyMethodDescriptor pydesc_int_to_bytes = new PyMethodDescriptor(pyglobal_int, "to_bytes", obj -> new PyInt.PyIntMethodUnimplemented(obj, "to_bytes"));
+    public static final pyclass_int pyglobal_int = pyclass_int.singleton;
 
     static final class pyfunc_isinstance extends PyBuiltinFunction {
         pyfunc_isinstance() { super("isinstance"); }
@@ -862,6 +868,19 @@ public final class Runtime {
     public static final pyfunc_len pyglobal_len = new pyfunc_len();
 
     static final class pyclass_list extends PyBuiltinClass {
+        public static final pyclass_list singleton = new pyclass_list();
+        private static final PyMethodDescriptor pydesc_list_append = new PyMethodDescriptor(singleton, "append", PyList.PyListMethod_append::new);
+        private static final PyMethodDescriptor pydesc_list_clear = new PyMethodDescriptor(singleton, "clear", PyList.PyListMethod_clear::new);
+        private static final PyMethodDescriptor pydesc_list_copy = new PyMethodDescriptor(singleton, "copy", PyList.PyListMethod_copy::new);
+        private static final PyMethodDescriptor pydesc_list_count = new PyMethodDescriptor(singleton, "count", PyList.PyListMethod_count::new);
+        private static final PyMethodDescriptor pydesc_list_extend = new PyMethodDescriptor(singleton, "extend", PyList.PyListMethod_extend::new);
+        private static final PyMethodDescriptor pydesc_list_index = new PyMethodDescriptor(singleton, "index", PyList.PyListMethod_index::new);
+        private static final PyMethodDescriptor pydesc_list_insert = new PyMethodDescriptor(singleton, "insert", PyList.PyListMethod_insert::new);
+        private static final PyMethodDescriptor pydesc_list_pop = new PyMethodDescriptor(singleton, "pop", PyList.PyListMethod_pop::new);
+        private static final PyMethodDescriptor pydesc_list_remove = new PyMethodDescriptor(singleton, "remove", PyList.PyListMethod_remove::new);
+        private static final PyMethodDescriptor pydesc_list_reverse = new PyMethodDescriptor(singleton, "reverse", PyList.PyListMethod_reverse::new);
+        private static final PyMethodDescriptor pydesc_list_sort = new PyMethodDescriptor(singleton, "sort", PyList.PyListMethod_sort::new);
+
         pyclass_list() { super("list", PyList.class); }
         @Override public PyDescriptor getDescriptor(String name) {
             switch (name) {
@@ -890,18 +909,7 @@ public final class Runtime {
             return ret;
         }
     }
-    public static final pyclass_list pyglobal_list = new pyclass_list();
-    private static final PyMethodDescriptor pydesc_list_append = new PyMethodDescriptor(pyglobal_list, "append", PyList.PyListMethod_append::new);
-    private static final PyMethodDescriptor pydesc_list_clear = new PyMethodDescriptor(pyglobal_list, "clear", PyList.PyListMethod_clear::new);
-    private static final PyMethodDescriptor pydesc_list_copy = new PyMethodDescriptor(pyglobal_list, "copy", PyList.PyListMethod_copy::new);
-    private static final PyMethodDescriptor pydesc_list_count = new PyMethodDescriptor(pyglobal_list, "count", PyList.PyListMethod_count::new);
-    private static final PyMethodDescriptor pydesc_list_extend = new PyMethodDescriptor(pyglobal_list, "extend", PyList.PyListMethod_extend::new);
-    private static final PyMethodDescriptor pydesc_list_index = new PyMethodDescriptor(pyglobal_list, "index", PyList.PyListMethod_index::new);
-    private static final PyMethodDescriptor pydesc_list_insert = new PyMethodDescriptor(pyglobal_list, "insert", PyList.PyListMethod_insert::new);
-    private static final PyMethodDescriptor pydesc_list_pop = new PyMethodDescriptor(pyglobal_list, "pop", PyList.PyListMethod_pop::new);
-    private static final PyMethodDescriptor pydesc_list_remove = new PyMethodDescriptor(pyglobal_list, "remove", PyList.PyListMethod_remove::new);
-    private static final PyMethodDescriptor pydesc_list_reverse = new PyMethodDescriptor(pyglobal_list, "reverse", PyList.PyListMethod_reverse::new);
-    private static final PyMethodDescriptor pydesc_list_sort = new PyMethodDescriptor(pyglobal_list, "sort", PyList.PyListMethod_sort::new);
+    public static final pyclass_list pyglobal_list = pyclass_list.singleton;
 
     static final class pyfunc_max extends PyBuiltinFunction {
         pyfunc_max() { super("max"); }
@@ -1049,6 +1057,13 @@ public final class Runtime {
     public static final pyfunc_print pyglobal_print = new pyfunc_print();
 
     static final class pyclass_range extends PyBuiltinClass {
+        public static final pyclass_range singleton = new pyclass_range();
+        private static final PyMethodDescriptor pydesc_range_count = new PyMethodDescriptor(singleton, "count", PyRange.PyRangeMethod_count::new);
+        private static final PyMethodDescriptor pydesc_range_index = new PyMethodDescriptor(singleton, "index", PyRange.PyRangeMethod_index::new);
+        private static final PyMemberDescriptor pydesc_range_start = new PyMemberDescriptor(singleton, "start", obj -> new PyInt(((PyRange)obj).start));
+        private static final PyMemberDescriptor pydesc_range_step = new PyMemberDescriptor(singleton, "step", obj -> new PyInt(((PyRange)obj).step));
+        private static final PyMemberDescriptor pydesc_range_stop = new PyMemberDescriptor(singleton, "stop", obj -> new PyInt(((PyRange)obj).stop));
+
         pyclass_range() { super("range", PyRange.class); }
         @Override public PyDescriptor getDescriptor(String name) {
             switch (name) {
@@ -1077,12 +1092,7 @@ public final class Runtime {
             return new PyRange(start, stop, step);
         }
     }
-    public static final pyclass_range pyglobal_range = new pyclass_range();
-    private static final PyMethodDescriptor pydesc_range_count = new PyMethodDescriptor(pyglobal_range, "count", PyRange.PyRangeMethod_count::new);
-    private static final PyMethodDescriptor pydesc_range_index = new PyMethodDescriptor(pyglobal_range, "index", PyRange.PyRangeMethod_index::new);
-    private static final PyMemberDescriptor pydesc_range_start = new PyMemberDescriptor(pyglobal_range, "start", obj -> new PyInt(((PyRange)obj).start));
-    private static final PyMemberDescriptor pydesc_range_step = new PyMemberDescriptor(pyglobal_range, "step", obj -> new PyInt(((PyRange)obj).step));
-    private static final PyMemberDescriptor pydesc_range_stop = new PyMemberDescriptor(pyglobal_range, "stop", obj -> new PyInt(((PyRange)obj).stop));
+    public static final pyclass_range pyglobal_range = pyclass_range.singleton;
 
     static final class pyfunc_repr extends PyBuiltinFunction {
         pyfunc_repr() { super("repr"); }
@@ -1104,6 +1114,25 @@ public final class Runtime {
     public static final pyclass_reversed pyglobal_reversed = new pyclass_reversed();
 
     static final class pyclass_set extends PyBuiltinClass {
+        public static final pyclass_set singleton = new pyclass_set();
+        private static final PyMethodDescriptor pydesc_set_add = new PyMethodDescriptor(singleton, "add", PySet.PySetMethod_add::new);
+        private static final PyMethodDescriptor pydesc_set_clear = new PyMethodDescriptor(singleton, "clear", PySet.PySetMethod_clear::new);
+        private static final PyMethodDescriptor pydesc_set_copy = new PyMethodDescriptor(singleton, "copy", obj -> new PySet.PySetMethodUnimplemented(obj, "copy"));
+        private static final PyMethodDescriptor pydesc_set_difference = new PyMethodDescriptor(singleton, "difference", obj -> new PySet.PySetMethodUnimplemented(obj, "difference"));
+        private static final PyMethodDescriptor pydesc_set_difference_update = new PyMethodDescriptor(singleton, "difference_update", obj -> new PySet.PySetMethodUnimplemented(obj, "difference_update"));
+        private static final PyMethodDescriptor pydesc_set_discard = new PyMethodDescriptor(singleton, "discard", PySet.PySetMethod_discard::new);
+        private static final PyMethodDescriptor pydesc_set_intersection = new PyMethodDescriptor(singleton, "intersection", obj -> new PySet.PySetMethodUnimplemented(obj, "intersection"));
+        private static final PyMethodDescriptor pydesc_set_intersection_update = new PyMethodDescriptor(singleton, "intersection_update", obj -> new PySet.PySetMethodUnimplemented(obj, "intersection_update"));
+        private static final PyMethodDescriptor pydesc_set_isdisjoint = new PyMethodDescriptor(singleton, "isdisjoint", obj -> new PySet.PySetMethodUnimplemented(obj, "isdisjoint"));
+        private static final PyMethodDescriptor pydesc_set_issubset = new PyMethodDescriptor(singleton, "issubset", obj -> new PySet.PySetMethodUnimplemented(obj, "issubset"));
+        private static final PyMethodDescriptor pydesc_set_issuperset = new PyMethodDescriptor(singleton, "issuperset", obj -> new PySet.PySetMethodUnimplemented(obj, "issuperset"));
+        private static final PyMethodDescriptor pydesc_set_pop = new PyMethodDescriptor(singleton, "pop", obj -> new PySet.PySetMethodUnimplemented(obj, "pop"));
+        private static final PyMethodDescriptor pydesc_set_remove = new PyMethodDescriptor(singleton, "remove", obj -> new PySet.PySetMethodUnimplemented(obj, "remove"));
+        private static final PyMethodDescriptor pydesc_set_symmetric_difference = new PyMethodDescriptor(singleton, "symmetric_difference", obj -> new PySet.PySetMethodUnimplemented(obj, "symmetric_difference"));
+        private static final PyMethodDescriptor pydesc_set_symmetric_difference_update = new PyMethodDescriptor(singleton, "symmetric_difference_update", obj -> new PySet.PySetMethodUnimplemented(obj, "symmetric_difference_update"));
+        private static final PyMethodDescriptor pydesc_set_union = new PyMethodDescriptor(singleton, "union", obj -> new PySet.PySetMethodUnimplemented(obj, "union"));
+        private static final PyMethodDescriptor pydesc_set_update = new PyMethodDescriptor(singleton, "update", PySet.PySetMethod_update::new);
+
         pyclass_set() { super("set", PySet.class); }
         @Override public PyDescriptor getDescriptor(String name) {
             switch (name) {
@@ -1138,24 +1167,7 @@ public final class Runtime {
             return ret;
         }
     }
-    public static final pyclass_set pyglobal_set = new pyclass_set();
-    private static final PyMethodDescriptor pydesc_set_add = new PyMethodDescriptor(pyglobal_set, "add", PySet.PySetMethod_add::new);
-    private static final PyMethodDescriptor pydesc_set_clear = new PyMethodDescriptor(pyglobal_set, "clear", PySet.PySetMethod_clear::new);
-    private static final PyMethodDescriptor pydesc_set_copy = new PyMethodDescriptor(pyglobal_set, "copy", obj -> new PySet.PySetMethodUnimplemented(obj, "copy"));
-    private static final PyMethodDescriptor pydesc_set_difference = new PyMethodDescriptor(pyglobal_set, "difference", obj -> new PySet.PySetMethodUnimplemented(obj, "difference"));
-    private static final PyMethodDescriptor pydesc_set_difference_update = new PyMethodDescriptor(pyglobal_set, "difference_update", obj -> new PySet.PySetMethodUnimplemented(obj, "difference_update"));
-    private static final PyMethodDescriptor pydesc_set_discard = new PyMethodDescriptor(pyglobal_set, "discard", PySet.PySetMethod_discard::new);
-    private static final PyMethodDescriptor pydesc_set_intersection = new PyMethodDescriptor(pyglobal_set, "intersection", obj -> new PySet.PySetMethodUnimplemented(obj, "intersection"));
-    private static final PyMethodDescriptor pydesc_set_intersection_update = new PyMethodDescriptor(pyglobal_set, "intersection_update", obj -> new PySet.PySetMethodUnimplemented(obj, "intersection_update"));
-    private static final PyMethodDescriptor pydesc_set_isdisjoint = new PyMethodDescriptor(pyglobal_set, "isdisjoint", obj -> new PySet.PySetMethodUnimplemented(obj, "isdisjoint"));
-    private static final PyMethodDescriptor pydesc_set_issubset = new PyMethodDescriptor(pyglobal_set, "issubset", obj -> new PySet.PySetMethodUnimplemented(obj, "issubset"));
-    private static final PyMethodDescriptor pydesc_set_issuperset = new PyMethodDescriptor(pyglobal_set, "issuperset", obj -> new PySet.PySetMethodUnimplemented(obj, "issuperset"));
-    private static final PyMethodDescriptor pydesc_set_pop = new PyMethodDescriptor(pyglobal_set, "pop", obj -> new PySet.PySetMethodUnimplemented(obj, "pop"));
-    private static final PyMethodDescriptor pydesc_set_remove = new PyMethodDescriptor(pyglobal_set, "remove", obj -> new PySet.PySetMethodUnimplemented(obj, "remove"));
-    private static final PyMethodDescriptor pydesc_set_symmetric_difference = new PyMethodDescriptor(pyglobal_set, "symmetric_difference", obj -> new PySet.PySetMethodUnimplemented(obj, "symmetric_difference"));
-    private static final PyMethodDescriptor pydesc_set_symmetric_difference_update = new PyMethodDescriptor(pyglobal_set, "symmetric_difference_update", obj -> new PySet.PySetMethodUnimplemented(obj, "symmetric_difference_update"));
-    private static final PyMethodDescriptor pydesc_set_union = new PyMethodDescriptor(pyglobal_set, "union", obj -> new PySet.PySetMethodUnimplemented(obj, "union"));
-    private static final PyMethodDescriptor pydesc_set_update = new PyMethodDescriptor(pyglobal_set, "update", PySet.PySetMethod_update::new);
+    public static final pyclass_set pyglobal_set = pyclass_set.singleton;
 
     static final class pyfunc_setattr extends PyBuiltinFunction {
         pyfunc_setattr() { super("setattr"); }
@@ -1173,6 +1185,12 @@ public final class Runtime {
     public static final pyfunc_setattr pyglobal_setattr = new pyfunc_setattr();
 
     static final class pyclass_slice extends PyBuiltinClass {
+        public static final pyclass_slice singleton = new pyclass_slice();
+        private static final PyMethodDescriptor pydesc_slice_indices = new PyMethodDescriptor(singleton, "indices", PySlice.PySliceMethod_indices::new);
+        private static final PyMemberDescriptor pydesc_slice_start = new PyMemberDescriptor(singleton, "start", obj -> ((PySlice)obj).start);
+        private static final PyMemberDescriptor pydesc_slice_step = new PyMemberDescriptor(singleton, "step", obj -> ((PySlice)obj).step);
+        private static final PyMemberDescriptor pydesc_slice_stop = new PyMemberDescriptor(singleton, "stop", obj -> ((PySlice)obj).stop);
+
         pyclass_slice() { super("slice", PySlice.class); }
         @Override public PyDescriptor getDescriptor(String name) {
             switch (name) {
@@ -1202,11 +1220,7 @@ public final class Runtime {
             return new PySlice(start, stop, step);
         }
     }
-    public static final pyclass_slice pyglobal_slice = new pyclass_slice();
-    private static final PyMethodDescriptor pydesc_slice_indices = new PyMethodDescriptor(pyglobal_slice, "indices", PySlice.PySliceMethod_indices::new);
-    private static final PyMemberDescriptor pydesc_slice_start = new PyMemberDescriptor(pyglobal_slice, "start", obj -> ((PySlice)obj).start);
-    private static final PyMemberDescriptor pydesc_slice_step = new PyMemberDescriptor(pyglobal_slice, "step", obj -> ((PySlice)obj).step);
-    private static final PyMemberDescriptor pydesc_slice_stop = new PyMemberDescriptor(pyglobal_slice, "stop", obj -> ((PySlice)obj).stop);
+    public static final pyclass_slice pyglobal_slice = pyclass_slice.singleton;
 
     static final class pyfunc_sorted extends PyBuiltinFunction {
         pyfunc_sorted() { super("sorted"); }
@@ -1226,6 +1240,55 @@ public final class Runtime {
     public static final pyfunc_sorted pyglobal_sorted = new pyfunc_sorted();
 
     static final class pyclass_str extends PyBuiltinClass {
+        public static final pyclass_str singleton = new pyclass_str();
+        private static final PyMethodDescriptor pydesc_str_capitalize = new PyMethodDescriptor(singleton, "capitalize", obj -> new PyString.PyStringMethodUnimplemented(obj, "capitalize"));
+        private static final PyMethodDescriptor pydesc_str_casefold = new PyMethodDescriptor(singleton, "casefold", obj -> new PyString.PyStringMethodUnimplemented(obj, "casefold"));
+        private static final PyMethodDescriptor pydesc_str_center = new PyMethodDescriptor(singleton, "center", obj -> new PyString.PyStringMethodUnimplemented(obj, "center"));
+        private static final PyMethodDescriptor pydesc_str_count = new PyMethodDescriptor(singleton, "count", obj -> new PyString.PyStringMethodUnimplemented(obj, "count"));
+        private static final PyMethodDescriptor pydesc_str_encode = new PyMethodDescriptor(singleton, "encode", obj -> new PyString.PyStringMethodUnimplemented(obj, "encode"));
+        private static final PyMethodDescriptor pydesc_str_endswith = new PyMethodDescriptor(singleton, "endswith", obj -> new PyString.PyStringMethodUnimplemented(obj, "endswith"));
+        private static final PyMethodDescriptor pydesc_str_expandtabs = new PyMethodDescriptor(singleton, "expandtabs", obj -> new PyString.PyStringMethodUnimplemented(obj, "expandtabs"));
+        private static final PyMethodDescriptor pydesc_str_find = new PyMethodDescriptor(singleton, "find", PyString.PyStringMethod_find::new);
+        private static final PyMethodDescriptor pydesc_str_format = new PyMethodDescriptor(singleton, "format", obj -> new PyString.PyStringMethodUnimplemented(obj, "format"));
+        private static final PyMethodDescriptor pydesc_str_format_map = new PyMethodDescriptor(singleton, "format_map", obj -> new PyString.PyStringMethodUnimplemented(obj, "format_map"));
+        private static final PyMethodDescriptor pydesc_str_index = new PyMethodDescriptor(singleton, "index", obj -> new PyString.PyStringMethodUnimplemented(obj, "index"));
+        private static final PyMethodDescriptor pydesc_str_isalnum = new PyMethodDescriptor(singleton, "isalnum", obj -> new PyString.PyStringMethodUnimplemented(obj, "isalnum"));
+        private static final PyMethodDescriptor pydesc_str_isalpha = new PyMethodDescriptor(singleton, "isalpha", obj -> new PyString.PyStringMethodUnimplemented(obj, "isalpha"));
+        private static final PyMethodDescriptor pydesc_str_isascii = new PyMethodDescriptor(singleton, "isascii", obj -> new PyString.PyStringMethodUnimplemented(obj, "isascii"));
+        private static final PyMethodDescriptor pydesc_str_isdecimal = new PyMethodDescriptor(singleton, "isdecimal", obj -> new PyString.PyStringMethodUnimplemented(obj, "isdecimal"));
+        private static final PyMethodDescriptor pydesc_str_isdigit = new PyMethodDescriptor(singleton, "isdigit", obj -> new PyString.PyStringMethodUnimplemented(obj, "isdigit"));
+        private static final PyMethodDescriptor pydesc_str_isidentifier = new PyMethodDescriptor(singleton, "isidentifier", obj -> new PyString.PyStringMethodUnimplemented(obj, "isidentifier"));
+        private static final PyMethodDescriptor pydesc_str_islower = new PyMethodDescriptor(singleton, "islower", obj -> new PyString.PyStringMethodUnimplemented(obj, "islower"));
+        private static final PyMethodDescriptor pydesc_str_isnumeric = new PyMethodDescriptor(singleton, "isnumeric", obj -> new PyString.PyStringMethodUnimplemented(obj, "isnumeric"));
+        private static final PyMethodDescriptor pydesc_str_isprintable = new PyMethodDescriptor(singleton, "isprintable", obj -> new PyString.PyStringMethodUnimplemented(obj, "isprintable"));
+        private static final PyMethodDescriptor pydesc_str_isspace = new PyMethodDescriptor(singleton, "isspace", obj -> new PyString.PyStringMethodUnimplemented(obj, "isspace"));
+        private static final PyMethodDescriptor pydesc_str_istitle = new PyMethodDescriptor(singleton, "istitle", obj -> new PyString.PyStringMethodUnimplemented(obj, "istitle"));
+        private static final PyMethodDescriptor pydesc_str_isupper = new PyMethodDescriptor(singleton, "isupper", obj -> new PyString.PyStringMethodUnimplemented(obj, "isupper"));
+        private static final PyMethodDescriptor pydesc_str_join = new PyMethodDescriptor(singleton, "join", PyString.PyStringMethod_join::new);
+        private static final PyMethodDescriptor pydesc_str_ljust = new PyMethodDescriptor(singleton, "ljust", obj -> new PyString.PyStringMethodUnimplemented(obj, "ljust"));
+        private static final PyMethodDescriptor pydesc_str_lower = new PyMethodDescriptor(singleton, "lower", PyString.PyStringMethod_lower::new);
+        private static final PyMethodDescriptor pydesc_str_lstrip = new PyMethodDescriptor(singleton, "lstrip", obj -> new PyString.PyStringMethodUnimplemented(obj, "lstrip"));
+        private static final PyStaticMethod pydesc_str_maketrans = new PyStaticMethod(singleton, "maketrans", new pyclass_str.PyStringStaticMethod_maketrans(singleton));
+        private static final PyMethodDescriptor pydesc_str_partition = new PyMethodDescriptor(singleton, "partition", obj -> new PyString.PyStringMethodUnimplemented(obj, "partition"));
+        private static final PyMethodDescriptor pydesc_str_removeprefix = new PyMethodDescriptor(singleton, "removeprefix", obj -> new PyString.PyStringMethodUnimplemented(obj, "removeprefix"));
+        private static final PyMethodDescriptor pydesc_str_removesuffix = new PyMethodDescriptor(singleton, "removesuffix", obj -> new PyString.PyStringMethodUnimplemented(obj, "removesuffix"));
+        private static final PyMethodDescriptor pydesc_str_replace = new PyMethodDescriptor(singleton, "replace", obj -> new PyString.PyStringMethodUnimplemented(obj, "replace"));
+        private static final PyMethodDescriptor pydesc_str_rfind = new PyMethodDescriptor(singleton, "rfind", obj -> new PyString.PyStringMethodUnimplemented(obj, "rfind"));
+        private static final PyMethodDescriptor pydesc_str_rindex = new PyMethodDescriptor(singleton, "rindex", obj -> new PyString.PyStringMethodUnimplemented(obj, "rindex"));
+        private static final PyMethodDescriptor pydesc_str_rjust = new PyMethodDescriptor(singleton, "rjust", obj -> new PyString.PyStringMethodUnimplemented(obj, "rjust"));
+        private static final PyMethodDescriptor pydesc_str_rpartition = new PyMethodDescriptor(singleton, "rpartition", obj -> new PyString.PyStringMethodUnimplemented(obj, "rpartition"));
+        private static final PyMethodDescriptor pydesc_str_rsplit = new PyMethodDescriptor(singleton, "rsplit", obj -> new PyString.PyStringMethodUnimplemented(obj, "rsplit"));
+        private static final PyMethodDescriptor pydesc_str_rstrip = new PyMethodDescriptor(singleton, "rstrip", obj -> new PyString.PyStringMethodUnimplemented(obj, "rstrip"));
+        private static final PyMethodDescriptor pydesc_str_split = new PyMethodDescriptor(singleton, "split", PyString.PyStringMethod_split::new);
+        private static final PyMethodDescriptor pydesc_str_splitlines = new PyMethodDescriptor(singleton, "splitlines", obj -> new PyString.PyStringMethodUnimplemented(obj, "splitlines"));
+        private static final PyMethodDescriptor pydesc_str_startswith = new PyMethodDescriptor(singleton, "startswith", PyString.PyStringMethod_startswith::new);
+        private static final PyMethodDescriptor pydesc_str_strip = new PyMethodDescriptor(singleton, "strip", obj -> new PyString.PyStringMethodUnimplemented(obj, "strip"));
+        private static final PyMethodDescriptor pydesc_str_swapcase = new PyMethodDescriptor(singleton, "swapcase", obj -> new PyString.PyStringMethodUnimplemented(obj, "swapcase"));
+        private static final PyMethodDescriptor pydesc_str_title = new PyMethodDescriptor(singleton, "title", obj -> new PyString.PyStringMethodUnimplemented(obj, "title"));
+        private static final PyMethodDescriptor pydesc_str_translate = new PyMethodDescriptor(singleton, "translate", obj -> new PyString.PyStringMethodUnimplemented(obj, "translate"));
+        private static final PyMethodDescriptor pydesc_str_upper = new PyMethodDescriptor(singleton, "upper", PyString.PyStringMethod_upper::new);
+        private static final PyMethodDescriptor pydesc_str_zfill = new PyMethodDescriptor(singleton, "zfill", obj -> new PyString.PyStringMethodUnimplemented(obj, "zfill"));
+
         pyclass_str() { super("str", PyString.class); }
         @Override public PyDescriptor getDescriptor(String name) {
             switch (name) {
@@ -1300,54 +1363,7 @@ public final class Runtime {
             }
         }
     }
-    public static final pyclass_str pyglobal_str = new pyclass_str();
-    private static final PyMethodDescriptor pydesc_str_capitalize = new PyMethodDescriptor(pyglobal_str, "capitalize", obj -> new PyString.PyStringMethodUnimplemented(obj, "capitalize"));
-    private static final PyMethodDescriptor pydesc_str_casefold = new PyMethodDescriptor(pyglobal_str, "casefold", obj -> new PyString.PyStringMethodUnimplemented(obj, "casefold"));
-    private static final PyMethodDescriptor pydesc_str_center = new PyMethodDescriptor(pyglobal_str, "center", obj -> new PyString.PyStringMethodUnimplemented(obj, "center"));
-    private static final PyMethodDescriptor pydesc_str_count = new PyMethodDescriptor(pyglobal_str, "count", obj -> new PyString.PyStringMethodUnimplemented(obj, "count"));
-    private static final PyMethodDescriptor pydesc_str_encode = new PyMethodDescriptor(pyglobal_str, "encode", obj -> new PyString.PyStringMethodUnimplemented(obj, "encode"));
-    private static final PyMethodDescriptor pydesc_str_endswith = new PyMethodDescriptor(pyglobal_str, "endswith", obj -> new PyString.PyStringMethodUnimplemented(obj, "endswith"));
-    private static final PyMethodDescriptor pydesc_str_expandtabs = new PyMethodDescriptor(pyglobal_str, "expandtabs", obj -> new PyString.PyStringMethodUnimplemented(obj, "expandtabs"));
-    private static final PyMethodDescriptor pydesc_str_find = new PyMethodDescriptor(pyglobal_str, "find", PyString.PyStringMethod_find::new);
-    private static final PyMethodDescriptor pydesc_str_format = new PyMethodDescriptor(pyglobal_str, "format", obj -> new PyString.PyStringMethodUnimplemented(obj, "format"));
-    private static final PyMethodDescriptor pydesc_str_format_map = new PyMethodDescriptor(pyglobal_str, "format_map", obj -> new PyString.PyStringMethodUnimplemented(obj, "format_map"));
-    private static final PyMethodDescriptor pydesc_str_index = new PyMethodDescriptor(pyglobal_str, "index", obj -> new PyString.PyStringMethodUnimplemented(obj, "index"));
-    private static final PyMethodDescriptor pydesc_str_isalnum = new PyMethodDescriptor(pyglobal_str, "isalnum", obj -> new PyString.PyStringMethodUnimplemented(obj, "isalnum"));
-    private static final PyMethodDescriptor pydesc_str_isalpha = new PyMethodDescriptor(pyglobal_str, "isalpha", obj -> new PyString.PyStringMethodUnimplemented(obj, "isalpha"));
-    private static final PyMethodDescriptor pydesc_str_isascii = new PyMethodDescriptor(pyglobal_str, "isascii", obj -> new PyString.PyStringMethodUnimplemented(obj, "isascii"));
-    private static final PyMethodDescriptor pydesc_str_isdecimal = new PyMethodDescriptor(pyglobal_str, "isdecimal", obj -> new PyString.PyStringMethodUnimplemented(obj, "isdecimal"));
-    private static final PyMethodDescriptor pydesc_str_isdigit = new PyMethodDescriptor(pyglobal_str, "isdigit", obj -> new PyString.PyStringMethodUnimplemented(obj, "isdigit"));
-    private static final PyMethodDescriptor pydesc_str_isidentifier = new PyMethodDescriptor(pyglobal_str, "isidentifier", obj -> new PyString.PyStringMethodUnimplemented(obj, "isidentifier"));
-    private static final PyMethodDescriptor pydesc_str_islower = new PyMethodDescriptor(pyglobal_str, "islower", obj -> new PyString.PyStringMethodUnimplemented(obj, "islower"));
-    private static final PyMethodDescriptor pydesc_str_isnumeric = new PyMethodDescriptor(pyglobal_str, "isnumeric", obj -> new PyString.PyStringMethodUnimplemented(obj, "isnumeric"));
-    private static final PyMethodDescriptor pydesc_str_isprintable = new PyMethodDescriptor(pyglobal_str, "isprintable", obj -> new PyString.PyStringMethodUnimplemented(obj, "isprintable"));
-    private static final PyMethodDescriptor pydesc_str_isspace = new PyMethodDescriptor(pyglobal_str, "isspace", obj -> new PyString.PyStringMethodUnimplemented(obj, "isspace"));
-    private static final PyMethodDescriptor pydesc_str_istitle = new PyMethodDescriptor(pyglobal_str, "istitle", obj -> new PyString.PyStringMethodUnimplemented(obj, "istitle"));
-    private static final PyMethodDescriptor pydesc_str_isupper = new PyMethodDescriptor(pyglobal_str, "isupper", obj -> new PyString.PyStringMethodUnimplemented(obj, "isupper"));
-    private static final PyMethodDescriptor pydesc_str_join = new PyMethodDescriptor(pyglobal_str, "join", PyString.PyStringMethod_join::new);
-    private static final PyMethodDescriptor pydesc_str_ljust = new PyMethodDescriptor(pyglobal_str, "ljust", obj -> new PyString.PyStringMethodUnimplemented(obj, "ljust"));
-    private static final PyMethodDescriptor pydesc_str_lower = new PyMethodDescriptor(pyglobal_str, "lower", PyString.PyStringMethod_lower::new);
-    private static final PyMethodDescriptor pydesc_str_lstrip = new PyMethodDescriptor(pyglobal_str, "lstrip", obj -> new PyString.PyStringMethodUnimplemented(obj, "lstrip"));
-    private static final PyStaticMethod pydesc_str_maketrans = new PyStaticMethod(pyglobal_str, "maketrans", new pyclass_str.PyStringStaticMethod_maketrans(pyglobal_str));
-    private static final PyMethodDescriptor pydesc_str_partition = new PyMethodDescriptor(pyglobal_str, "partition", obj -> new PyString.PyStringMethodUnimplemented(obj, "partition"));
-    private static final PyMethodDescriptor pydesc_str_removeprefix = new PyMethodDescriptor(pyglobal_str, "removeprefix", obj -> new PyString.PyStringMethodUnimplemented(obj, "removeprefix"));
-    private static final PyMethodDescriptor pydesc_str_removesuffix = new PyMethodDescriptor(pyglobal_str, "removesuffix", obj -> new PyString.PyStringMethodUnimplemented(obj, "removesuffix"));
-    private static final PyMethodDescriptor pydesc_str_replace = new PyMethodDescriptor(pyglobal_str, "replace", obj -> new PyString.PyStringMethodUnimplemented(obj, "replace"));
-    private static final PyMethodDescriptor pydesc_str_rfind = new PyMethodDescriptor(pyglobal_str, "rfind", obj -> new PyString.PyStringMethodUnimplemented(obj, "rfind"));
-    private static final PyMethodDescriptor pydesc_str_rindex = new PyMethodDescriptor(pyglobal_str, "rindex", obj -> new PyString.PyStringMethodUnimplemented(obj, "rindex"));
-    private static final PyMethodDescriptor pydesc_str_rjust = new PyMethodDescriptor(pyglobal_str, "rjust", obj -> new PyString.PyStringMethodUnimplemented(obj, "rjust"));
-    private static final PyMethodDescriptor pydesc_str_rpartition = new PyMethodDescriptor(pyglobal_str, "rpartition", obj -> new PyString.PyStringMethodUnimplemented(obj, "rpartition"));
-    private static final PyMethodDescriptor pydesc_str_rsplit = new PyMethodDescriptor(pyglobal_str, "rsplit", obj -> new PyString.PyStringMethodUnimplemented(obj, "rsplit"));
-    private static final PyMethodDescriptor pydesc_str_rstrip = new PyMethodDescriptor(pyglobal_str, "rstrip", obj -> new PyString.PyStringMethodUnimplemented(obj, "rstrip"));
-    private static final PyMethodDescriptor pydesc_str_split = new PyMethodDescriptor(pyglobal_str, "split", PyString.PyStringMethod_split::new);
-    private static final PyMethodDescriptor pydesc_str_splitlines = new PyMethodDescriptor(pyglobal_str, "splitlines", obj -> new PyString.PyStringMethodUnimplemented(obj, "splitlines"));
-    private static final PyMethodDescriptor pydesc_str_startswith = new PyMethodDescriptor(pyglobal_str, "startswith", PyString.PyStringMethod_startswith::new);
-    private static final PyMethodDescriptor pydesc_str_strip = new PyMethodDescriptor(pyglobal_str, "strip", obj -> new PyString.PyStringMethodUnimplemented(obj, "strip"));
-    private static final PyMethodDescriptor pydesc_str_swapcase = new PyMethodDescriptor(pyglobal_str, "swapcase", obj -> new PyString.PyStringMethodUnimplemented(obj, "swapcase"));
-    private static final PyMethodDescriptor pydesc_str_title = new PyMethodDescriptor(pyglobal_str, "title", obj -> new PyString.PyStringMethodUnimplemented(obj, "title"));
-    private static final PyMethodDescriptor pydesc_str_translate = new PyMethodDescriptor(pyglobal_str, "translate", obj -> new PyString.PyStringMethodUnimplemented(obj, "translate"));
-    private static final PyMethodDescriptor pydesc_str_upper = new PyMethodDescriptor(pyglobal_str, "upper", PyString.PyStringMethod_upper::new);
-    private static final PyMethodDescriptor pydesc_str_zfill = new PyMethodDescriptor(pyglobal_str, "zfill", obj -> new PyString.PyStringMethodUnimplemented(obj, "zfill"));
+    public static final pyclass_str pyglobal_str = pyclass_str.singleton;
 
     static final class pyfunc_sum extends PyBuiltinFunction {
         pyfunc_sum() { super("sum"); }
@@ -1373,6 +1389,10 @@ public final class Runtime {
     public static final pyfunc_sum pyglobal_sum = new pyfunc_sum();
 
     static final class pyclass_tuple extends PyBuiltinClass {
+        public static final pyclass_tuple singleton = new pyclass_tuple();
+        private static final PyMethodDescriptor pydesc_tuple_count = new PyMethodDescriptor(singleton, "count", PyTuple.PyTupleMethod_count::new);
+        private static final PyMethodDescriptor pydesc_tuple_index = new PyMethodDescriptor(singleton, "index", PyTuple.PyTupleMethod_index::new);
+
         pyclass_tuple() { super("tuple", PyTuple.class); }
         @Override public PyDescriptor getDescriptor(String name) {
             switch (name) {
@@ -1392,9 +1412,7 @@ public final class Runtime {
             return new PyTuple(list);
         }
     }
-    public static final pyclass_tuple pyglobal_tuple = new pyclass_tuple();
-    private static final PyMethodDescriptor pydesc_tuple_count = new PyMethodDescriptor(pyglobal_tuple, "count", PyTuple.PyTupleMethod_count::new);
-    private static final PyMethodDescriptor pydesc_tuple_index = new PyMethodDescriptor(pyglobal_tuple, "index", PyTuple.PyTupleMethod_index::new);
+    public static final pyclass_tuple pyglobal_tuple = pyclass_tuple.singleton;
 
     static final class pyclass_type extends PyBuiltinClass {
         pyclass_type() { super("type", PyType.class); }
