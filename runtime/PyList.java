@@ -37,7 +37,7 @@ final class PyListType extends PyBuiltinType {
         new PyAttr("__doc__", pydesc___doc__)
     };
     @Override public PyAttr[] getAttributes() { return attrs; }
-    @Override public PyDescriptor getDescriptor(String name) {
+    @Override public PyObject lookupAttr(String name) {
         switch (name) {
             case "clear": return pydesc_clear;
             case "copy": return pydesc_copy;
@@ -50,6 +50,7 @@ final class PyListType extends PyBuiltinType {
             case "count": return pydesc_count;
             case "reverse": return pydesc_reverse;
             case "sort": return pydesc_sort;
+            case "__doc__": return pydesc___doc__;
             default: return null;
         }
     }

@@ -106,7 +106,7 @@ final class PyStringType extends PyBuiltinType {
         new PyAttr("__doc__", pydesc___doc__)
     };
     @Override public PyAttr[] getAttributes() { return attrs; }
-    @Override public PyDescriptor getDescriptor(String name) {
+    @Override public PyObject lookupAttr(String name) {
         switch (name) {
             case "encode": return pydesc_encode;
             case "replace": return pydesc_replace;
@@ -155,6 +155,7 @@ final class PyStringType extends PyBuiltinType {
             case "format": return pydesc_format;
             case "format_map": return pydesc_format_map;
             case "maketrans": return pydesc_maketrans;
+            case "__doc__": return pydesc___doc__;
             default: return null;
         }
     }

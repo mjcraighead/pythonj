@@ -27,7 +27,7 @@ abstract class PyType extends PyTruthyObject {
     }
 
     public PyAttr[] getAttributes() { return null; }
-    public PyDescriptor getDescriptor(String name) { return null; }
+    public PyObject lookupAttr(String name) { return null; }
 
     @Override public boolean contains(PyObject rhs) { return defaultContains(rhs); }
 
@@ -43,7 +43,7 @@ class PyBuiltinType extends PyType {
         instanceClass = _instanceClass;
     }
     @Override public final PyObject getAttr(String key) {
-        var desc = getDescriptor(key);
+        var desc = lookupAttr(key);
         if (desc != null) {
             return desc.get(null);
         }
@@ -90,13 +90,7 @@ final class PyTypeType extends PyBuiltinType {
     }
 }
 
-abstract class PyDescriptor extends PyTruthyObject {
-    abstract public PyObject get(PyObject instance);
-    abstract public void set(PyObject instance, PyObject value);
-    abstract public void delete(PyObject instance);
-}
-
-abstract class PyGettableDescriptor extends PyDescriptor {
+abstract class PyGettableDescriptor extends PyTruthyObject {
     protected final PyType owner;
     protected final String name;
     protected final Function<PyObject, PyObject> getter;
@@ -167,7 +161,7 @@ final class PyMethodDescriptor extends PyGettableDescriptor {
     @Override public final PyBuiltinType type() { return type_singleton; }
 }
 
-final class PyClassMethodDescriptor extends PyDescriptor {
+final class PyClassMethodDescriptor extends PyTruthyObject {
     private static final PyBuiltinType type_singleton = new PyBuiltinType("classmethod_descriptor", PyClassMethodDescriptor.class);
 
     protected final PyType owner;
@@ -193,7 +187,7 @@ final class PyClassMethodDescriptor extends PyDescriptor {
     @Override public final PyBuiltinType type() { return type_singleton; }
 }
 
-final class PyStaticMethod extends PyDescriptor {
+final class PyStaticMethod extends PyTruthyObject {
     private static final PyBuiltinType type_singleton = new PyBuiltinType("staticmethod", PyStaticMethod.class);
 
     protected final PyType owner;

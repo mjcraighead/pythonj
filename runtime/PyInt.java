@@ -32,7 +32,7 @@ final class PyIntType extends PyBuiltinType {
         new PyAttr("__doc__", pydesc___doc__)
     };
     @Override public PyAttr[] getAttributes() { return attrs; }
-    @Override public PyDescriptor getDescriptor(String name) {
+    @Override public PyObject lookupAttr(String name) {
         switch (name) {
             case "conjugate": return pydesc_conjugate;
             case "bit_length": return pydesc_bit_length;
@@ -45,6 +45,7 @@ final class PyIntType extends PyBuiltinType {
             case "imag": return pydesc_imag;
             case "numerator": return pydesc_numerator;
             case "denominator": return pydesc_denominator;
+            case "__doc__": return pydesc___doc__;
             default: return null;
         }
     }

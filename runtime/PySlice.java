@@ -18,12 +18,13 @@ final class PySliceType extends PyBuiltinType {
         new PyAttr("__doc__", pydesc___doc__)
     };
     @Override public PyAttr[] getAttributes() { return attrs; }
-    @Override public PyDescriptor getDescriptor(String name) {
+    @Override public PyObject lookupAttr(String name) {
         switch (name) {
             case "indices": return pydesc_indices;
             case "start": return pydesc_start;
             case "stop": return pydesc_stop;
             case "step": return pydesc_step;
+            case "__doc__": return pydesc___doc__;
             default: return null;
         }
     }

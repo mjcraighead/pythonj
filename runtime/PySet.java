@@ -49,7 +49,7 @@ final class PySetType extends PyBuiltinType {
         new PyAttr("__doc__", pydesc___doc__)
     };
     @Override public PyAttr[] getAttributes() { return attrs; }
-    @Override public PyDescriptor getDescriptor(String name) {
+    @Override public PyObject lookupAttr(String name) {
         switch (name) {
             case "add": return pydesc_add;
             case "clear": return pydesc_clear;
@@ -68,6 +68,7 @@ final class PySetType extends PyBuiltinType {
             case "symmetric_difference_update": return pydesc_symmetric_difference_update;
             case "union": return pydesc_union;
             case "update": return pydesc_update;
+            case "__doc__": return pydesc___doc__;
             default: return null;
         }
     }

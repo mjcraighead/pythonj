@@ -38,7 +38,7 @@ final class PyDictType extends PyBuiltinType {
         new PyAttr("__doc__", pydesc___doc__)
     };
     @Override public PyAttr[] getAttributes() { return attrs; }
-    @Override public PyDescriptor getDescriptor(String name) {
+    @Override public PyObject lookupAttr(String name) {
         switch (name) {
             case "get": return pydesc_get;
             case "setdefault": return pydesc_setdefault;
@@ -51,6 +51,7 @@ final class PyDictType extends PyBuiltinType {
             case "fromkeys": return pydesc_fromkeys;
             case "clear": return pydesc_clear;
             case "copy": return pydesc_copy;
+            case "__doc__": return pydesc___doc__;
             default: return null;
         }
     }

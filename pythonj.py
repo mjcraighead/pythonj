@@ -1381,11 +1381,11 @@ def gen_code(path) -> None:
             '\n',
             '    };\n',
             '    @Override public PyAttr[] getAttributes() { return attrs; }\n',
-            '    @Override public PyDescriptor getDescriptor(String name) {\n',
+            '    @Override public PyObject lookupAttr(String name) {\n',
             '        switch (name) {\n',
             *(
                 f'            case {java_string_literal(k)}: return pydesc_{k};\n'
-                for (k, v) in attrs.items() if v['kind'] != 'string'
+                for (k, v) in attrs.items()
             ),
             '            default: return null;\n',
             '        }\n',

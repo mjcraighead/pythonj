@@ -97,7 +97,7 @@ final class PyBytesType extends PyBuiltinType {
         new PyAttr("__doc__", pydesc___doc__)
     };
     @Override public PyAttr[] getAttributes() { return attrs; }
-    @Override public PyDescriptor getDescriptor(String name) {
+    @Override public PyObject lookupAttr(String name) {
         switch (name) {
             case "capitalize": return pydesc_capitalize;
             case "center": return pydesc_center;
@@ -141,6 +141,7 @@ final class PyBytesType extends PyBuiltinType {
             case "translate": return pydesc_translate;
             case "upper": return pydesc_upper;
             case "zfill": return pydesc_zfill;
+            case "__doc__": return pydesc___doc__;
             default: return null;
         }
     }
