@@ -1290,8 +1290,8 @@ class PythonjVisitor(ast.NodeVisitor):
 def gen_spec(spec_path: str) -> None:
     spec = {}
     for name in ['bool', 'bytearray', 'bytes', 'dict', 'enumerate', 'int', 'list', 'object', 'range',
-                 'reversed', 'set', 'slice', 'str', 'tuple', 'type', 'zip', 'types.NoneType',
-                 '_io.BufferedReader', '_io.TextIOWrapper', *sorted(EXCEPTION_TYPES)]:
+                 'reversed', 'set', 'slice', 'str', 'tuple', 'type', 'zip', 'types.MemberDescriptorType',
+                 'types.NoneType', '_io.BufferedReader', '_io.TextIOWrapper', *sorted(EXCEPTION_TYPES)]:
         if name.startswith('_io.'):
             obj = getattr(_io, name.split('.', 1)[1])
         elif name.startswith('types.'):
@@ -1371,6 +1371,8 @@ def get_java_name(name: str) -> str:
         return 'PyTextIOWrapper'
     elif name == 'types.NoneType':
         return 'PyNone'
+    elif name == 'types.MemberDescriptorType':
+        return 'PyMemberDescriptor'
     elif name in EXCEPTION_TYPES:
         return f'Py{name}'
     else:
@@ -1383,7 +1385,10 @@ def gen_code(spec_path: str, java_path: str) -> None:
     with open(java_path, 'w') as f:
         for (name, attrs) in spec.items():
             java_name = get_java_name(name)
-            py_name = 'NoneType' if name == 'types.NoneType' else name
+            match name:
+                case 'types.NoneType': py_name = 'NoneType'
+                case 'types.MemberDescriptorType': py_name = 'member_descriptor'
+                case _: py_name = name
 
             gen_lines = [
                 f'final class {java_name}Type extends PyBuiltinType {{\n',

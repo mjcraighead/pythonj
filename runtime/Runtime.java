@@ -138,8 +138,6 @@ abstract class PyGettableDescriptor extends PyTruthyObject {
 }
 
 final class PyMemberDescriptor extends PyGettableDescriptor {
-    private static final PyBuiltinType type_singleton = new PyBuiltinType("member_descriptor", PyMemberDescriptor.class);
-
     protected PyMemberDescriptor(PyType _owner, String _name, Function<PyObject, PyObject> _getter) {
         super(_owner, _name, _getter);
     }
@@ -152,7 +150,11 @@ final class PyMemberDescriptor extends PyGettableDescriptor {
     }
 
     @Override public final String repr() { return "<member " + PyString.reprOf(name) + " of " + PyString.reprOf(owner.name()) + " objects>"; }
-    @Override public final PyBuiltinType type() { return type_singleton; }
+    @Override public final PyBuiltinType type() { return PyMemberDescriptorType.singleton; }
+
+    static PyObject pygetset___doc__(PyObject obj) {
+        throw new UnsupportedOperationException("member_descriptor.__doc__ unimplemented");
+    }
 }
 
 final class PyGetSetDescriptor extends PyGettableDescriptor {
