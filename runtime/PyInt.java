@@ -3,36 +3,54 @@
 // SPDX-License-Identifier: MIT
 
 final class PyIntType extends PyBuiltinType {
+// BEGIN GENERATED CODE: PyIntType
     public static final PyIntType singleton = new PyIntType();
-    private static final PyMethodDescriptor pydesc_as_integer_ratio = new PyMethodDescriptor(singleton, "as_integer_ratio", obj -> new PyInt.PyIntMethodUnimplemented(obj, "as_integer_ratio"));
-    private static final PyMethodDescriptor pydesc_bit_count = new PyMethodDescriptor(singleton, "bit_count", obj -> new PyInt.PyIntMethodUnimplemented(obj, "bit_count"));
-    private static final PyMethodDescriptor pydesc_bit_length = new PyMethodDescriptor(singleton, "bit_length", obj -> new PyInt.PyIntMethodUnimplemented(obj, "bit_length"));
     private static final PyMethodDescriptor pydesc_conjugate = new PyMethodDescriptor(singleton, "conjugate", obj -> new PyInt.PyIntMethodUnimplemented(obj, "conjugate"));
-    private static final PyGetSetDescriptor pydesc_denominator = new PyGetSetDescriptor(singleton, "denominator", obj -> PyInt.singleton_1);
-    private static final PyClassMethodDescriptor pydesc_from_bytes = new PyClassMethodDescriptor(singleton, "from_bytes", PyIntType.PyIntClassMethod_from_bytes::new);
-    private static final PyGetSetDescriptor pydesc_imag = new PyGetSetDescriptor(singleton, "imag", obj -> PyInt.singleton_0);
-    private static final PyMethodDescriptor pydesc_is_integer = new PyMethodDescriptor(singleton, "is_integer", obj -> new PyInt.PyIntMethodUnimplemented(obj, "is_integer"));
-    private static final PyGetSetDescriptor pydesc_numerator = new PyGetSetDescriptor(singleton, "numerator", obj -> obj);
-    private static final PyGetSetDescriptor pydesc_real = new PyGetSetDescriptor(singleton, "real", obj -> obj);
+    private static final PyMethodDescriptor pydesc_bit_length = new PyMethodDescriptor(singleton, "bit_length", obj -> new PyInt.PyIntMethodUnimplemented(obj, "bit_length"));
+    private static final PyMethodDescriptor pydesc_bit_count = new PyMethodDescriptor(singleton, "bit_count", obj -> new PyInt.PyIntMethodUnimplemented(obj, "bit_count"));
     private static final PyMethodDescriptor pydesc_to_bytes = new PyMethodDescriptor(singleton, "to_bytes", obj -> new PyInt.PyIntMethodUnimplemented(obj, "to_bytes"));
-
-    private PyIntType() { super("int", PyInt.class); }
+    private static final PyClassMethodDescriptor pydesc_from_bytes = new PyClassMethodDescriptor(singleton, "from_bytes", PyIntType.PyIntClassMethod_from_bytes::new);
+    private static final PyMethodDescriptor pydesc_as_integer_ratio = new PyMethodDescriptor(singleton, "as_integer_ratio", obj -> new PyInt.PyIntMethodUnimplemented(obj, "as_integer_ratio"));
+    private static final PyMethodDescriptor pydesc_is_integer = new PyMethodDescriptor(singleton, "is_integer", obj -> new PyInt.PyIntMethodUnimplemented(obj, "is_integer"));
+    private static final PyGetSetDescriptor pydesc_real = new PyGetSetDescriptor(singleton, "real", PyInt::pygetset_real);
+    private static final PyGetSetDescriptor pydesc_imag = new PyGetSetDescriptor(singleton, "imag", PyInt::pygetset_imag);
+    private static final PyGetSetDescriptor pydesc_numerator = new PyGetSetDescriptor(singleton, "numerator", PyInt::pygetset_numerator);
+    private static final PyGetSetDescriptor pydesc_denominator = new PyGetSetDescriptor(singleton, "denominator", PyInt::pygetset_denominator);
+    private static final PyString pydesc___doc__ = new PyString("int([x]) -> integer\nint(x, base=10) -> integer\n\nConvert a number or string to an integer, or return 0 if no arguments\nare given.  If x is a number, return x.__int__().  For floating-point\nnumbers, this truncates towards zero.\n\nIf x is not a number or if base is given, then x must be a string,\nbytes, or bytearray instance representing an integer literal in the\ngiven base.  The literal can be preceded by '+' or '-' and be surrounded\nby whitespace.  The base defaults to 10.  Valid bases are 0 and 2-36.\nBase 0 means to interpret the base from the string as an integer literal.\n>>> int('0b100', base=0)\n4");
+    private static final PyAttr attrs[] = new PyAttr[] {
+        new PyAttr("conjugate", pydesc_conjugate),
+        new PyAttr("bit_length", pydesc_bit_length),
+        new PyAttr("bit_count", pydesc_bit_count),
+        new PyAttr("to_bytes", pydesc_to_bytes),
+        new PyAttr("from_bytes", pydesc_from_bytes),
+        new PyAttr("as_integer_ratio", pydesc_as_integer_ratio),
+        new PyAttr("is_integer", pydesc_is_integer),
+        new PyAttr("real", pydesc_real),
+        new PyAttr("imag", pydesc_imag),
+        new PyAttr("numerator", pydesc_numerator),
+        new PyAttr("denominator", pydesc_denominator),
+        new PyAttr("__doc__", pydesc___doc__)
+    };
+    @Override public PyAttr[] getAttributes() { return attrs; }
     @Override public PyDescriptor getDescriptor(String name) {
         switch (name) {
-            case "as_integer_ratio": return pydesc_as_integer_ratio;
-            case "bit_count": return pydesc_bit_count;
-            case "bit_length": return pydesc_bit_length;
             case "conjugate": return pydesc_conjugate;
-            case "denominator": return pydesc_denominator;
-            case "from_bytes": return pydesc_from_bytes;
-            case "imag": return pydesc_imag;
-            case "is_integer": return pydesc_is_integer;
-            case "numerator": return pydesc_numerator;
-            case "real": return pydesc_real;
+            case "bit_length": return pydesc_bit_length;
+            case "bit_count": return pydesc_bit_count;
             case "to_bytes": return pydesc_to_bytes;
+            case "from_bytes": return pydesc_from_bytes;
+            case "as_integer_ratio": return pydesc_as_integer_ratio;
+            case "is_integer": return pydesc_is_integer;
+            case "real": return pydesc_real;
+            case "imag": return pydesc_imag;
+            case "numerator": return pydesc_numerator;
+            case "denominator": return pydesc_denominator;
             default: return null;
         }
     }
+// END GENERATED CODE: PyIntType
+
+    private PyIntType() { super("int", PyInt.class); }
     @Override public PyInt call(PyObject[] args, PyDict kwargs) {
         Runtime.requireMaxArgs(args, 2, typeName);
         if ((kwargs != null) && kwargs.boolValue()) {
@@ -120,6 +138,7 @@ public final class PyInt extends PyObject {
     public static final PyInt singleton_0 = new PyInt(0);
     public static final PyInt singleton_1 = new PyInt(1);
 
+// BEGIN GENERATED CODE: PyInt
     protected static final class PyIntMethodUnimplemented extends PyBuiltinMethod<PyInt> {
         private final String name;
         PyIntMethodUnimplemented(PyObject _self, String _name) { super((PyInt)_self); name = _name; }
@@ -128,6 +147,7 @@ public final class PyInt extends PyObject {
             throw new UnsupportedOperationException("int." + name + "() unimplemented");
         }
     }
+// END GENERATED CODE: PyInt
 
     public final long value;
 
@@ -373,4 +393,9 @@ public final class PyInt extends PyObject {
     @Override public long indexValue() { return value; }
     @Override public long intValue() { return value; }
     @Override public String repr() { return String.valueOf(value); }
+
+    static PyObject pygetset_denominator(PyObject obj) { return PyInt.singleton_1; }
+    static PyObject pygetset_imag(PyObject obj) { return PyInt.singleton_0; }
+    static PyObject pygetset_numerator(PyObject obj) { return obj; }
+    static PyObject pygetset_real(PyObject obj) { return obj; }
 }

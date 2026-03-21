@@ -17,7 +17,7 @@ import shutil
 import subprocess
 import sys
 import time
-from types import ClassMethodDescriptorType, MemberDescriptorType, MethodDescriptorType, NoneType
+from types import ClassMethodDescriptorType, GetSetDescriptorType, MemberDescriptorType, MethodDescriptorType, NoneType
 from typing import Iterator, Optional, TextIO
 
 BUILTIN_FUNCTIONS = {
@@ -1288,7 +1288,7 @@ class PythonjVisitor(ast.NodeVisitor):
 
 def gen_spec(path: str) -> None:
     spec = {}
-    for name in ['bytes', 'dict', 'list', 'range', 'set', 'slice', 'tuple']:
+    for name in ['bytes', 'dict', 'int', 'list', 'range', 'set', 'slice', 'str', 'tuple']:
         obj = getattr(builtins, name)
         attrs = {}
         for (k, v) in obj.__dict__.items():
@@ -1298,6 +1298,8 @@ def gen_spec(path: str) -> None:
                 attrs[k] = {'kind': 'string', 'value': v}
             elif isinstance(v, MemberDescriptorType):
                 attrs[k] = {'kind': 'member'}
+            elif isinstance(v, GetSetDescriptorType):
+                attrs[k] = {'kind': 'getset'}
             elif isinstance(v, MethodDescriptorType):
                 attrs[k] = {'kind': 'method'}
             elif isinstance(v, ClassMethodDescriptorType):
@@ -1320,9 +1322,19 @@ UNIMPLEMENTED_METHODS = {
         'rindex', 'rjust', 'rpartition', 'rsplit', 'rstrip', 'split', 'splitlines', 'startswith', 'strip',
         'swapcase', 'title', 'translate', 'upper', 'zfill',
     },
+    'int': {
+        'as_integer_ratio', 'bit_count', 'bit_length', 'conjugate', 'is_integer', 'to_bytes',
+    },
     'set': {
         'copy', 'difference', 'difference_update', 'intersection', 'intersection_update', 'isdisjoint', 'issubset',
         'issuperset', 'pop', 'remove', 'symmetric_difference', 'symmetric_difference_update', 'union',
+    },
+    'str': {
+        'capitalize', 'casefold', 'center', 'count', 'encode', 'endswith', 'expandtabs', 'format', 'format_map',
+        'index', 'isalnum', 'isalpha', 'isascii', 'isdecimal', 'isdigit', 'isidentifier', 'islower', 'isnumeric',
+        'isprintable', 'isspace', 'istitle', 'isupper', 'ljust', 'lstrip', 'partition', 'removeprefix',
+        'removesuffix', 'replace', 'rfind', 'rindex', 'rjust', 'rpartition', 'rsplit', 'rstrip', 'splitlines',
+        'strip', 'swapcase', 'title', 'translate', 'zfill',
     },
 }
 def gen_code(path) -> None:
@@ -1346,6 +1358,8 @@ def gen_code(path) -> None:
                 gen_lines.append(f"    private static final PyString pydesc_{k} = new PyString({java_string_literal(v['value'])});\n")
             elif v['kind'] == 'member':
                 gen_lines.append(f"    private static final PyMemberDescriptor pydesc_{k} = new PyMemberDescriptor(singleton, {java_string_literal(k)}, {java_name}::pymember_{k});\n")
+            elif v['kind'] == 'getset':
+                gen_lines.append(f"    private static final PyGetSetDescriptor pydesc_{k} = new PyGetSetDescriptor(singleton, {java_string_literal(k)}, {java_name}::pygetset_{k});\n")
             elif v['kind'] == 'method':
                 if name in UNIMPLEMENTED_METHODS and k in UNIMPLEMENTED_METHODS[name]:
                     constructor = f'obj -> new {java_name}.{java_name}MethodUnimplemented(obj, {java_string_literal(k)})'
