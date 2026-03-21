@@ -117,68 +117,148 @@ final class PyExceptionType extends PyBuiltinType {
 }
 // END GENERATED CODE: PyExceptionType
 
+// BEGIN GENERATED CODE: PyIndexErrorType
 final class PyIndexErrorType extends PyBuiltinType {
     public static final PyIndexErrorType singleton = new PyIndexErrorType();
-    private PyIndexErrorType() { super("IndexError", PyIndexError.class); }
-    @Override public PyIndexError call(PyObject[] args, PyDict kwargs) {
-        Runtime.requireNoKwArgs(kwargs, typeName);
-        return new PyIndexError(args);
+    private static final PyString pyattr___doc__ = new PyString("Sequence index out of range.");
+    private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>(1);
+    static {
+        attrs.put(new PyString("__doc__"), pyattr___doc__);
+    }
+
+    private PyIndexErrorType() { super("IndexError", PyIndexError.class, PyIndexError::newObj); }
+    @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
+    @Override public PyObject lookupAttr(String name) {
+        switch (name) {
+            case "__doc__": return pyattr___doc__;
+            default: return null;
+        }
     }
 }
+// END GENERATED CODE: PyIndexErrorType
 
+// BEGIN GENERATED CODE: PyKeyErrorType
 final class PyKeyErrorType extends PyBuiltinType {
     public static final PyKeyErrorType singleton = new PyKeyErrorType();
-    private PyKeyErrorType() { super("KeyError", PyKeyError.class); }
-    @Override public PyKeyError call(PyObject[] args, PyDict kwargs) {
-        Runtime.requireNoKwArgs(kwargs, typeName);
-        return new PyKeyError(args);
+    private static final PyString pyattr___doc__ = new PyString("Mapping key not found.");
+    private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>(1);
+    static {
+        attrs.put(new PyString("__doc__"), pyattr___doc__);
+    }
+
+    private PyKeyErrorType() { super("KeyError", PyKeyError.class, PyKeyError::newObj); }
+    @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
+    @Override public PyObject lookupAttr(String name) {
+        switch (name) {
+            case "__doc__": return pyattr___doc__;
+            default: return null;
+        }
     }
 }
+// END GENERATED CODE: PyKeyErrorType
 
+// BEGIN GENERATED CODE: PyLookupErrorType
 final class PyLookupErrorType extends PyBuiltinType {
     public static final PyLookupErrorType singleton = new PyLookupErrorType();
-    private PyLookupErrorType() { super("LookupError", PyLookupError.class); }
-    @Override public PyLookupError call(PyObject[] args, PyDict kwargs) {
-        Runtime.requireNoKwArgs(kwargs, typeName);
-        return new PyLookupError(args);
+    private static final PyString pyattr___doc__ = new PyString("Base class for lookup errors.");
+    private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>(1);
+    static {
+        attrs.put(new PyString("__doc__"), pyattr___doc__);
+    }
+
+    private PyLookupErrorType() { super("LookupError", PyLookupError.class, PyLookupError::newObj); }
+    @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
+    @Override public PyObject lookupAttr(String name) {
+        switch (name) {
+            case "__doc__": return pyattr___doc__;
+            default: return null;
+        }
     }
 }
+// END GENERATED CODE: PyLookupErrorType
 
+// BEGIN GENERATED CODE: PyStopIterationType
 final class PyStopIterationType extends PyBuiltinType {
     public static final PyStopIterationType singleton = new PyStopIterationType();
-    private PyStopIterationType() { super("StopIteration", PyStopIteration.class); }
-    @Override public PyStopIteration call(PyObject[] args, PyDict kwargs) {
-        Runtime.requireNoKwArgs(kwargs, typeName);
-        return new PyStopIteration(args);
+    private static final PyMemberDescriptor pyattr_value = new PyMemberDescriptor(singleton, "value", PyStopIteration::pymember_value);
+    private static final PyString pyattr___doc__ = new PyString("Signal the end from iterator.__next__().");
+    private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>(2);
+    static {
+        attrs.put(new PyString("value"), pyattr_value);
+        attrs.put(new PyString("__doc__"), pyattr___doc__);
+    }
+
+    private PyStopIterationType() { super("StopIteration", PyStopIteration.class, PyStopIteration::newObj); }
+    @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
+    @Override public PyObject lookupAttr(String name) {
+        switch (name) {
+            case "value": return pyattr_value;
+            case "__doc__": return pyattr___doc__;
+            default: return null;
+        }
     }
 }
+// END GENERATED CODE: PyStopIterationType
 
+// BEGIN GENERATED CODE: PyTypeErrorType
 final class PyTypeErrorType extends PyBuiltinType {
     public static final PyTypeErrorType singleton = new PyTypeErrorType();
-    private PyTypeErrorType() { super("TypeError", PyTypeError.class); }
-    @Override public PyTypeError call(PyObject[] args, PyDict kwargs) {
-        Runtime.requireNoKwArgs(kwargs, typeName);
-        return new PyTypeError(args);
+    private static final PyString pyattr___doc__ = new PyString("Inappropriate argument type.");
+    private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>(1);
+    static {
+        attrs.put(new PyString("__doc__"), pyattr___doc__);
+    }
+
+    private PyTypeErrorType() { super("TypeError", PyTypeError.class, PyTypeError::newObj); }
+    @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
+    @Override public PyObject lookupAttr(String name) {
+        switch (name) {
+            case "__doc__": return pyattr___doc__;
+            default: return null;
+        }
     }
 }
+// END GENERATED CODE: PyTypeErrorType
 
+// BEGIN GENERATED CODE: PyValueErrorType
 final class PyValueErrorType extends PyBuiltinType {
     public static final PyValueErrorType singleton = new PyValueErrorType();
-    private PyValueErrorType() { super("ValueError", PyValueError.class); }
-    @Override public PyValueError call(PyObject[] args, PyDict kwargs) {
-        Runtime.requireNoKwArgs(kwargs, typeName);
-        return new PyValueError(args);
+    private static final PyString pyattr___doc__ = new PyString("Inappropriate argument value (of correct type).");
+    private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>(1);
+    static {
+        attrs.put(new PyString("__doc__"), pyattr___doc__);
+    }
+
+    private PyValueErrorType() { super("ValueError", PyValueError.class, PyValueError::newObj); }
+    @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
+    @Override public PyObject lookupAttr(String name) {
+        switch (name) {
+            case "__doc__": return pyattr___doc__;
+            default: return null;
+        }
     }
 }
+// END GENERATED CODE: PyValueErrorType
 
+// BEGIN GENERATED CODE: PyZeroDivisionErrorType
 final class PyZeroDivisionErrorType extends PyBuiltinType {
     public static final PyZeroDivisionErrorType singleton = new PyZeroDivisionErrorType();
-    private PyZeroDivisionErrorType() { super("ZeroDivisionError", PyZeroDivisionError.class); }
-    @Override public PyZeroDivisionError call(PyObject[] args, PyDict kwargs) {
-        Runtime.requireNoKwArgs(kwargs, typeName);
-        return new PyZeroDivisionError(args);
+    private static final PyString pyattr___doc__ = new PyString("Second argument to a division or modulo operation was zero.");
+    private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>(1);
+    static {
+        attrs.put(new PyString("__doc__"), pyattr___doc__);
+    }
+
+    private PyZeroDivisionErrorType() { super("ZeroDivisionError", PyZeroDivisionError.class, PyZeroDivisionError::newObj); }
+    @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
+    @Override public PyObject lookupAttr(String name) {
+        switch (name) {
+            case "__doc__": return pyattr___doc__;
+            default: return null;
+        }
     }
 }
+// END GENERATED CODE: PyZeroDivisionErrorType
 
 class PyBaseException extends PyTruthyObject {
 // BEGIN GENERATED CODE: PyBaseException
@@ -294,11 +374,21 @@ final class PyZeroDivisionError extends PyArithmeticError {
     static PyRaise raise(String msg) {
         return new PyRaise(new PyZeroDivisionError(new PyString(msg)));
     }
+
+    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+        Runtime.requireNoKwArgs(kwargs, type.name());
+        return new PyZeroDivisionError(args);
+    }
 }
 
 class PyLookupError extends PyException {
     PyLookupError(PyObject... _args) { super(_args); }
     @Override public PyBuiltinType type() { return PyLookupErrorType.singleton; }
+
+    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+        Runtime.requireNoKwArgs(kwargs, type.name());
+        return new PyLookupError(args);
+    }
 }
 final class PyIndexError extends PyLookupError {
     PyIndexError(PyObject... _args) { super(_args); }
@@ -306,6 +396,11 @@ final class PyIndexError extends PyLookupError {
 
     static PyRaise raise(String msg) {
         return new PyRaise(new PyIndexError(new PyString(msg)));
+    }
+
+    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+        Runtime.requireNoKwArgs(kwargs, type.name());
+        return new PyIndexError(args);
     }
 }
 final class PyKeyError extends PyLookupError {
@@ -322,11 +417,23 @@ final class PyKeyError extends PyLookupError {
     static PyRaise raise(String msg) {
         return new PyRaise(new PyKeyError(new PyString(msg)));
     }
+
+    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+        Runtime.requireNoKwArgs(kwargs, type.name());
+        return new PyKeyError(args);
+    }
 }
 
 final class PyStopIteration extends PyException {
     PyStopIteration(PyObject... _args) { super(_args); }
     @Override public PyBuiltinType type() { return PyStopIterationType.singleton; }
+
+    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+        Runtime.requireNoKwArgs(kwargs, type.name());
+        return new PyStopIteration(args);
+    }
+
+    static PyObject pymember_value(PyObject obj) { throw new UnsupportedOperationException("StopIteration.value unsupported"); }
 }
 
 final class PyTypeError extends PyException {
@@ -339,6 +446,11 @@ final class PyTypeError extends PyException {
     static PyRaise raiseFormat(String fmt, Object... args) {
         return new PyRaise(new PyTypeError(new PyString(String.format(fmt, args))));
     }
+
+    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+        Runtime.requireNoKwArgs(kwargs, type.name());
+        return new PyTypeError(args);
+    }
 }
 
 final class PyValueError extends PyException {
@@ -350,6 +462,11 @@ final class PyValueError extends PyException {
     }
     static PyRaise raiseFormat(String fmt, Object... args) {
         return new PyRaise(new PyValueError(new PyString(String.format(fmt, args))));
+    }
+
+    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+        Runtime.requireNoKwArgs(kwargs, type.name());
+        return new PyValueError(args);
     }
 }
 

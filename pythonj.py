@@ -17,6 +17,7 @@ import shutil
 import subprocess
 import sys
 import time
+import types
 from types import ClassMethodDescriptorType, GetSetDescriptorType, MemberDescriptorType, MethodDescriptorType, NoneType
 from typing import Iterator, Optional, TextIO
 import _io
@@ -1290,11 +1291,12 @@ class PythonjVisitor(ast.NodeVisitor):
 def gen_spec(path: str) -> None:
     spec = {}
     for name in ['bool', 'bytearray', 'bytes', 'dict', 'enumerate', 'int', 'list', 'object', 'range',
-                 'reversed', 'set', 'slice', 'str', 'tuple', 'type', 'zip', '_io.BufferedReader',
-                 '_io.TextIOWrapper', 'ArithmeticError', 'AssertionError', 'AttributeError', 'BaseException',
-                 'Exception']:
+                 'reversed', 'set', 'slice', 'str', 'tuple', 'type', 'zip', 'types.NoneType',
+                 '_io.BufferedReader', '_io.TextIOWrapper', *sorted(EXCEPTION_TYPES)]:
         if name.startswith('_io.'):
             obj = getattr(_io, name.split('.', 1)[1])
+        elif name.startswith('types.'):
+            obj = getattr(types, name.split('.', 1)[1])
         else:
             obj = getattr(builtins, name)
         attrs = {}
@@ -1374,6 +1376,9 @@ def gen_code(path) -> None:
         elif name == '_io.TextIOWrapper':
             java_name = 'PyTextIOWrapper'
             java_path = 'runtime/PyFile.java'
+        elif name == 'types.NoneType':
+            java_name = 'PyNone'
+            java_path = 'runtime/PyNone.java'
         elif name in EXCEPTION_TYPES:
             java_name = f'Py{name}'
             java_path = 'runtime/PyExceptions.java'
@@ -1383,6 +1388,7 @@ def gen_code(path) -> None:
                 java_path = f'runtime/Runtime.java'
             else:
                 java_path = f'runtime/{java_name}.java'
+        py_name = 'NoneType' if name == 'types.NoneType' else name
         with open(java_path) as f:
             source_lines = f.readlines()
 
@@ -1422,9 +1428,9 @@ def gen_code(path) -> None:
             *(f'        attrs.put(new PyString("{k}"), pyattr_{k});\n' for k in attrs),
             '    }\n',
             '\n',
-            f'    private {java_name}Type() {{ super({java_string_literal(name)}, {java_name}.class, {java_name}::newObj); }}\n'
+            f'    private {java_name}Type() {{ super({java_string_literal(py_name)}, {java_name}.class, {java_name}::newObj); }}\n'
             if has_newobj else
-            f'    private {java_name}Type() {{ super({java_string_literal(name)}, {java_name}.class); }}\n',
+            f'    private {java_name}Type() {{ super({java_string_literal(py_name)}, {java_name}.class); }}\n',
             '    @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }\n',
             '    @Override public PyObject lookupAttr(String name) {\n',
             '        switch (name) {\n',
