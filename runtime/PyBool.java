@@ -5,8 +5,9 @@
 // Note intentional compatibility break: this is not a subclass of PyInt, so:
 // isinstance(False, int) -> False
 // issubclass(bool, int) -> False
-final class PyBoolType extends PyBuiltinType {
+
 // BEGIN GENERATED CODE: PyBoolType
+final class PyBoolType extends PyBuiltinType {
     public static final PyBoolType singleton = new PyBoolType();
     private static final PyString pyattr___doc__ = new PyString("Returns True when the argument is true, False otherwise.\nThe builtins True and False are the only two instances of the class bool.\nThe class bool is a subclass of the class int, and cannot be subclassed.");
     private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>(1);
@@ -14,7 +15,7 @@ final class PyBoolType extends PyBuiltinType {
         attrs.put(new PyString("__doc__"), pyattr___doc__);
     }
 
-    private PyBoolType() { super("bool", PyBool.class); }
+    private PyBoolType() { super("bool", PyBool.class, PyBool::newObj); }
     @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
     @Override public PyObject lookupAttr(String name) {
         switch (name) {
@@ -22,17 +23,8 @@ final class PyBoolType extends PyBuiltinType {
             default: return null;
         }
     }
-// END GENERATED CODE: PyBoolType
-
-    @Override public PyBool call(PyObject[] args, PyDict kwargs) {
-        Runtime.requireNoKwArgs(kwargs, typeName);
-        Runtime.requireMaxArgs(args, 1, typeName);
-        if (args.length == 1) {
-            return PyBool.create(args[0].boolValue());
-        }
-        return PyBool.false_singleton;
-    }
 }
+// END GENERATED CODE: PyBoolType
 
 public final class PyBool extends PyObject {
     public static final PyBool false_singleton = new PyBool(false);
@@ -43,6 +35,15 @@ public final class PyBool extends PyObject {
     private PyBool(boolean _value) { value = _value; }
     public static PyBool create(boolean value) {
         return value ? true_singleton : false_singleton;
+    }
+
+    static public PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+        Runtime.requireNoKwArgs(kwargs, type.name());
+        Runtime.requireMaxArgs(args, 1, type.name());
+        if (args.length == 1) {
+            return PyBool.create(args[0].boolValue());
+        }
+        return PyBool.false_singleton;
     }
 
     protected int asInt() { return value ? 1 : 0; }

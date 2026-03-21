@@ -8,8 +8,8 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
-final class PyDictType extends PyBuiltinType {
 // BEGIN GENERATED CODE: PyDictType
+final class PyDictType extends PyBuiltinType {
     public static final PyDictType singleton = new PyDictType();
     private static final PyMethodDescriptor pyattr_get = new PyMethodDescriptor(singleton, "get", PyDict.PyDictMethod_get::new);
     private static final PyMethodDescriptor pyattr_setdefault = new PyMethodDescriptor(singleton, "setdefault", PyDict.PyDictMethod_setdefault::new);
@@ -39,7 +39,7 @@ final class PyDictType extends PyBuiltinType {
         attrs.put(new PyString("__doc__"), pyattr___doc__);
     }
 
-    private PyDictType() { super("dict", PyDict.class); }
+    private PyDictType() { super("dict", PyDict.class, PyDict::newObj); }
     @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
     @Override public PyObject lookupAttr(String name) {
         switch (name) {
@@ -58,17 +58,8 @@ final class PyDictType extends PyBuiltinType {
             default: return null;
         }
     }
-// END GENERATED CODE: PyDictType
-
-    @Override public PyDict call(PyObject[] args, PyDict kwargs) {
-        if (args.length > 1) {
-            throw new IllegalArgumentException("dict() takes 0 or 1 arguments");
-        }
-        var ret = new PyDict();
-        ret.pymethod_update(args, kwargs);
-        return ret;
-    }
 }
+// END GENERATED CODE: PyDictType
 
 final class PyDictClassMethod_fromkeys extends PyBuiltinMethod<PyType> {
     PyDictClassMethod_fromkeys(PyType _self) { super(_self); }
@@ -479,6 +470,15 @@ public final class PyDict extends PyObject {
                 items.put(k, v);
             }
         }
+    }
+
+    static public PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+        if (args.length > 1) {
+            throw new IllegalArgumentException("dict() takes 0 or 1 arguments");
+        }
+        var ret = new PyDict();
+        ret.pymethod_update(args, kwargs);
+        return ret;
     }
 
     @Override public PyObject or(PyObject rhs) {

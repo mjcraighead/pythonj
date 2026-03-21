@@ -2,8 +2,8 @@
 // Copyright (c) 2012-2026 Matt Craighead
 // SPDX-License-Identifier: MIT
 
-final class PyIntType extends PyBuiltinType {
 // BEGIN GENERATED CODE: PyIntType
+final class PyIntType extends PyBuiltinType {
     public static final PyIntType singleton = new PyIntType();
     private static final PyMethodDescriptor pyattr_conjugate = new PyMethodDescriptor(singleton, "conjugate", obj -> new PyInt.PyIntMethodUnimplemented(obj, "conjugate"));
     private static final PyMethodDescriptor pyattr_bit_length = new PyMethodDescriptor(singleton, "bit_length", obj -> new PyInt.PyIntMethodUnimplemented(obj, "bit_length"));
@@ -33,7 +33,7 @@ final class PyIntType extends PyBuiltinType {
         attrs.put(new PyString("__doc__"), pyattr___doc__);
     }
 
-    private PyIntType() { super("int", PyInt.class); }
+    private PyIntType() { super("int", PyInt.class, PyInt::newObj); }
     @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
     @Override public PyObject lookupAttr(String name) {
         switch (name) {
@@ -52,10 +52,40 @@ final class PyIntType extends PyBuiltinType {
             default: return null;
         }
     }
+}
 // END GENERATED CODE: PyIntType
 
-    @Override public PyInt call(PyObject[] args, PyDict kwargs) {
-        Runtime.requireMaxArgs(args, 2, typeName);
+final class PyIntClassMethod_from_bytes extends PyBuiltinMethod<PyType> {
+    PyIntClassMethod_from_bytes(PyType self) { super(self); }
+    @Override public String methodName() { return "from_bytes"; }
+    @Override public PyObject call(PyObject[] args, PyDict kwargs) {
+        throw new UnsupportedOperationException("int.from_bytes() unimplemented");
+    }
+}
+
+// XXX Should probably pre-intern [-5,256] to match CPython
+public final class PyInt extends PyObject {
+    public static final PyInt singleton_neg1 = new PyInt(-1);
+    public static final PyInt singleton_0 = new PyInt(0);
+    public static final PyInt singleton_1 = new PyInt(1);
+
+// BEGIN GENERATED CODE: PyInt
+    protected static final class PyIntMethodUnimplemented extends PyBuiltinMethod<PyInt> {
+        private final String name;
+        PyIntMethodUnimplemented(PyObject _self, String _name) { super((PyInt)_self); name = _name; }
+        @Override public String methodName() { return name; }
+        @Override public PyObject call(PyObject[] args, PyDict kwargs) {
+            throw new UnsupportedOperationException("int." + name + "() unimplemented");
+        }
+    }
+// END GENERATED CODE: PyInt
+
+    public final long value;
+
+    PyInt(long _value) { value = _value; }
+
+    static public PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+        Runtime.requireMaxArgs(args, 2, type.name());
         if ((kwargs != null) && kwargs.boolValue()) {
             throw new IllegalArgumentException("int() does not accept kwargs");
         }
@@ -126,36 +156,6 @@ final class PyIntType extends PyBuiltinType {
         }
         throw new UnsupportedOperationException("don't know how to handle argument to int()");
     }
-}
-
-final class PyIntClassMethod_from_bytes extends PyBuiltinMethod<PyType> {
-    PyIntClassMethod_from_bytes(PyType self) { super(self); }
-    @Override public String methodName() { return "from_bytes"; }
-    @Override public PyObject call(PyObject[] args, PyDict kwargs) {
-        throw new UnsupportedOperationException("int.from_bytes() unimplemented");
-    }
-}
-
-// XXX Should probably pre-intern [-5,256] to match CPython
-public final class PyInt extends PyObject {
-    public static final PyInt singleton_neg1 = new PyInt(-1);
-    public static final PyInt singleton_0 = new PyInt(0);
-    public static final PyInt singleton_1 = new PyInt(1);
-
-// BEGIN GENERATED CODE: PyInt
-    protected static final class PyIntMethodUnimplemented extends PyBuiltinMethod<PyInt> {
-        private final String name;
-        PyIntMethodUnimplemented(PyObject _self, String _name) { super((PyInt)_self); name = _name; }
-        @Override public String methodName() { return name; }
-        @Override public PyObject call(PyObject[] args, PyDict kwargs) {
-            throw new UnsupportedOperationException("int." + name + "() unimplemented");
-        }
-    }
-// END GENERATED CODE: PyInt
-
-    public final long value;
-
-    PyInt(long _value) { value = _value; }
 
     public static long floorDiv(long lhs, long rhs) {
         if ((lhs == Long.MIN_VALUE) && (rhs == -1)) {
