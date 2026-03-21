@@ -17,7 +17,7 @@ import shutil
 import subprocess
 import sys
 import time
-from types import MemberDescriptorType, MethodDescriptorType, NoneType
+from types import ClassMethodDescriptorType, MemberDescriptorType, MethodDescriptorType, NoneType
 from typing import Iterator, Optional, TextIO
 
 BUILTIN_FUNCTIONS = {
@@ -1288,7 +1288,7 @@ class PythonjVisitor(ast.NodeVisitor):
 
 def gen_spec(path: str) -> None:
     spec = {}
-    for name in ['list', 'range', 'set', 'slice', 'tuple']:
+    for name in ['dict', 'list', 'range', 'set', 'slice', 'tuple']:
         obj = getattr(builtins, name)
         attrs = {}
         for (k, v) in obj.__dict__.items():
@@ -1300,8 +1300,10 @@ def gen_spec(path: str) -> None:
                 attrs[k] = {'kind': 'member'}
             elif isinstance(v, MethodDescriptorType):
                 attrs[k] = {'kind': 'method'}
+            elif isinstance(v, ClassMethodDescriptorType):
+                attrs[k] = {'kind': 'classmethod'}
             else:
-                assert False, (name, k, v)
+                assert False, (name, k, v, type(v))
         spec[name] = attrs
 
     with open(path, 'w') as f:
@@ -1341,6 +1343,9 @@ def gen_code(path) -> None:
                 else:
                     constructor = f'{java_name}.{java_name}Method_{k}::new'
                 gen_lines.append(f"    private static final PyMethodDescriptor pydesc_{k} = new PyMethodDescriptor(singleton, {java_string_literal(k)}, {constructor});\n")
+            elif v['kind'] == 'classmethod':
+                constructor = f'{java_name}Type.{java_name}ClassMethod_{k}::new'
+                gen_lines.append(f"    private static final PyClassMethodDescriptor pydesc_{k} = new PyClassMethodDescriptor(singleton, {java_string_literal(k)}, {constructor});\n")
             else:
                 assert False, (name, k, v)
         gen_lines += [
@@ -1354,7 +1359,7 @@ def gen_code(path) -> None:
             '        switch (name) {\n',
             *(
                 f'            case {java_string_literal(k)}: return pydesc_{k};\n'
-                for (k, v) in attrs.items() if v['kind'] in {'member', 'method'}
+                for (k, v) in attrs.items() if v['kind'] in {'classmethod', 'member', 'method'}
             ),
             '            default: return null;\n',
             '        }\n',

@@ -9,36 +9,54 @@ import java.util.Map;
 import java.util.Set;
 
 final class PyDictType extends PyBuiltinType {
+// BEGIN GENERATED CODE: PyDictType
     public static final PyDictType singleton = new PyDictType();
-    private static final PyMethodDescriptor pydesc_clear = new PyMethodDescriptor(singleton, "clear", PyDict.PyDictMethod_clear::new);
-    private static final PyMethodDescriptor pydesc_copy = new PyMethodDescriptor(singleton, "copy", PyDict.PyDictMethod_copy::new);
-    private static final PyClassMethodDescriptor pydesc_fromkeys = new PyClassMethodDescriptor(singleton, "fromkeys", PyDictType.PyDictClassMethod_fromkeys::new);
     private static final PyMethodDescriptor pydesc_get = new PyMethodDescriptor(singleton, "get", PyDict.PyDictMethod_get::new);
-    private static final PyMethodDescriptor pydesc_keys = new PyMethodDescriptor(singleton, "keys", PyDict.PyDictMethod_keys::new);
-    private static final PyMethodDescriptor pydesc_items = new PyMethodDescriptor(singleton, "items", PyDict.PyDictMethod_items::new);
+    private static final PyMethodDescriptor pydesc_setdefault = new PyMethodDescriptor(singleton, "setdefault", PyDict.PyDictMethod_setdefault::new);
     private static final PyMethodDescriptor pydesc_pop = new PyMethodDescriptor(singleton, "pop", PyDict.PyDictMethod_pop::new);
     private static final PyMethodDescriptor pydesc_popitem = new PyMethodDescriptor(singleton, "popitem", PyDict.PyDictMethod_popitem::new);
-    private static final PyMethodDescriptor pydesc_setdefault = new PyMethodDescriptor(singleton, "setdefault", PyDict.PyDictMethod_setdefault::new);
-    private static final PyMethodDescriptor pydesc_update = new PyMethodDescriptor(singleton, "update", PyDict.PyDictMethod_update::new);
+    private static final PyMethodDescriptor pydesc_keys = new PyMethodDescriptor(singleton, "keys", PyDict.PyDictMethod_keys::new);
+    private static final PyMethodDescriptor pydesc_items = new PyMethodDescriptor(singleton, "items", PyDict.PyDictMethod_items::new);
     private static final PyMethodDescriptor pydesc_values = new PyMethodDescriptor(singleton, "values", PyDict.PyDictMethod_values::new);
-
-    private PyDictType() { super("dict", PyDict.class); }
+    private static final PyMethodDescriptor pydesc_update = new PyMethodDescriptor(singleton, "update", PyDict.PyDictMethod_update::new);
+    private static final PyClassMethodDescriptor pydesc_fromkeys = new PyClassMethodDescriptor(singleton, "fromkeys", PyDictType.PyDictClassMethod_fromkeys::new);
+    private static final PyMethodDescriptor pydesc_clear = new PyMethodDescriptor(singleton, "clear", PyDict.PyDictMethod_clear::new);
+    private static final PyMethodDescriptor pydesc_copy = new PyMethodDescriptor(singleton, "copy", PyDict.PyDictMethod_copy::new);
+    private static final PyString pydesc___doc__ = new PyString("dict() -> new empty dictionary\ndict(mapping) -> new dictionary initialized from a mapping object's\n    (key, value) pairs\ndict(iterable) -> new dictionary initialized as if via:\n    d = {}\n    for k, v in iterable:\n        d[k] = v\ndict(**kwargs) -> new dictionary initialized with the name=value pairs\n    in the keyword argument list.  For example:  dict(one=1, two=2)");
+    private static final PyAttr attrs[] = new PyAttr[] {
+        new PyAttr("get", pydesc_get),
+        new PyAttr("setdefault", pydesc_setdefault),
+        new PyAttr("pop", pydesc_pop),
+        new PyAttr("popitem", pydesc_popitem),
+        new PyAttr("keys", pydesc_keys),
+        new PyAttr("items", pydesc_items),
+        new PyAttr("values", pydesc_values),
+        new PyAttr("update", pydesc_update),
+        new PyAttr("fromkeys", pydesc_fromkeys),
+        new PyAttr("clear", pydesc_clear),
+        new PyAttr("copy", pydesc_copy),
+        new PyAttr("__doc__", pydesc___doc__)
+    };
+    @Override public PyAttr[] getAttributes() { return attrs; }
     @Override public PyDescriptor getDescriptor(String name) {
         switch (name) {
-            case "clear": return pydesc_clear;
-            case "copy": return pydesc_copy;
-            case "fromkeys": return pydesc_fromkeys;
             case "get": return pydesc_get;
-            case "items": return pydesc_items;
-            case "keys": return pydesc_keys;
+            case "setdefault": return pydesc_setdefault;
             case "pop": return pydesc_pop;
             case "popitem": return pydesc_popitem;
-            case "setdefault": return pydesc_setdefault;
-            case "update": return pydesc_update;
+            case "keys": return pydesc_keys;
+            case "items": return pydesc_items;
             case "values": return pydesc_values;
+            case "update": return pydesc_update;
+            case "fromkeys": return pydesc_fromkeys;
+            case "clear": return pydesc_clear;
+            case "copy": return pydesc_copy;
             default: return null;
         }
     }
+// END GENERATED CODE: PyDictType
+
+    private PyDictType() { super("dict", PyDict.class); }
     @Override public PyDict call(PyObject[] args, PyDict kwargs) {
         if (args.length > 1) {
             throw new IllegalArgumentException("dict() takes 0 or 1 arguments");
