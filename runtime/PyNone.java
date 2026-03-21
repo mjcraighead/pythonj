@@ -2,23 +2,23 @@
 // Copyright (c) 2012-2026 Matt Craighead
 // SPDX-License-Identifier: MIT
 
+final class PyNoneType extends PyBuiltinClass {
+    public static final PyBuiltinClass singleton = new PyNoneType();
+
+    PyNoneType() { super("NoneType", PyNone.class); }
+    @Override public PyNone call(PyObject[] args, PyDict kwargs) {
+        if ((kwargs != null) && kwargs.boolValue()) {
+            throw PyTypeError.raise("NoneType takes no arguments");
+        }
+        if (args.length != 0) {
+            throw PyTypeError.raise("NoneType takes no arguments");
+        }
+        return PyNone.singleton;
+    }
+}
+
 public final class PyNone extends PyObject {
     public static final PyNone singleton = new PyNone();
-
-    private static final class PyNoneType extends PyBuiltinClass {
-        private static final PyBuiltinClass singleton = new PyNoneType();
-
-        PyNoneType() { super("NoneType", PyNone.class); }
-        @Override public PyNone call(PyObject[] args, PyDict kwargs) {
-            if ((kwargs != null) && kwargs.boolValue()) {
-                throw PyTypeError.raise("NoneType takes no arguments");
-            }
-            if (args.length != 0) {
-                throw PyTypeError.raise("NoneType takes no arguments");
-            }
-            return PyNone.singleton;
-        }
-    }
 
     private PyNone() {}
 
