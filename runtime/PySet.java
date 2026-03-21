@@ -9,12 +9,13 @@ import java.util.Set;
 
 final class PySetType extends PyBuiltinType {
     public static final PySetType singleton = new PySetType();
+// BEGIN GENERATED CODE: PySetType
     private static final PyMethodDescriptor pydesc_add = new PyMethodDescriptor(singleton, "add", PySet.PySetMethod_add::new);
     private static final PyMethodDescriptor pydesc_clear = new PyMethodDescriptor(singleton, "clear", PySet.PySetMethod_clear::new);
     private static final PyMethodDescriptor pydesc_copy = new PyMethodDescriptor(singleton, "copy", obj -> new PySet.PySetMethodUnimplemented(obj, "copy"));
+    private static final PyMethodDescriptor pydesc_discard = new PyMethodDescriptor(singleton, "discard", PySet.PySetMethod_discard::new);
     private static final PyMethodDescriptor pydesc_difference = new PyMethodDescriptor(singleton, "difference", obj -> new PySet.PySetMethodUnimplemented(obj, "difference"));
     private static final PyMethodDescriptor pydesc_difference_update = new PyMethodDescriptor(singleton, "difference_update", obj -> new PySet.PySetMethodUnimplemented(obj, "difference_update"));
-    private static final PyMethodDescriptor pydesc_discard = new PyMethodDescriptor(singleton, "discard", PySet.PySetMethod_discard::new);
     private static final PyMethodDescriptor pydesc_intersection = new PyMethodDescriptor(singleton, "intersection", obj -> new PySet.PySetMethodUnimplemented(obj, "intersection"));
     private static final PyMethodDescriptor pydesc_intersection_update = new PyMethodDescriptor(singleton, "intersection_update", obj -> new PySet.PySetMethodUnimplemented(obj, "intersection_update"));
     private static final PyMethodDescriptor pydesc_isdisjoint = new PyMethodDescriptor(singleton, "isdisjoint", obj -> new PySet.PySetMethodUnimplemented(obj, "isdisjoint"));
@@ -26,7 +27,6 @@ final class PySetType extends PyBuiltinType {
     private static final PyMethodDescriptor pydesc_symmetric_difference_update = new PyMethodDescriptor(singleton, "symmetric_difference_update", obj -> new PySet.PySetMethodUnimplemented(obj, "symmetric_difference_update"));
     private static final PyMethodDescriptor pydesc_union = new PyMethodDescriptor(singleton, "union", obj -> new PySet.PySetMethodUnimplemented(obj, "union"));
     private static final PyMethodDescriptor pydesc_update = new PyMethodDescriptor(singleton, "update", PySet.PySetMethod_update::new);
-// BEGIN GENERATED CODE: PySetType
     private static final PyString pydesc___doc__ = new PyString("Build an unordered collection of unique elements.");
     private static final PyAttr attrs[] = new PyAttr[] {
         new PyAttr("add", pydesc_add),

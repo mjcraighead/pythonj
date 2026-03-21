@@ -9,18 +9,18 @@ import java.util.Iterator;
 
 final class PyListType extends PyBuiltinType {
     public static final PyListType singleton = new PyListType();
-    private static final PyMethodDescriptor pydesc_append = new PyMethodDescriptor(singleton, "append", PyList.PyListMethod_append::new);
+// BEGIN GENERATED CODE: PyListType
     private static final PyMethodDescriptor pydesc_clear = new PyMethodDescriptor(singleton, "clear", PyList.PyListMethod_clear::new);
     private static final PyMethodDescriptor pydesc_copy = new PyMethodDescriptor(singleton, "copy", PyList.PyListMethod_copy::new);
-    private static final PyMethodDescriptor pydesc_count = new PyMethodDescriptor(singleton, "count", PyList.PyListMethod_count::new);
-    private static final PyMethodDescriptor pydesc_extend = new PyMethodDescriptor(singleton, "extend", PyList.PyListMethod_extend::new);
-    private static final PyMethodDescriptor pydesc_index = new PyMethodDescriptor(singleton, "index", PyList.PyListMethod_index::new);
+    private static final PyMethodDescriptor pydesc_append = new PyMethodDescriptor(singleton, "append", PyList.PyListMethod_append::new);
     private static final PyMethodDescriptor pydesc_insert = new PyMethodDescriptor(singleton, "insert", PyList.PyListMethod_insert::new);
+    private static final PyMethodDescriptor pydesc_extend = new PyMethodDescriptor(singleton, "extend", PyList.PyListMethod_extend::new);
     private static final PyMethodDescriptor pydesc_pop = new PyMethodDescriptor(singleton, "pop", PyList.PyListMethod_pop::new);
     private static final PyMethodDescriptor pydesc_remove = new PyMethodDescriptor(singleton, "remove", PyList.PyListMethod_remove::new);
+    private static final PyMethodDescriptor pydesc_index = new PyMethodDescriptor(singleton, "index", PyList.PyListMethod_index::new);
+    private static final PyMethodDescriptor pydesc_count = new PyMethodDescriptor(singleton, "count", PyList.PyListMethod_count::new);
     private static final PyMethodDescriptor pydesc_reverse = new PyMethodDescriptor(singleton, "reverse", PyList.PyListMethod_reverse::new);
     private static final PyMethodDescriptor pydesc_sort = new PyMethodDescriptor(singleton, "sort", PyList.PyListMethod_sort::new);
-// BEGIN GENERATED CODE: PyListType
     private static final PyString pydesc___doc__ = new PyString("Built-in mutable sequence.\n\nIf no argument is given, the constructor creates a new empty list.\nThe argument must be an iterable if specified.");
     private static final PyAttr attrs[] = new PyAttr[] {
         new PyAttr("clear", pydesc_clear),

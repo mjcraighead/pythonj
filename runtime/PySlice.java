@@ -4,11 +4,11 @@
 
 final class PySliceType extends PyBuiltinType {
     public static final PySliceType singleton = new PySliceType();
-    private static final PyMethodDescriptor pydesc_indices = new PyMethodDescriptor(singleton, "indices", PySlice.PySliceMethod_indices::new);
-    private static final PyMemberDescriptor pydesc_start = new PyMemberDescriptor(singleton, "start", obj -> ((PySlice)obj).start);
-    private static final PyMemberDescriptor pydesc_step = new PyMemberDescriptor(singleton, "step", obj -> ((PySlice)obj).step);
-    private static final PyMemberDescriptor pydesc_stop = new PyMemberDescriptor(singleton, "stop", obj -> ((PySlice)obj).stop);
 // BEGIN GENERATED CODE: PySliceType
+    private static final PyMethodDescriptor pydesc_indices = new PyMethodDescriptor(singleton, "indices", PySlice.PySliceMethod_indices::new);
+    private static final PyMemberDescriptor pydesc_start = new PyMemberDescriptor(singleton, "start", PySlice::pymember_start);
+    private static final PyMemberDescriptor pydesc_stop = new PyMemberDescriptor(singleton, "stop", PySlice::pymember_stop);
+    private static final PyMemberDescriptor pydesc_step = new PyMemberDescriptor(singleton, "step", PySlice::pymember_step);
     private static final PyString pydesc___doc__ = new PyString("slice(stop)\nslice(start, stop[, step])\n\nCreate a slice object.  This is used for extended slicing (e.g. a[0:10:2]).");
     private static final PyAttr attrs[] = new PyAttr[] {
         new PyAttr("indices", pydesc_indices),
@@ -163,4 +163,8 @@ public final class PySlice extends PyTruthyObject {
             new PyInt(indices.step())
         });
     }
+
+    static PyObject pymember_start(PyObject obj) { return ((PySlice)obj).start; }
+    static PyObject pymember_step(PyObject obj) { return ((PySlice)obj).step; }
+    static PyObject pymember_stop(PyObject obj) { return ((PySlice)obj).stop; }
 }

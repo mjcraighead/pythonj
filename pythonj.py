@@ -1308,25 +1308,42 @@ def gen_spec(path: str) -> None:
         json.dump(spec, f, indent=2)
         f.write('\n')
 
+UNIMPLEMENTED_METHODS = {
+    'set': {
+        'copy', 'difference', 'difference_update', 'intersection', 'intersection_update', 'isdisjoint', 'issubset',
+        'issuperset', 'pop', 'remove', 'symmetric_difference', 'symmetric_difference_update', 'union',
+    },
+}
 def gen_code(path) -> None:
     with open(path) as f:
         spec = json.load(f)
 
     for (name, attrs) in spec.items():
-        java_path = f'runtime/{BUILTIN_TYPES[name]}.java'
-        begin_tag = f'// BEGIN GENERATED CODE: {BUILTIN_TYPES[name]}Type\n'
-        end_tag = f'// END GENERATED CODE: {BUILTIN_TYPES[name]}Type\n'
+        java_name = BUILTIN_TYPES[name]
+        java_path = f'runtime/{java_name}.java'
+        begin_tag = f'// BEGIN GENERATED CODE: {java_name}Type\n'
+        end_tag = f'// END GENERATED CODE: {java_name}Type\n'
 
         with open(java_path) as f:
             source_lines = f.readlines()
 
         begin_index = source_lines.index(begin_tag) + 1
         end_index = source_lines.index(end_tag)
-        gen_lines = [
-            *(
-                f"    private static final PyString pydesc_{k} = new PyString({java_string_literal(v['value'])});\n"
-                for (k, v) in attrs.items() if v['kind'] == 'string'
-            ),
+        gen_lines = []
+        for (k, v) in attrs.items():
+            if v['kind'] == 'string':
+                gen_lines.append(f"    private static final PyString pydesc_{k} = new PyString({java_string_literal(v['value'])});\n")
+            elif v['kind'] == 'member':
+                gen_lines.append(f"    private static final PyMemberDescriptor pydesc_{k} = new PyMemberDescriptor(singleton, {java_string_literal(k)}, {java_name}::pymember_{k});\n")
+            elif v['kind'] == 'method':
+                if name in UNIMPLEMENTED_METHODS and k in UNIMPLEMENTED_METHODS[name]:
+                    constructor = f'obj -> new {java_name}.{java_name}MethodUnimplemented(obj, {java_string_literal(k)})'
+                else:
+                    constructor = f'{java_name}.{java_name}Method_{k}::new'
+                gen_lines.append(f"    private static final PyMethodDescriptor pydesc_{k} = new PyMethodDescriptor(singleton, {java_string_literal(k)}, {constructor});\n")
+            else:
+                assert False, (name, k, v)
+        gen_lines += [
             '    private static final PyAttr attrs[] = new PyAttr[] {\n',
             '        ',
             ',\n        '.join(f'new PyAttr("{k}", pydesc_{k})' for k in attrs),

@@ -4,12 +4,12 @@
 
 final class PyRangeType extends PyBuiltinType {
     public static final PyRangeType singleton = new PyRangeType();
+// BEGIN GENERATED CODE: PyRangeType
     private static final PyMethodDescriptor pydesc_count = new PyMethodDescriptor(singleton, "count", PyRange.PyRangeMethod_count::new);
     private static final PyMethodDescriptor pydesc_index = new PyMethodDescriptor(singleton, "index", PyRange.PyRangeMethod_index::new);
-    private static final PyMemberDescriptor pydesc_start = new PyMemberDescriptor(singleton, "start", obj -> new PyInt(((PyRange)obj).start));
-    private static final PyMemberDescriptor pydesc_step = new PyMemberDescriptor(singleton, "step", obj -> new PyInt(((PyRange)obj).step));
-    private static final PyMemberDescriptor pydesc_stop = new PyMemberDescriptor(singleton, "stop", obj -> new PyInt(((PyRange)obj).stop));
-// BEGIN GENERATED CODE: PyRangeType
+    private static final PyMemberDescriptor pydesc_start = new PyMemberDescriptor(singleton, "start", PyRange::pymember_start);
+    private static final PyMemberDescriptor pydesc_stop = new PyMemberDescriptor(singleton, "stop", PyRange::pymember_stop);
+    private static final PyMemberDescriptor pydesc_step = new PyMemberDescriptor(singleton, "step", PyRange::pymember_step);
     private static final PyString pydesc___doc__ = new PyString("range(stop) -> range object\nrange(start, stop[, step]) -> range object\n\nReturn an object that produces a sequence of integers from start (inclusive)\nto stop (exclusive) by step.  range(i, j) produces i, i+1, i+2, ..., j-1.\nstart defaults to 0, and stop is omitted!  range(4) produces 0, 1, 2, 3.\nThese are exactly the valid indices for a list of 4 elements.\nWhen step is given, it specifies the increment (or decrement).");
     private static final PyAttr attrs[] = new PyAttr[] {
         new PyAttr("count", pydesc_count),
@@ -151,4 +151,8 @@ public final class PyRange extends PyObject {
             return String.format("range(%d, %d, %d)", start, stop, step);
         }
     }
+
+    static PyObject pymember_start(PyObject obj) { return new PyInt(((PyRange)obj).start); }
+    static PyObject pymember_step(PyObject obj) { return new PyInt(((PyRange)obj).step); }
+    static PyObject pymember_stop(PyObject obj) { return new PyInt(((PyRange)obj).stop); }
 }
