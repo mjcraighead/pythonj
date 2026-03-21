@@ -2,8 +2,8 @@
 // Copyright (c) 2012-2026 Matt Craighead
 // SPDX-License-Identifier: MIT
 
-final class PyNoneType extends PyBuiltinClass {
-    public static final PyBuiltinClass singleton = new PyNoneType();
+final class PyNoneType extends PyBuiltinType {
+    public static final PyBuiltinType singleton = new PyNoneType();
 
     private PyNoneType() { super("NoneType", PyNone.class); }
     @Override public PyNone call(PyObject[] args, PyDict kwargs) {
@@ -30,7 +30,7 @@ public final class PyNone extends PyObject {
         }
     }
 
-    @Override public PyBuiltinClass type() { return PyNoneType.singleton; }
+    @Override public PyBuiltinType type() { return PyNoneType.singleton; }
 
     @Override public boolean boolValue() { return false; }
     @Override public boolean contains(PyObject rhs) { return defaultContains(rhs); }

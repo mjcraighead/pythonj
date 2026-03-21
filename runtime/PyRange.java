@@ -2,7 +2,7 @@
 // Copyright (c) 2012-2026 Matt Craighead
 // SPDX-License-Identifier: MIT
 
-final class PyRangeType extends PyBuiltinClass {
+final class PyRangeType extends PyBuiltinType {
     public static final PyRangeType singleton = new PyRangeType();
     private static final PyMethodDescriptor pydesc_count = new PyMethodDescriptor(singleton, "count", PyRange.PyRangeMethod_count::new);
     private static final PyMethodDescriptor pydesc_index = new PyMethodDescriptor(singleton, "index", PyRange.PyRangeMethod_index::new);
@@ -41,7 +41,7 @@ final class PyRangeType extends PyBuiltinClass {
 
 public final class PyRange extends PyObject {
     static final class PyRangeIter extends PyIter {
-        private static final PyBuiltinClass type_singleton = new PyBuiltinClass("range_iterator", PyRangeIter.class);
+        private static final PyBuiltinType type_singleton = new PyBuiltinType("range_iterator", PyRangeIter.class);
 
         private long start;
         private final long stop, step;
@@ -67,7 +67,7 @@ public final class PyRange extends PyObject {
             return ret;
         }
         @Override public String repr() { return defaultRepr(); }
-        @Override public PyBuiltinClass type() { return type_singleton; }
+        @Override public PyBuiltinType type() { return type_singleton; }
     };
 
     protected static final class PyRangeMethod_count extends PyBuiltinMethod<PyRange> {
@@ -103,7 +103,7 @@ public final class PyRange extends PyObject {
 
     @Override public final boolean hasIter() { return true; }
     @Override public PyRangeIter iter() { return new PyRangeIter(this); }
-    @Override public PyBuiltinClass type() { return PyRangeType.singleton; }
+    @Override public PyBuiltinType type() { return PyRangeType.singleton; }
 
     @Override public boolean boolValue() {
         return len() != 0;

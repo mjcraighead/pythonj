@@ -4,7 +4,7 @@
 
 import java.util.ArrayList;
 
-final class PyZipType extends PyBuiltinClass {
+final class PyZipType extends PyBuiltinType {
     public static final PyZipType singleton = new PyZipType();
 
     private PyZipType() { super("zip", PyZip.class); }
@@ -44,5 +44,5 @@ public final class PyZip extends PyIter {
 
     @Override public boolean contains(PyObject rhs) { return defaultContains(rhs); }
     @Override public String repr() { return defaultRepr(); }
-    @Override public PyBuiltinClass type() { return PyZipType.singleton; }
+    @Override public PyBuiltinType type() { return PyZipType.singleton; }
 }

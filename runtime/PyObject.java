@@ -4,7 +4,7 @@
 
 import java.util.Set;
 
-final class PyObjectType extends PyBuiltinClass {
+final class PyObjectType extends PyBuiltinType {
     public static final PyObjectType singleton = new PyObjectType();
     private PyObjectType() { super("object", PyObject.class); }
 }

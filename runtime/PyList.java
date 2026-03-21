@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 
-final class PyListType extends PyBuiltinClass {
+final class PyListType extends PyBuiltinType {
     public static final PyListType singleton = new PyListType();
     private static final PyMethodDescriptor pydesc_append = new PyMethodDescriptor(singleton, "append", PyList.PyListMethod_append::new);
     private static final PyMethodDescriptor pydesc_clear = new PyMethodDescriptor(singleton, "clear", PyList.PyListMethod_clear::new);
@@ -52,7 +52,7 @@ final class PyListType extends PyBuiltinClass {
 
 public final class PyList extends PyObject {
     static final class PyListIter extends PyIter {
-        private static final PyBuiltinClass type_singleton = new PyBuiltinClass("list_iterator", PyListIter.class);
+        private static final PyBuiltinType type_singleton = new PyBuiltinType("list_iterator", PyListIter.class);
 
         private final Iterator<PyObject> it;
 
@@ -60,7 +60,7 @@ public final class PyList extends PyObject {
 
         @Override public PyObject next() { return it.hasNext() ? it.next() : null; }
         @Override public String repr() { return defaultRepr(); }
-        @Override public PyBuiltinClass type() { return type_singleton; }
+        @Override public PyBuiltinType type() { return type_singleton; }
     };
 
     protected static final class PyListMethod_append extends PyBuiltinMethod<PyList> {
@@ -330,7 +330,7 @@ public final class PyList extends PyObject {
     @Override public final boolean hasIter() { return true; }
     @Override public PyListIter iter() { return new PyListIter(items.iterator()); }
     @Override public PyReversed reversed() { return new PyReversed(this); }
-    @Override public PyBuiltinClass type() { return PyListType.singleton; }
+    @Override public PyBuiltinType type() { return PyListType.singleton; }
 
     @Override public boolean boolValue() { return !items.isEmpty(); }
     @Override public boolean contains(PyObject rhs) { return items.contains(rhs); }

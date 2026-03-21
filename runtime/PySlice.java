@@ -2,7 +2,7 @@
 // Copyright (c) 2012-2026 Matt Craighead
 // SPDX-License-Identifier: MIT
 
-final class PySliceType extends PyBuiltinClass {
+final class PySliceType extends PyBuiltinType {
     public static final PySliceType singleton = new PySliceType();
     private static final PyMethodDescriptor pydesc_indices = new PyMethodDescriptor(singleton, "indices", PySlice.PySliceMethod_indices::new);
     private static final PyMemberDescriptor pydesc_start = new PyMemberDescriptor(singleton, "start", obj -> ((PySlice)obj).start);
@@ -58,7 +58,7 @@ public final class PySlice extends PyTruthyObject {
         step = _step;
     }
 
-    @Override public PyBuiltinClass type() { return PySliceType.singleton; }
+    @Override public PyBuiltinType type() { return PySliceType.singleton; }
 
     @Override public boolean ge(PyObject rhs) { throw unimplementedMethod("ge"); }
     @Override public boolean gt(PyObject rhs) { throw unimplementedMethod("gt"); }

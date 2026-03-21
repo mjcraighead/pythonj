@@ -5,7 +5,7 @@
 import java.util.Arrays;
 import java.util.ArrayList;
 
-final class PyTupleType extends PyBuiltinClass {
+final class PyTupleType extends PyBuiltinType {
     public static final PyTupleType singleton = new PyTupleType();
     private static final PyMethodDescriptor pydesc_count = new PyMethodDescriptor(singleton, "count", PyTuple.PyTupleMethod_count::new);
     private static final PyMethodDescriptor pydesc_index = new PyMethodDescriptor(singleton, "index", PyTuple.PyTupleMethod_index::new);
@@ -32,7 +32,7 @@ final class PyTupleType extends PyBuiltinClass {
 
 public final class PyTuple extends PyObject {
     static final class PyTupleIter extends PyIter {
-        private static final PyBuiltinClass type_singleton = new PyBuiltinClass("tuple_iterator", PyTupleIter.class);
+        private static final PyBuiltinType type_singleton = new PyBuiltinType("tuple_iterator", PyTupleIter.class);
 
         private final PyObject[] items;
         private int index = 0;
@@ -46,7 +46,7 @@ public final class PyTuple extends PyObject {
             return items[index++];
         }
         @Override public String repr() { return defaultRepr(); }
-        @Override public PyBuiltinClass type() { return type_singleton; }
+        @Override public PyBuiltinType type() { return type_singleton; }
     };
 
     protected static final class PyTupleMethod_count extends PyBuiltinMethod<PyTuple> {
@@ -169,7 +169,7 @@ public final class PyTuple extends PyObject {
     @Override public final boolean hasIter() { return true; }
     @Override public PyTupleIter iter() { return new PyTupleIter(this); }
     @Override public PyReversed reversed() { return new PyReversed(this); }
-    @Override public PyBuiltinClass type() { return PyTupleType.singleton; }
+    @Override public PyBuiltinType type() { return PyTupleType.singleton; }
 
     @Override public boolean boolValue() { return items.length != 0; }
     @Override public boolean contains(PyObject rhs) {

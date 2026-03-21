@@ -5,7 +5,7 @@
 // Note intentional compatibility break: this is not a subclass of PyInt, so:
 // isinstance(False, int) -> False
 // issubclass(bool, int) -> False
-final class PyBoolType extends PyBuiltinClass {
+final class PyBoolType extends PyBuiltinType {
     public static final PyBoolType singleton = new PyBoolType();
 
     private PyBoolType() { super("bool", PyBool.class); }

@@ -2,7 +2,7 @@
 // Copyright (c) 2012-2026 Matt Craighead
 // SPDX-License-Identifier: MIT
 
-final class PyIntType extends PyBuiltinClass {
+final class PyIntType extends PyBuiltinType {
     public static final PyIntType singleton = new PyIntType();
     private static final PyMethodDescriptor pydesc_as_integer_ratio = new PyMethodDescriptor(singleton, "as_integer_ratio", obj -> new PyInt.PyIntMethodUnimplemented(obj, "as_integer_ratio"));
     private static final PyMethodDescriptor pydesc_bit_count = new PyMethodDescriptor(singleton, "bit_count", obj -> new PyInt.PyIntMethodUnimplemented(obj, "bit_count"));
@@ -341,7 +341,7 @@ public final class PyInt extends PyObject {
         }
     }
 
-    @Override public PyBuiltinClass type() { return PyIntType.singleton; }
+    @Override public PyBuiltinType type() { return PyIntType.singleton; }
 
     @Override public boolean boolValue() { return value != 0; }
     @Override public boolean contains(PyObject rhs) { return defaultContains(rhs); }

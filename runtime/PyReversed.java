@@ -2,7 +2,7 @@
 // Copyright (c) 2012-2026 Matt Craighead
 // SPDX-License-Identifier: MIT
 
-final class PyReversedType extends PyBuiltinClass {
+final class PyReversedType extends PyBuiltinType {
     public static final PyReversedType singleton = new PyReversedType();
 
     private PyReversedType() { super("reversed", PyReversed.class); }
@@ -31,5 +31,5 @@ public final class PyReversed extends PyIter {
         return obj.getItem(new PyInt(len - 1 - cur));
     }
     @Override public String repr() { return defaultRepr(); }
-    @Override public PyBuiltinClass type() { return PyReversedType.singleton; }
+    @Override public PyBuiltinType type() { return PyReversedType.singleton; }
 }

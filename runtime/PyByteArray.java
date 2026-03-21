@@ -5,7 +5,7 @@
 import java.io.ByteArrayOutputStream;
 import java.util.Arrays;
 
-final class PyByteArrayType extends PyBuiltinClass {
+final class PyByteArrayType extends PyBuiltinType {
     public static final PyByteArrayType singleton = new PyByteArrayType();
 
     private PyByteArrayType() { super("bytearray", PyByteArray.class); }
@@ -38,7 +38,7 @@ final class PyByteArrayType extends PyBuiltinClass {
 
 public final class PyByteArray extends PyObject {
     static final class PyByteArrayIter extends PyIter {
-        private static final PyBuiltinClass type_singleton = new PyBuiltinClass("bytearray_iterator", PyByteArrayIter.class);
+        private static final PyBuiltinType type_singleton = new PyBuiltinType("bytearray_iterator", PyByteArrayIter.class);
 
         private byte[] b;
         private int index = 0;
@@ -52,7 +52,7 @@ public final class PyByteArray extends PyObject {
             return new PyInt(b[index++] & 0xFF);
         }
         @Override public String repr() { return defaultRepr(); }
-        @Override public PyBuiltinClass type() { return type_singleton; }
+        @Override public PyBuiltinType type() { return type_singleton; }
     };
 
     protected byte[] value;
@@ -184,7 +184,7 @@ public final class PyByteArray extends PyObject {
 
     @Override public final boolean hasIter() { return true; }
     @Override public PyByteArrayIter iter() { return new PyByteArrayIter(this); }
-    @Override public PyBuiltinClass type() { return PyByteArrayType.singleton; }
+    @Override public PyBuiltinType type() { return PyByteArrayType.singleton; }
 
     @Override public boolean boolValue() { return value.length != 0; }
     @Override public boolean contains(PyObject rhs) {

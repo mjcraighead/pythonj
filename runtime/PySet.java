@@ -7,7 +7,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
-final class PySetType extends PyBuiltinClass {
+final class PySetType extends PyBuiltinType {
     public static final PySetType singleton = new PySetType();
     private static final PyMethodDescriptor pydesc_add = new PyMethodDescriptor(singleton, "add", PySet.PySetMethod_add::new);
     private static final PyMethodDescriptor pydesc_clear = new PyMethodDescriptor(singleton, "clear", PySet.PySetMethod_clear::new);
@@ -64,7 +64,7 @@ final class PySetType extends PyBuiltinClass {
 
 public final class PySet extends PyObject {
     static final class PySetIter extends PyIter {
-        private static final PyBuiltinClass type_singleton = new PyBuiltinClass("set_iterator", PySetIter.class);
+        private static final PyBuiltinType type_singleton = new PyBuiltinType("set_iterator", PySetIter.class);
 
         private final Iterator<PyObject> it;
 
@@ -72,7 +72,7 @@ public final class PySet extends PyObject {
 
         @Override public PyObject next() { return it.hasNext() ? it.next() : null; }
         @Override public String repr() { return defaultRepr(); }
-        @Override public PyBuiltinClass type() { return type_singleton; }
+        @Override public PyBuiltinType type() { return type_singleton; }
     };
 
     protected static final class PySetMethodUnimplemented extends PyBuiltinMethod<PySet> {
@@ -274,7 +274,7 @@ public final class PySet extends PyObject {
 
     @Override public final boolean hasIter() { return true; }
     @Override public PySetIter iter() { return new PySetIter(items.iterator()); }
-    @Override public PyBuiltinClass type() { return PySetType.singleton; }
+    @Override public PyBuiltinType type() { return PySetType.singleton; }
 
     @Override public Set<PyObject> asSetOrNull() { return items; }
     @Override public boolean boolValue() { return !items.isEmpty(); }

@@ -2,7 +2,7 @@
 // Copyright (c) 2012-2026 Matt Craighead
 // SPDX-License-Identifier: MIT
 
-final class PyEnumerateType extends PyBuiltinClass {
+final class PyEnumerateType extends PyBuiltinType {
     public static final PyEnumerateType singleton = new PyEnumerateType();
 
     private PyEnumerateType() { super("enumerate", PyEnumerate.class); }
@@ -61,5 +61,5 @@ public final class PyEnumerate extends PyIter {
 
     @Override public boolean contains(PyObject rhs) { return defaultContains(rhs); }
     @Override public String repr() { return defaultRepr(); }
-    @Override public PyBuiltinClass type() { return PyEnumerateType.singleton; }
+    @Override public PyBuiltinType type() { return PyEnumerateType.singleton; }
 }

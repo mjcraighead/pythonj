@@ -2,7 +2,7 @@
 // Copyright (c) 2012-2026 Matt Craighead
 // SPDX-License-Identifier: MIT
 
-final class PyArithmeticErrorType extends PyBuiltinClass {
+final class PyArithmeticErrorType extends PyBuiltinType {
     public static final PyArithmeticErrorType singleton = new PyArithmeticErrorType();
     private PyArithmeticErrorType() { super("ArithmeticError", PyArithmeticError.class); }
     @Override public PyArithmeticError call(PyObject[] args, PyDict kwargs) {
@@ -11,7 +11,7 @@ final class PyArithmeticErrorType extends PyBuiltinClass {
     }
 }
 
-final class PyAssertionErrorType extends PyBuiltinClass {
+final class PyAssertionErrorType extends PyBuiltinType {
     public static final PyAssertionErrorType singleton = new PyAssertionErrorType();
     private PyAssertionErrorType() { super("AssertionError", PyAssertionError.class); }
     @Override public PyAssertionError call(PyObject[] args, PyDict kwargs) {
@@ -20,7 +20,7 @@ final class PyAssertionErrorType extends PyBuiltinClass {
     }
 }
 
-final class PyAttributeErrorType extends PyBuiltinClass {
+final class PyAttributeErrorType extends PyBuiltinType {
     public static final PyAttributeErrorType singleton = new PyAttributeErrorType();
     private PyAttributeErrorType() { super("AttributeError", PyAttributeError.class); }
     @Override public PyAttributeError call(PyObject[] args, PyDict kwargs) {
@@ -31,7 +31,7 @@ final class PyAttributeErrorType extends PyBuiltinClass {
     }
 }
 
-final class PyBaseExceptionType extends PyBuiltinClass {
+final class PyBaseExceptionType extends PyBuiltinType {
     public static final PyBaseExceptionType singleton = new PyBaseExceptionType();
     private PyBaseExceptionType() { super("BaseException", PyBaseException.class); }
     @Override public PyBaseException call(PyObject[] args, PyDict kwargs) {
@@ -40,7 +40,7 @@ final class PyBaseExceptionType extends PyBuiltinClass {
     }
 }
 
-final class PyExceptionType extends PyBuiltinClass {
+final class PyExceptionType extends PyBuiltinType {
     public static final PyExceptionType singleton = new PyExceptionType();
     private PyExceptionType() { super("Exception", PyException.class); }
     @Override public PyException call(PyObject[] args, PyDict kwargs) {
@@ -49,7 +49,7 @@ final class PyExceptionType extends PyBuiltinClass {
     }
 }
 
-final class PyIndexErrorType extends PyBuiltinClass {
+final class PyIndexErrorType extends PyBuiltinType {
     public static final PyIndexErrorType singleton = new PyIndexErrorType();
     private PyIndexErrorType() { super("IndexError", PyIndexError.class); }
     @Override public PyIndexError call(PyObject[] args, PyDict kwargs) {
@@ -58,7 +58,7 @@ final class PyIndexErrorType extends PyBuiltinClass {
     }
 }
 
-final class PyKeyErrorType extends PyBuiltinClass {
+final class PyKeyErrorType extends PyBuiltinType {
     public static final PyKeyErrorType singleton = new PyKeyErrorType();
     private PyKeyErrorType() { super("KeyError", PyKeyError.class); }
     @Override public PyKeyError call(PyObject[] args, PyDict kwargs) {
@@ -67,7 +67,7 @@ final class PyKeyErrorType extends PyBuiltinClass {
     }
 }
 
-final class PyLookupErrorType extends PyBuiltinClass {
+final class PyLookupErrorType extends PyBuiltinType {
     public static final PyLookupErrorType singleton = new PyLookupErrorType();
     private PyLookupErrorType() { super("LookupError", PyLookupError.class); }
     @Override public PyLookupError call(PyObject[] args, PyDict kwargs) {
@@ -76,7 +76,7 @@ final class PyLookupErrorType extends PyBuiltinClass {
     }
 }
 
-final class PyStopIterationType extends PyBuiltinClass {
+final class PyStopIterationType extends PyBuiltinType {
     public static final PyStopIterationType singleton = new PyStopIterationType();
     private PyStopIterationType() { super("StopIteration", PyStopIteration.class); }
     @Override public PyStopIteration call(PyObject[] args, PyDict kwargs) {
@@ -85,7 +85,7 @@ final class PyStopIterationType extends PyBuiltinClass {
     }
 }
 
-final class PyTypeErrorType extends PyBuiltinClass {
+final class PyTypeErrorType extends PyBuiltinType {
     public static final PyTypeErrorType singleton = new PyTypeErrorType();
     private PyTypeErrorType() { super("TypeError", PyTypeError.class); }
     @Override public PyTypeError call(PyObject[] args, PyDict kwargs) {
@@ -94,7 +94,7 @@ final class PyTypeErrorType extends PyBuiltinClass {
     }
 }
 
-final class PyValueErrorType extends PyBuiltinClass {
+final class PyValueErrorType extends PyBuiltinType {
     public static final PyValueErrorType singleton = new PyValueErrorType();
     private PyValueErrorType() { super("ValueError", PyValueError.class); }
     @Override public PyValueError call(PyObject[] args, PyDict kwargs) {
@@ -103,7 +103,7 @@ final class PyValueErrorType extends PyBuiltinClass {
     }
 }
 
-final class PyZeroDivisionErrorType extends PyBuiltinClass {
+final class PyZeroDivisionErrorType extends PyBuiltinType {
     public static final PyZeroDivisionErrorType singleton = new PyZeroDivisionErrorType();
     private PyZeroDivisionErrorType() { super("ZeroDivisionError", PyZeroDivisionError.class); }
     @Override public PyZeroDivisionError call(PyObject[] args, PyDict kwargs) {
@@ -115,7 +115,7 @@ final class PyZeroDivisionErrorType extends PyBuiltinClass {
 class PyBaseException extends PyTruthyObject {
     protected final PyObject[] args;
     PyBaseException(PyObject[] _args) { args = _args; }
-    @Override public PyBuiltinClass type() { return PyBaseExceptionType.singleton; }
+    @Override public PyBuiltinType type() { return PyBaseExceptionType.singleton; }
 
     @Override public boolean contains(PyObject rhs) { return defaultContains(rhs); }
     @Override public String str() {
@@ -148,12 +148,12 @@ class PyBaseException extends PyTruthyObject {
 
 class PyException extends PyBaseException {
     PyException(PyObject[] _args) { super(_args); }
-    @Override public PyBuiltinClass type() { return PyExceptionType.singleton; }
+    @Override public PyBuiltinType type() { return PyExceptionType.singleton; }
 }
 
 final class PyAssertionError extends PyException {
     PyAssertionError(PyObject... _args) { super(_args); }
-    @Override public PyBuiltinClass type() { return PyAssertionErrorType.singleton; }
+    @Override public PyBuiltinType type() { return PyAssertionErrorType.singleton; }
 
     static PyRaise raise(String msg) {
         return new PyRaise(new PyAssertionError(new PyString(msg)));
@@ -162,7 +162,7 @@ final class PyAssertionError extends PyException {
 
 final class PyAttributeError extends PyException {
     PyAttributeError(PyObject... _args) { super(_args); }
-    @Override public PyBuiltinClass type() { return PyAttributeErrorType.singleton; }
+    @Override public PyBuiltinType type() { return PyAttributeErrorType.singleton; }
 
     static PyRaise raise(String msg) {
         return new PyRaise(new PyAttributeError(new PyString(msg)));
@@ -174,11 +174,11 @@ final class PyAttributeError extends PyException {
 
 class PyArithmeticError extends PyException {
     PyArithmeticError(PyObject... _args) { super(_args); }
-    @Override public PyBuiltinClass type() { return PyArithmeticErrorType.singleton; }
+    @Override public PyBuiltinType type() { return PyArithmeticErrorType.singleton; }
 }
 final class PyZeroDivisionError extends PyArithmeticError {
     PyZeroDivisionError(PyObject... _args) { super(_args); }
-    @Override public PyBuiltinClass type() { return PyZeroDivisionErrorType.singleton; }
+    @Override public PyBuiltinType type() { return PyZeroDivisionErrorType.singleton; }
 
     static PyRaise raise(String msg) {
         return new PyRaise(new PyZeroDivisionError(new PyString(msg)));
@@ -187,11 +187,11 @@ final class PyZeroDivisionError extends PyArithmeticError {
 
 class PyLookupError extends PyException {
     PyLookupError(PyObject... _args) { super(_args); }
-    @Override public PyBuiltinClass type() { return PyLookupErrorType.singleton; }
+    @Override public PyBuiltinType type() { return PyLookupErrorType.singleton; }
 }
 final class PyIndexError extends PyLookupError {
     PyIndexError(PyObject... _args) { super(_args); }
-    @Override public PyBuiltinClass type() { return PyIndexErrorType.singleton; }
+    @Override public PyBuiltinType type() { return PyIndexErrorType.singleton; }
 
     static PyRaise raise(String msg) {
         return new PyRaise(new PyIndexError(new PyString(msg)));
@@ -199,7 +199,7 @@ final class PyIndexError extends PyLookupError {
 }
 final class PyKeyError extends PyLookupError {
     PyKeyError(PyObject... _args) { super(_args); }
-    @Override public PyBuiltinClass type() { return PyKeyErrorType.singleton; }
+    @Override public PyBuiltinType type() { return PyKeyErrorType.singleton; }
     @Override public String str() { // special case for KeyError
         if (args.length == 1) {
             return args[0].repr();
@@ -215,12 +215,12 @@ final class PyKeyError extends PyLookupError {
 
 final class PyStopIteration extends PyException {
     PyStopIteration(PyObject... _args) { super(_args); }
-    @Override public PyBuiltinClass type() { return PyStopIterationType.singleton; }
+    @Override public PyBuiltinType type() { return PyStopIterationType.singleton; }
 }
 
 final class PyTypeError extends PyException {
     PyTypeError(PyObject... _args) { super(_args); }
-    @Override public PyBuiltinClass type() { return PyTypeErrorType.singleton; }
+    @Override public PyBuiltinType type() { return PyTypeErrorType.singleton; }
 
     static PyRaise raise(String msg) {
         return new PyRaise(new PyTypeError(new PyString(msg)));
@@ -232,7 +232,7 @@ final class PyTypeError extends PyException {
 
 final class PyValueError extends PyException {
     PyValueError(PyObject... _args) { super(_args); }
-    @Override public PyBuiltinClass type() { return PyValueErrorType.singleton; }
+    @Override public PyBuiltinType type() { return PyValueErrorType.singleton; }
 
     static PyRaise raise(String msg) {
         return new PyRaise(new PyValueError(new PyString(msg)));

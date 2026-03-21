@@ -11,7 +11,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 
 final class PyTextIOWrapper extends PyIter {
-    private static final PyBuiltinClass type_singleton = new PyBuiltinClass("_io.TextIOWrapper", PyTextIOWrapper.class);
+    private static final PyBuiltinType type_singleton = new PyBuiltinType("_io.TextIOWrapper", PyTextIOWrapper.class);
 
     private static final class PyTextIOWrapperMethod_close extends PyBuiltinMethod<PyTextIOWrapper> {
         PyTextIOWrapperMethod_close(PyTextIOWrapper _self) { super(_self); }
@@ -105,7 +105,7 @@ final class PyTextIOWrapper extends PyIter {
 }
 
 final class PyBufferedReader extends PyIter {
-    private static final PyBuiltinClass type_singleton = new PyBuiltinClass("_io.BufferedReader", PyBufferedReader.class);
+    private static final PyBuiltinType type_singleton = new PyBuiltinType("_io.BufferedReader", PyBufferedReader.class);
 
     private static final class PyBufferedReaderMethod_close extends PyBuiltinMethod<PyBufferedReader> {
         PyBufferedReaderMethod_close(PyBufferedReader _self) { super(_self); }

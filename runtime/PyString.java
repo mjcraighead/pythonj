@@ -4,7 +4,7 @@
 
 import java.util.Locale;
 
-final class PyStringType extends PyBuiltinClass {
+final class PyStringType extends PyBuiltinType {
     public static final PyStringType singleton = new PyStringType();
     private static final PyMethodDescriptor pydesc_capitalize = new PyMethodDescriptor(singleton, "capitalize", obj -> new PyString.PyStringMethodUnimplemented(obj, "capitalize"));
     private static final PyMethodDescriptor pydesc_casefold = new PyMethodDescriptor(singleton, "casefold", obj -> new PyString.PyStringMethodUnimplemented(obj, "casefold"));
@@ -133,7 +133,7 @@ public final class PyString extends PyObject {
     public static final PyString empty_singleton = new PyString("");
 
     static final class PyStringIter extends PyIter {
-        private static final PyBuiltinClass type_singleton = new PyBuiltinClass("str_iterator", PyStringIter.class);
+        private static final PyBuiltinType type_singleton = new PyBuiltinType("str_iterator", PyStringIter.class);
 
         private final String s;
         private int index = 0;
@@ -149,7 +149,7 @@ public final class PyString extends PyObject {
             return ret;
         }
         @Override public String repr() { return defaultRepr(); }
-        @Override public PyBuiltinClass type() { return type_singleton; }
+        @Override public PyBuiltinType type() { return type_singleton; }
     };
 
     protected static final class PyStringMethodUnimplemented extends PyBuiltinMethod<PyString> {
@@ -374,7 +374,7 @@ public final class PyString extends PyObject {
 
     @Override public final boolean hasIter() { return true; }
     @Override public PyStringIter iter() { return new PyStringIter(this); }
-    @Override public PyBuiltinClass type() { return PyStringType.singleton; }
+    @Override public PyBuiltinType type() { return PyStringType.singleton; }
 
     @Override public boolean boolValue() { return !value.isEmpty(); }
     @Override public boolean contains(PyObject rhs) {

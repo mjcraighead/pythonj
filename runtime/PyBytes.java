@@ -5,7 +5,7 @@
 import java.io.ByteArrayOutputStream;
 import java.util.Arrays;
 
-final class PyBytesType extends PyBuiltinClass {
+final class PyBytesType extends PyBuiltinType {
     public static final PyBytesType singleton = new PyBytesType();
     private static final PyMethodDescriptor pydesc_capitalize = new PyMethodDescriptor(singleton, "capitalize", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "capitalize"));
     private static final PyMethodDescriptor pydesc_center = new PyMethodDescriptor(singleton, "center", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "center"));
@@ -142,7 +142,7 @@ final class PyBytesType extends PyBuiltinClass {
 
 public final class PyBytes extends PyObject {
     static final class PyBytesIter extends PyIter {
-        private static final PyBuiltinClass type_singleton = new PyBuiltinClass("bytes_iterator", PyBytesIter.class);
+        private static final PyBuiltinType type_singleton = new PyBuiltinType("bytes_iterator", PyBytesIter.class);
 
         private final byte[] b;
         private int index = 0;
@@ -156,7 +156,7 @@ public final class PyBytes extends PyObject {
             return new PyInt(b[index++] & 0xFF);
         }
         @Override public String repr() { return defaultRepr(); }
-        @Override public PyBuiltinClass type() { return type_singleton; }
+        @Override public PyBuiltinType type() { return type_singleton; }
     };
 
     protected static final class PyBytesMethodUnimplemented extends PyBuiltinMethod<PyBytes> {
@@ -304,7 +304,7 @@ public final class PyBytes extends PyObject {
 
     @Override public final boolean hasIter() { return true; }
     @Override public PyBytesIter iter() { return new PyBytesIter(this); }
-    @Override public PyBuiltinClass type() { return PyBytesType.singleton; }
+    @Override public PyBuiltinType type() { return PyBytesType.singleton; }
 
     @Override public boolean boolValue() { return value.length != 0; }
     @Override public boolean contains(PyObject rhs) {
