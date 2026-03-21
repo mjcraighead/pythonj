@@ -7,8 +7,8 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
-final class PySetType extends PyBuiltinType {
 // BEGIN GENERATED CODE: PySetType
+final class PySetType extends PyBuiltinType {
     public static final PySetType singleton = new PySetType();
     private static final PyMethodDescriptor pyattr_add = new PyMethodDescriptor(singleton, "add", PySet.PySetMethod_add::new);
     private static final PyMethodDescriptor pyattr_clear = new PyMethodDescriptor(singleton, "clear", PySet.PySetMethod_clear::new);
@@ -50,7 +50,7 @@ final class PySetType extends PyBuiltinType {
         attrs.put(new PyString("__doc__"), pyattr___doc__);
     }
 
-    private PySetType() { super("set", PySet.class); }
+    private PySetType() { super("set", PySet.class, PySet::newObj); }
     @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
     @Override public PyObject lookupAttr(String name) {
         switch (name) {
@@ -75,19 +75,8 @@ final class PySetType extends PyBuiltinType {
             default: return null;
         }
     }
-// END GENERATED CODE: PySetType
-
-    @Override public PySet call(PyObject[] args, PyDict kwargs) {
-        Runtime.requireNoKwArgs(kwargs, typeName);
-        Runtime.requireMaxArgs(args, 1, typeName);
-        var ret = new PySet();
-        if (args.length == 0) {
-            return ret;
-        }
-        Runtime.addIterableToCollection(ret.items, args[0]);
-        return ret;
-    }
 }
+// END GENERATED CODE: PySetType
 
 public final class PySet extends PyObject {
     static final class PySetIter extends PyIter {
@@ -164,6 +153,17 @@ public final class PySet extends PyObject {
     }
     PySet(HashSet<PyObject> _items) {
         items = _items; // WARNING: takes ownership of _items from caller, does not copy
+    }
+
+    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+        Runtime.requireNoKwArgs(kwargs, type.name());
+        Runtime.requireMaxArgs(args, 1, type.name());
+        var ret = new PySet();
+        if (args.length == 0) {
+            return ret;
+        }
+        Runtime.addIterableToCollection(ret.items, args[0]);
+        return ret;
     }
 
     static HashSet<PyObject> xor(Set<PyObject> lhs, Set<PyObject> rhs) {

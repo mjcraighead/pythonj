@@ -1369,7 +1369,7 @@ def gen_code(path) -> None:
     for (name, attrs) in spec.items():
         # XXX roll out gen_entire_class to the rest
         gen_entire_class = name in {
-            'bool', 'dict', 'enumerate', 'int', 'list', 'range', 'reversed', 'slice', 'tuple', 'zip',
+            'bool', 'bytearray', 'bytes', 'dict', 'enumerate', 'int', 'list', 'range', 'reversed', 'set', 'slice', 'tuple', 'zip',
             'ArithmeticError', 'AssertionError', 'AttributeError', 'BaseException', 'Exception',
         }
         if name == '_io.BufferedReader':

@@ -5,8 +5,8 @@
 import java.io.ByteArrayOutputStream;
 import java.util.Arrays;
 
-final class PyByteArrayType extends PyBuiltinType {
 // BEGIN GENERATED CODE: PyByteArrayType
+final class PyByteArrayType extends PyBuiltinType {
     public static final PyByteArrayType singleton = new PyByteArrayType();
     private static final PyMethodDescriptor pyattr_append = new PyMethodDescriptor(singleton, "append", obj -> new PyByteArray.PyByteArrayMethodUnimplemented(obj, "append"));
     private static final PyMethodDescriptor pyattr_capitalize = new PyMethodDescriptor(singleton, "capitalize", obj -> new PyByteArray.PyByteArrayMethodUnimplemented(obj, "capitalize"));
@@ -116,7 +116,7 @@ final class PyByteArrayType extends PyBuiltinType {
         attrs.put(new PyString("__doc__"), pyattr___doc__);
     }
 
-    private PyByteArrayType() { super("bytearray", PyByteArray.class); }
+    private PyByteArrayType() { super("bytearray", PyByteArray.class, PyByteArray::newObj); }
     @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
     @Override public PyObject lookupAttr(String name) {
         switch (name) {
@@ -175,34 +175,8 @@ final class PyByteArrayType extends PyBuiltinType {
             default: return null;
         }
     }
-// END GENERATED CODE: PyByteArrayType
-
-    @Override public PyByteArray call(PyObject[] args, PyDict kwargs) {
-        if (args.length > 1) {
-            throw new IllegalArgumentException("bytearray() takes 0 or 1 arguments");
-        }
-        if ((kwargs != null) && kwargs.boolValue()) {
-            throw new IllegalArgumentException("bytearray() does not accept kwargs");
-        }
-        if (args.length == 0) {
-            return new PyByteArray(new byte[0]);
-        }
-        PyObject arg = args[0];
-        if (arg.hasIndex()) {
-            return new PyByteArray(new byte[Math.toIntExact(arg.indexValue())]);
-        }
-        var b = new ByteArrayOutputStream();
-        var iter = arg.iter();
-        for (var item = iter.next(); item != null; item = iter.next()) {
-            long i = item.indexValue();
-            if ((i < 0) || (i >= 256)) {
-                throw new IllegalArgumentException("invalid byte value");
-            }
-            b.write((int)i);
-        }
-        return new PyByteArray(b.toByteArray());
-    }
 }
+// END GENERATED CODE: PyByteArrayType
 
 final class PyByteArrayClassMethod_fromhex extends PyBuiltinMethod<PyType> {
     PyByteArrayClassMethod_fromhex(PyType self) { super(self); }
@@ -252,6 +226,32 @@ public final class PyByteArray extends PyObject {
     protected byte[] value;
 
     PyByteArray(byte[] _value) { value = _value; }
+
+    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+        if (args.length > 1) {
+            throw new IllegalArgumentException("bytearray() takes 0 or 1 arguments");
+        }
+        if ((kwargs != null) && kwargs.boolValue()) {
+            throw new IllegalArgumentException("bytearray() does not accept kwargs");
+        }
+        if (args.length == 0) {
+            return new PyByteArray(new byte[0]);
+        }
+        PyObject arg = args[0];
+        if (arg.hasIndex()) {
+            return new PyByteArray(new byte[Math.toIntExact(arg.indexValue())]);
+        }
+        var b = new ByteArrayOutputStream();
+        var iter = arg.iter();
+        for (var item = iter.next(); item != null; item = iter.next()) {
+            long i = item.indexValue();
+            if ((i < 0) || (i >= 256)) {
+                throw new IllegalArgumentException("invalid byte value");
+            }
+            b.write((int)i);
+        }
+        return new PyByteArray(b.toByteArray());
+    }
 
     @Override public PyByteArray add(PyObject rhs) {
         if (rhs instanceof PyBytes rhsBytes) {
