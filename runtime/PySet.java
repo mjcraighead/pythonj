@@ -49,6 +49,8 @@ final class PySetType extends PyBuiltinType {
         attrs.put(new PyString("update"), pyattr_update);
         attrs.put(new PyString("__doc__"), pyattr___doc__);
     }
+
+    private PySetType() { super("set", PySet.class); }
     @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
     @Override public PyObject lookupAttr(String name) {
         switch (name) {
@@ -75,7 +77,6 @@ final class PySetType extends PyBuiltinType {
     }
 // END GENERATED CODE: PySetType
 
-    private PySetType() { super("set", PySet.class); }
     @Override public PySet call(PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, typeName);
         Runtime.requireMaxArgs(args, 1, typeName);

@@ -1415,6 +1415,8 @@ def gen_code(path) -> None:
             '    static {\n',
             *(f'        attrs.put(new PyString("{k}"), pyattr_{k});\n' for k in attrs),
             '    }\n',
+            '\n',
+            f'    private {java_name}Type() {{ super({java_string_literal(name)}, {java_name}.class); }}\n',
             '    @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }\n',
             '    @Override public PyObject lookupAttr(String name) {\n',
             '        switch (name) {\n',

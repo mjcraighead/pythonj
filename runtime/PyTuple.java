@@ -17,6 +17,8 @@ final class PyTupleType extends PyBuiltinType {
         attrs.put(new PyString("count"), pyattr_count);
         attrs.put(new PyString("__doc__"), pyattr___doc__);
     }
+
+    private PyTupleType() { super("tuple", PyTuple.class); }
     @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
     @Override public PyObject lookupAttr(String name) {
         switch (name) {
@@ -28,7 +30,6 @@ final class PyTupleType extends PyBuiltinType {
     }
 // END GENERATED CODE: PyTupleType
 
-    private PyTupleType() { super("tuple", PyTuple.class); }
     @Override public PyTuple call(PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, typeName);
         Runtime.requireMaxArgs(args, 1, typeName);

@@ -12,6 +12,8 @@ final class PyObjectType extends PyBuiltinType {
     static {
         attrs.put(new PyString("__doc__"), pyattr___doc__);
     }
+
+    private PyObjectType() { super("object", PyObject.class); }
     @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
     @Override public PyObject lookupAttr(String name) {
         switch (name) {
@@ -20,8 +22,6 @@ final class PyObjectType extends PyBuiltinType {
         }
     }
 // END GENERATED CODE: PyObjectType
-
-    private PyObjectType() { super("object", PyObject.class); }
 }
 
 public abstract class PyObject implements Comparable<PyObject> {

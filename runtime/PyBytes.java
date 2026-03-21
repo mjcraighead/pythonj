@@ -97,6 +97,8 @@ final class PyBytesType extends PyBuiltinType {
         attrs.put(new PyString("zfill"), pyattr_zfill);
         attrs.put(new PyString("__doc__"), pyattr___doc__);
     }
+
+    private PyBytesType() { super("bytes", PyBytes.class); }
     @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
     @Override public PyObject lookupAttr(String name) {
         switch (name) {
@@ -148,7 +150,6 @@ final class PyBytesType extends PyBuiltinType {
     }
 // END GENERATED CODE: PyBytesType
 
-    private PyBytesType() { super("bytes", PyBytes.class); }
     @Override public PyBytes call(PyObject[] args, PyDict kwargs) {
         if (args.length > 1) {
             throw new IllegalArgumentException("bytes() takes 0 or 1 arguments");

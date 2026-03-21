@@ -38,6 +38,8 @@ final class PyDictType extends PyBuiltinType {
         attrs.put(new PyString("copy"), pyattr_copy);
         attrs.put(new PyString("__doc__"), pyattr___doc__);
     }
+
+    private PyDictType() { super("dict", PyDict.class); }
     @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
     @Override public PyObject lookupAttr(String name) {
         switch (name) {
@@ -58,7 +60,6 @@ final class PyDictType extends PyBuiltinType {
     }
 // END GENERATED CODE: PyDictType
 
-    private PyDictType() { super("dict", PyDict.class); }
     @Override public PyDict call(PyObject[] args, PyDict kwargs) {
         if (args.length > 1) {
             throw new IllegalArgumentException("dict() takes 0 or 1 arguments");

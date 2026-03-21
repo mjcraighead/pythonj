@@ -97,6 +97,8 @@ final class PyTypeType extends PyBuiltinType {
         attrs.put(new PyString("mro"), pyattr_mro);
         attrs.put(new PyString("__doc__"), pyattr___doc__);
     }
+
+    private PyTypeType() { super("type", PyType.class); }
     @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
     @Override public PyObject lookupAttr(String name) {
         switch (name) {
@@ -107,7 +109,6 @@ final class PyTypeType extends PyBuiltinType {
     }
 // END GENERATED CODE: PyTypeType
 
-    private PyTypeType() { super("type", PyType.class); }
     @Override public PyType call(PyObject[] args, PyDict kwargs) {
         if (args.length != 1) {
             throw new IllegalArgumentException("type() takes 1 argument");

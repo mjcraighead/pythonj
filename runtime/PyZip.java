@@ -12,6 +12,8 @@ final class PyZipType extends PyBuiltinType {
     static {
         attrs.put(new PyString("__doc__"), pyattr___doc__);
     }
+
+    private PyZipType() { super("zip", PyZip.class); }
     @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
     @Override public PyObject lookupAttr(String name) {
         switch (name) {
@@ -21,7 +23,6 @@ final class PyZipType extends PyBuiltinType {
     }
 // END GENERATED CODE: PyZipType
 
-    private PyZipType() { super("zip", PyZip.class); }
     @Override public PyZip call(PyObject[] args, PyDict kwargs) {
         if ((kwargs != null) && kwargs.boolValue()) {
             throw new IllegalArgumentException("zip() does not accept kwargs");

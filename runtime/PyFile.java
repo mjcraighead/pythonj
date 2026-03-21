@@ -68,6 +68,8 @@ final class PyTextIOWrapperType extends PyBuiltinType {
         attrs.put(new PyString("_CHUNK_SIZE"), pyattr__CHUNK_SIZE);
         attrs.put(new PyString("__doc__"), pyattr___doc__);
     }
+
+    private PyTextIOWrapperType() { super("_io.TextIOWrapper", PyTextIOWrapper.class); }
     @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
     @Override public PyObject lookupAttr(String name) {
         switch (name) {
@@ -101,8 +103,6 @@ final class PyTextIOWrapperType extends PyBuiltinType {
         }
     }
 // END GENERATED CODE: PyTextIOWrapperType
-
-    private PyTextIOWrapperType() { super("_io.TextIOWrapper", PyTextIOWrapper.class); }
 }
 
 final class PyTextIOWrapper extends PyIter {
@@ -263,6 +263,8 @@ final class PyBufferedReaderType extends PyBuiltinType {
         attrs.put(new PyString("mode"), pyattr_mode);
         attrs.put(new PyString("__doc__"), pyattr___doc__);
     }
+
+    private PyBufferedReaderType() { super("_io.BufferedReader", PyBufferedReader.class); }
     @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
     @Override public PyObject lookupAttr(String name) {
         switch (name) {
@@ -293,8 +295,6 @@ final class PyBufferedReaderType extends PyBuiltinType {
         }
     }
 // END GENERATED CODE: PyBufferedReaderType
-
-    private PyBufferedReaderType() { super("_io.BufferedReader", PyBufferedReader.class); }
 }
 
 final class PyBufferedReader extends PyIter {

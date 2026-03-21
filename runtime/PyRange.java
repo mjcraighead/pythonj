@@ -20,6 +20,8 @@ final class PyRangeType extends PyBuiltinType {
         attrs.put(new PyString("step"), pyattr_step);
         attrs.put(new PyString("__doc__"), pyattr___doc__);
     }
+
+    private PyRangeType() { super("range", PyRange.class); }
     @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
     @Override public PyObject lookupAttr(String name) {
         switch (name) {
@@ -34,7 +36,6 @@ final class PyRangeType extends PyBuiltinType {
     }
 // END GENERATED CODE: PyRangeType
 
-    private PyRangeType() { super("range", PyRange.class); }
     @Override public PyRange call(PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, typeName);
         Runtime.requireMinArgs(args, 1, typeName);

@@ -18,6 +18,8 @@ final class PySliceType extends PyBuiltinType {
         attrs.put(new PyString("step"), pyattr_step);
         attrs.put(new PyString("__doc__"), pyattr___doc__);
     }
+
+    private PySliceType() { super("slice", PySlice.class); }
     @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
     @Override public PyObject lookupAttr(String name) {
         switch (name) {
@@ -31,7 +33,6 @@ final class PySliceType extends PyBuiltinType {
     }
 // END GENERATED CODE: PySliceType
 
-    private PySliceType() { super("slice", PySlice.class); }
     @Override public PySlice call(PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, typeName);
         Runtime.requireMinArgs(args, 1, typeName);

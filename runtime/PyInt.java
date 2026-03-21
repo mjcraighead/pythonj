@@ -32,6 +32,8 @@ final class PyIntType extends PyBuiltinType {
         attrs.put(new PyString("denominator"), pyattr_denominator);
         attrs.put(new PyString("__doc__"), pyattr___doc__);
     }
+
+    private PyIntType() { super("int", PyInt.class); }
     @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
     @Override public PyObject lookupAttr(String name) {
         switch (name) {
@@ -52,7 +54,6 @@ final class PyIntType extends PyBuiltinType {
     }
 // END GENERATED CODE: PyIntType
 
-    private PyIntType() { super("int", PyInt.class); }
     @Override public PyInt call(PyObject[] args, PyDict kwargs) {
         Runtime.requireMaxArgs(args, 2, typeName);
         if ((kwargs != null) && kwargs.boolValue()) {

@@ -10,6 +10,8 @@ final class PyReversedType extends PyBuiltinType {
     static {
         attrs.put(new PyString("__doc__"), pyattr___doc__);
     }
+
+    private PyReversedType() { super("reversed", PyReversed.class); }
     @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
     @Override public PyObject lookupAttr(String name) {
         switch (name) {
@@ -19,7 +21,6 @@ final class PyReversedType extends PyBuiltinType {
     }
 // END GENERATED CODE: PyReversedType
 
-    private PyReversedType() { super("reversed", PyReversed.class); }
     @Override public PyIter call(PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, typeName);
         Runtime.requireExactArgs(args, 1, typeName);

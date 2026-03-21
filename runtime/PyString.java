@@ -106,6 +106,8 @@ final class PyStringType extends PyBuiltinType {
         attrs.put(new PyString("maketrans"), pyattr_maketrans);
         attrs.put(new PyString("__doc__"), pyattr___doc__);
     }
+
+    private PyStringType() { super("str", PyString.class); }
     @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
     @Override public PyObject lookupAttr(String name) {
         switch (name) {
@@ -162,7 +164,6 @@ final class PyStringType extends PyBuiltinType {
     }
 // END GENERATED CODE: PyStringType
 
-    private PyStringType() { super("str", PyString.class); }
     @Override public PyString call(PyObject[] args, PyDict kwargs) {
         if (args.length > 1) {
             throw new IllegalArgumentException("str() takes 0 or 1 arguments");

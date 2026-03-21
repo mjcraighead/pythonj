@@ -115,6 +115,8 @@ final class PyByteArrayType extends PyBuiltinType {
         attrs.put(new PyString("zfill"), pyattr_zfill);
         attrs.put(new PyString("__doc__"), pyattr___doc__);
     }
+
+    private PyByteArrayType() { super("bytearray", PyByteArray.class); }
     @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
     @Override public PyObject lookupAttr(String name) {
         switch (name) {
@@ -175,7 +177,6 @@ final class PyByteArrayType extends PyBuiltinType {
     }
 // END GENERATED CODE: PyByteArrayType
 
-    private PyByteArrayType() { super("bytearray", PyByteArray.class); }
     @Override public PyByteArray call(PyObject[] args, PyDict kwargs) {
         if (args.length > 1) {
             throw new IllegalArgumentException("bytearray() takes 0 or 1 arguments");

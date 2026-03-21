@@ -10,6 +10,8 @@ final class PyArithmeticErrorType extends PyBuiltinType {
     static {
         attrs.put(new PyString("__doc__"), pyattr___doc__);
     }
+
+    private PyArithmeticErrorType() { super("ArithmeticError", PyArithmeticError.class); }
     @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
     @Override public PyObject lookupAttr(String name) {
         switch (name) {
@@ -19,7 +21,6 @@ final class PyArithmeticErrorType extends PyBuiltinType {
     }
 // END GENERATED CODE: PyArithmeticErrorType
 
-    private PyArithmeticErrorType() { super("ArithmeticError", PyArithmeticError.class); }
     @Override public PyArithmeticError call(PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, typeName);
         return new PyArithmeticError(args);

@@ -13,6 +13,8 @@ final class PyBoolType extends PyBuiltinType {
     static {
         attrs.put(new PyString("__doc__"), pyattr___doc__);
     }
+
+    private PyBoolType() { super("bool", PyBool.class); }
     @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
     @Override public PyObject lookupAttr(String name) {
         switch (name) {
@@ -22,7 +24,6 @@ final class PyBoolType extends PyBuiltinType {
     }
 // END GENERATED CODE: PyBoolType
 
-    private PyBoolType() { super("bool", PyBool.class); }
     @Override public PyBool call(PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, typeName);
         Runtime.requireMaxArgs(args, 1, typeName);
