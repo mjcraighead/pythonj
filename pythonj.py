@@ -42,7 +42,8 @@ BUILTIN_TYPES = {
     'zip': 'PyZipType',
 }
 EXCEPTION_TYPES = {
-    'ArithmeticError', 'AssertionError', 'AttributeError', 'BaseException', 'Exception', 'IndexError', 'KeyError', 'LookupError', 'StopIteration', 'TypeError', 'ValueError', 'ZeroDivisionError',
+    'ArithmeticError', 'AssertionError', 'AttributeError', 'BaseException', 'Exception', 'IndexError',
+    'KeyError', 'LookupError', 'StopIteration', 'TypeError', 'ValueError', 'ZeroDivisionError',
 }
 
 RUNTIME_JAVA_FILES = (
