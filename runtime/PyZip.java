@@ -7,7 +7,7 @@ import java.util.ArrayList;
 final class PyZipType extends PyBuiltinClass {
     public static final PyZipType singleton = new PyZipType();
 
-    PyZipType() { super("zip", PyZip.class); }
+    private PyZipType() { super("zip", PyZip.class); }
     @Override public PyZip call(PyObject[] args, PyDict kwargs) {
         if ((kwargs != null) && kwargs.boolValue()) {
             throw new IllegalArgumentException("zip() does not accept kwargs");

@@ -6,7 +6,7 @@ import java.util.Set;
 
 final class PyObjectType extends PyBuiltinClass {
     public static final PyObjectType singleton = new PyObjectType();
-    PyObjectType() { super("object", PyObject.class); }
+    private PyObjectType() { super("object", PyObject.class); }
 }
 
 public abstract class PyObject implements Comparable<PyObject> {

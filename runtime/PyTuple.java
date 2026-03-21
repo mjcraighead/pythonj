@@ -10,7 +10,7 @@ final class PyTupleType extends PyBuiltinClass {
     private static final PyMethodDescriptor pydesc_count = new PyMethodDescriptor(singleton, "count", PyTuple.PyTupleMethod_count::new);
     private static final PyMethodDescriptor pydesc_index = new PyMethodDescriptor(singleton, "index", PyTuple.PyTupleMethod_index::new);
 
-    PyTupleType() { super("tuple", PyTuple.class); }
+    private PyTupleType() { super("tuple", PyTuple.class); }
     @Override public PyDescriptor getDescriptor(String name) {
         switch (name) {
             case "count": return pydesc_count;

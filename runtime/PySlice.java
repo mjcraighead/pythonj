@@ -9,7 +9,7 @@ final class PySliceType extends PyBuiltinClass {
     private static final PyMemberDescriptor pydesc_step = new PyMemberDescriptor(singleton, "step", obj -> ((PySlice)obj).step);
     private static final PyMemberDescriptor pydesc_stop = new PyMemberDescriptor(singleton, "stop", obj -> ((PySlice)obj).stop);
 
-    PySliceType() { super("slice", PySlice.class); }
+    private PySliceType() { super("slice", PySlice.class); }
     @Override public PyDescriptor getDescriptor(String name) {
         switch (name) {
             case "indices": return pydesc_indices;

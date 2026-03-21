@@ -4,7 +4,7 @@
 
 final class PyArithmeticErrorType extends PyBuiltinClass {
     public static final PyArithmeticErrorType singleton = new PyArithmeticErrorType();
-    PyArithmeticErrorType() { super("ArithmeticError", PyArithmeticError.class); }
+    private PyArithmeticErrorType() { super("ArithmeticError", PyArithmeticError.class); }
     @Override public PyArithmeticError call(PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, typeName);
         return new PyArithmeticError(args);
@@ -13,7 +13,7 @@ final class PyArithmeticErrorType extends PyBuiltinClass {
 
 final class PyAssertionErrorType extends PyBuiltinClass {
     public static final PyAssertionErrorType singleton = new PyAssertionErrorType();
-    PyAssertionErrorType() { super("AssertionError", PyAssertionError.class); }
+    private PyAssertionErrorType() { super("AssertionError", PyAssertionError.class); }
     @Override public PyAssertionError call(PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, typeName);
         return new PyAssertionError(args);
@@ -22,7 +22,7 @@ final class PyAssertionErrorType extends PyBuiltinClass {
 
 final class PyAttributeErrorType extends PyBuiltinClass {
     public static final PyAttributeErrorType singleton = new PyAttributeErrorType();
-    PyAttributeErrorType() { super("AttributeError", PyAttributeError.class); }
+    private PyAttributeErrorType() { super("AttributeError", PyAttributeError.class); }
     @Override public PyAttributeError call(PyObject[] args, PyDict kwargs) {
         if ((kwargs != null) && kwargs.boolValue()) {
             throw new IllegalArgumentException("AttributeError() does not accept kwargs");
@@ -33,7 +33,7 @@ final class PyAttributeErrorType extends PyBuiltinClass {
 
 final class PyBaseExceptionType extends PyBuiltinClass {
     public static final PyBaseExceptionType singleton = new PyBaseExceptionType();
-    PyBaseExceptionType() { super("BaseException", PyBaseException.class); }
+    private PyBaseExceptionType() { super("BaseException", PyBaseException.class); }
     @Override public PyBaseException call(PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, typeName);
         return new PyBaseException(args);
@@ -42,7 +42,7 @@ final class PyBaseExceptionType extends PyBuiltinClass {
 
 final class PyExceptionType extends PyBuiltinClass {
     public static final PyExceptionType singleton = new PyExceptionType();
-    PyExceptionType() { super("Exception", PyException.class); }
+    private PyExceptionType() { super("Exception", PyException.class); }
     @Override public PyException call(PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, typeName);
         return new PyException(args);
@@ -51,7 +51,7 @@ final class PyExceptionType extends PyBuiltinClass {
 
 final class PyIndexErrorType extends PyBuiltinClass {
     public static final PyIndexErrorType singleton = new PyIndexErrorType();
-    PyIndexErrorType() { super("IndexError", PyIndexError.class); }
+    private PyIndexErrorType() { super("IndexError", PyIndexError.class); }
     @Override public PyIndexError call(PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, typeName);
         return new PyIndexError(args);
@@ -60,7 +60,7 @@ final class PyIndexErrorType extends PyBuiltinClass {
 
 final class PyKeyErrorType extends PyBuiltinClass {
     public static final PyKeyErrorType singleton = new PyKeyErrorType();
-    PyKeyErrorType() { super("KeyError", PyKeyError.class); }
+    private PyKeyErrorType() { super("KeyError", PyKeyError.class); }
     @Override public PyKeyError call(PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, typeName);
         return new PyKeyError(args);
@@ -69,7 +69,7 @@ final class PyKeyErrorType extends PyBuiltinClass {
 
 final class PyLookupErrorType extends PyBuiltinClass {
     public static final PyLookupErrorType singleton = new PyLookupErrorType();
-    PyLookupErrorType() { super("LookupError", PyLookupError.class); }
+    private PyLookupErrorType() { super("LookupError", PyLookupError.class); }
     @Override public PyLookupError call(PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, typeName);
         return new PyLookupError(args);
@@ -78,7 +78,7 @@ final class PyLookupErrorType extends PyBuiltinClass {
 
 final class PyStopIterationType extends PyBuiltinClass {
     public static final PyStopIterationType singleton = new PyStopIterationType();
-    PyStopIterationType() { super("StopIteration", PyStopIteration.class); }
+    private PyStopIterationType() { super("StopIteration", PyStopIteration.class); }
     @Override public PyStopIteration call(PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, typeName);
         return new PyStopIteration(args);
@@ -87,7 +87,7 @@ final class PyStopIterationType extends PyBuiltinClass {
 
 final class PyTypeErrorType extends PyBuiltinClass {
     public static final PyTypeErrorType singleton = new PyTypeErrorType();
-    PyTypeErrorType() { super("TypeError", PyTypeError.class); }
+    private PyTypeErrorType() { super("TypeError", PyTypeError.class); }
     @Override public PyTypeError call(PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, typeName);
         return new PyTypeError(args);
@@ -96,7 +96,7 @@ final class PyTypeErrorType extends PyBuiltinClass {
 
 final class PyValueErrorType extends PyBuiltinClass {
     public static final PyValueErrorType singleton = new PyValueErrorType();
-    PyValueErrorType() { super("ValueError", PyValueError.class); }
+    private PyValueErrorType() { super("ValueError", PyValueError.class); }
     @Override public PyValueError call(PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, typeName);
         return new PyValueError(args);
@@ -105,7 +105,7 @@ final class PyValueErrorType extends PyBuiltinClass {
 
 final class PyZeroDivisionErrorType extends PyBuiltinClass {
     public static final PyZeroDivisionErrorType singleton = new PyZeroDivisionErrorType();
-    PyZeroDivisionErrorType() { super("ZeroDivisionError", PyZeroDivisionError.class); }
+    private PyZeroDivisionErrorType() { super("ZeroDivisionError", PyZeroDivisionError.class); }
     @Override public PyZeroDivisionError call(PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, typeName);
         return new PyZeroDivisionError(args);

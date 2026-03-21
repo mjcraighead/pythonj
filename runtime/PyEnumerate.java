@@ -5,7 +5,7 @@
 final class PyEnumerateType extends PyBuiltinClass {
     public static final PyEnumerateType singleton = new PyEnumerateType();
 
-    PyEnumerateType() { super("enumerate", PyEnumerate.class); }
+    private PyEnumerateType() { super("enumerate", PyEnumerate.class); }
     @Override public PyEnumerate call(PyObject[] args, PyDict kwargs) {
         // This is quirky, but is intended to match corner cases in CPython enumerate()
         long totalArgs = args.length;

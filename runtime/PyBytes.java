@@ -50,7 +50,7 @@ final class PyBytesType extends PyBuiltinClass {
     private static final PyMethodDescriptor pydesc_upper = new PyMethodDescriptor(singleton, "upper", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "upper"));
     private static final PyMethodDescriptor pydesc_zfill = new PyMethodDescriptor(singleton, "zfill", obj -> new PyBytes.PyBytesMethodUnimplemented(obj, "zfill"));
 
-    PyBytesType() { super("bytes", PyBytes.class); }
+    private PyBytesType() { super("bytes", PyBytes.class); }
     @Override public PyDescriptor getDescriptor(String name) {
         switch (name) {
             case "capitalize": return pydesc_capitalize;

@@ -5,7 +5,7 @@
 final class PyNoneType extends PyBuiltinClass {
     public static final PyBuiltinClass singleton = new PyNoneType();
 
-    PyNoneType() { super("NoneType", PyNone.class); }
+    private PyNoneType() { super("NoneType", PyNone.class); }
     @Override public PyNone call(PyObject[] args, PyDict kwargs) {
         if ((kwargs != null) && kwargs.boolValue()) {
             throw PyTypeError.raise("NoneType takes no arguments");

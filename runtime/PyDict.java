@@ -22,7 +22,7 @@ final class PyDictType extends PyBuiltinClass {
     private static final PyMethodDescriptor pydesc_update = new PyMethodDescriptor(singleton, "update", PyDict.PyDictMethod_update::new);
     private static final PyMethodDescriptor pydesc_values = new PyMethodDescriptor(singleton, "values", PyDict.PyDictMethod_values::new);
 
-    PyDictType() { super("dict", PyDict.class); }
+    private PyDictType() { super("dict", PyDict.class); }
     @Override public PyDescriptor getDescriptor(String name) {
         switch (name) {
             case "clear": return pydesc_clear;

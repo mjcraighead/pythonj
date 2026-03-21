@@ -16,7 +16,7 @@ final class PyIntType extends PyBuiltinClass {
     private static final PyGetSetDescriptor pydesc_real = new PyGetSetDescriptor(singleton, "real", obj -> obj);
     private static final PyMethodDescriptor pydesc_to_bytes = new PyMethodDescriptor(singleton, "to_bytes", obj -> new PyInt.PyIntMethodUnimplemented(obj, "to_bytes"));
 
-    PyIntType() { super("int", PyInt.class); }
+    private PyIntType() { super("int", PyInt.class); }
     @Override public PyDescriptor getDescriptor(String name) {
         switch (name) {
             case "as_integer_ratio": return pydesc_as_integer_ratio;

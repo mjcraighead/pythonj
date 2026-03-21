@@ -8,7 +8,7 @@
 final class PyBoolType extends PyBuiltinClass {
     public static final PyBoolType singleton = new PyBoolType();
 
-    PyBoolType() { super("bool", PyBool.class); }
+    private PyBoolType() { super("bool", PyBool.class); }
     @Override public PyBool call(PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, typeName);
         Runtime.requireMaxArgs(args, 1, typeName);

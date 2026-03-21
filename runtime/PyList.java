@@ -21,7 +21,7 @@ final class PyListType extends PyBuiltinClass {
     private static final PyMethodDescriptor pydesc_reverse = new PyMethodDescriptor(singleton, "reverse", PyList.PyListMethod_reverse::new);
     private static final PyMethodDescriptor pydesc_sort = new PyMethodDescriptor(singleton, "sort", PyList.PyListMethod_sort::new);
 
-    PyListType() { super("list", PyList.class); }
+    private PyListType() { super("list", PyList.class); }
     @Override public PyDescriptor getDescriptor(String name) {
         switch (name) {
             case "append": return pydesc_append;

@@ -10,7 +10,7 @@ final class PyRangeType extends PyBuiltinClass {
     private static final PyMemberDescriptor pydesc_step = new PyMemberDescriptor(singleton, "step", obj -> new PyInt(((PyRange)obj).step));
     private static final PyMemberDescriptor pydesc_stop = new PyMemberDescriptor(singleton, "stop", obj -> new PyInt(((PyRange)obj).stop));
 
-    PyRangeType() { super("range", PyRange.class); }
+    private PyRangeType() { super("range", PyRange.class); }
     @Override public PyDescriptor getDescriptor(String name) {
         switch (name) {
             case "count": return pydesc_count;

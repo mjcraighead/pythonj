@@ -8,7 +8,7 @@ import java.util.Arrays;
 final class PyByteArrayType extends PyBuiltinClass {
     public static final PyByteArrayType singleton = new PyByteArrayType();
 
-    PyByteArrayType() { super("bytearray", PyByteArray.class); }
+    private PyByteArrayType() { super("bytearray", PyByteArray.class); }
     @Override public PyByteArray call(PyObject[] args, PyDict kwargs) {
         if (args.length > 1) {
             throw new IllegalArgumentException("bytearray() takes 0 or 1 arguments");

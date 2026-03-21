@@ -54,7 +54,7 @@ final class PyStringType extends PyBuiltinClass {
     private static final PyMethodDescriptor pydesc_upper = new PyMethodDescriptor(singleton, "upper", PyString.PyStringMethod_upper::new);
     private static final PyMethodDescriptor pydesc_zfill = new PyMethodDescriptor(singleton, "zfill", obj -> new PyString.PyStringMethodUnimplemented(obj, "zfill"));
 
-    PyStringType() { super("str", PyString.class); }
+    private PyStringType() { super("str", PyString.class); }
     @Override public PyDescriptor getDescriptor(String name) {
         switch (name) {
             case "capitalize": return pydesc_capitalize;

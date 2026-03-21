@@ -65,7 +65,7 @@ class PyBuiltinClass extends PyType {
 final class PyTypeType extends PyBuiltinClass {
     public static final PyTypeType singleton = new PyTypeType();
 
-    PyTypeType() { super("type", PyType.class); }
+    private PyTypeType() { super("type", PyType.class); }
     @Override public PyType call(PyObject[] args, PyDict kwargs) {
         if (args.length != 1) {
             throw new IllegalArgumentException("type() takes 1 argument");
@@ -246,7 +246,7 @@ public final class Runtime {
     static final class pyfunc_abs extends PyBuiltinFunction {
         public static final pyfunc_abs singleton = new pyfunc_abs();
 
-        pyfunc_abs() { super("abs"); }
+        private pyfunc_abs() { super("abs"); }
         @Override public PyObject call(PyObject[] args, PyDict kwargs) {
             var arg = exactlyOneArg(args, kwargs);
             return arg.abs();
@@ -256,7 +256,7 @@ public final class Runtime {
     static final class pyfunc_all extends PyBuiltinFunction {
         public static final pyfunc_all singleton = new pyfunc_all();
 
-        pyfunc_all() { super("all"); }
+        private pyfunc_all() { super("all"); }
         @Override public PyBool call(PyObject[] args, PyDict kwargs) {
             var arg = exactlyOneArg(args, kwargs);
             var iter = arg.iter();
@@ -272,7 +272,7 @@ public final class Runtime {
     static final class pyfunc_any extends PyBuiltinFunction {
         public static final pyfunc_any singleton = new pyfunc_any();
 
-        pyfunc_any() { super("any"); }
+        private pyfunc_any() { super("any"); }
         @Override public PyBool call(PyObject[] args, PyDict kwargs) {
             var arg = exactlyOneArg(args, kwargs);
             var iter = arg.iter();
@@ -288,7 +288,7 @@ public final class Runtime {
     static final class pyfunc_ascii extends PyBuiltinFunction {
         public static final pyfunc_ascii singleton = new pyfunc_ascii();
 
-        pyfunc_ascii() { super("ascii"); }
+        private pyfunc_ascii() { super("ascii"); }
         @Override public PyString call(PyObject[] args, PyDict kwargs) {
             var arg = exactlyOneArg(args, kwargs);
             String r = arg.repr();
@@ -313,7 +313,7 @@ public final class Runtime {
     static final class pyfunc_chr extends PyBuiltinFunction {
         public static final pyfunc_chr singleton = new pyfunc_chr();
 
-        pyfunc_chr() { super("chr"); }
+        private pyfunc_chr() { super("chr"); }
         @Override public PyString call(PyObject[] args, PyDict kwargs) {
             var arg = exactlyOneArg(args, kwargs);
             long index = arg.indexValue();
@@ -327,7 +327,7 @@ public final class Runtime {
     static final class pyfunc_delattr extends PyBuiltinFunction {
         public static final pyfunc_delattr singleton = new pyfunc_delattr();
 
-        pyfunc_delattr() { super("delattr"); }
+        private pyfunc_delattr() { super("delattr"); }
         @Override public PyNone call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, funcName);
             requireExactArgs(args, 2, funcName);
@@ -343,7 +343,7 @@ public final class Runtime {
     static final class pyfunc_format extends PyBuiltinFunction {
         public static final pyfunc_format singleton = new pyfunc_format();
 
-        pyfunc_format() { super("format"); }
+        private pyfunc_format() { super("format"); }
         @Override public PyString call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, funcName);
             requireMinArgs(args, 1, funcName);
@@ -363,7 +363,7 @@ public final class Runtime {
     static final class pyfunc_getattr extends PyBuiltinFunction {
         public static final pyfunc_getattr singleton = new pyfunc_getattr();
 
-        pyfunc_getattr() { super("getattr"); }
+        private pyfunc_getattr() { super("getattr"); }
         @Override public PyObject call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, funcName);
             requireMinArgs(args, 2, funcName);
@@ -386,7 +386,7 @@ public final class Runtime {
     static final class pyfunc_hasattr extends PyBuiltinFunction {
         public static final pyfunc_hasattr singleton = new pyfunc_hasattr();
 
-        pyfunc_hasattr() { super("hasattr"); }
+        private pyfunc_hasattr() { super("hasattr"); }
         @Override public PyBool call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, funcName);
             requireExactArgs(args, 2, funcName);
@@ -409,7 +409,7 @@ public final class Runtime {
     static final class pyfunc_hash extends PyBuiltinFunction {
         public static final pyfunc_hash singleton = new pyfunc_hash();
 
-        pyfunc_hash() { super("hash"); }
+        private pyfunc_hash() { super("hash"); }
         @Override public PyInt call(PyObject[] args, PyDict kwargs) {
             var arg = exactlyOneArg(args, kwargs);
             return new PyInt(arg.hashCode());
@@ -419,7 +419,7 @@ public final class Runtime {
     static final class pyfunc_hex extends PyBuiltinFunction {
         public static final pyfunc_hex singleton = new pyfunc_hex();
 
-        pyfunc_hex() { super("hex"); }
+        private pyfunc_hex() { super("hex"); }
         @Override public PyString call(PyObject[] args, PyDict kwargs) {
             var arg = exactlyOneArg(args, kwargs);
             long index = arg.indexValue();
@@ -434,7 +434,7 @@ public final class Runtime {
     static final class pyfunc_isinstance extends PyBuiltinFunction {
         public static final pyfunc_isinstance singleton = new pyfunc_isinstance();
 
-        pyfunc_isinstance() { super("isinstance"); }
+        private pyfunc_isinstance() { super("isinstance"); }
         private static boolean isInstanceImpl(PyObject obj, PyObject type) {
             if (type instanceof PyTuple type_tuple) {
                 for (var x: type_tuple.items) {
@@ -461,7 +461,7 @@ public final class Runtime {
     static final class pyfunc_issubclass extends PyBuiltinFunction {
         public static final pyfunc_issubclass singleton = new pyfunc_issubclass();
 
-        pyfunc_issubclass() { super("issubclass"); }
+        private pyfunc_issubclass() { super("issubclass"); }
         private static boolean isSubclassImpl(PyObject obj, PyObject type) {
             if (type instanceof PyTuple type_tuple) {
                 for (var x: type_tuple.items) {
@@ -487,7 +487,7 @@ public final class Runtime {
     static final class pyfunc_iter extends PyBuiltinFunction {
         public static final pyfunc_iter singleton = new pyfunc_iter();
 
-        pyfunc_iter() { super("iter"); }
+        private pyfunc_iter() { super("iter"); }
         @Override public PyIter call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, funcName);
             if (args.length != 1) {
@@ -500,7 +500,7 @@ public final class Runtime {
     static final class pyfunc_len extends PyBuiltinFunction {
         public static final pyfunc_len singleton = new pyfunc_len();
 
-        pyfunc_len() { super("len"); }
+        private pyfunc_len() { super("len"); }
         @Override public PyInt call(PyObject[] args, PyDict kwargs) {
             var arg = exactlyOneArg(args, kwargs);
             return new PyInt(arg.len());
@@ -510,7 +510,7 @@ public final class Runtime {
     static final class pyfunc_max extends PyBuiltinFunction {
         public static final pyfunc_max singleton = new pyfunc_max();
 
-        pyfunc_max() { super("max"); }
+        private pyfunc_max() { super("max"); }
         @Override public PyObject call(PyObject[] args, PyDict kwargs) {
             if ((kwargs != null) && kwargs.boolValue()) {
                 throw new IllegalArgumentException("max() does not accept kwargs");
@@ -544,7 +544,7 @@ public final class Runtime {
     static final class pyfunc_min extends PyBuiltinFunction {
         public static final pyfunc_min singleton = new pyfunc_min();
 
-        pyfunc_min() { super("min"); }
+        private pyfunc_min() { super("min"); }
         @Override public PyObject call(PyObject[] args, PyDict kwargs) {
             if ((kwargs != null) && kwargs.boolValue()) {
                 throw new IllegalArgumentException("min() does not accept kwargs");
@@ -578,7 +578,7 @@ public final class Runtime {
     static final class pyfunc_next extends PyBuiltinFunction {
         public static final pyfunc_next singleton = new pyfunc_next();
 
-        pyfunc_next() { super("next"); }
+        private pyfunc_next() { super("next"); }
         @Override public PyObject call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, funcName);
             requireMinArgs(args, 1, funcName);
@@ -597,7 +597,7 @@ public final class Runtime {
     static final class pyfunc_open extends PyBuiltinFunction {
         public static final pyfunc_open singleton = new pyfunc_open();
 
-        pyfunc_open() { super("open"); }
+        private pyfunc_open() { super("open"); }
         @Override public PyObject call(PyObject[] args, PyDict kwargs) {
             if ((kwargs != null) && kwargs.boolValue()) {
                 throw new IllegalArgumentException("open() does not accept kwargs");
@@ -622,7 +622,7 @@ public final class Runtime {
     static final class pyfunc_ord extends PyBuiltinFunction {
         public static final pyfunc_ord singleton = new pyfunc_ord();
 
-        pyfunc_ord() { super("ord"); }
+        private pyfunc_ord() { super("ord"); }
         @Override public PyInt call(PyObject[] args, PyDict kwargs) {
             PyString arg = (PyString)exactlyOneArg(args, kwargs);
             if (arg.len() != 1) {
@@ -635,7 +635,7 @@ public final class Runtime {
     static final class pyfunc_print extends PyBuiltinFunction {
         public static final pyfunc_print singleton = new pyfunc_print();
 
-        pyfunc_print() { super("print"); }
+        private pyfunc_print() { super("print"); }
         @Override public PyNone call(PyObject[] args, PyDict kwargs) {
             if ((kwargs != null) && kwargs.boolValue()) {
                 throw new IllegalArgumentException("print() does not accept kwargs");
@@ -656,7 +656,7 @@ public final class Runtime {
     static final class pyfunc_repr extends PyBuiltinFunction {
         public static final pyfunc_repr singleton = new pyfunc_repr();
 
-        pyfunc_repr() { super("repr"); }
+        private pyfunc_repr() { super("repr"); }
         @Override public PyString call(PyObject[] args, PyDict kwargs) {
             var arg = exactlyOneArg(args, kwargs);
             return new PyString(arg.repr());
@@ -666,7 +666,7 @@ public final class Runtime {
     static final class pyfunc_setattr extends PyBuiltinFunction {
         public static final pyfunc_setattr singleton = new pyfunc_setattr();
 
-        pyfunc_setattr() { super("setattr"); }
+        private pyfunc_setattr() { super("setattr"); }
         @Override public PyNone call(PyObject[] args, PyDict kwargs) {
             requireNoKwArgs(kwargs, funcName);
             requireExactArgs(args, 3, funcName);
@@ -682,7 +682,7 @@ public final class Runtime {
     static final class pyfunc_sorted extends PyBuiltinFunction {
         public static final pyfunc_sorted singleton = new pyfunc_sorted();
 
-        pyfunc_sorted() { super("sorted"); }
+        private pyfunc_sorted() { super("sorted"); }
         @Override public PyList call(PyObject[] args, PyDict kwargs) {
             if (args.length != 1) {
                 throw new IllegalArgumentException("sorted() takes 1 argument");
@@ -700,7 +700,7 @@ public final class Runtime {
     static final class pyfunc_sum extends PyBuiltinFunction {
         public static final pyfunc_sum singleton = new pyfunc_sum();
 
-        pyfunc_sum() { super("sum"); }
+        private pyfunc_sum() { super("sum"); }
         @Override public PyInt call(PyObject[] args, PyDict kwargs) {
             if (args.length != 1) {
                 throw new IllegalArgumentException("sum() takes 1 argument");

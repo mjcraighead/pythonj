@@ -27,7 +27,7 @@ final class PySetType extends PyBuiltinClass {
     private static final PyMethodDescriptor pydesc_union = new PyMethodDescriptor(singleton, "union", obj -> new PySet.PySetMethodUnimplemented(obj, "union"));
     private static final PyMethodDescriptor pydesc_update = new PyMethodDescriptor(singleton, "update", PySet.PySetMethod_update::new);
 
-    PySetType() { super("set", PySet.class); }
+    private PySetType() { super("set", PySet.class); }
     @Override public PyDescriptor getDescriptor(String name) {
         switch (name) {
             case "add": return pydesc_add;

@@ -5,7 +5,7 @@
 final class PyReversedType extends PyBuiltinClass {
     public static final PyReversedType singleton = new PyReversedType();
 
-    PyReversedType() { super("reversed", PyReversed.class); }
+    private PyReversedType() { super("reversed", PyReversed.class); }
     @Override public PyIter call(PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, typeName);
         Runtime.requireExactArgs(args, 1, typeName);
