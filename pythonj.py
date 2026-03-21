@@ -1367,11 +1367,7 @@ def gen_code(path) -> None:
         spec = json.load(f)
 
     for (name, attrs) in spec.items():
-        # XXX roll out gen_entire_class to the rest
-        gen_entire_class = name in {
-            'bool', 'bytearray', 'bytes', 'dict', 'enumerate', 'int', 'list', 'range', 'reversed', 'set', 'slice', 'str', 'tuple', 'zip',
-            'ArithmeticError', 'AssertionError', 'AttributeError', 'BaseException', 'Exception',
-        }
+        has_newobj = name not in {'object', '_io.BufferedReader', '_io.TextIOWrapper'}
         if name == '_io.BufferedReader':
             java_name = 'PyBufferedReader'
             java_path = 'runtime/PyFile.java'
@@ -1395,10 +1391,10 @@ def gen_code(path) -> None:
         begin_index = source_lines.index(begin_tag) + 1
         end_index = source_lines.index(end_tag)
 
-        gen_lines = []
-        if gen_entire_class:
-            gen_lines.append(f'final class {java_name}Type extends PyBuiltinType {{\n')
-        gen_lines.append(f'    public static final {java_name}Type singleton = new {java_name}Type();\n')
+        gen_lines = [
+            f'final class {java_name}Type extends PyBuiltinType {{\n',
+            f'    public static final {java_name}Type singleton = new {java_name}Type();\n',
+        ]
         for (k, v) in attrs.items():
             if v['kind'] == 'string':
                 gen_lines.append(f"    private static final PyString pyattr_{k} = new PyString({java_string_literal(v['value'])});\n")
@@ -1427,7 +1423,7 @@ def gen_code(path) -> None:
             '    }\n',
             '\n',
             f'    private {java_name}Type() {{ super({java_string_literal(name)}, {java_name}.class, {java_name}::newObj); }}\n'
-            if gen_entire_class else
+            if has_newobj else
             f'    private {java_name}Type() {{ super({java_string_literal(name)}, {java_name}.class); }}\n',
             '    @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }\n',
             '    @Override public PyObject lookupAttr(String name) {\n',
@@ -1439,9 +1435,8 @@ def gen_code(path) -> None:
             '            default: return null;\n',
             '        }\n',
             '    }\n',
+            '}\n',
         ]
-        if gen_entire_class:
-            gen_lines.append('}\n')
         source_lines[begin_index:end_index] = gen_lines
 
         if name in UNIMPLEMENTED_METHODS:

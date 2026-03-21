@@ -33,6 +33,16 @@ abstract class PyType extends PyTruthyObject {
     }
 // END GENERATED CODE: PyType
 
+    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+        if (args.length != 1) {
+            throw new IllegalArgumentException("type() takes 1 argument");
+        }
+        if ((kwargs != null) && kwargs.boolValue()) {
+            throw new IllegalArgumentException("type() does not accept kwargs");
+        }
+        return args[0].type();
+    }
+
     @Override public PyObject or(PyObject rhs) {
         if ((rhs instanceof PyType) || (rhs instanceof PyNone)) {
             throw new UnsupportedOperationException("type unions are unsupported");
@@ -107,8 +117,8 @@ class PyBuiltinType extends PyType {
     @Override public final String name() { return typeName; }
 }
 
-final class PyTypeType extends PyBuiltinType {
 // BEGIN GENERATED CODE: PyTypeType
+final class PyTypeType extends PyBuiltinType {
     public static final PyTypeType singleton = new PyTypeType();
     private static final PyMethodDescriptor pyattr_mro = new PyMethodDescriptor(singleton, "mro", obj -> new PyType.PyTypeMethodUnimplemented(obj, "mro"));
     private static final PyGetSetDescriptor pyattr___doc__ = new PyGetSetDescriptor(singleton, "__doc__", PyType::pygetset___doc__);
@@ -118,7 +128,7 @@ final class PyTypeType extends PyBuiltinType {
         attrs.put(new PyString("__doc__"), pyattr___doc__);
     }
 
-    private PyTypeType() { super("type", PyType.class); }
+    private PyTypeType() { super("type", PyType.class, PyType::newObj); }
     @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }
     @Override public PyObject lookupAttr(String name) {
         switch (name) {
@@ -127,18 +137,8 @@ final class PyTypeType extends PyBuiltinType {
             default: return null;
         }
     }
-// END GENERATED CODE: PyTypeType
-
-    @Override public PyType call(PyObject[] args, PyDict kwargs) {
-        if (args.length != 1) {
-            throw new IllegalArgumentException("type() takes 1 argument");
-        }
-        if ((kwargs != null) && kwargs.boolValue()) {
-            throw new IllegalArgumentException("type() does not accept kwargs");
-        }
-        return args[0].type();
-    }
 }
+// END GENERATED CODE: PyTypeType
 
 abstract class PyGettableDescriptor extends PyTruthyObject {
     protected final PyType owner;

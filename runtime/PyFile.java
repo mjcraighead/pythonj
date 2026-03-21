@@ -10,8 +10,8 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 
-final class PyTextIOWrapperType extends PyBuiltinType {
 // BEGIN GENERATED CODE: PyTextIOWrapperType
+final class PyTextIOWrapperType extends PyBuiltinType {
     public static final PyTextIOWrapperType singleton = new PyTextIOWrapperType();
     private static final PyMethodDescriptor pyattr_detach = new PyMethodDescriptor(singleton, "detach", obj -> new PyTextIOWrapper.PyTextIOWrapperMethodUnimplemented(obj, "detach"));
     private static final PyMethodDescriptor pyattr_reconfigure = new PyMethodDescriptor(singleton, "reconfigure", obj -> new PyTextIOWrapper.PyTextIOWrapperMethodUnimplemented(obj, "reconfigure"));
@@ -102,8 +102,8 @@ final class PyTextIOWrapperType extends PyBuiltinType {
             default: return null;
         }
     }
-// END GENERATED CODE: PyTextIOWrapperType
 }
+// END GENERATED CODE: PyTextIOWrapperType
 
 final class PyTextIOWrapper extends PyIter {
 // BEGIN GENERATED CODE: PyTextIOWrapper
@@ -211,8 +211,8 @@ final class PyTextIOWrapper extends PyIter {
     static PyObject pygetset__CHUNK_SIZE(PyObject obj) { throw new UnsupportedOperationException("TextIOWrapper._CHUNK_SIZE unsupported"); }
 }
 
-final class PyBufferedReaderType extends PyBuiltinType {
 // BEGIN GENERATED CODE: PyBufferedReaderType
+final class PyBufferedReaderType extends PyBuiltinType {
     public static final PyBufferedReaderType singleton = new PyBufferedReaderType();
     private static final PyMethodDescriptor pyattr_detach = new PyMethodDescriptor(singleton, "detach", obj -> new PyBufferedReader.PyBufferedReaderMethodUnimplemented(obj, "detach"));
     private static final PyMethodDescriptor pyattr_flush = new PyMethodDescriptor(singleton, "flush", obj -> new PyBufferedReader.PyBufferedReaderMethodUnimplemented(obj, "flush"));
@@ -294,8 +294,8 @@ final class PyBufferedReaderType extends PyBuiltinType {
             default: return null;
         }
     }
-// END GENERATED CODE: PyBufferedReaderType
 }
+// END GENERATED CODE: PyBufferedReaderType
 
 final class PyBufferedReader extends PyIter {
 // BEGIN GENERATED CODE: PyBufferedReader
