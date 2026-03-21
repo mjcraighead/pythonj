@@ -53,7 +53,7 @@ final class PyStringType extends PyBuiltinType {
     private static final PyMethodDescriptor pyattr_zfill = new PyMethodDescriptor(singleton, "zfill", obj -> new PyString.PyStringMethodUnimplemented(obj, "zfill"));
     private static final PyMethodDescriptor pyattr_format = new PyMethodDescriptor(singleton, "format", obj -> new PyString.PyStringMethodUnimplemented(obj, "format"));
     private static final PyMethodDescriptor pyattr_format_map = new PyMethodDescriptor(singleton, "format_map", obj -> new PyString.PyStringMethodUnimplemented(obj, "format_map"));
-    private static final PyStaticMethod pyattr_maketrans = new PyStaticMethod(singleton, "maketrans", new PyStringType.PyStringStaticMethod_maketrans(singleton));
+    private static final PyStaticMethod pyattr_maketrans = new PyStaticMethod(singleton, "maketrans", new PyStringStaticMethod_maketrans(singleton));
     private static final PyString pyattr___doc__ = new PyString("str(object='') -> str\nstr(bytes_or_buffer[, encoding[, errors]]) -> str\n\nCreate a new string object from the given object. If encoding or\nerrors is specified, then the object must expose a data buffer\nthat will be decoded using the given encoding and error handler.\nOtherwise, returns the result of object.__str__() (if defined)\nor repr(object).\nencoding defaults to 'utf-8'.\nerrors defaults to 'strict'.");
     private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>(48);
     static {
@@ -176,13 +176,13 @@ final class PyStringType extends PyBuiltinType {
         }
         return PyString.empty_singleton;
     }
+}
 
-    static final class PyStringStaticMethod_maketrans extends PyBuiltinMethod<PyType> {
-        PyStringStaticMethod_maketrans(PyType _self) { super(_self); }
-        @Override public String methodName() { return "maketrans"; }
-        @Override public PyObject call(PyObject[] args, PyDict kwargs) {
-            throw new UnsupportedOperationException("str.maketrans unimplemented");
-        }
+final class PyStringStaticMethod_maketrans extends PyBuiltinMethod<PyType> {
+    PyStringStaticMethod_maketrans(PyType _self) { super(_self); }
+    @Override public String methodName() { return "maketrans"; }
+    @Override public PyObject call(PyObject[] args, PyDict kwargs) {
+        throw new UnsupportedOperationException("str.maketrans unimplemented");
     }
 }
 

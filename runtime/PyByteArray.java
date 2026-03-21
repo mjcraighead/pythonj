@@ -19,7 +19,7 @@ final class PyByteArrayType extends PyBuiltinType {
     private static final PyMethodDescriptor pyattr_expandtabs = new PyMethodDescriptor(singleton, "expandtabs", obj -> new PyByteArray.PyByteArrayMethodUnimplemented(obj, "expandtabs"));
     private static final PyMethodDescriptor pyattr_extend = new PyMethodDescriptor(singleton, "extend", obj -> new PyByteArray.PyByteArrayMethodUnimplemented(obj, "extend"));
     private static final PyMethodDescriptor pyattr_find = new PyMethodDescriptor(singleton, "find", obj -> new PyByteArray.PyByteArrayMethodUnimplemented(obj, "find"));
-    private static final PyClassMethodDescriptor pyattr_fromhex = new PyClassMethodDescriptor(singleton, "fromhex", PyByteArrayType.PyByteArrayClassMethod_fromhex::new);
+    private static final PyClassMethodDescriptor pyattr_fromhex = new PyClassMethodDescriptor(singleton, "fromhex", PyByteArrayClassMethod_fromhex::new);
     private static final PyMethodDescriptor pyattr_hex = new PyMethodDescriptor(singleton, "hex", obj -> new PyByteArray.PyByteArrayMethodUnimplemented(obj, "hex"));
     private static final PyMethodDescriptor pyattr_index = new PyMethodDescriptor(singleton, "index", obj -> new PyByteArray.PyByteArrayMethodUnimplemented(obj, "index"));
     private static final PyMethodDescriptor pyattr_insert = new PyMethodDescriptor(singleton, "insert", obj -> new PyByteArray.PyByteArrayMethodUnimplemented(obj, "insert"));
@@ -35,7 +35,7 @@ final class PyByteArrayType extends PyBuiltinType {
     private static final PyMethodDescriptor pyattr_ljust = new PyMethodDescriptor(singleton, "ljust", obj -> new PyByteArray.PyByteArrayMethodUnimplemented(obj, "ljust"));
     private static final PyMethodDescriptor pyattr_lower = new PyMethodDescriptor(singleton, "lower", obj -> new PyByteArray.PyByteArrayMethodUnimplemented(obj, "lower"));
     private static final PyMethodDescriptor pyattr_lstrip = new PyMethodDescriptor(singleton, "lstrip", obj -> new PyByteArray.PyByteArrayMethodUnimplemented(obj, "lstrip"));
-    private static final PyStaticMethod pyattr_maketrans = new PyStaticMethod(singleton, "maketrans", new PyByteArrayType.PyByteArrayStaticMethod_maketrans(singleton));
+    private static final PyStaticMethod pyattr_maketrans = new PyStaticMethod(singleton, "maketrans", new PyByteArrayStaticMethod_maketrans(singleton));
     private static final PyMethodDescriptor pyattr_partition = new PyMethodDescriptor(singleton, "partition", obj -> new PyByteArray.PyByteArrayMethodUnimplemented(obj, "partition"));
     private static final PyMethodDescriptor pyattr_pop = new PyMethodDescriptor(singleton, "pop", obj -> new PyByteArray.PyByteArrayMethodUnimplemented(obj, "pop"));
     private static final PyMethodDescriptor pyattr_remove = new PyMethodDescriptor(singleton, "remove", obj -> new PyByteArray.PyByteArrayMethodUnimplemented(obj, "remove"));
@@ -202,20 +202,20 @@ final class PyByteArrayType extends PyBuiltinType {
         }
         return new PyByteArray(b.toByteArray());
     }
+}
 
-    protected static final class PyByteArrayClassMethod_fromhex extends PyBuiltinMethod<PyType> {
-        PyByteArrayClassMethod_fromhex(PyType self) { super(self); }
-        @Override public String methodName() { return "fromhex"; }
-        @Override public PyObject call(PyObject[] args, PyDict kwargs) {
-            throw new UnsupportedOperationException("bytearray.fromhex() unimplemented");
-        }
+final class PyByteArrayClassMethod_fromhex extends PyBuiltinMethod<PyType> {
+    PyByteArrayClassMethod_fromhex(PyType self) { super(self); }
+    @Override public String methodName() { return "fromhex"; }
+    @Override public PyObject call(PyObject[] args, PyDict kwargs) {
+        throw new UnsupportedOperationException("bytearray.fromhex() unimplemented");
     }
-    protected static final class PyByteArrayStaticMethod_maketrans extends PyBuiltinMethod<PyType> {
-        PyByteArrayStaticMethod_maketrans(PyType self) { super(self); }
-        @Override public String methodName() { return "maketrans"; }
-        @Override public PyObject call(PyObject[] args, PyDict kwargs) {
-            throw new UnsupportedOperationException("bytearray.maketrans() unimplemented");
-        }
+}
+final class PyByteArrayStaticMethod_maketrans extends PyBuiltinMethod<PyType> {
+    PyByteArrayStaticMethod_maketrans(PyType self) { super(self); }
+    @Override public String methodName() { return "maketrans"; }
+    @Override public PyObject call(PyObject[] args, PyDict kwargs) {
+        throw new UnsupportedOperationException("bytearray.maketrans() unimplemented");
     }
 }
 

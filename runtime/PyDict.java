@@ -19,7 +19,7 @@ final class PyDictType extends PyBuiltinType {
     private static final PyMethodDescriptor pyattr_items = new PyMethodDescriptor(singleton, "items", PyDict.PyDictMethod_items::new);
     private static final PyMethodDescriptor pyattr_values = new PyMethodDescriptor(singleton, "values", PyDict.PyDictMethod_values::new);
     private static final PyMethodDescriptor pyattr_update = new PyMethodDescriptor(singleton, "update", PyDict.PyDictMethod_update::new);
-    private static final PyClassMethodDescriptor pyattr_fromkeys = new PyClassMethodDescriptor(singleton, "fromkeys", PyDictType.PyDictClassMethod_fromkeys::new);
+    private static final PyClassMethodDescriptor pyattr_fromkeys = new PyClassMethodDescriptor(singleton, "fromkeys", PyDictClassMethod_fromkeys::new);
     private static final PyMethodDescriptor pyattr_clear = new PyMethodDescriptor(singleton, "clear", PyDict.PyDictMethod_clear::new);
     private static final PyMethodDescriptor pyattr_copy = new PyMethodDescriptor(singleton, "copy", PyDict.PyDictMethod_copy::new);
     private static final PyString pyattr___doc__ = new PyString("dict() -> new empty dictionary\ndict(mapping) -> new dictionary initialized from a mapping object's\n    (key, value) pairs\ndict(iterable) -> new dictionary initialized as if via:\n    d = {}\n    for k, v in iterable:\n        d[k] = v\ndict(**kwargs) -> new dictionary initialized with the name=value pairs\n    in the keyword argument list.  For example:  dict(one=1, two=2)");
@@ -68,23 +68,23 @@ final class PyDictType extends PyBuiltinType {
         ret.pymethod_update(args, kwargs);
         return ret;
     }
+}
 
-    static final class PyDictClassMethod_fromkeys extends PyBuiltinMethod<PyType> {
-        PyDictClassMethod_fromkeys(PyType _self) { super(_self); }
-        @Override public String methodName() { return "fromkeys"; }
-        @Override public PyDict call(PyObject[] args, PyDict kwargs) {
-            Runtime.requireNoKwArgs(kwargs, "dict.fromkeys");
-            Runtime.requireMinArgs(args, 1, "fromkeys");
-            Runtime.requireMaxArgs(args, 2, "fromkeys");
-            PyObject iterable = args[0];
-            PyObject value = (args.length == 2) ? args[1] : PyNone.singleton;
-            var ret = new PyDict();
-            var iter = iterable.iter();
-            for (var key = iter.next(); key != null; key = iter.next()) {
-                ret.items.put(key, value);
-            }
-            return ret;
+final class PyDictClassMethod_fromkeys extends PyBuiltinMethod<PyType> {
+    PyDictClassMethod_fromkeys(PyType _self) { super(_self); }
+    @Override public String methodName() { return "fromkeys"; }
+    @Override public PyDict call(PyObject[] args, PyDict kwargs) {
+        Runtime.requireNoKwArgs(kwargs, "dict.fromkeys");
+        Runtime.requireMinArgs(args, 1, "fromkeys");
+        Runtime.requireMaxArgs(args, 2, "fromkeys");
+        PyObject iterable = args[0];
+        PyObject value = (args.length == 2) ? args[1] : PyNone.singleton;
+        var ret = new PyDict();
+        var iter = iterable.iter();
+        for (var key = iter.next(); key != null; key = iter.next()) {
+            ret.items.put(key, value);
         }
+        return ret;
     }
 }
 

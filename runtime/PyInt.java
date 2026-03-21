@@ -9,7 +9,7 @@ final class PyIntType extends PyBuiltinType {
     private static final PyMethodDescriptor pyattr_bit_length = new PyMethodDescriptor(singleton, "bit_length", obj -> new PyInt.PyIntMethodUnimplemented(obj, "bit_length"));
     private static final PyMethodDescriptor pyattr_bit_count = new PyMethodDescriptor(singleton, "bit_count", obj -> new PyInt.PyIntMethodUnimplemented(obj, "bit_count"));
     private static final PyMethodDescriptor pyattr_to_bytes = new PyMethodDescriptor(singleton, "to_bytes", obj -> new PyInt.PyIntMethodUnimplemented(obj, "to_bytes"));
-    private static final PyClassMethodDescriptor pyattr_from_bytes = new PyClassMethodDescriptor(singleton, "from_bytes", PyIntType.PyIntClassMethod_from_bytes::new);
+    private static final PyClassMethodDescriptor pyattr_from_bytes = new PyClassMethodDescriptor(singleton, "from_bytes", PyIntClassMethod_from_bytes::new);
     private static final PyMethodDescriptor pyattr_as_integer_ratio = new PyMethodDescriptor(singleton, "as_integer_ratio", obj -> new PyInt.PyIntMethodUnimplemented(obj, "as_integer_ratio"));
     private static final PyMethodDescriptor pyattr_is_integer = new PyMethodDescriptor(singleton, "is_integer", obj -> new PyInt.PyIntMethodUnimplemented(obj, "is_integer"));
     private static final PyGetSetDescriptor pyattr_real = new PyGetSetDescriptor(singleton, "real", PyInt::pygetset_real);
@@ -126,12 +126,13 @@ final class PyIntType extends PyBuiltinType {
         }
         throw new UnsupportedOperationException("don't know how to handle argument to int()");
     }
-    protected static final class PyIntClassMethod_from_bytes extends PyBuiltinMethod<PyType> {
-        PyIntClassMethod_from_bytes(PyType self) { super(self); }
-        @Override public String methodName() { return "from_bytes"; }
-        @Override public PyObject call(PyObject[] args, PyDict kwargs) {
-            throw new UnsupportedOperationException("int.from_bytes() unimplemented");
-        }
+}
+
+final class PyIntClassMethod_from_bytes extends PyBuiltinMethod<PyType> {
+    PyIntClassMethod_from_bytes(PyType self) { super(self); }
+    @Override public String methodName() { return "from_bytes"; }
+    @Override public PyObject call(PyObject[] args, PyDict kwargs) {
+        throw new UnsupportedOperationException("int.from_bytes() unimplemented");
     }
 }
 
