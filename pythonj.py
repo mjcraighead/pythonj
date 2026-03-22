@@ -1401,9 +1401,11 @@ def gen_code(spec_path: str, java_path: str) -> None:
                 if v['kind'] == 'string':
                     gen_lines.append(f"    private static final PyString pyattr_{k} = new PyString({java_string_literal(v['value'])});\n")
                 elif v['kind'] == 'member':
-                    gen_lines.append(f"    private static final PyMemberDescriptor pyattr_{k} = new PyMemberDescriptor(singleton, {java_string_literal(k)}, {java_name}::pymember_{k});\n")
+                    doc = 'null' if v['doc'] is None else java_string_literal(v['doc'])
+                    gen_lines.append(f"    private static final PyMemberDescriptor pyattr_{k} = new PyMemberDescriptor(singleton, {java_string_literal(k)}, {java_name}::pymember_{k}, {doc});\n")
                 elif v['kind'] == 'getset':
-                    gen_lines.append(f"    private static final PyGetSetDescriptor pyattr_{k} = new PyGetSetDescriptor(singleton, {java_string_literal(k)}, {java_name}::pygetset_{k});\n")
+                    doc = 'null' if v['doc'] is None else java_string_literal(v['doc'])
+                    gen_lines.append(f"    private static final PyGetSetDescriptor pyattr_{k} = new PyGetSetDescriptor(singleton, {java_string_literal(k)}, {java_name}::pygetset_{k}, {doc});\n")
                 elif v['kind'] == 'method':
                     doc = 'null' if v['doc'] is None else java_string_literal(v['doc'])
                     if name in UNIMPLEMENTED_METHODS and k in UNIMPLEMENTED_METHODS[name]:

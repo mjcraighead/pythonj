@@ -121,11 +121,13 @@ abstract class PyGettableDescriptor extends PyTruthyObject {
     protected final PyType owner;
     protected final String name;
     protected final Function<PyObject, PyObject> getter;
+    protected final String doc;
 
-    protected PyGettableDescriptor(PyType _owner, String _name, Function<PyObject, PyObject> _getter) {
+    protected PyGettableDescriptor(PyType _owner, String _name, Function<PyObject, PyObject> _getter, String _doc) {
         owner = _owner;
         name = _name;
         getter = _getter;
+        doc = _doc;
     }
 
     public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
@@ -139,11 +141,16 @@ abstract class PyGettableDescriptor extends PyTruthyObject {
             return getter.apply(instance);
         }
     }
+
+    static PyObject pygetset___doc__(PyObject obj) {
+        String doc = ((PyGettableDescriptor)obj).doc;
+        return (doc != null) ? new PyString(doc) : PyNone.singleton;
+    }
 }
 
 final class PyMemberDescriptor extends PyGettableDescriptor {
-    protected PyMemberDescriptor(PyType _owner, String _name, Function<PyObject, PyObject> _getter) {
-        super(_owner, _name, _getter);
+    protected PyMemberDescriptor(PyType _owner, String _name, Function<PyObject, PyObject> _getter, String _doc) {
+        super(_owner, _name, _getter, _doc);
     }
 
     @Override public final boolean isDataDescriptor() { return true; }
@@ -156,15 +163,11 @@ final class PyMemberDescriptor extends PyGettableDescriptor {
 
     @Override public final String repr() { return "<member " + PyString.reprOf(name) + " of " + PyString.reprOf(owner.name()) + " objects>"; }
     @Override public final PyBuiltinType type() { return PyMemberDescriptorType.singleton; }
-
-    static PyObject pygetset___doc__(PyObject obj) {
-        throw new UnsupportedOperationException("member_descriptor.__doc__ unimplemented");
-    }
 }
 
 final class PyGetSetDescriptor extends PyGettableDescriptor {
-    protected PyGetSetDescriptor(PyType _owner, String _name, Function<PyObject, PyObject> _getter) {
-        super(_owner, _name, _getter);
+    protected PyGetSetDescriptor(PyType _owner, String _name, Function<PyObject, PyObject> _getter, String _doc) {
+        super(_owner, _name, _getter, _doc);
     }
 
     @Override public final boolean isDataDescriptor() { return true; }
@@ -177,27 +180,15 @@ final class PyGetSetDescriptor extends PyGettableDescriptor {
 
     @Override public final String repr() { return "<attribute " + PyString.reprOf(name) + " of " + PyString.reprOf(owner.name()) + " objects>"; }
     @Override public final PyBuiltinType type() { return PyGetSetDescriptorType.singleton; }
-
-    static PyObject pygetset___doc__(PyObject obj) {
-        throw new UnsupportedOperationException("getset_descriptor.__doc__ unimplemented");
-    }
 }
 
 final class PyMethodDescriptor extends PyGettableDescriptor {
-    private final String doc;
-
     protected PyMethodDescriptor(PyType _owner, String _name, Function<PyObject, PyObject> _getter, String _doc) {
-        super(_owner, _name, _getter);
-        doc = _doc;
+        super(_owner, _name, _getter, _doc);
     }
 
     @Override public final String repr() { return "<method " + PyString.reprOf(name) + " of " + PyString.reprOf(owner.name()) + " objects>"; }
     @Override public final PyBuiltinType type() { return PyMethodDescriptorType.singleton; }
-
-    static PyObject pygetset___doc__(PyObject obj) {
-        String doc = ((PyMethodDescriptor)obj).doc;
-        return (doc != null) ? new PyString(doc) : PyNone.singleton;
-    }
 }
 
 final class PyClassMethodDescriptor extends PyTruthyObject {
