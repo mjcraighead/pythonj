@@ -47,7 +47,7 @@ BUILTIN_TYPES = {
 }
 EXCEPTION_TYPES = {
     'ArithmeticError', 'AssertionError', 'AttributeError', 'BaseException', 'Exception', 'IndexError',
-    'KeyError', 'LookupError', 'StopIteration', 'TypeError', 'ValueError', 'ZeroDivisionError',
+    'KeyError', 'LookupError', 'OverflowError', 'StopIteration', 'TypeError', 'ValueError', 'ZeroDivisionError',
 }
 
 RUNTIME_JAVA_FILES = (
@@ -1342,9 +1342,6 @@ UNIMPLEMENTED_METHODS = {
         'ljust', 'lower', 'lstrip', 'partition', 'removeprefix', 'removesuffix', 'replace', 'rfind',
         'rindex', 'rjust', 'rpartition', 'rsplit', 'rstrip', 'split', 'splitlines', 'startswith', 'strip',
         'swapcase', 'title', 'translate', 'upper', 'zfill',
-    },
-    'int': {
-        'as_integer_ratio', 'bit_count', 'bit_length', 'conjugate', 'is_integer', 'to_bytes',
     },
     'set': {
         'copy', 'difference', 'difference_update', 'intersection', 'intersection_update', 'isdisjoint', 'issubset',

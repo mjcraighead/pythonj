@@ -109,6 +109,19 @@ class PyArithmeticError extends PyException {
         return new PyArithmeticError(args);
     }
 }
+final class PyOverflowError extends PyArithmeticError {
+    PyOverflowError(PyObject... _args) { super(_args); }
+    @Override public PyBuiltinType type() { return PyOverflowErrorType.singleton; }
+
+    static PyRaise raise(String msg) {
+        return new PyRaise(new PyOverflowError(new PyString(msg)));
+    }
+
+    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+        Runtime.requireNoKwArgs(kwargs, type.name());
+        return new PyOverflowError(args);
+    }
+}
 final class PyZeroDivisionError extends PyArithmeticError {
     PyZeroDivisionError(PyObject... _args) { super(_args); }
     @Override public PyBuiltinType type() { return PyZeroDivisionErrorType.singleton; }

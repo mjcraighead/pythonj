@@ -2,30 +2,74 @@
 // Copyright (c) 2012-2026 Matt Craighead
 // SPDX-License-Identifier: MIT
 
-final class PyIntClassMethod_from_bytes extends PyBuiltinMethod<PyType> {
-    PyIntClassMethod_from_bytes(PyType self) { super(self); }
-    @Override public String methodName() { return "from_bytes"; }
-    @Override public PyObject call(PyObject[] args, PyDict kwargs) {
-        throw new UnsupportedOperationException("int.from_bytes() unimplemented");
-    }
-}
-
 // XXX Should probably pre-intern [-5,256] to match CPython
 public final class PyInt extends PyObject {
     public static final PyInt singleton_neg1 = new PyInt(-1);
     public static final PyInt singleton_0 = new PyInt(0);
     public static final PyInt singleton_1 = new PyInt(1);
 
-// BEGIN GENERATED CODE: PyInt
-    protected static final class PyIntMethodUnimplemented extends PyBuiltinMethod<PyInt> {
-        private final String name;
-        PyIntMethodUnimplemented(PyObject _self, String _name) { super((PyInt)_self); name = _name; }
-        @Override public String methodName() { return name; }
-        @Override public PyObject call(PyObject[] args, PyDict kwargs) {
-            throw new UnsupportedOperationException("int." + name + "() unimplemented");
+    protected static final class PyIntMethod_as_integer_ratio extends PyBuiltinMethod<PyInt> {
+        PyIntMethod_as_integer_ratio(PyObject _self) { super((PyInt)_self); }
+        @Override public String methodName() { return "as_integer_ratio"; }
+        @Override public PyTuple call(PyObject[] args, PyDict kwargs) {
+            Runtime.requireNoKwArgs(kwargs, "int.as_integer_ratio");
+            Runtime.requireExactArgsAlt(args, 0, "int.as_integer_ratio");
+            return self.pymethod_as_integer_ratio();
         }
     }
-// END GENERATED CODE: PyInt
+    protected static final class PyIntMethod_bit_count extends PyBuiltinMethod<PyInt> {
+        PyIntMethod_bit_count(PyObject _self) { super((PyInt)_self); }
+        @Override public String methodName() { return "bit_count"; }
+        @Override public PyInt call(PyObject[] args, PyDict kwargs) {
+            Runtime.requireNoKwArgs(kwargs, "int.bit_count");
+            Runtime.requireExactArgsAlt(args, 0, "int.bit_count");
+            return self.pymethod_bit_count();
+        }
+    }
+    protected static final class PyIntMethod_bit_length extends PyBuiltinMethod<PyInt> {
+        PyIntMethod_bit_length(PyObject _self) { super((PyInt)_self); }
+        @Override public String methodName() { return "bit_length"; }
+        @Override public PyInt call(PyObject[] args, PyDict kwargs) {
+            Runtime.requireNoKwArgs(kwargs, "int.bit_length");
+            Runtime.requireExactArgsAlt(args, 0, "int.bit_length");
+            return self.pymethod_bit_length();
+        }
+    }
+    protected static final class PyIntMethod_conjugate extends PyBuiltinMethod<PyInt> {
+        PyIntMethod_conjugate(PyObject _self) { super((PyInt)_self); }
+        @Override public String methodName() { return "conjugate"; }
+        @Override public PyInt call(PyObject[] args, PyDict kwargs) {
+            Runtime.requireNoKwArgs(kwargs, "int.conjugate");
+            Runtime.requireExactArgsAlt(args, 0, "int.conjugate");
+            return self.pymethod_conjugate();
+        }
+    }
+    protected static final class PyIntMethod_is_integer extends PyBuiltinMethod<PyInt> {
+        PyIntMethod_is_integer(PyObject _self) { super((PyInt)_self); }
+        @Override public String methodName() { return "is_integer"; }
+        @Override public PyBool call(PyObject[] args, PyDict kwargs) {
+            Runtime.requireNoKwArgs(kwargs, "int.is_integer");
+            Runtime.requireExactArgsAlt(args, 0, "int.is_integer");
+            return self.pymethod_is_integer();
+        }
+    }
+    protected static final class PyIntMethod_to_bytes extends PyBuiltinMethod<PyInt> {
+        PyIntMethod_to_bytes(PyObject _self) { super((PyInt)_self); }
+        @Override public String methodName() { return "to_bytes"; }
+        @Override public PyBytes call(PyObject[] args, PyDict kwargs) {
+            if ((kwargs != null) && kwargs.boolValue()) {
+                throw new IllegalArgumentException("int.to_bytes() does not accept kwargs");
+            }
+            if (args.length > 3) {
+                throw PyTypeError.raiseFormat("to_bytes() takes at most 3 arguments (%d given)", args.length);
+            } else if (args.length > 2) {
+                throw PyTypeError.raiseFormat("to_bytes() takes at most 2 positional arguments (%d given)", args.length);
+            }
+            PyObject length = (args.length >= 1) ? args[0] : PyInt.singleton_1;
+            PyObject byteorder = (args.length >= 2) ? args[1] : null;
+            return self.pymethod_to_bytes(length, byteorder);
+        }
+    }
 
     public final long value;
 
@@ -349,4 +393,74 @@ public final class PyInt extends PyObject {
     static PyObject pygetset_imag(PyObject obj) { return PyInt.singleton_0; }
     static PyObject pygetset_numerator(PyObject obj) { return obj; }
     static PyObject pygetset_real(PyObject obj) { return obj; }
+
+    public PyTuple pymethod_as_integer_ratio() {
+        return new PyTuple(new PyObject[]{this, PyInt.singleton_1});
+    }
+    public PyInt pymethod_bit_count() {
+        if (value == Long.MIN_VALUE) {
+            return PyInt.singleton_1;
+        }
+        return new PyInt(Long.bitCount(Math.abs(value)));
+    }
+    public PyInt pymethod_bit_length() {
+        if (value == Long.MIN_VALUE) {
+            return new PyInt(64);
+        }
+        return new PyInt(64 - Long.numberOfLeadingZeros(Math.abs(value)));
+    }
+    public PyInt pymethod_conjugate() {
+        return this;
+    }
+    public PyBool pymethod_is_integer() {
+        return PyBool.true_singleton;
+    }
+    public PyBytes pymethod_to_bytes(PyObject length, PyObject byteorder) {
+        if (!length.hasIndex()) {
+            throw PyTypeError.raise(PyString.reprOf(length.type().name()) + " object cannot be interpreted as an integer");
+        }
+        int len = Math.toIntExact(length.indexValue());
+        boolean littleEndian = false;
+        if (byteorder != null) {
+            if (!(byteorder instanceof PyString byteorderStr)) {
+                throw PyTypeError.raise("to_bytes() argument 'byteorder' must be str, not " + byteorder.type().name());
+            }
+            String s = byteorderStr.value;
+            if (s.equals("big")) {
+                littleEndian = false;
+            } else if (s.equals("little")) {
+                littleEndian = true;
+            } else {
+                throw PyValueError.raise("byteorder must be either 'little' or 'big'");
+            }
+        }
+        if (len < 0) {
+            throw PyValueError.raise("length argument must be non-negative");
+        }
+        long v = value;
+        if (v < 0) {
+            throw PyOverflowError.raise("can't convert negative int to unsigned");
+        }
+        if (len < 8) { // len >= 8 is always representible
+            long max = (1L << (len * 8)) - 1;
+            if (v > max) {
+                throw PyOverflowError.raise("int too big to convert");
+            }
+        }
+        byte[] out = new byte[len];
+        for (int i = 0; i < len; i++) {
+            int idx = littleEndian ? i : (len - 1 - i);
+            out[idx] = (byte)(v & 0xFF);
+            v >>= 8;
+        }
+        return new PyBytes(out);
+    }
+}
+
+final class PyIntClassMethod_from_bytes extends PyBuiltinMethod<PyType> {
+    PyIntClassMethod_from_bytes(PyType self) { super(self); }
+    @Override public String methodName() { return "from_bytes"; }
+    @Override public PyObject call(PyObject[] args, PyDict kwargs) {
+        throw new UnsupportedOperationException("int.from_bytes() unimplemented");
+    }
 }
