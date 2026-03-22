@@ -201,14 +201,16 @@ final class PyMethodDescriptor extends PyGettableDescriptor {
 }
 
 final class PyClassMethodDescriptor extends PyTruthyObject {
-    protected final PyType owner;
-    protected final String name;
-    protected final Function<PyType, PyObject> getter;
+    private final PyType owner;
+    private final String name;
+    private final Function<PyType, PyObject> getter;
+    private final String doc;
 
-    protected PyClassMethodDescriptor(PyType _owner, String _name, Function<PyType, PyObject> _getter) {
+    protected PyClassMethodDescriptor(PyType _owner, String _name, Function<PyType, PyObject> _getter, String _doc) {
         owner = _owner;
         name = _name;
         getter = _getter;
+        doc = _doc;
     }
 
     public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
@@ -223,7 +225,8 @@ final class PyClassMethodDescriptor extends PyTruthyObject {
     @Override public final PyBuiltinType type() { return PyClassMethodDescriptorType.singleton; }
 
     static PyObject pygetset___doc__(PyObject obj) {
-        throw new UnsupportedOperationException("classmethod_descriptor.__doc__ unimplemented");
+        String doc = ((PyClassMethodDescriptor)obj).doc;
+        return (doc != null) ? new PyString(doc) : PyNone.singleton;
     }
 }
 

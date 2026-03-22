@@ -1412,8 +1412,9 @@ def gen_code(spec_path: str, java_path: str) -> None:
                         constructor = f'{java_name}.{java_name}Method_{k}::new'
                     gen_lines.append(f"    private static final PyMethodDescriptor pyattr_{k} = new PyMethodDescriptor(singleton, {java_string_literal(k)}, {constructor}, {doc});\n")
                 elif v['kind'] == 'classmethod':
+                    doc = 'null' if v['doc'] is None else java_string_literal(v['doc'])
                     constructor = f'{java_name}ClassMethod_{k}::new'
-                    gen_lines.append(f"    private static final PyClassMethodDescriptor pyattr_{k} = new PyClassMethodDescriptor(singleton, {java_string_literal(k)}, {constructor});\n")
+                    gen_lines.append(f"    private static final PyClassMethodDescriptor pyattr_{k} = new PyClassMethodDescriptor(singleton, {java_string_literal(k)}, {constructor}, {doc});\n")
                 elif v['kind'] == 'staticmethod':
                     constructor = f'new {java_name}StaticMethod_{k}(singleton)'
                     gen_lines.append(f'    private static final PyStaticMethod pyattr_{k} = new PyStaticMethod(singleton, {java_string_literal(k)}, {constructor});\n')
