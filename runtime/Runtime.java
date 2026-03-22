@@ -128,6 +128,10 @@ abstract class PyGettableDescriptor extends PyTruthyObject {
         getter = _getter;
     }
 
+    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+        throw PyTypeError.raise("cannot create " + PyString.reprOf(type.name()) + " instances");
+    }
+
     @Override public final PyObject get(PyObject instance) {
         if (instance == null) {
             return this;
@@ -141,6 +145,7 @@ final class PyMemberDescriptor extends PyGettableDescriptor {
     protected PyMemberDescriptor(PyType _owner, String _name, Function<PyObject, PyObject> _getter) {
         super(_owner, _name, _getter);
     }
+
     @Override public final boolean isDataDescriptor() { return true; }
     @Override public final void set(PyObject instance, PyObject value) {
         throw PyAttributeError.raise("readonly attribute");
@@ -161,6 +166,7 @@ final class PyGetSetDescriptor extends PyGettableDescriptor {
     protected PyGetSetDescriptor(PyType _owner, String _name, Function<PyObject, PyObject> _getter) {
         super(_owner, _name, _getter);
     }
+
     @Override public final boolean isDataDescriptor() { return true; }
     @Override public final void set(PyObject instance, PyObject value) {
         throw PyAttributeError.raise("attribute " + PyString.reprOf(name) + " of " + PyString.reprOf(owner.name()) + " objects is not writable");
@@ -204,6 +210,11 @@ final class PyClassMethodDescriptor extends PyTruthyObject {
         name = _name;
         getter = _getter;
     }
+
+    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+        throw PyTypeError.raise("cannot create " + PyString.reprOf(type.name()) + " instances");
+    }
+
     @Override public final PyObject get(PyObject instance) {
         return getter.apply(owner);
     }
