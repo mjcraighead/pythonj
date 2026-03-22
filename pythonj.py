@@ -1138,7 +1138,7 @@ class PythonjVisitor(ast.NodeVisitor):
 
         assert java_name not in self.functions
         self.functions[java_name] = [
-            f'private static final class {java_name} extends PyUserFunction {{',
+            f'private static final class {java_name} extends PyFunction {{',
             f'{java_name}() {{',
             f'super({java_string_literal(py_name)});',
             '}',
@@ -1290,9 +1290,10 @@ class PythonjVisitor(ast.NodeVisitor):
 def gen_spec(spec_path: str) -> None:
     spec = {}
     for name in ['bool', 'bytearray', 'bytes', 'dict', 'enumerate', 'int', 'list', 'object', 'range',
-                 'reversed', 'set', 'slice', 'str', 'tuple', 'type', 'zip',
-                 'types.GetSetDescriptorType', 'types.MemberDescriptorType', 'types.MethodDescriptorType',
-                 'types.NoneType', '_io.BufferedReader', '_io.TextIOWrapper', *sorted(EXCEPTION_TYPES)]:
+                 'reversed', 'set', 'slice', 'str', 'tuple', 'type', 'zip', 'types.ClassMethodDescriptorType',
+                 'types.FunctionType', 'types.GetSetDescriptorType', 'types.MemberDescriptorType',
+                 'types.MethodDescriptorType', 'types.NoneType', '_io.BufferedReader', '_io.TextIOWrapper',
+                 *sorted(EXCEPTION_TYPES)]:
         if name.startswith('_io.'):
             obj = getattr(_io, name.split('.', 1)[1])
         elif name.startswith('types.'):
@@ -1384,6 +1385,8 @@ def gen_code(spec_path: str, java_path: str) -> None:
         for (name, attrs) in spec.items():
             java_name = get_java_name(name)
             match name:
+                case 'types.ClassMethodDescriptorType': py_name = 'classmethod_descriptor'
+                case 'types.FunctionType': py_name = 'function'
                 case 'types.GetSetDescriptorType': py_name = 'getset_descriptor'
                 case 'types.MemberDescriptorType': py_name = 'member_descriptor'
                 case 'types.MethodDescriptorType': py_name = 'method_descriptor'

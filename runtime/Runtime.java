@@ -191,8 +191,6 @@ final class PyMethodDescriptor extends PyGettableDescriptor {
 }
 
 final class PyClassMethodDescriptor extends PyTruthyObject {
-    private static final PyBuiltinType type_singleton = new PyBuiltinType("classmethod_descriptor", PyClassMethodDescriptor.class);
-
     protected final PyType owner;
     protected final String name;
     protected final Function<PyType, PyObject> getter;
@@ -207,7 +205,11 @@ final class PyClassMethodDescriptor extends PyTruthyObject {
     }
 
     @Override public final String repr() { return "<method " + PyString.reprOf(name) + " of " + PyString.reprOf(owner.name()) + " objects>"; }
-    @Override public final PyBuiltinType type() { return type_singleton; }
+    @Override public final PyBuiltinType type() { return PyClassMethodDescriptorType.singleton; }
+
+    static PyObject pygetset___doc__(PyObject obj) {
+        throw new UnsupportedOperationException("classmethod_descriptor.__doc__ unimplemented");
+    }
 }
 
 final class PyStaticMethod extends PyTruthyObject {
@@ -245,12 +247,15 @@ abstract class PyBuiltinMethod<T extends PyObject> extends PyBuiltinFunctionOrMe
     public abstract String methodName();
 }
 
-abstract class PyUserFunction extends PyTruthyObject {
-    private static final PyBuiltinType type_singleton = new PyBuiltinType("function", PyUserFunction.class);
+abstract class PyFunction extends PyTruthyObject {
     private final String funcName;
-    protected PyUserFunction(String name) { funcName = name; }
-    @Override public PyBuiltinType type() { return type_singleton; }
+    protected PyFunction(String name) { funcName = name; }
+    @Override public PyBuiltinType type() { return PyFunctionType.singleton; }
     @Override public String repr() { return "<function " + funcName + ">"; }
+
+    static PyObject pymember___doc__(PyObject obj) {
+        throw new UnsupportedOperationException("function.__doc__ unimplemented");
+    }
 }
 
 // Helper functions used by the builtins and code generator
