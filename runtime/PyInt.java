@@ -2,6 +2,8 @@
 // Copyright (c) 2012-2026 Matt Craighead
 // SPDX-License-Identifier: MIT
 
+import java.io.ByteArrayOutputStream;
+
 // XXX Should probably pre-intern [-5,256] to match CPython
 public final class PyInt extends PyObject {
     public static final PyInt singleton_neg1 = new PyInt(-1);
@@ -461,6 +463,69 @@ final class PyIntClassMethod_from_bytes extends PyBuiltinMethod<PyType> {
     PyIntClassMethod_from_bytes(PyType self) { super(self); }
     @Override public String methodName() { return "from_bytes"; }
     @Override public PyObject call(PyObject[] args, PyDict kwargs) {
-        throw new UnsupportedOperationException("int.from_bytes() unimplemented");
+        if ((kwargs != null) && kwargs.boolValue()) {
+            throw new IllegalArgumentException("int.from_bytes() does not accept kwargs");
+        }
+        if (args.length > 3) {
+            throw PyTypeError.raiseFormat("from_bytes() takes at most 3 arguments (%d given)", args.length);
+        } else if (args.length > 2) {
+            throw PyTypeError.raiseFormat("from_bytes() takes at most 2 positional arguments (%d given)", args.length);
+        } else if (args.length < 1) {
+            throw PyTypeError.raise("from_bytes() missing required argument 'bytes' (pos 1)");
+        }
+        PyObject bytes = args[0];
+        PyObject byteorder = (args.length >= 2) ? args[1] : null;
+        boolean littleEndian = false;
+        if (byteorder != null) {
+            if (!(byteorder instanceof PyString byteorderStr)) {
+                throw PyTypeError.raise("from_bytes() argument 'byteorder' must be str, not " + byteorder.type().name());
+            }
+            String s = byteorderStr.value;
+            if (s.equals("big")) {
+                littleEndian = false;
+            } else if (s.equals("little")) {
+                littleEndian = true;
+            } else {
+                throw PyValueError.raise("byteorder must be either 'little' or 'big'");
+            }
+        }
+
+        byte[] data;
+        if (bytes instanceof PyBytes bytesBytes) {
+            data = bytesBytes.value;
+        } else if (bytes instanceof PyByteArray bytesByteArray) {
+            data = bytesByteArray.value;
+        } else {
+            if (!bytes.hasIter()) {
+                throw PyTypeError.raise("cannot convert " + PyString.reprOf(bytes.type().name()) + " object to bytes");
+            }
+            var b = new ByteArrayOutputStream();
+            var iter = bytes.iter();
+            PyObject item;
+            while ((item = iter.next()) != null) {
+                if (!item.hasIndex()) {
+                    throw PyTypeError.raise(PyString.reprOf(item.type().name()) + " object cannot be interpreted as an integer");
+                }
+                long v = item.indexValue();
+                if ((v < 0) || (v >= 256)) {
+                    throw PyValueError.raise("bytes must be in range(0, 256)");
+                }
+                b.write((byte)v);
+            }
+            data = b.toByteArray();
+        }
+
+        int len = data.length;
+        long result = 0;
+        if (littleEndian) {
+            for (int i = len - 1; i >= 0; i--) {
+                result = Math.multiplyExact(result, 256) | (data[i] & 0xFF);
+            }
+        } else {
+            for (int i = 0; i < len; i++) {
+                result = Math.multiplyExact(result, 256) | (data[i] & 0xFF);
+            }
+        }
+        return new PyInt(result);
     }
 }
