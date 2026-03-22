@@ -222,8 +222,6 @@ final class PyClassMethodDescriptor extends PyTruthyObject {
 }
 
 final class PyStaticMethod extends PyTruthyObject {
-    private static final PyBuiltinType type_singleton = new PyBuiltinType("staticmethod", PyStaticMethod.class);
-
     protected final PyType owner;
     protected final String name;
     protected final PyObject func;
@@ -239,7 +237,7 @@ final class PyStaticMethod extends PyTruthyObject {
     }
 
     @Override public final String repr() { return "<staticmethod(" + func.repr() + ")>"; }
-    @Override public final PyBuiltinType type() { return type_singleton; }
+    @Override public final PyBuiltinType type() { return PyStaticMethodType.singleton; }
 }
 
 abstract class PyBuiltinFunctionOrMethod extends PyTruthyObject {

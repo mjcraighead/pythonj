@@ -39,6 +39,7 @@ BUILTIN_TYPES = {
     'reversed': 'PyReversed',
     'set': 'PySet',
     'slice': 'PySlice',
+    'staticmethod': 'PyStaticMethod',
     'str': 'PyString',
     'tuple': 'PyTuple',
     'type': 'PyType',
@@ -1290,7 +1291,7 @@ class PythonjVisitor(ast.NodeVisitor):
 def gen_spec(spec_path: str) -> None:
     spec = {}
     for name in ['bool', 'bytearray', 'bytes', 'dict', 'enumerate', 'int', 'list', 'object', 'range',
-                 'reversed', 'set', 'slice', 'str', 'tuple', 'type', 'zip', 'types.ClassMethodDescriptorType',
+                 'reversed', 'set', 'slice', 'staticmethod', 'str', 'tuple', 'type', 'zip', 'types.ClassMethodDescriptorType',
                  'types.FunctionType', 'types.GetSetDescriptorType', 'types.MemberDescriptorType',
                  'types.MethodDescriptorType', 'types.NoneType', '_io.BufferedReader', '_io.TextIOWrapper',
                  *sorted(EXCEPTION_TYPES)]:
