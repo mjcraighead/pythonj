@@ -178,15 +178,19 @@ final class PyGetSetDescriptor extends PyGettableDescriptor {
 }
 
 final class PyMethodDescriptor extends PyGettableDescriptor {
-    protected PyMethodDescriptor(PyType _owner, String _name, Function<PyObject, PyObject> _getter) {
+    private final String doc;
+
+    protected PyMethodDescriptor(PyType _owner, String _name, Function<PyObject, PyObject> _getter, String _doc) {
         super(_owner, _name, _getter);
+        doc = _doc;
     }
 
     @Override public final String repr() { return "<method " + PyString.reprOf(name) + " of " + PyString.reprOf(owner.name()) + " objects>"; }
     @Override public final PyBuiltinType type() { return PyMethodDescriptorType.singleton; }
 
     static PyObject pygetset___doc__(PyObject obj) {
-        throw new UnsupportedOperationException("method_descriptor.__doc__ unimplemented");
+        String doc = ((PyMethodDescriptor)obj).doc;
+        return (doc != null) ? new PyString(doc) : PyNone.singleton;
     }
 }
 

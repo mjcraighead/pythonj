@@ -1308,13 +1308,13 @@ def gen_spec(spec_path: str) -> None:
             if v_type is str:
                 attrs[k] = {'kind': 'string', 'value': v}
             elif v_type is types.MemberDescriptorType:
-                attrs[k] = {'kind': 'member'}
+                attrs[k] = {'kind': 'member', 'doc': v.__doc__}
             elif v_type is types.GetSetDescriptorType:
-                attrs[k] = {'kind': 'getset'}
+                attrs[k] = {'kind': 'getset', 'doc': v.__doc__}
             elif v_type is types.MethodDescriptorType:
-                attrs[k] = {'kind': 'method'}
+                attrs[k] = {'kind': 'method', 'doc': v.__doc__}
             elif v_type is types.ClassMethodDescriptorType:
-                attrs[k] = {'kind': 'classmethod'}
+                attrs[k] = {'kind': 'classmethod', 'doc': v.__doc__}
             elif v_type is staticmethod:
                 attrs[k] = {'kind': 'staticmethod'}
             else:
@@ -1405,11 +1405,12 @@ def gen_code(spec_path: str, java_path: str) -> None:
                 elif v['kind'] == 'getset':
                     gen_lines.append(f"    private static final PyGetSetDescriptor pyattr_{k} = new PyGetSetDescriptor(singleton, {java_string_literal(k)}, {java_name}::pygetset_{k});\n")
                 elif v['kind'] == 'method':
+                    doc = 'null' if v['doc'] is None else java_string_literal(v['doc'])
                     if name in UNIMPLEMENTED_METHODS and k in UNIMPLEMENTED_METHODS[name]:
                         constructor = f'obj -> new {java_name}.{java_name}MethodUnimplemented(obj, {java_string_literal(k)})'
                     else:
                         constructor = f'{java_name}.{java_name}Method_{k}::new'
-                    gen_lines.append(f"    private static final PyMethodDescriptor pyattr_{k} = new PyMethodDescriptor(singleton, {java_string_literal(k)}, {constructor});\n")
+                    gen_lines.append(f"    private static final PyMethodDescriptor pyattr_{k} = new PyMethodDescriptor(singleton, {java_string_literal(k)}, {constructor}, {doc});\n")
                 elif v['kind'] == 'classmethod':
                     constructor = f'{java_name}ClassMethod_{k}::new'
                     gen_lines.append(f"    private static final PyClassMethodDescriptor pyattr_{k} = new PyClassMethodDescriptor(singleton, {java_string_literal(k)}, {constructor});\n")
