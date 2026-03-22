@@ -1291,7 +1291,8 @@ class PythonjVisitor(ast.NodeVisitor):
 def gen_spec(spec_path: str) -> None:
     spec = {}
     for name in ['bool', 'bytearray', 'bytes', 'dict', 'enumerate', 'int', 'list', 'object', 'range',
-                 'reversed', 'set', 'slice', 'staticmethod', 'str', 'tuple', 'type', 'zip', 'types.ClassMethodDescriptorType',
+                 'reversed', 'set', 'slice', 'staticmethod', 'str', 'tuple', 'type', 'zip',
+                 'types.BuiltinFunctionType', 'types.ClassMethodDescriptorType',
                  'types.FunctionType', 'types.GetSetDescriptorType', 'types.MemberDescriptorType',
                  'types.MethodDescriptorType', 'types.NoneType', '_io.BufferedReader', '_io.TextIOWrapper',
                  *sorted(EXCEPTION_TYPES)]:
@@ -1371,6 +1372,8 @@ UNIMPLEMENTED_METHODS = {
 def get_java_name(name: str) -> str:
     if name.startswith('_io.'):
         return f"Py{name.split('.', 1)[1]}" # _io.Foo -> PyFoo + PyFooType
+    elif name == 'types.BuiltinFunctionType':
+        return 'PyBuiltinFunctionOrMethod' # weird shared type
     elif name.startswith('types.') and name.endswith('Type'):
         return f"Py{name[:-4].split('.', 1)[1]}" # types.FooType -> PyFoo + PyFooType
     elif name in EXCEPTION_TYPES:
@@ -1386,6 +1389,7 @@ def gen_code(spec_path: str, java_path: str) -> None:
         for (name, attrs) in spec.items():
             java_name = get_java_name(name)
             match name:
+                case 'types.BuiltinFunctionType': py_name = 'builtin_function_or_method'
                 case 'types.ClassMethodDescriptorType': py_name = 'classmethod_descriptor'
                 case 'types.FunctionType': py_name = 'function'
                 case 'types.GetSetDescriptorType': py_name = 'getset_descriptor'

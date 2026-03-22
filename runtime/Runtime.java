@@ -241,8 +241,11 @@ final class PyStaticMethod extends PyTruthyObject {
 }
 
 abstract class PyBuiltinFunctionOrMethod extends PyTruthyObject {
-    private static final PyBuiltinType type_singleton = new PyBuiltinType("builtin_function_or_method", PyBuiltinFunctionOrMethod.class);
-    @Override public final PyBuiltinType type() { return type_singleton; }
+    @Override public final PyBuiltinType type() { return PyBuiltinFunctionOrMethodType.singleton; }
+
+    static PyObject pygetset___doc__(PyObject obj) {
+        throw new UnsupportedOperationException("builtin_function_or_method.__doc__ unimplemented");
+    }
 }
 
 abstract class PyBuiltinMethod<T extends PyObject> extends PyBuiltinFunctionOrMethod {
