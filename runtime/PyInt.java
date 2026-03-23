@@ -97,11 +97,7 @@ public final class PyInt extends PyObject {
             long base = 10;
             if (args.length > 1) {
                 PyObject arg1 = args[1];
-                if (arg1.hasIndex()) {
-                    base = arg1.indexValue();
-                } else {
-                    throw PyTypeError.raise(PyString.reprOf(arg1.type().name()) + " object cannot be interpreted as an integer");
-                }
+                base = arg1.indexValue();
                 if ((base < 0) || (base == 1) || (base > 36)) {
                     throw PyValueError.raise("int() base must be >= 2 and <= 36, or 0");
                 }
@@ -417,9 +413,6 @@ public final class PyInt extends PyObject {
         return PyBool.true_singleton;
     }
     public PyBytes pymethod_to_bytes(PyObject length, PyObject byteorder) {
-        if (!length.hasIndex()) {
-            throw PyTypeError.raise(PyString.reprOf(length.type().name()) + " object cannot be interpreted as an integer");
-        }
         int len = Math.toIntExact(length.indexValue());
         boolean littleEndian = false;
         if (byteorder != null) {
@@ -502,9 +495,6 @@ final class PyIntClassMethod_from_bytes extends PyBuiltinMethod<PyType> {
             var iter = bytes.iter();
             PyObject item;
             while ((item = iter.next()) != null) {
-                if (!item.hasIndex()) {
-                    throw PyTypeError.raise(PyString.reprOf(item.type().name()) + " object cannot be interpreted as an integer");
-                }
                 long v = item.indexValue();
                 if ((v < 0) || (v >= 256)) {
                     throw PyValueError.raise("bytes must be in range(0, 256)");

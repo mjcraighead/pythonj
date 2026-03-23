@@ -120,9 +120,6 @@ public final class PySlice extends PyTruthyObject {
     }
 
     PyTuple pymethod_indices(PyObject lengthArg) {
-        if (!lengthArg.hasIndex()) {
-            throw PyTypeError.raise(PyString.reprOf(lengthArg.type().name()) + " object cannot be interpreted as an integer");
-        }
         int length = Math.toIntExact(lengthArg.indexValue());
         if (length < 0) {
             throw PyValueError.raise("length should not be negative");

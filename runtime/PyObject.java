@@ -155,7 +155,9 @@ public abstract class PyObject implements Comparable<PyObject> {
     }
     @Override public int hashCode() { throw unimplementedMethod("hashCode"); }
     public boolean hasIndex() { return false; }
-    public long indexValue() { throw unimplementedMethod("indexValue"); }
+    public long indexValue() {
+        throw PyTypeError.raise(PyString.reprOf(type().name()) + " object cannot be interpreted as an integer");
+    }
     public long intValue() { throw unimplementedMethod("intValue"); }
     public long len() {
         throw PyTypeError.raiseFormat("object of type %s has no len()", PyString.reprOf(type().name()));

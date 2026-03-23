@@ -352,16 +352,13 @@ public final class PyString extends PyObject {
         if (sep == PyNone.singleton) {
             throw new UnsupportedOperationException("sep=None unsupported");
         }
-        if (!maxsplit.hasIndex()) {
-            throw PyTypeError.raise(PyString.reprOf(maxsplit.type().name()) + " object cannot be interpreted as an integer");
-        }
+        long m = maxsplit.indexValue();
         if (!(sep instanceof PyString sepStr)) {
             throw PyTypeError.raise("must be str or None, not " + sep.type().name());
         }
         if (sepStr.len() != 1) {
             throw new UnsupportedOperationException("multi-character split tokens unsupported");
         }
-        long m = maxsplit.indexValue();
         if (m != -1) {
             throw new UnsupportedOperationException("maxsplit=-1 is the only value supported");
         }

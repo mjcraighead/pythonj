@@ -73,7 +73,7 @@ public final class PyByteArray extends PyObject {
         for (var item = iter.next(); item != null; item = iter.next()) {
             long i = item.indexValue();
             if ((i < 0) || (i >= 256)) {
-                throw new IllegalArgumentException("invalid byte value");
+                throw PyValueError.raise("byte must be in range(0, 256)");
             }
             b.write((int)i);
         }
