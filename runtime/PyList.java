@@ -204,6 +204,9 @@ public final class PyList extends PyObject {
         return ret;
     }
     @Override public PyList mulInPlace(PyObject rhs) {
+        if (!rhs.hasIndex()) {
+            throw PyTypeError.raise("can't multiply sequence by non-int of type " + PyString.reprOf(rhs.type().name()));
+        }
         long count = rhs.indexValue();
         if (count <= 0) {
             items.clear();
