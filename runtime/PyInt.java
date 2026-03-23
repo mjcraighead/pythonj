@@ -86,46 +86,45 @@ public final class PyInt extends PyObject {
             return PyInt.singleton_0;
         }
         PyObject arg0 = args[0];
-        // XXX should always call intValue when length is 1
-        if (arg0 instanceof PyInt arg0_int) {
+        // XXX should also try intValue when length is 1
+        if (arg0.hasIndex()) {
             if (args.length > 1) {
-                throw new IllegalArgumentException("int() cannot accept a base when passed an int");
+                throw PyTypeError.raise("int() can't convert non-string with explicit base");
             }
-            return arg0_int;
+            return new PyInt(arg0.indexValue());
         }
-        if (arg0 instanceof PyBool) {
-            if (args.length > 1) {
-                throw new IllegalArgumentException("int() cannot accept a base when passed a bool");
-            }
-            return new PyInt(arg0.intValue());
-        }
-        if (arg0 instanceof PyString arg0_str) {
+        if (arg0 instanceof PyString arg0Str) {
             long base = 10;
             if (args.length > 1) {
                 PyObject arg1 = args[1];
                 if (arg1.hasIndex()) {
                     base = arg1.indexValue();
                 } else {
-                    throw new IllegalArgumentException("base must be an int");
+                    throw PyTypeError.raise(PyString.reprOf(arg1.type().name()) + " object cannot be interpreted as an integer");
                 }
                 if ((base < 0) || (base == 1) || (base > 36)) {
-                    throw new IllegalArgumentException("base must be 0 or 2-36");
+                    throw PyValueError.raise("int() base must be >= 2 and <= 36, or 0");
                 }
                 if (base == 0) {
                     throw new UnsupportedOperationException("base 0 unsupported at present");
                 }
             }
-            String s = arg0_str.value;
+            String s = arg0Str.value;
             int i = 0;
-            while (s.charAt(i) == ' ') {
+            while ((i < s.length()) && (s.charAt(i) == ' ')) {
                 i++;
             }
             long sign = 1;
-            if (s.charAt(i) == '-') {
-                i++;
-                sign = -1;
-            } else if (s.charAt(i) == '+') {
-                i++;
+            if (i < s.length()) {
+                if (s.charAt(i) == '-') {
+                    i++;
+                    sign = -1;
+                } else if (s.charAt(i) == '+') {
+                    i++;
+                }
+            }
+            if (i == s.length()) {
+                throw PyValueError.raiseFormat("invalid literal for int() with base %d: %s", base, PyString.reprOf(s));
             }
             long value = 0;
             while (i < s.length()) {
@@ -138,14 +137,14 @@ public final class PyInt extends PyObject {
                 } else if ((c >= 'A') && (c <= 'Z')) {
                     digit = c - 'A' + 10;
                 } else {
-                    throw new IllegalArgumentException("unexpected digit");
+                    digit = 36; // always invalid
                 }
                 if (digit >= base) {
-                    throw new IllegalArgumentException("digit not valid in base");
+                    throw PyValueError.raiseFormat("invalid literal for int() with base %d: %s", base, PyString.reprOf(s));
                 }
-                value = value*base + digit;
+                value = Math.addExact(Math.multiplyExact(value, base), digit);
             }
-            return new PyInt(sign*value);
+            return new PyInt(Math.multiplyExact(sign, value));
         }
         throw new UnsupportedOperationException("don't know how to handle argument to int()");
     }
