@@ -376,10 +376,10 @@ public final class PyList extends PyObject {
         return PyNone.singleton;
     }
     public PyObject pymethod_pop(PyObject indexObj) {
+        int index = Math.toIntExact(indexObj.indexValue());
         if (items.isEmpty()) {
             throw PyIndexError.raise("pop from empty list");
         }
-        int index = Math.toIntExact(indexObj.indexValue());
         if (index < 0) {
             index += items.size();
         }
