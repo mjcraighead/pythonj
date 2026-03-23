@@ -262,7 +262,7 @@ public final class PyList extends PyObject {
                 }
                 return new PyList(result);
             }
-        } else {
+        } else if (key.hasIndex()) {
             int index = Math.toIntExact(key.indexValue());
             if (index < 0) {
                 index += items.size();
@@ -272,12 +272,14 @@ public final class PyList extends PyObject {
             } catch (IndexOutOfBoundsException e) {
                 throw PyIndexError.raise("list index out of range");
             }
+        } else {
+            throw PyTypeError.raise("list indices must be integers or slices, not " + key.type().name());
         }
     }
     @Override public void setItem(PyObject key, PyObject value) {
         if (key instanceof PySlice) {
             throw unimplementedMethod("slice assignment");
-        } else {
+        } else if (key.hasIndex()) {
             int index = Math.toIntExact(key.indexValue());
             if (index < 0) {
                 index += items.size();
@@ -287,6 +289,8 @@ public final class PyList extends PyObject {
             } catch (IndexOutOfBoundsException e) {
                 throw PyIndexError.raise("list assignment index out of range");
             }
+        } else {
+            throw PyTypeError.raise("list indices must be integers or slices, not " + key.type().name());
         }
     }
     @Override public void delItem(PyObject key) {

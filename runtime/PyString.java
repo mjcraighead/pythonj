@@ -254,7 +254,7 @@ public final class PyString extends PyObject {
                 }
                 return new PyString(s.toString());
             }
-        } else {
+        } else if (key.hasIndex()) {
             int index = Math.toIntExact(key.indexValue());
             int length = value.length();
             if ((index < -length) || (index >= length)) {
@@ -264,6 +264,8 @@ public final class PyString extends PyObject {
                 index += length;
             }
             return new PyString(String.valueOf(value.charAt(index)));
+        } else {
+            throw PyTypeError.raise("string indices must be integers, not " + PyString.reprOf(key.type().name()));
         }
     }
     @Override public void delItem(PyObject key) {

@@ -168,7 +168,7 @@ public final class PyByteArray extends PyObject {
                 }
                 return new PyByteArray(result);
             }
-        } else {
+        } else if (key.hasIndex()) {
             int index = Math.toIntExact(key.indexValue());
             if (index < 0) {
                 index += value.length;
@@ -178,12 +178,14 @@ public final class PyByteArray extends PyObject {
             } catch (ArrayIndexOutOfBoundsException e) {
                 throw PyIndexError.raise("bytearray index out of range");
             }
+        } else {
+            throw PyTypeError.raise("bytearray indices must be integers or slices, not " + key.type().name());
         }
     }
     @Override public void setItem(PyObject key, PyObject val) {
         if (key instanceof PySlice) {
             throw unimplementedMethod("slice assignment");
-        } else {
+        } else if (key.hasIndex()) {
             int index = Math.toIntExact(key.indexValue());
             if (index < 0) {
                 index += value.length;
@@ -197,6 +199,8 @@ public final class PyByteArray extends PyObject {
             } catch (ArrayIndexOutOfBoundsException e) {
                 throw PyIndexError.raise("bytearray index out of range");
             }
+        } else {
+            throw PyTypeError.raise("bytearray indices must be integers or slices, not " + key.type().name());
         }
     }
     @Override public void delItem(PyObject key) {

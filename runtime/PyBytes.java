@@ -194,7 +194,7 @@ public final class PyBytes extends PyObject {
                 }
                 return new PyBytes(result);
             }
-        } else {
+        } else if (key.hasIndex()) {
             int index = Math.toIntExact(key.indexValue());
             if (index < 0) {
                 index += value.length;
@@ -204,6 +204,8 @@ public final class PyBytes extends PyObject {
             } catch (ArrayIndexOutOfBoundsException e) {
                 throw PyIndexError.raise("index out of range");
             }
+        } else {
+            throw PyTypeError.raise("byte indices must be integers or slices, not " + key.type().name());
         }
     }
     @Override public void delItem(PyObject key) {

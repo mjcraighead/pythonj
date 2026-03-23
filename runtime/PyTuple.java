@@ -139,7 +139,7 @@ public final class PyTuple extends PyObject {
                 index += step;
             }
             return new PyTuple(result);
-        } else {
+        } else if (key.hasIndex()) {
             int index = Math.toIntExact(key.indexValue());
             if (index < 0) {
                 index += items.length;
@@ -149,6 +149,8 @@ public final class PyTuple extends PyObject {
             } catch (ArrayIndexOutOfBoundsException e) {
                 throw PyIndexError.raise("tuple index out of range");
             }
+        } else {
+            throw PyTypeError.raise("tuple indices must be integers or slices, not " + key.type().name());
         }
     }
 
