@@ -2,6 +2,7 @@
 // Copyright (c) 2012-2026 Matt Craighead
 // SPDX-License-Identifier: MIT
 
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
@@ -281,61 +282,41 @@ public final class Runtime {
             throw raiseExactArgs(args, n, name);
         }
     }
-    public static PyRaise raiseUserExactArgs(PyObject[] args, int n, String name, String... argNames) {
-        if (args.length > n) {
-            return PyTypeError.raiseFormat("%s() takes %d positional argument%s but %d %s given",
-                name, n, (n == 1) ? "" : "s", args.length, (args.length == 1) ? "was" : "were");
-        } else {
-            int missing = n - args.length;
-            StringBuilder s = new StringBuilder(String.format("%s() missing %d required positional argument%s:", name, missing, (missing == 1) ? "" : "s"));
-            for (int i = args.length; i < n; i++) {
-                s.append(" '").append(argNames[i]).append("'");
-                if ((missing >= 3) && (i != n - 1)) {
-                    s.append(",");
-                }
-                if (i == n - 2) {
-                    s.append(" and");
-                }
-            }
-            return PyTypeError.raise(s.toString());
-        }
-    }
-    public static PyRaise raiseUserMissingArgs(int nBound, String name, String... argNames) {
-        int missing = argNames.length - nBound;
+    private static PyRaise raiseUserMissingArgsImpl(String name, Collection<String> missingArgNames) {
+        int missing = missingArgNames.size();
         StringBuilder s = new StringBuilder(String.format("%s() missing %d required positional argument%s:", name, missing, (missing == 1) ? "" : "s"));
-        for (int i = nBound; i < argNames.length; i++) {
-            s.append(" '").append(argNames[i]).append("'");
-            if ((missing >= 3) && (i != argNames.length - 1)) {
+        int i = 0;
+        for (var argName: missingArgNames) {
+            i++;
+            s.append(" '").append(argName).append("'");
+            if ((missing >= 3) && (i != missing)) {
                 s.append(",");
             }
-            if (i == argNames.length - 2) {
+            if (i == missing - 1) {
                 s.append(" and");
             }
         }
         return PyTypeError.raise(s.toString());
     }
+    public static PyRaise raiseUserExactArgs(PyObject[] args, int n, String name, String... argNames) {
+        if (args.length > n) {
+            return PyTypeError.raiseFormat("%s() takes %d positional argument%s but %d %s given",
+                name, n, (n == 1) ? "" : "s", args.length, (args.length == 1) ? "was" : "were");
+        } else {
+            return raiseUserMissingArgsImpl(name, Arrays.asList(argNames).subList(args.length, n));
+        }
+    }
+    public static PyRaise raiseUserMissingArgs(int nBound, String name, String... argNames) {
+        return raiseUserMissingArgsImpl(name, Arrays.asList(argNames).subList(nBound, argNames.length));
+    }
     public static PyRaise raiseUserMissingKwArgs(String name, boolean[] seen, String... argNames) {
-        int missing = 0;
+        var missingArgNames = new ArrayList<String>();
         for (int i = 0; i < argNames.length; i++) {
             if (!seen[i]) {
-                missing++;
+                missingArgNames.add(argNames[i]);
             }
         }
-        StringBuilder s = new StringBuilder(String.format("%s() missing %d required positional argument%s:", name, missing, (missing == 1) ? "" : "s"));
-        int missingSeen = 0;
-        for (int i = 0; i < argNames.length; i++) {
-            if (!seen[i]) {
-                missingSeen++;
-                s.append(" '").append(argNames[i]).append("'");
-                if ((missing >= 3) && (missingSeen != missing)) {
-                    s.append(",");
-                }
-                if (missingSeen == missing - 1) {
-                    s.append(" and");
-                }
-            }
-        }
-        return PyTypeError.raise(s.toString());
+        return raiseUserMissingArgsImpl(name, missingArgNames);
     }
     public static PyRaise raiseUserFromToArgs(PyObject[] args, int min, int max, String name) {
         return PyTypeError.raiseFormat("%s() takes from %d to %d positional arguments but %d %s given",
