@@ -1367,20 +1367,15 @@ REQUIRED = object()
 VARARGS = object()
 KWARGS = object()
 GEN_METHODS = {
-    'dict': {
-        'fromkeys': [REQUIRED, 'PyNone.singleton'], 'get': [REQUIRED, 'PyNone.singleton'],
-        'pop': [REQUIRED, 'null'], 'setdefault': [REQUIRED, 'PyNone.singleton'], 'update': [VARARGS, KWARGS],
-    },
+    'dict': {'pop': [REQUIRED, 'null'], 'update': [VARARGS, KWARGS]},
     'int': {'from_bytes': [VARARGS, KWARGS], 'to_bytes': [VARARGS, KWARGS]},
-    'list': {'index': [REQUIRED, 'null', 'null'], 'pop': ['PyInt.singleton_neg1'], 'sort': [VARARGS, KWARGS]},
+    'list': {'index': [REQUIRED, 'null', 'null'], 'sort': [VARARGS, KWARGS]},
     'str': {
         'find': [REQUIRED, 'PyNone.singleton', 'PyNone.singleton'],
         'maketrans': [REQUIRED, 'null', 'null'], 'split': [VARARGS, KWARGS],
         'startswith': [REQUIRED, 'PyNone.singleton', 'PyNone.singleton'],
     },
     'tuple': {'index': [REQUIRED, 'null', 'null']},
-    '_io.BufferedReader': {'read': ['null']},
-    '_io.TextIOWrapper': {'readline': ['null']},
 }
 
 def infer_method_args(name: str, method_name: str) -> list[object | str] | None:
@@ -1419,6 +1414,9 @@ def infer_method_args(name: str, method_name: str) -> list[object | str] | None:
             elif param.default is None:
                 seen_optional = True
                 args.append('PyNone.singleton')
+            elif type(param.default) is int and param.default == -1:
+                seen_optional = True
+                args.append('PyInt.singleton_neg1')
             else:
                 return None
         elif param.kind is inspect.Parameter.VAR_POSITIONAL:

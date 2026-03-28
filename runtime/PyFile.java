@@ -72,7 +72,7 @@ final class PyTextIOWrapper extends PyIter {
         return PyNone.singleton;
     }
     public PyString pymethod_readline(PyObject size) {
-        if (size != null) {
+        if (!size.equals(PyInt.singleton_neg1)) {
             throw new UnsupportedOperationException("'size' argument to TextIOWrapper.readline() is not supported");
         }
         PyString ret = next();
@@ -125,7 +125,7 @@ final class PyBufferedReader extends PyIter {
         return PyNone.singleton;
     }
     public PyBytes pymethod_read(PyObject size) {
-        if (size != null) {
+        if (!size.equals(PyInt.singleton_neg1)) {
             throw new UnsupportedOperationException("'size' argument to BufferedReader.read() is not supported");
         }
         try {
