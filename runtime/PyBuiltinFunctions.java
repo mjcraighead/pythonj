@@ -20,14 +20,37 @@ abstract class PyBuiltinFunction extends PyBuiltinFunctionOrMethod {
     }
 }
 
-final class PyBuiltinFunction_abs extends PyBuiltinFunction {
-    public static final PyBuiltinFunction_abs singleton = new PyBuiltinFunction_abs();
-
-    private PyBuiltinFunction_abs() { super("abs"); }
-    @Override public PyObject call(PyObject[] args, PyDict kwargs) {
-        var arg = exactlyOneArg(args, kwargs);
-        return arg.abs();
+final class PyBuiltinFunctionsImpl {
+    static PyObject pyfunc_abs(PyObject arg) { return arg.abs(); }
+    static PyString pyfunc_ascii(PyObject arg) {
+        String r = arg.repr();
+        var s = new StringBuilder();
+        for (int i = 0; i < r.length(); i++) {
+            char c = r.charAt(i);
+            if (c < 0x80) {
+                s.append(c);
+            } else if (c <= 0xFF) {
+                s.append("\\x");
+                s.append("0123456789abcdef".charAt(c >> 4));
+                s.append("0123456789abcdef".charAt(c & 15));
+            } else {
+                s.append("\\u");
+                s.append(String.format("%04x", (int)c));
+            }
+        }
+        return new PyString(s.toString());
     }
+    static PyInt pyfunc_hash(PyObject arg) { return new PyInt(arg.hashCode()); }
+    static PyString pyfunc_hex(PyObject arg) {
+        long index = arg.indexValue();
+        if (index < 0) {
+            return new PyString(String.format("-0x%x", Math.negateExact(index)));
+        } else {
+            return new PyString(String.format("0x%x", index));
+        }
+    }
+    static PyInt pyfunc_len(PyObject arg) { return new PyInt(arg.len()); }
+    static PyString pyfunc_repr(PyObject arg) { return new PyString(arg.repr()); }
 }
 
 final class PyBuiltinFunction_all extends PyBuiltinFunction {
@@ -59,31 +82,6 @@ final class PyBuiltinFunction_any extends PyBuiltinFunction {
             }
         }
         return PyBool.false_singleton;
-    }
-}
-
-final class PyBuiltinFunction_ascii extends PyBuiltinFunction {
-    public static final PyBuiltinFunction_ascii singleton = new PyBuiltinFunction_ascii();
-
-    private PyBuiltinFunction_ascii() { super("ascii"); }
-    @Override public PyString call(PyObject[] args, PyDict kwargs) {
-        var arg = exactlyOneArg(args, kwargs);
-        String r = arg.repr();
-        var s = new StringBuilder();
-        for (int i = 0; i < r.length(); i++) {
-            char c = r.charAt(i);
-            if (c < 0x80) {
-                s.append(c);
-            } else if (c <= 0xFF) {
-                s.append("\\x");
-                s.append("0123456789abcdef".charAt(c >> 4));
-                s.append("0123456789abcdef".charAt(c & 15));
-            } else {
-                s.append("\\u");
-                s.append(String.format("%04x", (int)c));
-            }
-        }
-        return new PyString(s.toString());
     }
 }
 
@@ -210,31 +208,6 @@ final class PyBuiltinFunction_hasattr extends PyBuiltinFunction {
     }
 }
 
-final class PyBuiltinFunction_hash extends PyBuiltinFunction {
-    public static final PyBuiltinFunction_hash singleton = new PyBuiltinFunction_hash();
-
-    private PyBuiltinFunction_hash() { super("hash"); }
-    @Override public PyInt call(PyObject[] args, PyDict kwargs) {
-        var arg = exactlyOneArg(args, kwargs);
-        return new PyInt(arg.hashCode());
-    }
-}
-
-final class PyBuiltinFunction_hex extends PyBuiltinFunction {
-    public static final PyBuiltinFunction_hex singleton = new PyBuiltinFunction_hex();
-
-    private PyBuiltinFunction_hex() { super("hex"); }
-    @Override public PyString call(PyObject[] args, PyDict kwargs) {
-        var arg = exactlyOneArg(args, kwargs);
-        long index = arg.indexValue();
-        if (index < 0) {
-            return new PyString(String.format("-0x%x", Math.negateExact(index)));
-        } else {
-            return new PyString(String.format("0x%x", index));
-        }
-    }
-}
-
 final class PyBuiltinFunction_isinstance extends PyBuiltinFunction {
     public static final PyBuiltinFunction_isinstance singleton = new PyBuiltinFunction_isinstance();
 
@@ -298,16 +271,6 @@ final class PyBuiltinFunction_iter extends PyBuiltinFunction {
             throw new IllegalArgumentException("iter() takes 1 argument");
         }
         return args[0].iter();
-    }
-}
-
-final class PyBuiltinFunction_len extends PyBuiltinFunction {
-    public static final PyBuiltinFunction_len singleton = new PyBuiltinFunction_len();
-
-    private PyBuiltinFunction_len() { super("len"); }
-    @Override public PyInt call(PyObject[] args, PyDict kwargs) {
-        var arg = exactlyOneArg(args, kwargs);
-        return new PyInt(arg.len());
     }
 }
 
@@ -454,16 +417,6 @@ final class PyBuiltinFunction_print extends PyBuiltinFunction {
         }
         System.out.println();
         return PyNone.singleton;
-    }
-}
-
-final class PyBuiltinFunction_repr extends PyBuiltinFunction {
-    public static final PyBuiltinFunction_repr singleton = new PyBuiltinFunction_repr();
-
-    private PyBuiltinFunction_repr() { super("repr"); }
-    @Override public PyString call(PyObject[] args, PyDict kwargs) {
-        var arg = exactlyOneArg(args, kwargs);
-        return new PyString(arg.repr());
     }
 }
 

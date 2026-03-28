@@ -1378,23 +1378,9 @@ METHOD_ARG_OVERRIDES = {
     'tuple': {'index': [REQUIRED, 'null', 'null']},
 }
 
-def infer_method_args(name: str, method_name: str) -> list[object | str] | None:
-    obj = get_runtime_obj(name)
-    desc = obj.__dict__.get(method_name)
-    if desc is None:
-        return None
-    desc_type = type(desc)
-    if desc_type is types.MethodDescriptorType:
-        target = desc
-        implicit_name = 'self'
-    elif desc_type is types.ClassMethodDescriptorType:
-        target = desc
-        implicit_name = 'type'
-    elif desc_type is staticmethod:
-        target = getattr(obj, method_name)
-        implicit_name = None
-    else:
-        return None
+GENERATED_BUILTIN_FUNCTIONS = {'abs', 'ascii', 'hash', 'hex', 'len', 'repr'}
+
+def infer_args(target: object, implicit_name: Optional[str]) -> Optional[list[object | str]]:
     try:
         params = list(inspect.signature(target).parameters.values())
     except (TypeError, ValueError):
@@ -1426,6 +1412,27 @@ def infer_method_args(name: str, method_name: str) -> list[object | str] | None:
         else:
             return None
     return args
+
+def infer_method_args(name: str, method_name: str) -> Optional[list[object | str]]:
+    obj = get_runtime_obj(name)
+    desc = obj.__dict__.get(method_name)
+    if desc is None:
+        return None
+    desc_type = type(desc)
+    if desc_type is types.MethodDescriptorType:
+        return infer_args(desc, 'self')
+    elif desc_type is types.ClassMethodDescriptorType:
+        return infer_args(desc, 'type')
+    elif desc_type is staticmethod:
+        return infer_args(getattr(obj, method_name), None)
+    else:
+        return None
+
+def infer_builtin_function_args(name: str) -> Optional[list[object | str]]:
+    desc = builtins.__dict__.get(name)
+    if type(desc) is not types.BuiltinFunctionType:
+        return None
+    return infer_args(desc, None)
 
 def get_java_name(name: str) -> str:
     if name.startswith('_io.'):
@@ -1599,6 +1606,25 @@ def gen_code(spec_path: str, java_path: str) -> None:
                     writer.write('}')
                     writer.write('}')
                 writer.write('')
+
+        for func_name in sorted(GENERATED_BUILTIN_FUNCTIONS):
+            args = infer_builtin_function_args(func_name)
+            assert args is not None, func_name
+            writer.write(f'final class PyBuiltinFunction_{func_name} extends PyBuiltinFunction {{')
+            writer.write(f'public static final PyBuiltinFunction_{func_name} singleton = new PyBuiltinFunction_{func_name}();')
+            writer.write('')
+            writer.write(f'private PyBuiltinFunction_{func_name}() {{ super("{func_name}"); }}')
+            writer.write('@Override public PyObject call(PyObject[] args, PyDict kwargs) {')
+            writer.write('if ((kwargs != null) && kwargs.boolValue()) {')
+            writer.write(f'throw Runtime.raiseNoKwArgs("{func_name}");')
+            writer.write('}')
+            writer.write('if (args.length != 1) {')
+            writer.write(f'throw Runtime.raiseOneArg(args, "{func_name}");')
+            writer.write('}')
+            writer.write(f'return PyBuiltinFunctionsImpl.pyfunc_{func_name}(args[0]);')
+            writer.write('}')
+            writer.write('}')
+            writer.write('')
 
 def main() -> None:
     parser = argparse.ArgumentParser()
