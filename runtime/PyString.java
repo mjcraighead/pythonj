@@ -341,14 +341,7 @@ public final class PyString extends PyObject {
     public PyObject pymethod_isspace() { throw new UnsupportedOperationException(); }
     public PyObject pymethod_istitle() { throw new UnsupportedOperationException(); }
     public PyObject pymethod_isupper() { throw new UnsupportedOperationException(); }
+    public static PyObject pymethod_maketrans(PyObject x, PyObject y, PyObject z) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_swapcase() { throw new UnsupportedOperationException(); }
     public PyObject pymethod_title() { throw new UnsupportedOperationException(); }
-}
-
-final class PyStringStaticMethod_maketrans extends PyBuiltinMethod<PyType> {
-    PyStringStaticMethod_maketrans(PyType _self) { super(_self); }
-    @Override public String methodName() { return "maketrans"; }
-    @Override public PyObject call(PyObject[] args, PyDict kwargs) {
-        throw new UnsupportedOperationException("str.maketrans unimplemented");
-    }
 }

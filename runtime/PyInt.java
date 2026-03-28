@@ -399,12 +399,7 @@ public final class PyInt extends PyObject {
         PyObject byteorder = (args.length >= 2) ? args[1] : null;
         return toBytesImpl(length, byteorder);
     }
-}
-
-final class PyIntClassMethod_from_bytes extends PyBuiltinMethod<PyType> {
-    PyIntClassMethod_from_bytes(PyType self) { super(self); }
-    @Override public String methodName() { return "from_bytes"; }
-    @Override public PyObject call(PyObject[] args, PyDict kwargs) {
+    public static PyObject pymethod_from_bytes(PyType self, PyObject[] args, PyDict kwargs) {
         if ((kwargs != null) && kwargs.boolValue()) {
             throw new IllegalArgumentException("int.from_bytes() does not accept kwargs");
         }

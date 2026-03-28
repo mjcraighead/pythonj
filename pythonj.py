@@ -1363,18 +1363,20 @@ REQUIRED = object()
 VARARGS = object()
 KWARGS = object()
 GEN_METHODS = {
+    'bytearray': {'fromhex': [REQUIRED], 'maketrans': [REQUIRED, REQUIRED]},
     'bytes': {
-        'capitalize': [], 'isalnum': [], 'isalpha': [], 'isascii': [], 'isdigit': [], 'islower': [],
-        'isspace': [], 'istitle': [], 'isupper': [], 'lower': [], 'swapcase': [], 'title': [], 'upper': [],
+        'capitalize': [], 'fromhex': [REQUIRED], 'isalnum': [], 'isalpha': [], 'isascii': [], 'isdigit': [],
+        'islower': [], 'isspace': [], 'istitle': [], 'isupper': [], 'lower': [], 'maketrans': [REQUIRED, REQUIRED],
+        'swapcase': [], 'title': [], 'upper': [],
     },
     'dict': {
-        'clear': [], 'copy': [], 'get': [REQUIRED, 'PyNone.singleton'], 'items': [], 'keys': [],
+        'clear': [], 'copy': [], 'fromkeys': [REQUIRED, 'PyNone.singleton'], 'get': [REQUIRED, 'PyNone.singleton'], 'items': [], 'keys': [],
         'pop': [REQUIRED, 'null'], 'popitem': [], 'setdefault': [REQUIRED, 'PyNone.singleton'],
         'update': [VARARGS, KWARGS], 'values': [],
     },
     'int': {
         'as_integer_ratio': [], 'bit_count': [], 'bit_length': [], 'conjugate': [], 'is_integer': [],
-        'to_bytes': [VARARGS, KWARGS],
+        'from_bytes': [VARARGS, KWARGS], 'to_bytes': [VARARGS, KWARGS],
     },
     'list': {
         'append': [REQUIRED], 'clear': [], 'copy': [], 'count': [REQUIRED], 'extend': [REQUIRED],
@@ -1394,7 +1396,7 @@ GEN_METHODS = {
         'capitalize': [], 'casefold': [], 'find': [REQUIRED, 'PyNone.singleton', 'PyNone.singleton'],
         'isalnum': [], 'isalpha': [], 'isascii': [], 'isdecimal': [], 'isdigit': [], 'isidentifier': [],
         'islower': [], 'isnumeric': [], 'isprintable': [], 'isspace': [], 'istitle': [], 'isupper': [],
-        'join': [REQUIRED], 'lower': [], 'split': [VARARGS, KWARGS],
+        'join': [REQUIRED], 'lower': [], 'maketrans': [REQUIRED, 'null', 'null'], 'split': [VARARGS, KWARGS],
         'startswith': [REQUIRED, 'PyNone.singleton', 'PyNone.singleton'], 'swapcase': [], 'title': [],
         'upper': [],
     },
@@ -1495,8 +1497,29 @@ def gen_code(spec_path: str, java_path: str) -> None:
                 else:
                     py_name = name
                 for (method_name, args) in GEN_METHODS[name].items():
-                    writer.write(f'final class {java_name}Method_{method_name} extends PyBuiltinMethod<{java_name}> {{')
-                    writer.write(f'{java_name}Method_{method_name}(PyObject _self) {{ super(({java_name})_self); }}')
+                    kind = attrs[method_name]['kind']
+                    if kind == 'method':
+                        method_class_name = f'{java_name}Method_{method_name}'
+                        self_type = java_name
+                        ctor_arg = 'PyObject _self'
+                        super_arg = f'({java_name})_self'
+                        method_target = 'self'
+                    elif kind == 'classmethod':
+                        method_class_name = f'{java_name}ClassMethod_{method_name}'
+                        self_type = 'PyType'
+                        ctor_arg = 'PyType _self'
+                        super_arg = '_self'
+                        method_target = java_name
+                    elif kind == 'staticmethod':
+                        method_class_name = f'{java_name}StaticMethod_{method_name}'
+                        self_type = 'PyType'
+                        ctor_arg = 'PyType _self'
+                        super_arg = '_self'
+                        method_target = java_name
+                    else:
+                        assert False, (name, method_name, kind)
+                    writer.write(f'final class {method_class_name} extends PyBuiltinMethod<{self_type}> {{')
+                    writer.write(f'{method_class_name}({ctor_arg}) {{ super({super_arg}); }}')
                     writer.write(f'@Override public String methodName() {{ return "{method_name}"; }}')
                     writer.write('@Override public PyObject call(PyObject[] args, PyDict kwargs) {')
                     if args == [VARARGS, KWARGS]:
@@ -1535,7 +1558,9 @@ def gen_code(spec_path: str, java_path: str) -> None:
                                 for i in range(min_args, max_args):
                                     writer.write(f'PyObject arg{i} = (argsLength >= {i+1}) ? args[{i}] : {args[i]};')
                                     bind_args.append(f'arg{i}')
-                    writer.write(f"return self.pymethod_{method_name}({', '.join(bind_args)});")
+                    if kind == 'classmethod':
+                        bind_args = ['self'] + bind_args
+                    writer.write(f"return {method_target}.pymethod_{method_name}({', '.join(bind_args)});")
                     writer.write('}')
                     writer.write('}')
                 writer.write('')

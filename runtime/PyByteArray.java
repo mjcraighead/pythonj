@@ -237,19 +237,7 @@ public final class PyByteArray extends PyObject {
         }
         return s + "')";
     }
-}
 
-final class PyByteArrayClassMethod_fromhex extends PyBuiltinMethod<PyType> {
-    PyByteArrayClassMethod_fromhex(PyType self) { super(self); }
-    @Override public String methodName() { return "fromhex"; }
-    @Override public PyObject call(PyObject[] args, PyDict kwargs) {
-        throw new UnsupportedOperationException("bytearray.fromhex() unimplemented");
-    }
-}
-final class PyByteArrayStaticMethod_maketrans extends PyBuiltinMethod<PyType> {
-    PyByteArrayStaticMethod_maketrans(PyType self) { super(self); }
-    @Override public String methodName() { return "maketrans"; }
-    @Override public PyObject call(PyObject[] args, PyDict kwargs) {
-        throw new UnsupportedOperationException("bytearray.maketrans() unimplemented");
-    }
+    public static PyObject pymethod_fromhex(PyType self, PyObject string) { throw new UnsupportedOperationException(); }
+    public static PyObject pymethod_maketrans(PyObject frm, PyObject to) { throw new UnsupportedOperationException(); }
 }

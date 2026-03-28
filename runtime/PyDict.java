@@ -467,17 +467,8 @@ public final class PyDict extends PyObject {
         return PyNone.singleton;
     }
     public PyDictValues pymethod_values() { return new PyDictValues(items); }
-}
 
-final class PyDictClassMethod_fromkeys extends PyBuiltinMethod<PyType> {
-    PyDictClassMethod_fromkeys(PyType _self) { super(_self); }
-    @Override public String methodName() { return "fromkeys"; }
-    @Override public PyDict call(PyObject[] args, PyDict kwargs) {
-        Runtime.requireNoKwArgs(kwargs, "dict.fromkeys");
-        Runtime.requireMinArgs(args, 1, "fromkeys");
-        Runtime.requireMaxArgs(args, 2, "fromkeys");
-        PyObject iterable = args[0];
-        PyObject value = (args.length == 2) ? args[1] : PyNone.singleton;
+    public static PyDict pymethod_fromkeys(PyType self, PyObject iterable, PyObject value) {
         var ret = new PyDict();
         var iter = iterable.iter();
         for (var key = iter.next(); key != null; key = iter.next()) {

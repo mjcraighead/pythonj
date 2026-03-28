@@ -244,6 +244,7 @@ public final class PyBytes extends PyObject {
     }
 
     public PyObject pymethod_capitalize() { throw new UnsupportedOperationException(); }
+    public static PyObject pymethod_fromhex(PyType self, PyObject string) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_isalnum() { throw new UnsupportedOperationException(); }
     public PyObject pymethod_isalpha() { throw new UnsupportedOperationException(); }
     public PyObject pymethod_isascii() { throw new UnsupportedOperationException(); }
@@ -253,22 +254,8 @@ public final class PyBytes extends PyObject {
     public PyObject pymethod_istitle() { throw new UnsupportedOperationException(); }
     public PyObject pymethod_isupper() { throw new UnsupportedOperationException(); }
     public PyObject pymethod_lower() { throw new UnsupportedOperationException(); }
+    public static PyObject pymethod_maketrans(PyObject frm, PyObject to) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_swapcase() { throw new UnsupportedOperationException(); }
     public PyObject pymethod_title() { throw new UnsupportedOperationException(); }
     public PyObject pymethod_upper() { throw new UnsupportedOperationException(); }
-}
-
-final class PyBytesClassMethod_fromhex extends PyBuiltinMethod<PyType> {
-    PyBytesClassMethod_fromhex(PyType self) { super(self); }
-    @Override public String methodName() { return "fromhex"; }
-    @Override public PyObject call(PyObject[] args, PyDict kwargs) {
-        throw new UnsupportedOperationException("bytes.fromhex() unimplemented");
-    }
-}
-final class PyBytesStaticMethod_maketrans extends PyBuiltinMethod<PyType> {
-    PyBytesStaticMethod_maketrans(PyType self) { super(self); }
-    @Override public String methodName() { return "maketrans"; }
-    @Override public PyObject call(PyObject[] args, PyDict kwargs) {
-        throw new UnsupportedOperationException("bytes.maketrans() unimplemented");
-    }
 }
