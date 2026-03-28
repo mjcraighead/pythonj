@@ -1376,11 +1376,18 @@ METHOD_ARG_OVERRIDES = {
     'tuple': {'index': [REQUIRED, 'null', 'null']},
 }
 
-GENERATED_BUILTIN_FUNCTIONS = {
-    'abs', 'all', 'any', 'ascii', 'chr', 'delattr', 'format', 'getattr', 'hash', 'hasattr', 'hex', 'isinstance',
-    'issubclass', 'len', 'ord', 'repr', 'setattr',
+BUILTIN_FUNCTION_ARG_OVERRIDES = {
+    'dir': ['null'],
+    'getattr': [REQUIRED, REQUIRED, 'null'],
+    'iter': [REQUIRED, 'null'],
+    'max': [VARARGS, KWARGS],
+    'min': [VARARGS, KWARGS],
+    'next': [REQUIRED, 'null'],
+    'open': [VARARGS, KWARGS],
+    'print': [VARARGS, KWARGS],
+    'sorted': [VARARGS, KWARGS],
+    'sum': [VARARGS, KWARGS],
 }
-BUILTIN_FUNCTION_ARG_OVERRIDES = {'getattr': [REQUIRED, REQUIRED, 'null']}
 
 def infer_args(target: object, implicit_name: Optional[str]) -> Optional[list[object | str]]:
     try:
@@ -1615,7 +1622,7 @@ def gen_code(spec_path: str, java_path: str) -> None:
                     writer.write('}')
                 writer.write('')
 
-        for func_name in sorted(GENERATED_BUILTIN_FUNCTIONS):
+        for func_name in sorted(BUILTIN_FUNCTIONS):
             args = infer_builtin_function_args(func_name)
             assert args is not None, func_name
             writer.write(f'final class PyBuiltinFunction_{func_name} extends PyBuiltinFunction {{')

@@ -64,6 +64,24 @@ final class PyBuiltinFunctionsImpl {
             throw PyTypeError.raiseFormat("attribute name must be string, not %s", PyString.reprOf(name_obj.type().name()));
         }
     }
+    static PyList pyfunc_dir(PyObject object) {
+        if (object == null) {
+            throw new UnsupportedOperationException("dir() with no arguments is not implemented");
+        }
+        PyType attrsType;
+        if (object instanceof PyType objectType) {
+            attrsType = objectType;
+        } else {
+            attrsType = object.type();
+        }
+        var attrs = attrsType.getAttributes();
+        if (attrs == null) {
+            throw new UnsupportedOperationException(attrsType.name() + ".__dict__ is not implemented");
+        }
+        ArrayList<PyObject> list = new ArrayList<>(attrs.keySet());
+        Collections.sort(list);
+        return new PyList(list);
+    }
     static PyString pyfunc_format(PyObject value, PyObject format_spec_obj) {
         if (format_spec_obj instanceof PyString format_spec_str) {
             return new PyString(value.format(format_spec_str.value));
@@ -142,74 +160,18 @@ final class PyBuiltinFunctionsImpl {
         }
     }
     static PyBool pyfunc_issubclass(PyObject obj, PyObject type) { return PyBool.create(isSubclassImpl(obj, type)); }
+    static PyIter pyfunc_iter(PyObject obj, PyObject sentinel) {
+        if (sentinel != null) {
+            throw new UnsupportedOperationException("iter() with callable+sentinel is not implemented");
+        }
+        return obj.iter();
+    }
     static PyInt pyfunc_len(PyObject arg) { return new PyInt(arg.len()); }
-    static PyInt pyfunc_ord(PyObject arg_obj) {
-        PyString arg = (PyString)arg_obj;
-        if (arg.len() != 1) {
-            throw new IllegalArgumentException("argument to ord() must be string of length 1");
-        }
-        return new PyInt(arg.value.charAt(0));
-    }
-    static PyString pyfunc_repr(PyObject arg) { return new PyString(arg.repr()); }
-    static PyNone pyfunc_setattr(PyObject obj, PyObject name_obj, PyObject value) {
-        if (name_obj instanceof PyString name) {
-            obj.setAttr(name.value, value);
-            return PyNone.singleton;
-        } else {
-            throw PyTypeError.raiseFormat("attribute name must be string, not %s", PyString.reprOf(name_obj.type().name()));
-        }
-    }
-}
-
-final class PyBuiltinFunction_dir extends PyBuiltinFunction {
-    public static final PyBuiltinFunction_dir singleton = new PyBuiltinFunction_dir();
-
-    private PyBuiltinFunction_dir() { super("dir"); }
-    @Override public PyList call(PyObject[] args, PyDict kwargs) {
-        Runtime.requireNoKwArgs(kwargs, funcName);
-        Runtime.requireMaxArgs(args, 1, funcName);
-        if (args.length == 0) {
-            throw new UnsupportedOperationException("dir() with no arguments is not implemented");
-        }
-        PyObject object = args[0];
-        PyType attrsType;
-        if (object instanceof PyType objectType) {
-            attrsType = objectType;
-        } else {
-            attrsType = object.type();
-        }
-        var attrs = attrsType.getAttributes();
-        if (attrs == null) {
-            throw new UnsupportedOperationException(attrsType.name() + ".__dict__ is not implemented");
-        }
-        ArrayList<PyObject> list = new ArrayList<>(attrs.keySet());
-        Collections.sort(list);
-        return new PyList(list);
-    }
-}
-
-final class PyBuiltinFunction_iter extends PyBuiltinFunction {
-    public static final PyBuiltinFunction_iter singleton = new PyBuiltinFunction_iter();
-
-    private PyBuiltinFunction_iter() { super("iter"); }
-    @Override public PyIter call(PyObject[] args, PyDict kwargs) {
-        Runtime.requireNoKwArgs(kwargs, funcName);
-        if (args.length != 1) {
-            throw new IllegalArgumentException("iter() takes 1 argument");
-        }
-        return args[0].iter();
-    }
-}
-
-final class PyBuiltinFunction_max extends PyBuiltinFunction {
-    public static final PyBuiltinFunction_max singleton = new PyBuiltinFunction_max();
-
-    private PyBuiltinFunction_max() { super("max"); }
-    @Override public PyObject call(PyObject[] args, PyDict kwargs) {
+    static PyObject pyfunc_max(PyObject[] args, PyDict kwargs) {
         if ((kwargs != null) && kwargs.boolValue()) {
             throw new IllegalArgumentException("max() does not accept kwargs");
         }
-        Runtime.requireMinArgs(args, 1, funcName);
+        Runtime.requireMinArgs(args, 1, "max");
         if (args.length == 1) {
             var iter = args[0].iter();
             PyObject ret = iter.next();
@@ -233,17 +195,11 @@ final class PyBuiltinFunction_max extends PyBuiltinFunction {
             return ret;
         }
     }
-}
-
-final class PyBuiltinFunction_min extends PyBuiltinFunction {
-    public static final PyBuiltinFunction_min singleton = new PyBuiltinFunction_min();
-
-    private PyBuiltinFunction_min() { super("min"); }
-    @Override public PyObject call(PyObject[] args, PyDict kwargs) {
+    static PyObject pyfunc_min(PyObject[] args, PyDict kwargs) {
         if ((kwargs != null) && kwargs.boolValue()) {
             throw new IllegalArgumentException("min() does not accept kwargs");
         }
-        Runtime.requireMinArgs(args, 1, funcName);
+        Runtime.requireMinArgs(args, 1, "min");
         if (args.length == 1) {
             var iter = args[0].iter();
             PyObject ret = iter.next();
@@ -267,32 +223,17 @@ final class PyBuiltinFunction_min extends PyBuiltinFunction {
             return ret;
         }
     }
-}
-
-final class PyBuiltinFunction_next extends PyBuiltinFunction {
-    public static final PyBuiltinFunction_next singleton = new PyBuiltinFunction_next();
-
-    private PyBuiltinFunction_next() { super("next"); }
-    @Override public PyObject call(PyObject[] args, PyDict kwargs) {
-        Runtime.requireNoKwArgs(kwargs, funcName);
-        Runtime.requireMinArgs(args, 1, funcName);
-        Runtime.requireMaxArgs(args, 2, funcName);
-        PyObject ret = args[0].next();
+    static PyObject pyfunc_next(PyObject obj, PyObject default_obj) {
+        PyObject ret = obj.next();
         if (ret == null) {
-            if (args.length == 2) {
-                return args[1];
+            if (default_obj != null) {
+                return default_obj;
             }
             throw new PyRaise(new PyStopIteration());
         }
         return ret;
     }
-}
-
-final class PyBuiltinFunction_open extends PyBuiltinFunction {
-    public static final PyBuiltinFunction_open singleton = new PyBuiltinFunction_open();
-
-    private PyBuiltinFunction_open() { super("open"); }
-    @Override public PyObject call(PyObject[] args, PyDict kwargs) {
+    static PyObject pyfunc_open(PyObject[] args, PyDict kwargs) {
         if ((kwargs != null) && kwargs.boolValue()) {
             throw new IllegalArgumentException("open() does not accept kwargs");
         }
@@ -311,13 +252,14 @@ final class PyBuiltinFunction_open extends PyBuiltinFunction {
             throw new IllegalArgumentException("open() takes 1 or 2 arguments");
         }
     }
-}
-
-final class PyBuiltinFunction_print extends PyBuiltinFunction {
-    public static final PyBuiltinFunction_print singleton = new PyBuiltinFunction_print();
-
-    private PyBuiltinFunction_print() { super("print"); }
-    @Override public PyNone call(PyObject[] args, PyDict kwargs) {
+    static PyInt pyfunc_ord(PyObject arg_obj) {
+        PyString arg = (PyString)arg_obj;
+        if (arg.len() != 1) {
+            throw new IllegalArgumentException("argument to ord() must be string of length 1");
+        }
+        return new PyInt(arg.value.charAt(0));
+    }
+    static PyNone pyfunc_print(PyObject[] args, PyDict kwargs) {
         if ((kwargs != null) && kwargs.boolValue()) {
             throw new IllegalArgumentException("print() does not accept kwargs");
         }
@@ -332,13 +274,16 @@ final class PyBuiltinFunction_print extends PyBuiltinFunction {
         System.out.println();
         return PyNone.singleton;
     }
-}
-
-final class PyBuiltinFunction_sorted extends PyBuiltinFunction {
-    public static final PyBuiltinFunction_sorted singleton = new PyBuiltinFunction_sorted();
-
-    private PyBuiltinFunction_sorted() { super("sorted"); }
-    @Override public PyList call(PyObject[] args, PyDict kwargs) {
+    static PyString pyfunc_repr(PyObject arg) { return new PyString(arg.repr()); }
+    static PyNone pyfunc_setattr(PyObject obj, PyObject name_obj, PyObject value) {
+        if (name_obj instanceof PyString name) {
+            obj.setAttr(name.value, value);
+            return PyNone.singleton;
+        } else {
+            throw PyTypeError.raiseFormat("attribute name must be string, not %s", PyString.reprOf(name_obj.type().name()));
+        }
+    }
+    static PyList pyfunc_sorted(PyObject[] args, PyDict kwargs) {
         if (args.length != 1) {
             throw new IllegalArgumentException("sorted() takes 1 argument");
         }
@@ -350,13 +295,7 @@ final class PyBuiltinFunction_sorted extends PyBuiltinFunction {
         Collections.sort(ret.items);
         return ret;
     }
-}
-
-final class PyBuiltinFunction_sum extends PyBuiltinFunction {
-    public static final PyBuiltinFunction_sum singleton = new PyBuiltinFunction_sum();
-
-    private PyBuiltinFunction_sum() { super("sum"); }
-    @Override public PyInt call(PyObject[] args, PyDict kwargs) {
+    static PyInt pyfunc_sum(PyObject[] args, PyDict kwargs) {
         if (args.length != 1) {
             throw new IllegalArgumentException("sum() takes 1 argument");
         }
