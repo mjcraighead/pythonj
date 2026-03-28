@@ -303,14 +303,20 @@ public final class Runtime {
     public static PyRaise raiseNamedReadOnlyAttr(PyType owner, String key) {
         return PyAttributeError.raise(PyString.reprOf(owner.name()) + " object attribute " + PyString.reprOf(key) + " is read-only");
     }
+    public static PyRaise raiseMinArgs(PyObject[] args, int min, String name) {
+        return PyTypeError.raiseFormat("%s expected at least %d argument%s, got %d", name, min, (min == 1) ? "" : "s", args.length);
+    }
+    public static PyRaise raiseMaxArgs(PyObject[] args, int max, String name) {
+        return PyTypeError.raiseFormat("%s expected at most %d argument%s, got %d", name, max, (max == 1) ? "" : "s", args.length);
+    }
     public static void requireMinArgs(PyObject[] args, int min, String name) {
         if (args.length < min) {
-            throw PyTypeError.raiseFormat("%s expected at least %d argument%s, got %d", name, min, (min == 1) ? "" : "s", args.length);
+            throw raiseMinArgs(args, min, name);
         }
     }
     public static void requireMaxArgs(PyObject[] args, int max, String name) {
         if (args.length > max) {
-            throw PyTypeError.raiseFormat("%s expected at most %d argument%s, got %d", name, max, (max == 1) ? "" : "s", args.length);
+            throw raiseMaxArgs(args, max, name);
         }
     }
     public static PyDict requireKwStrings(PyDict dict) {
