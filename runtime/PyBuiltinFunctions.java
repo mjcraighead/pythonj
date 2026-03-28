@@ -9,19 +9,28 @@ abstract class PyBuiltinFunction extends PyBuiltinFunctionOrMethod {
     protected final String funcName;
     protected PyBuiltinFunction(String name) { funcName = name; }
     @Override public final String repr() { return "<built-in function " + funcName + ">"; }
-    protected PyObject exactlyOneArg(PyObject[] args, PyDict kwargs) {
-        if ((kwargs != null) && kwargs.boolValue()) {
-            throw Runtime.raiseNoKwArgs(funcName);
-        }
-        if (args.length != 1) {
-            throw Runtime.raiseOneArg(args, funcName);
-        }
-        return args[0];
-    }
 }
 
 final class PyBuiltinFunctionsImpl {
     static PyObject pyfunc_abs(PyObject arg) { return arg.abs(); }
+    static PyBool pyfunc_all(PyObject arg) {
+        var iter = arg.iter();
+        for (var item = iter.next(); item != null; item = iter.next()) {
+            if (!item.boolValue()) {
+                return PyBool.false_singleton;
+            }
+        }
+        return PyBool.true_singleton;
+    }
+    static PyBool pyfunc_any(PyObject arg) {
+        var iter = arg.iter();
+        for (var item = iter.next(); item != null; item = iter.next()) {
+            if (item.boolValue()) {
+                return PyBool.true_singleton;
+            }
+        }
+        return PyBool.false_singleton;
+    }
     static PyString pyfunc_ascii(PyObject arg) {
         String r = arg.repr();
         var s = new StringBuilder();
@@ -40,6 +49,43 @@ final class PyBuiltinFunctionsImpl {
         }
         return new PyString(s.toString());
     }
+    static PyString pyfunc_chr(PyObject arg) {
+        long index = arg.indexValue();
+        if ((index < 0) || (index > 65535)) {
+            throw new IllegalArgumentException("chr() argument out of range");
+        }
+        return new PyString(String.valueOf((char)index));
+    }
+    static PyNone pyfunc_delattr(PyObject obj, PyObject name_obj) {
+        if (name_obj instanceof PyString name) {
+            obj.delAttr(name.value);
+            return PyNone.singleton;
+        } else {
+            throw PyTypeError.raiseFormat("attribute name must be string, not %s", PyString.reprOf(name_obj.type().name()));
+        }
+    }
+    static PyString pyfunc_format(PyObject value, PyObject format_spec_obj) {
+        if (format_spec_obj instanceof PyString format_spec_str) {
+            return new PyString(value.format(format_spec_str.value));
+        } else {
+            throw PyTypeError.raiseFormat("format() argument 2 must be str, not %s", format_spec_obj.type().name());
+        }
+    }
+    static PyBool pyfunc_hasattr(PyObject obj, PyObject name_obj) {
+        if (name_obj instanceof PyString name) {
+            try {
+                obj.getAttr(name.value);
+            } catch (PyRaise r) {
+                if (r.exc instanceof PyAttributeError) {
+                    return PyBool.false_singleton;
+                }
+                throw r;
+            }
+            return PyBool.true_singleton;
+        } else {
+            throw PyTypeError.raiseFormat("attribute name must be string, not %s", PyString.reprOf(name_obj.type().name()));
+        }
+    }
     static PyInt pyfunc_hash(PyObject arg) { return new PyInt(arg.hashCode()); }
     static PyString pyfunc_hex(PyObject arg) {
         long index = arg.indexValue();
@@ -49,68 +95,54 @@ final class PyBuiltinFunctionsImpl {
             return new PyString(String.format("0x%x", index));
         }
     }
+    private static boolean isInstanceImpl(PyObject obj, PyObject type) {
+        if (type instanceof PyTuple type_tuple) {
+            for (var x: type_tuple.items) {
+                if (isInstanceImpl(obj, x)) {
+                    return true;
+                }
+            }
+            return false;
+        } else if (type instanceof PyBuiltinType type_class) {
+            return type_class.instanceClass.isInstance(obj);
+        } else if (type instanceof PyType) {
+            throw new UnsupportedOperationException("isinstance() is unimplemented for type " + type.repr());
+        } else {
+            throw PyTypeError.raise("isinstance() arg 2 must be a type, a tuple of types, or a union");
+        }
+    }
+    static PyBool pyfunc_isinstance(PyObject obj, PyObject type) { return PyBool.create(isInstanceImpl(obj, type)); }
+    private static boolean isSubclassImpl(PyObject obj, PyObject type) {
+        if (type instanceof PyTuple type_tuple) {
+            for (var x: type_tuple.items) {
+                if (isSubclassImpl(obj, x)) {
+                    return true;
+                }
+            }
+            return false;
+        } else if (obj instanceof PyBuiltinType obj_class &&
+                    type instanceof PyBuiltinType type_class) {
+            return type_class.instanceClass.isAssignableFrom(obj_class.instanceClass);
+        } else {
+            throw new UnsupportedOperationException(String.format("issubclass() is unimplemented for types %s and %s", obj.repr(), type.repr()));
+        }
+    }
+    static PyBool pyfunc_issubclass(PyObject obj, PyObject type) { return PyBool.create(isSubclassImpl(obj, type)); }
     static PyInt pyfunc_len(PyObject arg) { return new PyInt(arg.len()); }
+    static PyInt pyfunc_ord(PyObject arg_obj) {
+        PyString arg = (PyString)arg_obj;
+        if (arg.len() != 1) {
+            throw new IllegalArgumentException("argument to ord() must be string of length 1");
+        }
+        return new PyInt(arg.value.charAt(0));
+    }
     static PyString pyfunc_repr(PyObject arg) { return new PyString(arg.repr()); }
-}
-
-final class PyBuiltinFunction_all extends PyBuiltinFunction {
-    public static final PyBuiltinFunction_all singleton = new PyBuiltinFunction_all();
-
-    private PyBuiltinFunction_all() { super("all"); }
-    @Override public PyBool call(PyObject[] args, PyDict kwargs) {
-        var arg = exactlyOneArg(args, kwargs);
-        var iter = arg.iter();
-        for (var item = iter.next(); item != null; item = iter.next()) {
-            if (!item.boolValue()) {
-                return PyBool.false_singleton;
-            }
-        }
-        return PyBool.true_singleton;
-    }
-}
-
-final class PyBuiltinFunction_any extends PyBuiltinFunction {
-    public static final PyBuiltinFunction_any singleton = new PyBuiltinFunction_any();
-
-    private PyBuiltinFunction_any() { super("any"); }
-    @Override public PyBool call(PyObject[] args, PyDict kwargs) {
-        var arg = exactlyOneArg(args, kwargs);
-        var iter = arg.iter();
-        for (var item = iter.next(); item != null; item = iter.next()) {
-            if (item.boolValue()) {
-                return PyBool.true_singleton;
-            }
-        }
-        return PyBool.false_singleton;
-    }
-}
-
-final class PyBuiltinFunction_chr extends PyBuiltinFunction {
-    public static final PyBuiltinFunction_chr singleton = new PyBuiltinFunction_chr();
-
-    private PyBuiltinFunction_chr() { super("chr"); }
-    @Override public PyString call(PyObject[] args, PyDict kwargs) {
-        var arg = exactlyOneArg(args, kwargs);
-        long index = arg.indexValue();
-        if ((index < 0) || (index > 65535)) {
-            throw new IllegalArgumentException("chr() argument out of range");
-        }
-        return new PyString(String.valueOf((char)index));
-    }
-}
-
-final class PyBuiltinFunction_delattr extends PyBuiltinFunction {
-    public static final PyBuiltinFunction_delattr singleton = new PyBuiltinFunction_delattr();
-
-    private PyBuiltinFunction_delattr() { super("delattr"); }
-    @Override public PyNone call(PyObject[] args, PyDict kwargs) {
-        Runtime.requireNoKwArgs(kwargs, funcName);
-        Runtime.requireExactArgs(args, 2, funcName);
-        if (args[1] instanceof PyString name) {
-            args[0].delAttr(name.value);
+    static PyNone pyfunc_setattr(PyObject obj, PyObject name_obj, PyObject value) {
+        if (name_obj instanceof PyString name) {
+            obj.setAttr(name.value, value);
             return PyNone.singleton;
         } else {
-            throw PyTypeError.raiseFormat("attribute name must be string, not %s", PyString.reprOf(args[1].type().name()));
+            throw PyTypeError.raiseFormat("attribute name must be string, not %s", PyString.reprOf(name_obj.type().name()));
         }
     }
 }
@@ -142,26 +174,6 @@ final class PyBuiltinFunction_dir extends PyBuiltinFunction {
     }
 }
 
-final class PyBuiltinFunction_format extends PyBuiltinFunction {
-    public static final PyBuiltinFunction_format singleton = new PyBuiltinFunction_format();
-
-    private PyBuiltinFunction_format() { super("format"); }
-    @Override public PyString call(PyObject[] args, PyDict kwargs) {
-        Runtime.requireNoKwArgs(kwargs, funcName);
-        Runtime.requireMinArgs(args, 1, funcName);
-        Runtime.requireMaxArgs(args, 2, funcName);
-        String formatSpec = "";
-        if (args.length == 2) {
-            if (args[1] instanceof PyString arg1_str) {
-                formatSpec = arg1_str.value;
-            } else {
-                throw PyTypeError.raiseFormat("format() argument 2 must be str, not %s", args[1].type().name());
-            }
-        }
-        return new PyString(args[0].format(formatSpec));
-    }
-}
-
 final class PyBuiltinFunction_getattr extends PyBuiltinFunction {
     public static final PyBuiltinFunction_getattr singleton = new PyBuiltinFunction_getattr();
 
@@ -182,82 +194,6 @@ final class PyBuiltinFunction_getattr extends PyBuiltinFunction {
         } else {
             throw PyTypeError.raiseFormat("attribute name must be string, not %s", PyString.reprOf(args[1].type().name()));
         }
-    }
-}
-
-final class PyBuiltinFunction_hasattr extends PyBuiltinFunction {
-    public static final PyBuiltinFunction_hasattr singleton = new PyBuiltinFunction_hasattr();
-
-    private PyBuiltinFunction_hasattr() { super("hasattr"); }
-    @Override public PyBool call(PyObject[] args, PyDict kwargs) {
-        Runtime.requireNoKwArgs(kwargs, funcName);
-        Runtime.requireExactArgs(args, 2, funcName);
-        if (args[1] instanceof PyString name) {
-            try {
-                args[0].getAttr(name.value);
-            } catch (PyRaise r) {
-                if (r.exc instanceof PyAttributeError) {
-                    return PyBool.false_singleton;
-                }
-                throw r;
-            }
-            return PyBool.true_singleton;
-        } else {
-            throw PyTypeError.raiseFormat("attribute name must be string, not %s", PyString.reprOf(args[1].type().name()));
-        }
-    }
-}
-
-final class PyBuiltinFunction_isinstance extends PyBuiltinFunction {
-    public static final PyBuiltinFunction_isinstance singleton = new PyBuiltinFunction_isinstance();
-
-    private PyBuiltinFunction_isinstance() { super("isinstance"); }
-    private static boolean isInstanceImpl(PyObject obj, PyObject type) {
-        if (type instanceof PyTuple type_tuple) {
-            for (var x: type_tuple.items) {
-                if (isInstanceImpl(obj, x)) {
-                    return true;
-                }
-            }
-            return false;
-        } else if (type instanceof PyBuiltinType type_class) {
-            return type_class.instanceClass.isInstance(obj);
-        } else if (type instanceof PyType) {
-            throw new UnsupportedOperationException("isinstance() is unimplemented for type " + type.repr());
-        } else {
-            throw PyTypeError.raise("isinstance() arg 2 must be a type, a tuple of types, or a union");
-        }
-    }
-    @Override public PyBool call(PyObject[] args, PyDict kwargs) {
-        Runtime.requireNoKwArgs(kwargs, funcName);
-        Runtime.requireExactArgs(args, 2, funcName);
-        return PyBool.create(isInstanceImpl(args[0], args[1]));
-    }
-}
-
-final class PyBuiltinFunction_issubclass extends PyBuiltinFunction {
-    public static final PyBuiltinFunction_issubclass singleton = new PyBuiltinFunction_issubclass();
-
-    private PyBuiltinFunction_issubclass() { super("issubclass"); }
-    private static boolean isSubclassImpl(PyObject obj, PyObject type) {
-        if (type instanceof PyTuple type_tuple) {
-            for (var x: type_tuple.items) {
-                if (isSubclassImpl(obj, x)) {
-                    return true;
-                }
-            }
-            return false;
-        } else if (obj instanceof PyBuiltinType obj_class &&
-                    type instanceof PyBuiltinType type_class) {
-            return type_class.instanceClass.isAssignableFrom(obj_class.instanceClass);
-        } else {
-            throw new UnsupportedOperationException(String.format("issubclass() is unimplemented for types %s and %s", obj.repr(), type.repr()));
-        }
-    }
-    @Override public PyBool call(PyObject[] args, PyDict kwargs) {
-        Runtime.requireNoKwArgs(kwargs, funcName);
-        Runtime.requireExactArgs(args, 2, funcName);
-        return PyBool.create(isSubclassImpl(args[0], args[1]));
     }
 }
 
@@ -386,19 +322,6 @@ final class PyBuiltinFunction_open extends PyBuiltinFunction {
     }
 }
 
-final class PyBuiltinFunction_ord extends PyBuiltinFunction {
-    public static final PyBuiltinFunction_ord singleton = new PyBuiltinFunction_ord();
-
-    private PyBuiltinFunction_ord() { super("ord"); }
-    @Override public PyInt call(PyObject[] args, PyDict kwargs) {
-        PyString arg = (PyString)exactlyOneArg(args, kwargs);
-        if (arg.len() != 1) {
-            throw new IllegalArgumentException("argument to ord() must be string of length 1");
-        }
-        return new PyInt(arg.value.charAt(0));
-    }
-}
-
 final class PyBuiltinFunction_print extends PyBuiltinFunction {
     public static final PyBuiltinFunction_print singleton = new PyBuiltinFunction_print();
 
@@ -417,22 +340,6 @@ final class PyBuiltinFunction_print extends PyBuiltinFunction {
         }
         System.out.println();
         return PyNone.singleton;
-    }
-}
-
-final class PyBuiltinFunction_setattr extends PyBuiltinFunction {
-    public static final PyBuiltinFunction_setattr singleton = new PyBuiltinFunction_setattr();
-
-    private PyBuiltinFunction_setattr() { super("setattr"); }
-    @Override public PyNone call(PyObject[] args, PyDict kwargs) {
-        Runtime.requireNoKwArgs(kwargs, funcName);
-        Runtime.requireExactArgs(args, 3, funcName);
-        if (args[1] instanceof PyString name) {
-            args[0].setAttr(name.value, args[2]);
-            return PyNone.singleton;
-        } else {
-            throw PyTypeError.raiseFormat("attribute name must be string, not %s", PyString.reprOf(args[1].type().name()));
-        }
     }
 }
 

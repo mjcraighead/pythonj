@@ -1378,7 +1378,10 @@ METHOD_ARG_OVERRIDES = {
     'tuple': {'index': [REQUIRED, 'null', 'null']},
 }
 
-GENERATED_BUILTIN_FUNCTIONS = {'abs', 'ascii', 'hash', 'hex', 'len', 'repr'}
+GENERATED_BUILTIN_FUNCTIONS = {
+    'abs', 'all', 'any', 'ascii', 'chr', 'delattr', 'format', 'hash', 'hasattr', 'hex', 'isinstance',
+    'issubclass', 'len', 'ord', 'repr', 'setattr',
+}
 
 def infer_args(target: object, implicit_name: Optional[str]) -> Optional[list[object | str]]:
     try:
@@ -1400,6 +1403,9 @@ def infer_args(target: object, implicit_name: Optional[str]) -> Optional[list[ob
             elif param.default is None:
                 seen_optional = True
                 args.append('PyNone.singleton')
+            elif param.default == '':
+                seen_optional = True
+                args.append('PyString.empty_singleton')
             elif type(param.default) is int and param.default == -1:
                 seen_optional = True
                 args.append('PyInt.singleton_neg1')
@@ -1433,6 +1439,43 @@ def infer_builtin_function_args(name: str) -> Optional[list[object | str]]:
     if type(desc) is not types.BuiltinFunctionType:
         return None
     return infer_args(desc, None)
+
+def emit_arg_binding(writer: IndentedWriter, args: list[object | str], full_name: str, short_name: str) -> list[str]:
+    if args == [VARARGS, KWARGS]:
+        return ['args', 'kwargs']
+    assert args.count(KWARGS) == 0, args # KWARGS is only allowed in one trivial case currently
+    writer.write('if ((kwargs != null) && kwargs.boolValue()) {')
+    writer.write(f'throw Runtime.raiseNoKwArgs("{full_name}");')
+    writer.write('}')
+    if args == [VARARGS]:
+        return ['args']
+    assert args.count(VARARGS) == 0, args # VARARGS is only allowed by itself currently
+    writer.write('int argsLength = args.length;')
+    min_args = args.count(REQUIRED)
+    max_args = len(args)
+    assert args[min_args:].count(REQUIRED) == 0, args # REQUIRED may only be at start of list
+    bind_args = [f'args[{i}]' for i in range(min_args)]
+    if min_args == max_args:
+        writer.write(f'if (argsLength != {max_args}) {{')
+        if max_args == 0:
+            writer.write(f'throw Runtime.raiseNoArgs(args, "{full_name}");')
+        elif max_args == 1:
+            writer.write(f'throw Runtime.raiseOneArg(args, "{full_name}");')
+        else:
+            writer.write(f'throw Runtime.raiseExactArgs(args, {max_args}, "{short_name}");')
+        writer.write('}')
+    else:
+        if min_args > 0:
+            writer.write(f'if (argsLength < {min_args}) {{')
+            writer.write(f'throw Runtime.raiseMinArgs(args, {min_args}, "{short_name}");')
+            writer.write('}')
+        writer.write(f'if (argsLength > {max_args}) {{')
+        writer.write(f'throw Runtime.raiseMaxArgs(args, {max_args}, "{short_name}");')
+        writer.write('}')
+        for i in range(min_args, max_args):
+            writer.write(f'PyObject arg{i} = (argsLength >= {i+1}) ? args[{i}] : {args[i]};')
+            bind_args.append(f'arg{i}')
+    return bind_args
 
 def get_java_name(name: str) -> str:
     if name.startswith('_io.'):
@@ -1564,42 +1607,7 @@ def gen_code(spec_path: str, java_path: str) -> None:
                     writer.write(f'{method_class_name}({ctor_arg}) {{ super({super_arg}); }}')
                     writer.write(f'@Override public String methodName() {{ return "{method_name}"; }}')
                     writer.write('@Override public PyObject call(PyObject[] args, PyDict kwargs) {')
-                    if args == [VARARGS, KWARGS]:
-                        bind_args = ['args', 'kwargs']
-                    else:
-                        assert args.count(KWARGS) == 0, args # KWARGS is only allowed in one trivial case currently
-                        writer.write('if ((kwargs != null) && kwargs.boolValue()) {')
-                        writer.write(f'throw Runtime.raiseNoKwArgs("{py_name}.{method_name}");')
-                        writer.write('}')
-                        if args == [VARARGS]:
-                            bind_args = ['args']
-                        else:
-                            assert args.count(VARARGS) == 0, args # VARARGS is only allowed by itself currently
-                            writer.write('int argsLength = args.length;')
-                            min_args = args.count(REQUIRED)
-                            max_args = len(args)
-                            assert args[min_args:].count(REQUIRED) == 0, args # REQUIRED may only be at start of list
-                            bind_args = [f'args[{i}]' for i in range(min_args)]
-                            if min_args == max_args:
-                                writer.write(f'if (argsLength != {max_args}) {{')
-                                if max_args == 0:
-                                    writer.write(f'throw Runtime.raiseNoArgs(args, "{py_name}.{method_name}");')
-                                elif max_args == 1:
-                                    writer.write(f'throw Runtime.raiseOneArg(args, "{py_name}.{method_name}");')
-                                else:
-                                    writer.write(f'throw Runtime.raiseExactArgs(args, {max_args}, "{method_name}");')
-                                writer.write('}')
-                            else:
-                                if min_args > 0:
-                                    writer.write(f'if (argsLength < {min_args}) {{')
-                                    writer.write(f'throw Runtime.raiseMinArgs(args, {min_args}, "{method_name}");')
-                                    writer.write('}')
-                                writer.write(f'if (argsLength > {max_args}) {{')
-                                writer.write(f'throw Runtime.raiseMaxArgs(args, {max_args}, "{method_name}");')
-                                writer.write('}')
-                                for i in range(min_args, max_args):
-                                    writer.write(f'PyObject arg{i} = (argsLength >= {i+1}) ? args[{i}] : {args[i]};')
-                                    bind_args.append(f'arg{i}')
+                    bind_args = emit_arg_binding(writer, args, f'{py_name}.{method_name}', method_name)
                     if kind == 'classmethod':
                         bind_args = ['self'] + bind_args
                     writer.write(f"return {method_target}.pymethod_{method_name}({', '.join(bind_args)});")
@@ -1615,13 +1623,8 @@ def gen_code(spec_path: str, java_path: str) -> None:
             writer.write('')
             writer.write(f'private PyBuiltinFunction_{func_name}() {{ super("{func_name}"); }}')
             writer.write('@Override public PyObject call(PyObject[] args, PyDict kwargs) {')
-            writer.write('if ((kwargs != null) && kwargs.boolValue()) {')
-            writer.write(f'throw Runtime.raiseNoKwArgs("{func_name}");')
-            writer.write('}')
-            writer.write('if (args.length != 1) {')
-            writer.write(f'throw Runtime.raiseOneArg(args, "{func_name}");')
-            writer.write('}')
-            writer.write(f'return PyBuiltinFunctionsImpl.pyfunc_{func_name}(args[0]);')
+            bind_args = emit_arg_binding(writer, args, func_name, func_name)
+            writer.write(f'return PyBuiltinFunctionsImpl.pyfunc_{func_name}({", ".join(bind_args)});')
             writer.write('}')
             writer.write('}')
             writer.write('')
