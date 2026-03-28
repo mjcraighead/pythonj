@@ -230,6 +230,21 @@ public final class PySet extends PyObject {
         items.remove(arg);
         return PyNone.singleton;
     }
+    public PyObject pymethod_pop() {
+        var it = items.iterator();
+        if (!it.hasNext()) {
+            throw PyKeyError.raise("pop from an empty set");
+        }
+        PyObject ret = it.next();
+        it.remove();
+        return ret;
+    }
+    public PyNone pymethod_remove(PyObject elem) {
+        if (!items.remove(elem)) {
+            throw new PyRaise(new PyKeyError(elem));
+        }
+        return PyNone.singleton;
+    }
     public PyNone pymethod_update(PyObject[] args) {
         for (var arg: args) {
             Runtime.addIterableToCollection(items, arg);
@@ -244,8 +259,6 @@ public final class PySet extends PyObject {
     public PyObject pymethod_isdisjoint(PyObject other) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_issubset(PyObject other) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_issuperset(PyObject other) { throw new UnsupportedOperationException(); }
-    public PyObject pymethod_pop() { throw new UnsupportedOperationException(); }
-    public PyObject pymethod_remove(PyObject elem) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_symmetric_difference(PyObject other) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_symmetric_difference_update(PyObject other) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_union(PyObject[] others) { throw new UnsupportedOperationException(); }
