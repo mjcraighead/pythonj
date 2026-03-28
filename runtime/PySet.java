@@ -223,6 +223,9 @@ public final class PySet extends PyObject {
         items.clear();
         return PyNone.singleton;
     }
+    public PySet pymethod_copy() {
+        return new PySet(new HashSet<>(items));
+    }
     public PyNone pymethod_discard(PyObject arg) {
         items.remove(arg);
         return PyNone.singleton;
@@ -234,7 +237,6 @@ public final class PySet extends PyObject {
         return PyNone.singleton;
     }
 
-    public PyObject pymethod_copy() { throw new UnsupportedOperationException(); }
     public PyObject pymethod_difference(PyObject[] others) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_difference_update(PyObject[] others) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_intersection(PyObject[] others) { throw new UnsupportedOperationException(); }
