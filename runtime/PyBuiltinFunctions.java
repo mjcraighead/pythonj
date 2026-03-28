@@ -167,61 +167,82 @@ final class PyBuiltinFunctionsImpl {
         return obj.iter();
     }
     static PyInt pyfunc_len(PyObject arg) { return new PyInt(arg.len()); }
-    static PyObject pyfunc_max(PyObject[] args, PyDict kwargs) {
+    static PyObject minMaxImpl(PyObject[] args, PyDict kwargs, String name, boolean isMax) {
+        PyObject defaultObj = null;
+        PyObject keyFunc = PyNone.singleton;
         if ((kwargs != null) && kwargs.boolValue()) {
-            throw new IllegalArgumentException("max() does not accept kwargs");
+            if (kwargs.len() > 2) {
+                throw Runtime.raiseAtMostKwArgs(name, 2, kwargs.len());
+            }
+            for (var x: kwargs.items.entrySet()) {
+                PyString kw = (PyString)x.getKey(); // PyString validated at call site
+                if (kw.value.equals("default")) {
+                    defaultObj = x.getValue();
+                } else if (kw.value.equals("key")) {
+                    keyFunc = x.getValue();
+                } else {
+                    throw Runtime.raiseUnexpectedKwArg(name, kw.value);
+                }
+            }
         }
-        Runtime.requireMinArgs(args, 1, "max");
+        Runtime.requireMinArgs(args, 1, name);
         if (args.length == 1) {
             var iter = args[0].iter();
             PyObject ret = iter.next();
             if (ret == null) {
-                throw PyValueError.raise("max() iterable argument is empty");
+                if (defaultObj != null) {
+                    return defaultObj;
+                }
+                throw PyValueError.raise(name + "() iterable argument is empty");
             }
-            for (var item = iter.next(); item != null; item = iter.next()) {
-                if (item.gt(ret)) {
-                    ret = item;
+            if (keyFunc == PyNone.singleton) {
+                for (var item = iter.next(); item != null; item = iter.next()) {
+                    if (isMax ? item.gt(ret) : item.lt(ret)) {
+                        ret = item;
+                    }
+                }
+            } else {
+                PyObject retKey = keyFunc.call(new PyObject[] {ret}, null);
+                for (var item = iter.next(); item != null; item = iter.next()) {
+                    PyObject itemKey = keyFunc.call(new PyObject[] {item}, null);
+                    if (isMax ? itemKey.gt(retKey) : itemKey.lt(retKey)) {
+                        ret = item;
+                        retKey = itemKey;
+                    }
                 }
             }
             return ret;
         } else {
+            if (defaultObj != null) {
+                throw PyTypeError.raise("Cannot specify a default for " + name + "() with multiple positional arguments");
+            }
             PyObject ret = args[0];
-            for (int i = 1; i < args.length; i++) {
-                PyObject item = args[i];
-                if (item.gt(ret)) {
-                    ret = item;
+            if (keyFunc == PyNone.singleton) {
+                for (int i = 1; i < args.length; i++) {
+                    PyObject item = args[i];
+                    if (isMax ? item.gt(ret) : item.lt(ret)) {
+                        ret = item;
+                    }
+                }
+            } else {
+                PyObject retKey = keyFunc.call(new PyObject[] {ret}, null);
+                for (int i = 1; i < args.length; i++) {
+                    PyObject item = args[i];
+                    PyObject itemKey = keyFunc.call(new PyObject[] {item}, null);
+                    if (isMax ? itemKey.gt(retKey) : itemKey.lt(retKey)) {
+                        ret = item;
+                        retKey = itemKey;
+                    }
                 }
             }
             return ret;
         }
     }
+    static PyObject pyfunc_max(PyObject[] args, PyDict kwargs) {
+        return minMaxImpl(args, kwargs, "max", true);
+    }
     static PyObject pyfunc_min(PyObject[] args, PyDict kwargs) {
-        if ((kwargs != null) && kwargs.boolValue()) {
-            throw new IllegalArgumentException("min() does not accept kwargs");
-        }
-        Runtime.requireMinArgs(args, 1, "min");
-        if (args.length == 1) {
-            var iter = args[0].iter();
-            PyObject ret = iter.next();
-            if (ret == null) {
-                throw PyValueError.raise("min() iterable argument is empty");
-            }
-            for (var item = iter.next(); item != null; item = iter.next()) {
-                if (item.lt(ret)) {
-                    ret = item;
-                }
-            }
-            return ret;
-        } else {
-            PyObject ret = args[0];
-            for (int i = 1; i < args.length; i++) {
-                PyObject item = args[i];
-                if (item.lt(ret)) {
-                    ret = item;
-                }
-            }
-            return ret;
-        }
+        return minMaxImpl(args, kwargs, "min", false);
     }
     static PyObject pyfunc_next(PyObject obj, PyObject default_obj) {
         PyObject ret = obj.next();
@@ -285,14 +306,11 @@ final class PyBuiltinFunctionsImpl {
     }
     static PyList pyfunc_sorted(PyObject[] args, PyDict kwargs) {
         if (args.length != 1) {
-            throw new IllegalArgumentException("sorted() takes 1 argument");
-        }
-        if ((kwargs != null) && kwargs.boolValue()) {
-            throw new IllegalArgumentException("sorted() does not accept kwargs");
+            throw Runtime.raiseExactArgs(args, 1, "sorted");
         }
         var ret = new PyList();
         Runtime.addIterableToCollection(ret.items, args[0]);
-        Collections.sort(ret.items);
+        ret.pymethod_sort(new PyObject[] {}, kwargs);
         return ret;
     }
     static PyInt pyfunc_sum(PyObject[] args, PyDict kwargs) {
