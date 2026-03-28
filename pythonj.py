@@ -10,6 +10,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 import difflib
 from enum import Enum
+import inspect
 import itertools
 import json
 import os
@@ -1288,6 +1289,14 @@ class PythonjVisitor(ast.NodeVisitor):
         writer.write('}')
         assert writer.indent == 0, writer.indent
 
+def get_runtime_obj(name: str) -> object:
+    if name.startswith('_io.'):
+        return getattr(_io, name.split('.', 1)[1])
+    elif name.startswith('types.'):
+        return getattr(types, name.split('.', 1)[1])
+    else:
+        return getattr(builtins, name)
+
 def gen_spec(spec_path: str) -> None:
     spec = {}
     for name in ['bool', 'bytearray', 'bytes', 'dict', 'enumerate', 'int', 'list', 'object', 'range',
@@ -1296,12 +1305,7 @@ def gen_spec(spec_path: str) -> None:
                  'types.FunctionType', 'types.GetSetDescriptorType', 'types.MemberDescriptorType',
                  'types.MethodDescriptorType', 'types.NoneType', '_io.BufferedReader', '_io.TextIOWrapper',
                  *sorted(EXCEPTION_TYPES)]:
-        if name.startswith('_io.'):
-            obj = getattr(_io, name.split('.', 1)[1])
-        elif name.startswith('types.'):
-            obj = getattr(types, name.split('.', 1)[1])
-        else:
-            obj = getattr(builtins, name)
+        obj = get_runtime_obj(name)
         attrs = {}
         for (k, v) in obj.__dict__.items():
             if k.startswith('__') and k not in {'__doc__'}:
@@ -1363,47 +1367,67 @@ REQUIRED = object()
 VARARGS = object()
 KWARGS = object()
 GEN_METHODS = {
-    'bytearray': {'fromhex': [REQUIRED], 'maketrans': [REQUIRED, REQUIRED]},
-    'bytes': {
-        'capitalize': [], 'fromhex': [REQUIRED], 'isalnum': [], 'isalpha': [], 'isascii': [], 'isdigit': [],
-        'islower': [], 'isspace': [], 'istitle': [], 'isupper': [], 'lower': [], 'maketrans': [REQUIRED, REQUIRED],
-        'swapcase': [], 'title': [], 'upper': [],
-    },
     'dict': {
-        'clear': [], 'copy': [], 'fromkeys': [REQUIRED, 'PyNone.singleton'], 'get': [REQUIRED, 'PyNone.singleton'], 'items': [], 'keys': [],
-        'pop': [REQUIRED, 'null'], 'popitem': [], 'setdefault': [REQUIRED, 'PyNone.singleton'],
-        'update': [VARARGS, KWARGS], 'values': [],
+        'fromkeys': [REQUIRED, 'PyNone.singleton'], 'get': [REQUIRED, 'PyNone.singleton'],
+        'pop': [REQUIRED, 'null'], 'setdefault': [REQUIRED, 'PyNone.singleton'], 'update': [VARARGS, KWARGS],
     },
-    'int': {
-        'as_integer_ratio': [], 'bit_count': [], 'bit_length': [], 'conjugate': [], 'is_integer': [],
-        'from_bytes': [VARARGS, KWARGS], 'to_bytes': [VARARGS, KWARGS],
-    },
-    'list': {
-        'append': [REQUIRED], 'clear': [], 'copy': [], 'count': [REQUIRED], 'extend': [REQUIRED],
-        'index': [REQUIRED, 'null', 'null'], 'insert': [REQUIRED, REQUIRED], 'pop': ['PyInt.singleton_neg1'],
-        'remove': [REQUIRED], 'reverse': [], 'sort': [VARARGS, KWARGS],
-    },
-    'range': {'count': [REQUIRED], 'index': [REQUIRED]},
-    'set': {
-        'add': [REQUIRED], 'clear': [], 'copy': [], 'difference': [VARARGS], 'difference_update': [VARARGS],
-        'discard': [REQUIRED], 'isdisjoint': [REQUIRED], 'intersection': [VARARGS],
-        'intersection_update': [VARARGS], 'issubset': [REQUIRED], 'issuperset': [REQUIRED],
-        'pop': [], 'remove': [REQUIRED], 'symmetric_difference': [REQUIRED],
-        'symmetric_difference_update': [REQUIRED], 'union': [VARARGS], 'update': [VARARGS],
-    },
-    'slice': {'indices': [REQUIRED]},
+    'int': {'from_bytes': [VARARGS, KWARGS], 'to_bytes': [VARARGS, KWARGS]},
+    'list': {'index': [REQUIRED, 'null', 'null'], 'pop': ['PyInt.singleton_neg1'], 'sort': [VARARGS, KWARGS]},
     'str': {
-        'capitalize': [], 'casefold': [], 'find': [REQUIRED, 'PyNone.singleton', 'PyNone.singleton'],
-        'isalnum': [], 'isalpha': [], 'isascii': [], 'isdecimal': [], 'isdigit': [], 'isidentifier': [],
-        'islower': [], 'isnumeric': [], 'isprintable': [], 'isspace': [], 'istitle': [], 'isupper': [],
-        'join': [REQUIRED], 'lower': [], 'maketrans': [REQUIRED, 'null', 'null'], 'split': [VARARGS, KWARGS],
-        'startswith': [REQUIRED, 'PyNone.singleton', 'PyNone.singleton'], 'swapcase': [], 'title': [],
-        'upper': [],
+        'find': [REQUIRED, 'PyNone.singleton', 'PyNone.singleton'],
+        'maketrans': [REQUIRED, 'null', 'null'], 'split': [VARARGS, KWARGS],
+        'startswith': [REQUIRED, 'PyNone.singleton', 'PyNone.singleton'],
     },
-    'tuple': {'count': [REQUIRED], 'index': [REQUIRED, 'null', 'null']},
-    '_io.BufferedReader': {'close': [], 'read': ['null']},
-    '_io.TextIOWrapper': {'close': [], 'readline': ['null']},
+    'tuple': {'index': [REQUIRED, 'null', 'null']},
+    '_io.BufferedReader': {'read': ['null']},
+    '_io.TextIOWrapper': {'readline': ['null']},
 }
+
+def infer_method_args(name: str, method_name: str) -> list[object | str] | None:
+    obj = get_runtime_obj(name)
+    desc = obj.__dict__.get(method_name)
+    if desc is None:
+        return None
+    desc_type = type(desc)
+    if desc_type is types.MethodDescriptorType:
+        target = desc
+        implicit_name = 'self'
+    elif desc_type is types.ClassMethodDescriptorType:
+        target = desc
+        implicit_name = 'type'
+    elif desc_type is staticmethod:
+        target = getattr(obj, method_name)
+        implicit_name = None
+    else:
+        return None
+    try:
+        params = list(inspect.signature(target).parameters.values())
+    except (TypeError, ValueError):
+        return None
+    if implicit_name is not None:
+        if not params or params[0].name != implicit_name or params[0].kind is not inspect.Parameter.POSITIONAL_ONLY:
+            return None
+        params = params[1:]
+    args = []
+    seen_optional = False
+    for param in params:
+        if param.kind is inspect.Parameter.POSITIONAL_ONLY:
+            if param.default is inspect.Parameter.empty:
+                if seen_optional:
+                    return None
+                args.append(REQUIRED)
+            elif param.default is None:
+                seen_optional = True
+                args.append('PyNone.singleton')
+            else:
+                return None
+        elif param.kind is inspect.Parameter.VAR_POSITIONAL:
+            if param is not params[-1]:
+                return None
+            args.append(VARARGS)
+        else:
+            return None
+    return args
 
 def get_java_name(name: str) -> str:
     if name.startswith('_io.'):
@@ -1491,12 +1515,25 @@ def gen_code(spec_path: str, java_path: str) -> None:
                 writer.write('}')
                 writer.write('')
 
-            if name in GEN_METHODS:
+            gen_methods = {}
+            for (method_name, v) in attrs.items():
+                if v['kind'] not in {'method', 'classmethod', 'staticmethod'}:
+                    continue
+                if name in UNIMPLEMENTED_METHODS and method_name in UNIMPLEMENTED_METHODS[name]:
+                    continue
+                if name in GEN_METHODS and method_name in GEN_METHODS[name]:
+                    gen_methods[method_name] = GEN_METHODS[name][method_name]
+                    continue
+                inferred_args = infer_method_args(name, method_name)
+                if inferred_args is not None:
+                    gen_methods[method_name] = inferred_args
+
+            if gen_methods:
                 if '.' in name:
                     py_name = name.rsplit('.')[1]
                 else:
                     py_name = name
-                for (method_name, args) in GEN_METHODS[name].items():
+                for (method_name, args) in gen_methods.items():
                     kind = attrs[method_name]['kind']
                     if kind == 'method':
                         method_class_name = f'{java_name}Method_{method_name}'
