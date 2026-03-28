@@ -286,20 +286,21 @@ public final class PyString extends PyObject {
     public PyList pymethod_split(PyObject[] args, PyDict kwargs) {
         PyObject sep = null;
         PyObject maxsplit = null;
+        int argsLength = args.length;
         if ((kwargs != null) && kwargs.boolValue()) {
-            if ((args.length == 0) && (kwargs.len() > 2)) {
+            if ((argsLength == 0) && (kwargs.len() > 2)) {
                 throw Runtime.raiseAtMostKwArgs("split", 2, kwargs.len());
             }
-            if (args.length + kwargs.len() > 2) {
-                throw Runtime.raiseAtMostArgs("split", 2, args.length + kwargs.len());
+            if (argsLength + kwargs.len() > 2) {
+                throw Runtime.raiseAtMostArgs("split", 2, argsLength + kwargs.len());
             }
-        } else if (args.length > 2) {
-            throw Runtime.raiseAtMostArgs("split", 2, args.length);
+        } else if (argsLength > 2) {
+            throw Runtime.raiseAtMostArgs("split", 2, argsLength);
         }
-        if (args.length >= 1) {
+        if (argsLength >= 1) {
             sep = args[0];
         }
-        if (args.length >= 2) {
+        if (argsLength >= 2) {
             maxsplit = args[1];
         }
         if ((kwargs != null) && kwargs.boolValue()) {
