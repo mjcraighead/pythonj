@@ -311,11 +311,12 @@ public final class PyList extends PyObject {
         return PyNone.singleton;
     }
     public PyNone pymethod_sort(PyObject[] args, PyDict kwargs) {
+        int argsLength = args.length;
         PyObject key = PyNone.singleton;
         PyObject reverse = PyBool.false_singleton;
         if ((kwargs != null) && kwargs.boolValue()) { // XXX Handle more cases correctly here
             if (kwargs.len() > 2) {
-                throw Runtime.raiseAtMostKwArgs("sort", 2, 0, kwargs.len());
+                throw Runtime.raiseAtMostKwArgs("sort", 2, argsLength, kwargs.len());
             }
             for (var x: kwargs.items.entrySet()) {
                 PyString kw = (PyString)x.getKey(); // PyString validated at call site
@@ -328,9 +329,9 @@ public final class PyList extends PyObject {
                 }
             }
         }
-        if (args.length > 2) {
-            throw Runtime.raiseAtMostArgs("sort", 2, args.length);
-        } else if (args.length != 0) {
+        if (argsLength > 2) {
+            throw Runtime.raiseAtMostArgs("sort", 2, argsLength);
+        } else if (argsLength != 0) {
             throw PyTypeError.raise("sort() takes no positional arguments");
         }
         return sortImpl(key, reverse);

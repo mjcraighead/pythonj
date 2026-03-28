@@ -168,6 +168,7 @@ final class PyBuiltinFunctionsImpl {
     }
     static PyInt pyfunc_len(PyObject arg) { return new PyInt(arg.len()); }
     static PyObject minMaxImpl(PyObject[] args, PyDict kwargs, String name, boolean isMax) {
+        int argsLength = args.length;
         PyObject defaultObj = null;
         PyObject keyFunc = PyNone.singleton;
         if ((kwargs != null) && kwargs.boolValue()) {
@@ -186,7 +187,7 @@ final class PyBuiltinFunctionsImpl {
             }
         }
         Runtime.requireMinArgs(args, 1, name);
-        if (args.length == 1) {
+        if (argsLength == 1) {
             var iter = args[0].iter();
             PyObject ret = iter.next();
             if (ret == null) {
@@ -218,7 +219,7 @@ final class PyBuiltinFunctionsImpl {
             }
             PyObject ret = args[0];
             if (keyFunc == PyNone.singleton) {
-                for (int i = 1; i < args.length; i++) {
+                for (int i = 1; i < argsLength; i++) {
                     PyObject item = args[i];
                     if (isMax ? item.gt(ret) : item.lt(ret)) {
                         ret = item;
@@ -226,7 +227,7 @@ final class PyBuiltinFunctionsImpl {
                 }
             } else {
                 PyObject retKey = keyFunc.call(new PyObject[] {ret}, null);
-                for (int i = 1; i < args.length; i++) {
+                for (int i = 1; i < argsLength; i++) {
                     PyObject item = args[i];
                     PyObject itemKey = keyFunc.call(new PyObject[] {item}, null);
                     if (isMax ? itemKey.gt(retKey) : itemKey.lt(retKey)) {
