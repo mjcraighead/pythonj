@@ -1366,7 +1366,7 @@ UNIMPLEMENTED_METHODS = {
 REQUIRED = object()
 VARARGS = object()
 KWARGS = object()
-GEN_METHODS = {
+METHOD_ARG_OVERRIDES = {
     'dict': {'pop': [REQUIRED, 'null'], 'update': [VARARGS, KWARGS]},
     'int': {'from_bytes': [VARARGS, KWARGS], 'to_bytes': [VARARGS, KWARGS]},
     'list': {'index': [REQUIRED, 'null', 'null'], 'sort': [VARARGS, KWARGS]},
@@ -1519,8 +1519,8 @@ def gen_code(spec_path: str, java_path: str) -> None:
                     continue
                 if name in UNIMPLEMENTED_METHODS and method_name in UNIMPLEMENTED_METHODS[name]:
                     continue
-                if name in GEN_METHODS and method_name in GEN_METHODS[name]:
-                    gen_methods[method_name] = GEN_METHODS[name][method_name]
+                if name in METHOD_ARG_OVERRIDES and method_name in METHOD_ARG_OVERRIDES[name]:
+                    gen_methods[method_name] = METHOD_ARG_OVERRIDES[name][method_name]
                     continue
                 inferred_args = infer_method_args(name, method_name)
                 if inferred_args is not None:
