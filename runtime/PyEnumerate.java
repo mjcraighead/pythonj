@@ -22,13 +22,13 @@ public final class PyEnumerate extends PyIter {
             PyObject start = (args.length >= 2) ? args[1] : null;
             if (kwargs != null) {
                 for (var x: kwargs.items.entrySet()) {
-                    PyString key = (PyString)x.getKey(); // PyString validated at call site
-                    if ((key.value.equals("iterable")) && (iterable == null)) {
+                    PyString kw = (PyString)x.getKey(); // PyString validated at call site
+                    if ((kw.value.equals("iterable")) && (iterable == null)) {
                         iterable = x.getValue();
-                    } else if ((totalArgs == 2) && (key.value.equals("start")) && (start == null)) {
+                    } else if ((totalArgs == 2) && (kw.value.equals("start")) && (start == null)) {
                         start = x.getValue();
                     } else {
-                        throw PyTypeError.raiseFormat("%s is an invalid keyword argument for enumerate()", key.repr());
+                        throw PyTypeError.raiseFormat("%s is an invalid keyword argument for enumerate()", kw.repr());
                     }
                 }
             }

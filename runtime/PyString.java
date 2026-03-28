@@ -293,16 +293,16 @@ public final class PyString extends PyObject {
                 throw Runtime.raiseAtMostKwArgs("split", 2, argsLength, kwargsLen);
             }
             for (var x: kwargs.items.entrySet()) {
-                PyString key = (PyString)x.getKey(); // PyString validated at call site
-                if (key.value.equals("sep")) {
+                PyString kw = (PyString)x.getKey(); // PyString validated at call site
+                if (kw.value.equals("sep")) {
                     if (sep != null) {
                         throw Runtime.raiseArgGivenByNameAndPosition("split", "sep", 1);
                     }
                     sep = x.getValue();
-                } else if (key.value.equals("maxsplit")) {
+                } else if (kw.value.equals("maxsplit")) {
                     maxsplit = x.getValue();
                 } else {
-                    throw Runtime.raiseUnexpectedKwArg("split", key.value);
+                    throw Runtime.raiseUnexpectedKwArg("split", kw.value);
                 }
             }
         } else if (argsLength > 2) {
