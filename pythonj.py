@@ -1185,7 +1185,7 @@ class PythonjVisitor(ast.NodeVisitor):
                 ])
         func_code.extend([
             ('else {' if arg_names else '{'),
-            f'throw Runtime.raiseUserUnexpectedKwArg({java_string_literal(py_name)}, kwName);',
+            f'throw Runtime.raiseUnexpectedKwArg({java_string_literal(py_name)}, kwName);',
             '}',
             '}',
         ])

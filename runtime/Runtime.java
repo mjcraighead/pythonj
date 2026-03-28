@@ -341,7 +341,7 @@ public final class Runtime {
         return PyTypeError.raiseFormat("%s() takes from %d to %d positional arguments but %d %s given",
             name, min, max, args.length, (args.length == 1) ? "was" : "were");
     }
-    public static PyRaise raiseUserUnexpectedKwArg(String name, String kwName) {
+    public static PyRaise raiseUnexpectedKwArg(String name, String kwName) {
         return PyTypeError.raiseFormat("%s() got an unexpected keyword argument %s", name, PyString.reprOf(kwName));
     }
     public static PyRaise raiseUserMultipleValues(String name, String argName) {

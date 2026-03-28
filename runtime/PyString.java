@@ -291,7 +291,7 @@ public final class PyString extends PyObject {
             for (var x: kwargs.items.entrySet()) {
                 PyString key = (PyString)x.getKey(); // PyString validated at call site
                 if (!key.value.equals("sep") && !key.value.equals("maxsplit")) {
-                    throw PyTypeError.raise("split() got an unexpected keyword argument " + key.repr());
+                    throw Runtime.raiseUnexpectedKwArg("split", key.value);
                 }
             }
             throw new IllegalArgumentException("str.split() does not accept kwargs");

@@ -296,7 +296,7 @@ public final class PyList extends PyObject {
             for (var x: kwargs.items.entrySet()) {
                 PyString key = (PyString)x.getKey(); // PyString validated at call site
                 if (!key.value.equals("key") && !key.value.equals("reverse")) {
-                    throw PyTypeError.raise("sort() got an unexpected keyword argument " + key.repr());
+                    throw Runtime.raiseUnexpectedKwArg("sort", key.value);
                 }
             }
             throw new IllegalArgumentException("list.sort() does not accept kwargs");
