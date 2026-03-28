@@ -1379,9 +1379,10 @@ METHOD_ARG_OVERRIDES = {
 }
 
 GENERATED_BUILTIN_FUNCTIONS = {
-    'abs', 'all', 'any', 'ascii', 'chr', 'delattr', 'format', 'hash', 'hasattr', 'hex', 'isinstance',
+    'abs', 'all', 'any', 'ascii', 'chr', 'delattr', 'format', 'getattr', 'hash', 'hasattr', 'hex', 'isinstance',
     'issubclass', 'len', 'ord', 'repr', 'setattr',
 }
+BUILTIN_FUNCTION_ARG_OVERRIDES = {'getattr': [REQUIRED, REQUIRED, 'null']}
 
 def infer_args(target: object, implicit_name: Optional[str]) -> Optional[list[object | str]]:
     try:
@@ -1420,6 +1421,8 @@ def infer_args(target: object, implicit_name: Optional[str]) -> Optional[list[ob
     return args
 
 def infer_method_args(name: str, method_name: str) -> Optional[list[object | str]]:
+    if name in METHOD_ARG_OVERRIDES and method_name in METHOD_ARG_OVERRIDES[name]:
+        return METHOD_ARG_OVERRIDES[name][method_name]
     obj = get_runtime_obj(name)
     desc = obj.__dict__.get(method_name)
     if desc is None:
@@ -1435,6 +1438,8 @@ def infer_method_args(name: str, method_name: str) -> Optional[list[object | str
         return None
 
 def infer_builtin_function_args(name: str) -> Optional[list[object | str]]:
+    if name in BUILTIN_FUNCTION_ARG_OVERRIDES:
+        return BUILTIN_FUNCTION_ARG_OVERRIDES[name]
     desc = builtins.__dict__.get(name)
     if type(desc) is not types.BuiltinFunctionType:
         return None
@@ -1568,9 +1573,6 @@ def gen_code(spec_path: str, java_path: str) -> None:
                 if v['kind'] not in {'method', 'classmethod', 'staticmethod'}:
                     continue
                 if name in UNIMPLEMENTED_METHODS and method_name in UNIMPLEMENTED_METHODS[name]:
-                    continue
-                if name in METHOD_ARG_OVERRIDES and method_name in METHOD_ARG_OVERRIDES[name]:
-                    gen_methods[method_name] = METHOD_ARG_OVERRIDES[name][method_name]
                     continue
                 inferred_args = infer_method_args(name, method_name)
                 if inferred_args is not None:

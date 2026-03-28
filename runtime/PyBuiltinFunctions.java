@@ -71,6 +71,20 @@ final class PyBuiltinFunctionsImpl {
             throw PyTypeError.raiseFormat("format() argument 2 must be str, not %s", format_spec_obj.type().name());
         }
     }
+    static PyObject pyfunc_getattr(PyObject obj, PyObject name_obj, PyObject default_obj) {
+        if (name_obj instanceof PyString name) {
+            try {
+                return obj.getAttr(name.value);
+            } catch (PyRaise r) {
+                if ((default_obj != null) && (r.exc instanceof PyAttributeError)) {
+                    return default_obj;
+                }
+                throw r;
+            }
+        } else {
+            throw PyTypeError.raiseFormat("attribute name must be string, not %s", PyString.reprOf(name_obj.type().name()));
+        }
+    }
     static PyBool pyfunc_hasattr(PyObject obj, PyObject name_obj) {
         if (name_obj instanceof PyString name) {
             try {
@@ -171,29 +185,6 @@ final class PyBuiltinFunction_dir extends PyBuiltinFunction {
         ArrayList<PyObject> list = new ArrayList<>(attrs.keySet());
         Collections.sort(list);
         return new PyList(list);
-    }
-}
-
-final class PyBuiltinFunction_getattr extends PyBuiltinFunction {
-    public static final PyBuiltinFunction_getattr singleton = new PyBuiltinFunction_getattr();
-
-    private PyBuiltinFunction_getattr() { super("getattr"); }
-    @Override public PyObject call(PyObject[] args, PyDict kwargs) {
-        Runtime.requireNoKwArgs(kwargs, funcName);
-        Runtime.requireMinArgs(args, 2, funcName);
-        Runtime.requireMaxArgs(args, 3, funcName);
-        if (args[1] instanceof PyString name) {
-            try {
-                return args[0].getAttr(name.value);
-            } catch (PyRaise r) {
-                if ((args.length == 3) && (r.exc instanceof PyAttributeError)) {
-                    return args[2];
-                }
-                throw r;
-            }
-        } else {
-            throw PyTypeError.raiseFormat("attribute name must be string, not %s", PyString.reprOf(args[1].type().name()));
-        }
     }
 }
 
