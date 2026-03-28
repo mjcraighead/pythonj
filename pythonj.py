@@ -1395,71 +1395,68 @@ def gen_code(spec_path: str, java_path: str) -> None:
                 case 'types.NoneType': py_name = 'NoneType'
                 case _: py_name = name
 
-            gen_lines = [
-                f'final class {java_name}Type extends PyBuiltinType {{\n',
-                f'    public static final {java_name}Type singleton = new {java_name}Type();\n',
-            ]
+            f.write(
+                f'final class {java_name}Type extends PyBuiltinType {{\n'
+                f'    public static final {java_name}Type singleton = new {java_name}Type();\n'
+            )
             for (k, v) in attrs.items():
                 if v['kind'] == 'string':
-                    gen_lines.append(f"    private static final PyString pyattr_{k} = new PyString({java_string_literal(v['value'])});\n")
+                    f.write(f"    private static final PyString pyattr_{k} = new PyString({java_string_literal(v['value'])});\n")
                 elif v['kind'] == 'member':
                     doc = 'null' if v['doc'] is None else java_string_literal(v['doc'])
-                    gen_lines.append(f"    private static final PyMemberDescriptor pyattr_{k} = new PyMemberDescriptor(singleton, {java_string_literal(k)}, {java_name}::pymember_{k}, {doc});\n")
+                    f.write(f"    private static final PyMemberDescriptor pyattr_{k} = new PyMemberDescriptor(singleton, {java_string_literal(k)}, {java_name}::pymember_{k}, {doc});\n")
                 elif v['kind'] == 'getset':
                     doc = 'null' if v['doc'] is None else java_string_literal(v['doc'])
-                    gen_lines.append(f"    private static final PyGetSetDescriptor pyattr_{k} = new PyGetSetDescriptor(singleton, {java_string_literal(k)}, {java_name}::pygetset_{k}, {doc});\n")
+                    f.write(f"    private static final PyGetSetDescriptor pyattr_{k} = new PyGetSetDescriptor(singleton, {java_string_literal(k)}, {java_name}::pygetset_{k}, {doc});\n")
                 elif v['kind'] == 'method':
                     doc = 'null' if v['doc'] is None else java_string_literal(v['doc'])
                     if name in UNIMPLEMENTED_METHODS and k in UNIMPLEMENTED_METHODS[name]:
                         constructor = f'obj -> new {java_name}MethodUnimplemented(obj, {java_string_literal(k)})'
                     else:
                         constructor = f'{java_name}.{java_name}Method_{k}::new'
-                    gen_lines.append(f"    private static final PyMethodDescriptor pyattr_{k} = new PyMethodDescriptor(singleton, {java_string_literal(k)}, {constructor}, {doc});\n")
+                    f.write(f"    private static final PyMethodDescriptor pyattr_{k} = new PyMethodDescriptor(singleton, {java_string_literal(k)}, {constructor}, {doc});\n")
                 elif v['kind'] == 'classmethod':
                     doc = 'null' if v['doc'] is None else java_string_literal(v['doc'])
                     constructor = f'{java_name}ClassMethod_{k}::new'
-                    gen_lines.append(f"    private static final PyClassMethodDescriptor pyattr_{k} = new PyClassMethodDescriptor(singleton, {java_string_literal(k)}, {constructor}, {doc});\n")
+                    f.write(f"    private static final PyClassMethodDescriptor pyattr_{k} = new PyClassMethodDescriptor(singleton, {java_string_literal(k)}, {constructor}, {doc});\n")
                 elif v['kind'] == 'staticmethod':
                     constructor = f'new {java_name}StaticMethod_{k}(singleton)'
-                    gen_lines.append(f'    private static final PyStaticMethod pyattr_{k} = new PyStaticMethod(singleton, {java_string_literal(k)}, {constructor});\n')
+                    f.write(f'    private static final PyStaticMethod pyattr_{k} = new PyStaticMethod(singleton, {java_string_literal(k)}, {constructor});\n')
                 else:
                     assert False, (name, k, v)
-            gen_lines += [
-                f'    private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>({len(attrs)});\n',
-                '    static {\n',
-                *(f'        attrs.put(new PyString("{k}"), pyattr_{k});\n' for k in attrs),
-                '    }\n',
-                '\n',
+            f.write(
+                f'    private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>({len(attrs)});\n'
+                '    static {\n' +
+                ''.join(f'        attrs.put(new PyString("{k}"), pyattr_{k});\n' for k in attrs) +
+                '    }\n'
+                '\n'
                 f'    private {java_name}Type() {{ super({java_string_literal(py_name)}, {java_name}.class, {java_name}::newObj); }}\n'
-                '    @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }\n',
-                '    @Override public PyObject lookupAttr(String name) {\n',
-                '        switch (name) {\n',
-                *(
+                '    @Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }\n'
+                '    @Override public PyObject lookupAttr(String name) {\n'
+                '        switch (name) {\n' +
+                ''.join(
                     f'            case {java_string_literal(k)}: return pyattr_{k};\n'
                     for (k, v) in attrs.items()
-                ),
-                '            default: return null;\n',
-                '        }\n',
-                '    }\n',
-                '}\n',
-                '\n',
-            ]
+                ) +
+                '            default: return null;\n'
+                '        }\n'
+                '    }\n'
+                '}\n'
+                '\n'
+            )
 
             if name in UNIMPLEMENTED_METHODS:
-                gen_lines += [
-                    f'final class {java_name}MethodUnimplemented extends PyBuiltinMethod<{java_name}> {{\n',
-                    '    private final String name;\n',
-                    f'    {java_name}MethodUnimplemented(PyObject _self, String _name) {{ super(({java_name})_self); name = _name; }}\n',
-                    '    @Override public String methodName() { return name; }\n',
-                    '    @Override public PyObject call(PyObject[] args, PyDict kwargs) {\n',
-                    f'        throw new UnsupportedOperationException("{name}." + name + "() unimplemented");\n',
-                    '    }\n',
-                    '}\n',
-                    '\n',
-                ]
-
-            for line in gen_lines:
-                f.write(line)
+                f.write(
+                    f'final class {java_name}MethodUnimplemented extends PyBuiltinMethod<{java_name}> {{\n'
+                    '    private final String name;\n'
+                    f'    {java_name}MethodUnimplemented(PyObject _self, String _name) {{ super(({java_name})_self); name = _name; }}\n'
+                    '    @Override public String methodName() { return name; }\n'
+                    '    @Override public PyObject call(PyObject[] args, PyDict kwargs) {\n'
+                    f'        throw new UnsupportedOperationException("{name}." + name + "() unimplemented");\n'
+                    '    }\n'
+                    '}\n'
+                    '\n'
+                )
 
 def main() -> None:
     parser = argparse.ArgumentParser()
