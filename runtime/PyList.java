@@ -284,16 +284,11 @@ public final class PyList extends PyObject {
         Collections.reverse(items);
         return PyNone.singleton;
     }
-    public PyNone pymethod_sort() {
+    public PyNone sortImpl() {
         Collections.sort(items);
         return PyNone.singleton;
     }
-}
-
-final class PyListMethod_sort extends PyBuiltinMethod<PyList> {
-    PyListMethod_sort(PyObject _self) { super((PyList)_self); }
-    @Override public String methodName() { return "sort"; }
-    @Override public PyNone call(PyObject[] args, PyDict kwargs) {
+    public PyNone pymethod_sort(PyObject[] args, PyDict kwargs) {
         if ((kwargs != null) && kwargs.boolValue()) { // XXX Handle more cases correctly here
             if (kwargs.len() > 2) {
                 throw PyTypeError.raiseFormat("sort() takes at most 2 keyword arguments (%d given)", kwargs.len());
@@ -311,6 +306,6 @@ final class PyListMethod_sort extends PyBuiltinMethod<PyList> {
         } else if (args.length != 0) {
             throw PyTypeError.raise("sort() takes no positional arguments");
         }
-        return self.pymethod_sort();
+        return sortImpl();
     }
 }

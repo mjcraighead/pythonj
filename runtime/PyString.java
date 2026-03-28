@@ -254,7 +254,7 @@ public final class PyString extends PyObject {
         return new PyString(s.toString());
     }
     public PyString pymethod_lower() { return new PyString(value.toLowerCase(Locale.ROOT)); }
-    public PyList pymethod_split(PyObject sep, PyObject maxsplit) {
+    public PyList splitImpl(PyObject sep, PyObject maxsplit) {
         if (sep == PyNone.singleton) {
             throw new UnsupportedOperationException("sep=None unsupported");
         }
@@ -282,6 +282,26 @@ public final class PyString extends PyObject {
         }
         ret.items.add(new PyString(s.toString()));
         return ret;
+    }
+    public PyList pymethod_split(PyObject[] args, PyDict kwargs) {
+        if ((kwargs != null) && kwargs.boolValue()) { // XXX Handle more cases correctly here
+            if (kwargs.len() > 2) {
+                throw PyTypeError.raiseFormat("split() takes at most 2 keyword arguments (%d given)", kwargs.len());
+            }
+            for (var x: kwargs.items.entrySet()) {
+                PyString key = (PyString)x.getKey(); // PyString validated at call site
+                if (!key.value.equals("sep") && !key.value.equals("maxsplit")) {
+                    throw PyTypeError.raise("split() got an unexpected keyword argument " + key.repr());
+                }
+            }
+            throw new IllegalArgumentException("str.split() does not accept kwargs");
+        }
+        if (args.length > 2) {
+            throw PyTypeError.raiseFormat("split() takes at most 2 arguments (%d given)", args.length);
+        }
+        PyObject sep = (args.length >= 1) ? args[0] : PyNone.singleton;
+        PyObject maxsplit = (args.length >= 2) ? args[1] : PyInt.singleton_neg1;
+        return splitImpl(sep, maxsplit);
     }
     public PyBool pymethod_startswith(PyObject prefix, PyObject start, PyObject end) {
         int length = value.length();
@@ -330,29 +350,5 @@ final class PyStringStaticMethod_maketrans extends PyBuiltinMethod<PyType> {
     @Override public String methodName() { return "maketrans"; }
     @Override public PyObject call(PyObject[] args, PyDict kwargs) {
         throw new UnsupportedOperationException("str.maketrans unimplemented");
-    }
-}
-final class PyStringMethod_split extends PyBuiltinMethod<PyString> {
-    PyStringMethod_split(PyObject _self) { super((PyString)_self); }
-    @Override public String methodName() { return "split"; }
-    @Override public PyList call(PyObject[] args, PyDict kwargs) {
-        if ((kwargs != null) && kwargs.boolValue()) { // XXX Handle more cases correctly here
-            if (kwargs.len() > 2) {
-                throw PyTypeError.raiseFormat("split() takes at most 2 keyword arguments (%d given)", kwargs.len());
-            }
-            for (var x: kwargs.items.entrySet()) {
-                PyString key = (PyString)x.getKey(); // PyString validated at call site
-                if (!key.value.equals("sep") && !key.value.equals("maxsplit")) {
-                    throw PyTypeError.raise("split() got an unexpected keyword argument " + key.repr());
-                }
-            }
-            throw new IllegalArgumentException("str.split() does not accept kwargs");
-        }
-        if (args.length > 2) {
-            throw PyTypeError.raiseFormat("split() takes at most 2 arguments (%d given)", args.length);
-        }
-        PyObject sep = (args.length >= 1) ? args[0] : PyNone.singleton;
-        PyObject maxsplit = (args.length >= 2) ? args[1] : PyInt.singleton_neg1;
-        return self.pymethod_split(sep, maxsplit);
     }
 }

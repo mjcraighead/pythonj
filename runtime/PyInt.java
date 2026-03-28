@@ -349,7 +349,7 @@ public final class PyInt extends PyObject {
     public PyBool pymethod_is_integer() {
         return PyBool.true_singleton;
     }
-    public PyBytes pymethod_to_bytes(PyObject length, PyObject byteorder) {
+    public PyBytes toBytesImpl(PyObject length, PyObject byteorder) {
         int len = Math.toIntExact(length.indexValue());
         boolean littleEndian = false;
         if (byteorder != null) {
@@ -385,6 +385,19 @@ public final class PyInt extends PyObject {
             v >>= 8;
         }
         return new PyBytes(out);
+    }
+    public PyBytes pymethod_to_bytes(PyObject[] args, PyDict kwargs) {
+        if ((kwargs != null) && kwargs.boolValue()) {
+            throw new IllegalArgumentException("int.to_bytes() does not accept kwargs");
+        }
+        if (args.length > 3) {
+            throw PyTypeError.raiseFormat("to_bytes() takes at most 3 arguments (%d given)", args.length);
+        } else if (args.length > 2) {
+            throw PyTypeError.raiseFormat("to_bytes() takes at most 2 positional arguments (%d given)", args.length);
+        }
+        PyObject length = (args.length >= 1) ? args[0] : PyInt.singleton_1;
+        PyObject byteorder = (args.length >= 2) ? args[1] : null;
+        return toBytesImpl(length, byteorder);
     }
 }
 
@@ -453,22 +466,5 @@ final class PyIntClassMethod_from_bytes extends PyBuiltinMethod<PyType> {
             }
         }
         return new PyInt(result);
-    }
-}
-final class PyIntMethod_to_bytes extends PyBuiltinMethod<PyInt> {
-    PyIntMethod_to_bytes(PyObject _self) { super((PyInt)_self); }
-    @Override public String methodName() { return "to_bytes"; }
-    @Override public PyBytes call(PyObject[] args, PyDict kwargs) {
-        if ((kwargs != null) && kwargs.boolValue()) {
-            throw new IllegalArgumentException("int.to_bytes() does not accept kwargs");
-        }
-        if (args.length > 3) {
-            throw PyTypeError.raiseFormat("to_bytes() takes at most 3 arguments (%d given)", args.length);
-        } else if (args.length > 2) {
-            throw PyTypeError.raiseFormat("to_bytes() takes at most 2 positional arguments (%d given)", args.length);
-        }
-        PyObject length = (args.length >= 1) ? args[0] : PyInt.singleton_1;
-        PyObject byteorder = (args.length >= 2) ? args[1] : null;
-        return self.pymethod_to_bytes(length, byteorder);
     }
 }
