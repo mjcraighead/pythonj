@@ -764,9 +764,7 @@ class PythonjVisitor(ast.NodeVisitor):
                 elif val.conversion == ord('r'):
                     expr = JavaCreateObject('PyString', [JavaMethodCall(expr, 'repr', [])])
                 elif val.conversion == ord('a'):
-                    expr = JavaMethodCall(JavaField(JavaIdentifier('PyBuiltinFunction_ascii'), 'singleton'), 'call', [
-                        JavaCreateArray('PyObject', [expr]), JavaIdentifier('null')
-                    ])
+                    expr = JavaMethodCall(JavaIdentifier('PyBuiltinFunctionsImpl'), 'pyfunc_ascii', [expr])
                 elif val.conversion != -1:
                     self.error(val.lineno, f'unsupported f string conversion type {val.conversion}')
                 vals.append(JavaMethodCall(expr, 'format', [format_spec]))
