@@ -565,7 +565,7 @@ public final class PyInt extends PyObject {
                 }
             }
             if (bytes == null) {
-                throw PyTypeError.raise("from_bytes() missing required argument 'bytes' (pos 1)");
+                throw Runtime.raiseMissingRequiredArg("from_bytes", "bytes", 1);
             }
             if (unknownKw != null) {
                 throw Runtime.raiseUnexpectedKwArg("from_bytes", unknownKw);
@@ -575,7 +575,7 @@ public final class PyInt extends PyObject {
         } else if (argsLength > 2) {
             throw Runtime.raiseAtMostPosArgs("from_bytes", 2, argsLength);
         } else if (argsLength < 1) {
-            throw PyTypeError.raise("from_bytes() missing required argument 'bytes' (pos 1)");
+            throw Runtime.raiseMissingRequiredArg("from_bytes", "bytes", 1);
         }
         return fromBytesImpl(bytes, byteorder, signedObj);
     }
