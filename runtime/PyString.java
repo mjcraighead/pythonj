@@ -284,23 +284,45 @@ public final class PyString extends PyObject {
         return ret;
     }
     public PyList pymethod_split(PyObject[] args, PyDict kwargs) {
-        if ((kwargs != null) && kwargs.boolValue()) { // XXX Handle more cases correctly here
-            if (kwargs.len() > 2) {
+        PyObject sep = null;
+        PyObject maxsplit = null;
+        if ((kwargs != null) && kwargs.boolValue()) {
+            if ((args.length == 0) && (kwargs.len() > 2)) {
                 throw PyTypeError.raiseFormat("split() takes at most 2 keyword arguments (%d given)", kwargs.len());
             }
+            if (args.length + kwargs.len() > 2) {
+                throw PyTypeError.raiseFormat("split() takes at most 2 arguments (%d given)", args.length + kwargs.len());
+            }
+        } else if (args.length > 2) {
+            throw PyTypeError.raiseFormat("split() takes at most 2 arguments (%d given)", args.length);
+        }
+        if (args.length >= 1) {
+            sep = args[0];
+        }
+        if (args.length >= 2) {
+            maxsplit = args[1];
+        }
+        if ((kwargs != null) && kwargs.boolValue()) {
             for (var x: kwargs.items.entrySet()) {
                 PyString key = (PyString)x.getKey(); // PyString validated at call site
-                if (!key.value.equals("sep") && !key.value.equals("maxsplit")) {
+                if (key.value.equals("sep")) {
+                    if (sep != null) {
+                        throw PyTypeError.raise("argument for split() given by name ('sep') and position (1)");
+                    }
+                    sep = x.getValue();
+                } else if (key.value.equals("maxsplit")) {
+                    maxsplit = x.getValue();
+                } else {
                     throw Runtime.raiseUnexpectedKwArg("split", key.value);
                 }
             }
-            throw new IllegalArgumentException("str.split() does not accept kwargs");
         }
-        if (args.length > 2) {
-            throw PyTypeError.raiseFormat("split() takes at most 2 arguments (%d given)", args.length);
+        if (sep == null) {
+            sep = PyNone.singleton;
         }
-        PyObject sep = (args.length >= 1) ? args[0] : PyNone.singleton;
-        PyObject maxsplit = (args.length >= 2) ? args[1] : PyInt.singleton_neg1;
+        if (maxsplit == null) {
+            maxsplit = PyInt.singleton_neg1;
+        }
         return splitImpl(sep, maxsplit);
     }
     public PyBool pymethod_startswith(PyObject prefix, PyObject start, PyObject end) {
