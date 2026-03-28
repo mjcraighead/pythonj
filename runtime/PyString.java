@@ -290,11 +290,7 @@ public final class PyString extends PyObject {
         if ((kwargs != null) && kwargs.boolValue()) {
             long kwargsLen = kwargs.len();
             if (argsLength + kwargsLen > 2) {
-                if (argsLength == 0) {
-                    throw Runtime.raiseAtMostKwArgs("split", 2, kwargsLen);
-                } else {
-                    throw Runtime.raiseAtMostArgs("split", 2, argsLength + kwargsLen);
-                }
+                throw Runtime.raiseAtMostKwArgs("split", 2, argsLength, kwargsLen);
             }
             for (var x: kwargs.items.entrySet()) {
                 PyString key = (PyString)x.getKey(); // PyString validated at call site

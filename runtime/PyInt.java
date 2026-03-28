@@ -409,11 +409,8 @@ public final class PyInt extends PyObject {
         PyObject signed = PyBool.false_singleton;
         if ((kwargs != null) && kwargs.boolValue()) {
             long kwargsLen = kwargs.len();
-            if ((argsLength == 0) && (kwargsLen > 3)) {
-                throw Runtime.raiseAtMostKwArgs("to_bytes", 3, kwargsLen);
-            }
             if (argsLength + kwargsLen > 3) {
-                throw Runtime.raiseAtMostArgs("to_bytes", 3, argsLength + kwargsLen);
+                throw Runtime.raiseAtMostKwArgs("to_bytes", 3, argsLength, kwargsLen);
             }
             String unknownKw = null;
             for (var x: kwargs.items.entrySet()) {
@@ -539,11 +536,8 @@ public final class PyInt extends PyObject {
         PyObject signedObj = PyBool.false_singleton;
         if ((kwargs != null) && kwargs.boolValue()) {
             long kwargsLen = kwargs.len();
-            if ((argsLength == 0) && (kwargsLen > 3)) {
-                throw Runtime.raiseAtMostKwArgs("from_bytes", 3, kwargsLen);
-            }
             if (argsLength + kwargsLen > 3) {
-                throw Runtime.raiseAtMostArgs("from_bytes", 3, argsLength + kwargsLen);
+                throw Runtime.raiseAtMostKwArgs("from_bytes", 3, argsLength, kwargsLen);
             }
             String unknownKw = null;
             for (var x: kwargs.items.entrySet()) {

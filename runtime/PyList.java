@@ -315,7 +315,7 @@ public final class PyList extends PyObject {
         PyObject reverse = PyBool.false_singleton;
         if ((kwargs != null) && kwargs.boolValue()) { // XXX Handle more cases correctly here
             if (kwargs.len() > 2) {
-                throw Runtime.raiseAtMostKwArgs("sort", 2, kwargs.len());
+                throw Runtime.raiseAtMostKwArgs("sort", 2, 0, kwargs.len());
             }
             for (var x: kwargs.items.entrySet()) {
                 PyString kw = (PyString)x.getKey(); // PyString validated at call site

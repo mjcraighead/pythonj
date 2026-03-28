@@ -172,7 +172,7 @@ final class PyBuiltinFunctionsImpl {
         PyObject keyFunc = PyNone.singleton;
         if ((kwargs != null) && kwargs.boolValue()) {
             if (kwargs.len() > 2) {
-                throw Runtime.raiseAtMostKwArgs(name, 2, kwargs.len());
+                throw Runtime.raiseAtMostKwArgs(name, 2, 0, kwargs.len());
             }
             for (var x: kwargs.items.entrySet()) {
                 PyString kw = (PyString)x.getKey(); // PyString validated at call site

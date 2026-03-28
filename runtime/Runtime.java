@@ -328,8 +328,12 @@ public final class Runtime {
     public static PyRaise raiseAtMostPosArgs(String name, long max, long given) {
         return PyTypeError.raiseFormat("%s() takes at most %d positional arguments (%d given)", name, max, given);
     }
-    public static PyRaise raiseAtMostKwArgs(String name, long max, long given) {
-        return PyTypeError.raiseFormat("%s() takes at most %d keyword arguments (%d given)", name, max, given);
+    public static PyRaise raiseAtMostKwArgs(String name, long max, long argsLength, long kwargsLen) {
+        if (argsLength == 0) {
+            return PyTypeError.raiseFormat("%s() takes at most %d keyword arguments (%d given)", name, max, kwargsLen);
+        } else {
+            return raiseAtMostArgs(name, max, argsLength + kwargsLen);
+        }
     }
     public static PyRaise raiseMissingRequiredArg(String name, String argName, int position) {
         return PyTypeError.raiseFormat("%s() missing required argument %s (pos %d)", name, PyString.reprOf(argName), position);
