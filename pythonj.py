@@ -567,11 +567,12 @@ class Scope:
 # will compile into.  Partial mitigations are likely to be easier than a total fix.
 # XXX "invokedynamic" might help us a lot, but there is no way to access it from Java source
 class PythonjVisitor(ast.NodeVisitor):
-    __slots__ = ('path', 'n_errors', 'n_lambdas', 'scope', 'global_code', 'code',
+    __slots__ = ('path', 'n_errors', 'n_lambdas', 'qualname_stack', 'scope', 'global_code', 'code',
                  'emit_ctx', 'break_name', 'functions', 'allow_intrinsics')
     path: str
     n_errors: int
     n_lambdas: int
+    qualname_stack: list[str]
     scope: Scope
     global_code: list[JavaStatement]
     code: list[JavaStatement]
@@ -584,6 +585,7 @@ class PythonjVisitor(ast.NodeVisitor):
         self.path = path
         self.n_errors = 0
         self.n_lambdas = 0
+        self.qualname_stack = []
         self.scope = Scope(None, ScopeKind.MODULE)
         self.global_code = [JavaVariableDecl('PyObject', 'expr_discard', None)] # XXX remove this variable if not needed
         self.code = self.global_code
@@ -1065,7 +1067,7 @@ class PythonjVisitor(ast.NodeVisitor):
             self.code.append(JavaAssignStatement(JavaIdentifier('expr_discard'), value))
             self.scope.used_expr_discard = True
 
-    def check_args(self, lineno: int, args: ast.arguments) -> list[str]:
+    def check_args(self, lineno: int, args: ast.arguments) -> tuple[list[str], list[None | bool | int | str | bytes]]:
         if args.posonlyargs:
             self.error(lineno, 'position-only arguments are unsupported')
         if args.vararg:
@@ -1076,13 +1078,20 @@ class PythonjVisitor(ast.NodeVisitor):
             self.error(lineno, 'kw-only argument defaults are unsupported')
         if args.kwarg:
             self.error(lineno, '**kwargs are unsupported')
-        if args.defaults:
-            self.error(lineno, 'argument defaults are unsupported')
+        defaults: list[None | bool | int | str | bytes] = []
+        for default in args.defaults:
+            if isinstance(default, ast.Constant) and (
+                (default.value is None) or (default.value is False) or (default.value is True) or
+                (type(default.value) is int) or (type(default.value) is str) or (type(default.value) is bytes)
+            ):
+                defaults.append(default.value)
+            else:
+                self.error(lineno, 'only constant argument defaults are supported')
         for arg in args.args:
             # arg.type_comment is ignored; we only plan to support "real" type annotations.
             if arg.annotation:
                 self.error(lineno, 'argument type annotations are unsupported')
-        return [arg.arg for arg in args.args]
+        return ([arg.arg for arg in args.args], defaults)
 
     @contextmanager
     def new_function(self, lineno: int, symbol_table: SymbolTableVisitor, func_type: str) -> Iterator[None]:
@@ -1109,44 +1118,106 @@ class PythonjVisitor(ast.NodeVisitor):
 
         self.scope = saved_scope
 
-    def add_function(self, py_name: str, java_name: str, arg_names: list[str], body: list[JavaStatement],
+    def add_function(self, py_name: str, java_name: str, arg_names: list[str], arg_defaults: list[None | bool | int | str | bytes], body: list[JavaStatement],
                      invisible_args: bool = False) -> None:
         n_args = len(arg_names)
-        func_code: list[JavaStatement] = [
-            *if_statement(
-                JavaBinaryOp('&&', JavaBinaryOp('!=', JavaIdentifier('kwargs'), JavaIdentifier('null')), bool_value(JavaIdentifier('kwargs'))),
-                [JavaThrowStatement(JavaCreateObject('IllegalArgumentException', [JavaStrLiteral(f'{py_name}() does not accept kwargs')]))],
-                [],
-            ),
-            *if_statement(
-                JavaBinaryOp('!=', JavaField(JavaIdentifier('args'), 'length'), JavaIntLiteral(n_args, '')),
-                [JavaThrowStatement(JavaMethodCall(JavaIdentifier('Runtime'), 'raiseUserExactArgs', [
-                    JavaIdentifier('args'), JavaIntLiteral(n_args, ''), JavaStrLiteral(py_name),
-                    *(JavaStrLiteral(arg) for arg in arg_names),
-                ]))],
-                [],
-            ),
-            *(JavaVariableDecl(
-                'PyObject', arg if invisible_args else f'pylocal_{arg}', JavaArrayAccess(JavaIdentifier('args'), JavaIntLiteral(i, ''))
-            ) for (i, arg) in enumerate(arg_names)),
-            *((JavaVariableDecl('PyObject', 'expr_discard', None),) if self.scope.used_expr_discard else ()),
-            # XXX It's tempting to assign Java null here, but this makes it far too easy for null to leak out into the runtime
-            *(JavaVariableDecl('PyObject', f'pylocal_{name}', None) for name in sorted(self.scope.locals) if invisible_args or name not in arg_names),
-            *body,
-            JavaReturnStatement(JavaPyConstant(None)),
-        ]
-
-        assert java_name not in self.functions
-        self.functions[java_name] = [
+        n_required = n_args - len(arg_defaults)
+        local_arg_names = [arg if invisible_args else f'pylocal_{arg}' for arg in arg_names]
+        arg_names_java = ', '.join(java_string_literal(arg) for arg in arg_names)
+        required_arg_names_java = ', '.join(java_string_literal(arg) for arg in arg_names[:n_required])
+        func_code = [
             f'private static final class {java_name} extends PyFunction {{',
             f'{java_name}() {{',
             f'super({java_string_literal(py_name)});',
             '}',
             '@Override public PyObject call(PyObject[] args, PyDict kwargs) {',
-            *block_emit_java(block_simplify(func_code), self.emit_ctx),
-            '}',
-            '}',
+            'int argsLength = args.length;',
         ]
+        for (i, name) in enumerate(local_arg_names):
+            if i < n_required:
+                func_code.append(f'PyObject {name} = null;')
+            else:
+                func_code.append(f'PyObject {name} = {JavaPyConstant(arg_defaults[i - n_required]).emit_java(self.emit_ctx)};')
+        if (n_required == n_args):
+            func_code.extend([
+                'if ((kwargs == null) || !kwargs.boolValue()) {',
+                f'if (argsLength != {n_args}) {{',
+                f'throw Runtime.raiseUserExactArgs(args, {n_args}, {java_string_literal(py_name)}{", " if arg_names_java else ""}{arg_names_java});',
+                '}',
+            ])
+        else:
+            func_code.append('if ((kwargs == null) || !kwargs.boolValue()) {')
+            if n_required != 0:
+                func_code.extend([
+                    f'if (argsLength < {n_required}) {{',
+                    f'throw Runtime.raiseUserMissingArgs(argsLength, {java_string_literal(py_name)}, {required_arg_names_java});',
+                    '}',
+                ])
+            func_code.extend([
+                f'if (argsLength > {n_args}) {{',
+                f'throw Runtime.raiseUserFromToArgs(args, {n_required}, {n_args}, {java_string_literal(py_name)});',
+                '}',
+            ])
+        for (i, name) in enumerate(local_arg_names):
+            func_code.append(f'if (argsLength > {i}) {{ {name} = args[{i}]; }}')
+        func_code.extend([
+            '} else {',
+            f'boolean[] seen = new boolean[{n_args}];',
+        ])
+        for (i, name) in enumerate(local_arg_names):
+            func_code.append(f'if (argsLength > {i}) {{ {name} = args[{i}]; seen[{i}] = true; }}')
+        func_code.extend([
+            'for (var x: kwargs.items.entrySet()) {',
+            'String kwName = ((PyString)x.getKey()).value;',
+            'PyObject kwValue = x.getValue();',
+        ])
+        if arg_names:
+            for (i, arg_name) in enumerate(arg_names):
+                prefix = 'if' if i == 0 else 'else if'
+                func_code.extend([
+                    f'{prefix} (kwName.equals({java_string_literal(arg_name)})) {{',
+                    f'if (seen[{i}]) {{',
+                    f'throw Runtime.raiseUserMultipleValues({java_string_literal(py_name)}, {java_string_literal(arg_name)});',
+                    '}',
+                    f'{local_arg_names[i]} = kwValue;',
+                    f'seen[{i}] = true;',
+                    '}',
+                ])
+        func_code.extend([
+            ('else {' if arg_names else '{'),
+            f'throw Runtime.raiseUserUnexpectedKwArg({java_string_literal(py_name)}, kwName);',
+            '}',
+            '}',
+        ])
+        if n_args != 0:
+            func_code.extend([
+                f'if (argsLength > {n_args}) {{',
+                f'throw Runtime.raiseUserFromToArgs(args, {n_required}, {n_args}, {java_string_literal(py_name)});',
+                '}',
+            ])
+            if n_required != 0:
+                func_code.append(f'if ({ " || ".join(f"!seen[{i}]" for i in range(n_required)) }) {{')
+                func_code.append(f'throw Runtime.raiseUserMissingKwArgs({java_string_literal(py_name)}, seen, {required_arg_names_java});')
+                func_code.append('}')
+        else:
+            func_code.extend([
+                'if (argsLength != 0) {',
+                f'throw Runtime.raiseUserExactArgs(args, 0, {java_string_literal(py_name)});',
+                '}',
+            ])
+        func_code.append('}')
+        if self.scope.used_expr_discard:
+            func_code.append('PyObject expr_discard;')
+        for name in sorted(self.scope.locals):
+            if invisible_args or name not in arg_names:
+                func_code.append(f'PyObject pylocal_{name};')
+        func_code.extend(block_emit_java(block_simplify([*body, JavaReturnStatement(JavaPyConstant(None))]), self.emit_ctx))
+        func_code.extend([
+            '}',
+            '}',
+        ])
+        assert java_name not in self.functions
+        self.functions[java_name] = func_code
 
     def visit_FunctionDef(self, node) -> None:
         # node.type_comment is ignored; we only plan to support "real" type annotations.
@@ -1157,7 +1228,8 @@ class PythonjVisitor(ast.NodeVisitor):
         if node.type_params:
             self.error(node.lineno, 'function type parameters are unsupported')
 
-        arg_names = self.check_args(node.lineno, node.args)
+        (arg_names, arg_defaults) = self.check_args(node.lineno, node.args)
+        qualname = node.name if not self.qualname_stack else f'{self.qualname_stack[-1]}.<locals>.{node.name}'
         java_name = f'pyfunc_{node.name}'
         self.code.append(JavaAssignStatement(self.ident_expr(node.name), JavaCreateObject(java_name, [])))
 
@@ -1167,11 +1239,16 @@ class PythonjVisitor(ast.NodeVisitor):
             symbol_table.visit(statement)
 
         with self.new_function(node.lineno, symbol_table, 'nested function'):
-            body = self.visit_block(node.body)
-            self.add_function(node.name, java_name, arg_names, body)
+            self.qualname_stack.append(qualname)
+            try:
+                body = self.visit_block(node.body)
+                self.add_function(qualname, java_name, arg_names, arg_defaults, body)
+            finally:
+                self.qualname_stack.pop()
 
     def visit_Lambda(self, node) -> JavaExpr:
-        arg_names = self.check_args(node.lineno, node.args)
+        (arg_names, arg_defaults) = self.check_args(node.lineno, node.args)
+        qualname = '<lambda>' if not self.qualname_stack else f'{self.qualname_stack[-1]}.<locals>.<lambda>'
         java_name = f'pylambda{self.n_lambdas}'
         self.n_lambdas += 1
 
@@ -1182,9 +1259,13 @@ class PythonjVisitor(ast.NodeVisitor):
         assert not symbol_table.nonlocals, symbol_table.nonlocals # should not be possible in a lambda
 
         with self.new_function(node.lineno, symbol_table, 'lambda'):
-            with self.new_block() as body:
-                body.append(JavaReturnStatement(self.visit(node.body)))
-            self.add_function('<lambda>', java_name, arg_names, body)
+            self.qualname_stack.append(qualname)
+            try:
+                with self.new_block() as body:
+                    body.append(JavaReturnStatement(self.visit(node.body)))
+                self.add_function(qualname, java_name, arg_names, arg_defaults, body)
+            finally:
+                self.qualname_stack.pop()
 
         return JavaCreateObject(java_name, [])
 
@@ -1241,7 +1322,7 @@ class PythonjVisitor(ast.NodeVisitor):
                     *statements,
                     JavaReturnStatement(JavaIdentifier(temp_result)),
                 ]
-            self.add_function(py_name, java_name, [arg_name], body, invisible_args=True)
+            self.add_function(py_name, java_name, [arg_name], [], body, invisible_args=True)
 
         return JavaMethodCall(JavaCreateObject(java_name, []), 'call', [JavaCreateArray('PyObject', [self.visit(generators[0].iter)]), JavaIdentifier('null')])
 

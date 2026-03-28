@@ -300,6 +300,53 @@ public final class Runtime {
             return PyTypeError.raise(s.toString());
         }
     }
+    public static PyRaise raiseUserMissingArgs(int nBound, String name, String... argNames) {
+        int missing = argNames.length - nBound;
+        StringBuilder s = new StringBuilder(String.format("%s() missing %d required positional argument%s:", name, missing, (missing == 1) ? "" : "s"));
+        for (int i = nBound; i < argNames.length; i++) {
+            s.append(" '").append(argNames[i]).append("'");
+            if ((missing >= 3) && (i != argNames.length - 1)) {
+                s.append(",");
+            }
+            if (i == argNames.length - 2) {
+                s.append(" and");
+            }
+        }
+        return PyTypeError.raise(s.toString());
+    }
+    public static PyRaise raiseUserMissingKwArgs(String name, boolean[] seen, String... argNames) {
+        int missing = 0;
+        for (int i = 0; i < argNames.length; i++) {
+            if (!seen[i]) {
+                missing++;
+            }
+        }
+        StringBuilder s = new StringBuilder(String.format("%s() missing %d required positional argument%s:", name, missing, (missing == 1) ? "" : "s"));
+        int missingSeen = 0;
+        for (int i = 0; i < argNames.length; i++) {
+            if (!seen[i]) {
+                missingSeen++;
+                s.append(" '").append(argNames[i]).append("'");
+                if ((missing >= 3) && (missingSeen != missing)) {
+                    s.append(",");
+                }
+                if (missingSeen == missing - 1) {
+                    s.append(" and");
+                }
+            }
+        }
+        return PyTypeError.raise(s.toString());
+    }
+    public static PyRaise raiseUserFromToArgs(PyObject[] args, int min, int max, String name) {
+        return PyTypeError.raiseFormat("%s() takes from %d to %d positional arguments but %d %s given",
+            name, min, max, args.length, (args.length == 1) ? "was" : "were");
+    }
+    public static PyRaise raiseUserUnexpectedKwArg(String name, String kwName) {
+        return PyTypeError.raiseFormat("%s() got an unexpected keyword argument %s", name, PyString.reprOf(kwName));
+    }
+    public static PyRaise raiseUserMultipleValues(String name, String argName) {
+        return PyTypeError.raiseFormat("%s() got multiple values for argument %s", name, PyString.reprOf(argName));
+    }
     public static PyRaise raiseNamedReadOnlyAttr(PyType owner, String key) {
         return PyAttributeError.raise(PyString.reprOf(owner.name()) + " object attribute " + PyString.reprOf(key) + " is read-only");
     }
