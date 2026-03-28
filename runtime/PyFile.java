@@ -92,8 +92,12 @@ final class PyTextIOWrapperMethod_close extends PyBuiltinMethod<PyTextIOWrapper>
     PyTextIOWrapperMethod_close(PyObject _self) { super((PyTextIOWrapper)_self); }
     @Override public String methodName() { return "close"; }
     @Override public PyNone call(PyObject[] args, PyDict kwargs) {
-        Runtime.requireNoKwArgs(kwargs, "TextIOWrapper.close");
-        Runtime.requireExactArgsAlt(args, 0, "TextIOWrapper.close");
+        if ((kwargs != null) && kwargs.boolValue()) {
+            throw Runtime.raiseNoKwArgs("TextIOWrapper.close");
+        }
+        if (args.length != 0) {
+            throw Runtime.raiseExactArgsAlt(args, 0, "TextIOWrapper.close");
+        }
         return self.pymethod_close();
     }
 }
@@ -162,8 +166,12 @@ final class PyBufferedReaderMethod_close extends PyBuiltinMethod<PyBufferedReade
     PyBufferedReaderMethod_close(PyObject _self) { super((PyBufferedReader)_self); }
     @Override public String methodName() { return "close"; }
     @Override public PyNone call(PyObject[] args, PyDict kwargs) {
-        Runtime.requireNoKwArgs(kwargs, "BufferedReader.close");
-        Runtime.requireExactArgsAlt(args, 0, "BufferedReader.close");
+        if ((kwargs != null) && kwargs.boolValue()) {
+            throw Runtime.raiseNoKwArgs("BufferedReader.close");
+        }
+        if (args.length != 0) {
+            throw Runtime.raiseExactArgsAlt(args, 0, "BufferedReader.close");
+        }
         return self.pymethod_close();
     }
 }

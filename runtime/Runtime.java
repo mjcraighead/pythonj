@@ -284,11 +284,6 @@ public final class Runtime {
             throw raiseExactArgs(args, n, name);
         }
     }
-    public static void requireExactArgsAlt(PyObject[] args, int n, String name) {
-        if (args.length != n) {
-            throw raiseExactArgsAlt(args, n, name);
-        }
-    }
     public static PyRaise raiseUserExactArgs(PyObject[] args, int n, String name, String... argNames) {
         if (args.length > n) {
             return PyTypeError.raiseFormat("%s() takes %d positional argument%s but %d %s given",
