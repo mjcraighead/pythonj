@@ -108,19 +108,7 @@ public final class PyRange extends PyObject {
     static PyObject pymember_start(PyObject obj) { return new PyInt(((PyRange)obj).start); }
     static PyObject pymember_step(PyObject obj) { return new PyInt(((PyRange)obj).step); }
     static PyObject pymember_stop(PyObject obj) { return new PyInt(((PyRange)obj).stop); }
-}
 
-final class PyRangeMethod_count extends PyBuiltinMethod<PyRange> {
-    PyRangeMethod_count(PyObject _self) { super((PyRange)_self); }
-    @Override public String methodName() { return "count"; }
-    @Override public PyObject call(PyObject[] args, PyDict kwargs) {
-        throw new UnsupportedOperationException("range.count() unimplemented");
-    }
-}
-final class PyRangeMethod_index extends PyBuiltinMethod<PyRange> {
-    PyRangeMethod_index(PyObject _self) { super((PyRange)_self); }
-    @Override public String methodName() { return "index"; }
-    @Override public PyObject call(PyObject[] args, PyDict kwargs) {
-        throw new UnsupportedOperationException("range.index() unimplemented");
-    }
+    public PyObject pymethod_count(PyObject arg) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_index(PyObject arg) { throw new UnsupportedOperationException(); }
 }

@@ -1380,6 +1380,7 @@ GEN_METHODS = {
         'index': [REQUIRED, 'null', 'null'], 'insert': [REQUIRED, REQUIRED], 'pop': ['PyInt.singleton_neg1'],
         'remove': [REQUIRED], 'reverse': [], 'sort': [VARARGS, KWARGS],
     },
+    'range': {'count': [REQUIRED], 'index': [REQUIRED]},
     'set': {
         'add': [REQUIRED], 'clear': [], 'copy': [], 'difference': [VARARGS], 'difference_update': [VARARGS],
         'discard': [REQUIRED], 'isdisjoint': [REQUIRED], 'intersection': [VARARGS],
