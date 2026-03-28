@@ -1337,22 +1337,19 @@ UNIMPLEMENTED_METHODS = {
         'translate', 'upper', 'zfill',
     },
     'bytes': {
-        'capitalize', 'center', 'count', 'decode', 'endswith', 'expandtabs', 'find', 'hex', 'index',
-        'isalnum', 'isalpha', 'isascii', 'isdigit', 'islower', 'isspace', 'istitle', 'isupper', 'join',
-        'ljust', 'lower', 'lstrip', 'partition', 'removeprefix', 'removesuffix', 'replace', 'rfind',
+        'center', 'count', 'decode', 'endswith', 'expandtabs', 'find', 'hex', 'index', 'join',
+        'ljust', 'lstrip', 'partition', 'removeprefix', 'removesuffix', 'replace', 'rfind',
         'rindex', 'rjust', 'rpartition', 'rsplit', 'rstrip', 'split', 'splitlines', 'startswith', 'strip',
-        'swapcase', 'title', 'translate', 'upper', 'zfill',
+        'translate', 'zfill',
     },
     'set': {
-        'copy', 'difference', 'difference_update', 'intersection', 'intersection_update', 'isdisjoint', 'issubset',
-        'issuperset', 'pop', 'remove', 'symmetric_difference', 'symmetric_difference_update', 'union',
+        'difference', 'difference_update', 'intersection', 'intersection_update',
+        'symmetric_difference', 'symmetric_difference_update', 'union',
     },
     'str': {
-        'capitalize', 'casefold', 'center', 'count', 'encode', 'endswith', 'expandtabs', 'format', 'format_map',
-        'index', 'isalnum', 'isalpha', 'isascii', 'isdecimal', 'isdigit', 'isidentifier', 'islower', 'isnumeric',
-        'isprintable', 'isspace', 'istitle', 'isupper', 'ljust', 'lstrip', 'partition', 'removeprefix',
-        'removesuffix', 'replace', 'rfind', 'rindex', 'rjust', 'rpartition', 'rsplit', 'rstrip', 'splitlines',
-        'strip', 'swapcase', 'title', 'translate', 'zfill',
+        'center', 'count', 'encode', 'endswith', 'expandtabs', 'format', 'format_map', 'index', 'ljust',
+        'lstrip', 'partition', 'removeprefix', 'removesuffix', 'replace', 'rfind', 'rindex', 'rjust',
+        'rpartition', 'rsplit', 'rstrip', 'splitlines', 'strip', 'translate', 'zfill',
     },
     'type': {'mro'},
     '_io.BufferedReader': {
@@ -1365,8 +1362,13 @@ UNIMPLEMENTED_METHODS = {
     },
     'BaseException': {'add_note', 'with_traceback'},
 }
+
 REQUIRED = object()
 GEN_METHODS = {
+    'bytes': {
+        'capitalize': [], 'isalnum': [], 'isalpha': [], 'isascii': [], 'isdigit': [], 'islower': [],
+        'isspace': [], 'istitle': [], 'isupper': [], 'lower': [], 'swapcase': [], 'title': [], 'upper': [],
+    },
     'dict': {
         'clear': [], 'copy': [], 'get': [REQUIRED, 'PyNone.singleton'], 'items': [], 'keys': [],
         'pop': [REQUIRED, 'null'], 'popitem': [], 'setdefault': [REQUIRED, 'PyNone.singleton'], 'values': [],
@@ -1378,11 +1380,17 @@ GEN_METHODS = {
         'append': [REQUIRED], 'clear': [], 'copy': [], 'count': [REQUIRED], 'extend': [REQUIRED],
         'insert': [REQUIRED, REQUIRED], 'pop': ['PyInt.singleton_neg1'], 'remove': [REQUIRED], 'reverse': [],
     },
-    'set': {'add': [REQUIRED], 'clear': [], 'discard': [REQUIRED]},
+    'set': {
+        'add': [REQUIRED], 'clear': [], 'copy': [], 'discard': [REQUIRED], 'isdisjoint': [REQUIRED],
+        'issubset': [REQUIRED], 'issuperset': [REQUIRED], 'pop': [], 'remove': [REQUIRED],
+    },
     'slice': {'indices': [REQUIRED]},
     'str': {
-        'find': [REQUIRED, 'PyNone.singleton', 'PyNone.singleton'], 'join': [REQUIRED], 'lower': [],
-        'startswith': [REQUIRED, 'PyNone.singleton', 'PyNone.singleton'], 'upper': [],
+        'capitalize': [], 'casefold': [], 'find': [REQUIRED, 'PyNone.singleton', 'PyNone.singleton'],
+        'isalnum': [], 'isalpha': [], 'isascii': [], 'isdecimal': [], 'isdigit': [], 'isidentifier': [],
+        'islower': [], 'isnumeric': [], 'isprintable': [], 'isspace': [], 'istitle': [], 'isupper': [],
+        'join': [REQUIRED], 'lower': [], 'startswith': [REQUIRED, 'PyNone.singleton', 'PyNone.singleton'],
+        'swapcase': [], 'title': [], 'upper': [],
     },
     'tuple': {'count': [REQUIRED], 'index': [REQUIRED, 'null', 'null']},
     '_io.BufferedReader': {'close': []},

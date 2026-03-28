@@ -242,6 +242,20 @@ public final class PyBytes extends PyObject {
         }
         return s + "'";
     }
+
+    public PyObject pymethod_capitalize() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_isalnum() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_isalpha() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_isascii() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_isdigit() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_islower() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_isspace() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_istitle() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_isupper() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_lower() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_swapcase() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_title() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_upper() { throw new UnsupportedOperationException(); }
 }
 
 final class PyBytesClassMethod_fromhex extends PyBuiltinMethod<PyType> {

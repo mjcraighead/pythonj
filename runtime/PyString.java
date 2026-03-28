@@ -306,6 +306,23 @@ public final class PyString extends PyObject {
         }
     }
     public PyString pymethod_upper() { return new PyString(value.toUpperCase(Locale.ROOT)); }
+
+    public PyObject pymethod_capitalize() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_casefold() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_isalnum() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_isalpha() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_isascii() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_isdecimal() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_isdigit() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_isidentifier() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_islower() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_isnumeric() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_isprintable() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_isspace() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_istitle() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_isupper() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_swapcase() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_title() { throw new UnsupportedOperationException(); }
 }
 
 final class PyStringStaticMethod_maketrans extends PyBuiltinMethod<PyType> {

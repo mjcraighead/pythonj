@@ -233,6 +233,13 @@ public final class PySet extends PyObject {
         }
         return PyNone.singleton;
     }
+
+    public PyObject pymethod_copy() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_isdisjoint(PyObject other) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_issubset(PyObject other) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_issuperset(PyObject other) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_pop() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_remove(PyObject elem) { throw new UnsupportedOperationException(); }
 }
 
 final class PySetMethod_update extends PyBuiltinMethod<PySet> {
