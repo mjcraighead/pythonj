@@ -288,16 +288,14 @@ public final class PyString extends PyObject {
         PyObject sep = (argsLength >= 1) ? args[0] : null;
         PyObject maxsplit = (argsLength >= 2) ? args[1] : null;
         if ((kwargs != null) && kwargs.boolValue()) {
-            if ((argsLength == 0) && (kwargs.len() > 2)) {
-                throw Runtime.raiseAtMostKwArgs("split", 2, kwargs.len());
+            long kwargsLen = kwargs.len();
+            if (argsLength + kwargsLen > 2) {
+                if (argsLength == 0) {
+                    throw Runtime.raiseAtMostKwArgs("split", 2, kwargsLen);
+                } else {
+                    throw Runtime.raiseAtMostArgs("split", 2, argsLength + kwargsLen);
+                }
             }
-            if (argsLength + kwargs.len() > 2) {
-                throw Runtime.raiseAtMostArgs("split", 2, argsLength + kwargs.len());
-            }
-        } else if (argsLength > 2) {
-            throw Runtime.raiseAtMostArgs("split", 2, argsLength);
-        }
-        if ((kwargs != null) && kwargs.boolValue()) {
             for (var x: kwargs.items.entrySet()) {
                 PyString key = (PyString)x.getKey(); // PyString validated at call site
                 if (key.value.equals("sep")) {
@@ -311,6 +309,8 @@ public final class PyString extends PyObject {
                     throw Runtime.raiseUnexpectedKwArg("split", key.value);
                 }
             }
+        } else if (argsLength > 2) {
+            throw Runtime.raiseAtMostArgs("split", 2, argsLength);
         }
         if (sep == null) {
             sep = PyNone.singleton;
