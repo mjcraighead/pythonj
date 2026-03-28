@@ -43,17 +43,6 @@ class PyBaseException extends PyTruthyObject {
     }
 }
 
-// BEGIN GENERATED CODE: PyBaseException
-final class PyBaseExceptionMethodUnimplemented extends PyBuiltinMethod<PyBaseException> {
-    private final String name;
-    PyBaseExceptionMethodUnimplemented(PyObject _self, String _name) { super((PyBaseException)_self); name = _name; }
-    @Override public String methodName() { return name; }
-    @Override public PyObject call(PyObject[] args, PyDict kwargs) {
-        throw new UnsupportedOperationException("BaseException." + name + "() unimplemented");
-    }
-}
-// END GENERATED CODE: PyBaseException
-
 class PyException extends PyBaseException {
     PyException(PyObject[] _args) { super(_args); }
     @Override public PyBuiltinType type() { return PyExceptionType.singleton; }

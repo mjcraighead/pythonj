@@ -386,16 +386,6 @@ public final class PyString extends PyObject {
     public PyString pymethod_upper() { return new PyString(value.toUpperCase(Locale.ROOT)); }
 }
 
-// BEGIN GENERATED CODE: PyString
-final class PyStringMethodUnimplemented extends PyBuiltinMethod<PyString> {
-    private final String name;
-    PyStringMethodUnimplemented(PyObject _self, String _name) { super((PyString)_self); name = _name; }
-    @Override public String methodName() { return name; }
-    @Override public PyObject call(PyObject[] args, PyDict kwargs) {
-        throw new UnsupportedOperationException("str." + name + "() unimplemented");
-    }
-}
-// END GENERATED CODE: PyString
 final class PyStringStaticMethod_maketrans extends PyBuiltinMethod<PyType> {
     PyStringStaticMethod_maketrans(PyType _self) { super(_self); }
     @Override public String methodName() { return "maketrans"; }

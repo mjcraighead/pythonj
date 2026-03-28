@@ -270,14 +270,3 @@ public final class PySet extends PyObject {
         return PyNone.singleton;
     }
 }
-
-// BEGIN GENERATED CODE: PySet
-final class PySetMethodUnimplemented extends PyBuiltinMethod<PySet> {
-    private final String name;
-    PySetMethodUnimplemented(PyObject _self, String _name) { super((PySet)_self); name = _name; }
-    @Override public String methodName() { return name; }
-    @Override public PyObject call(PyObject[] args, PyDict kwargs) {
-        throw new UnsupportedOperationException("set." + name + "() unimplemented");
-    }
-}
-// END GENERATED CODE: PySet

@@ -52,17 +52,6 @@ abstract class PyType extends PyTruthyObject {
     }
 }
 
-// BEGIN GENERATED CODE: PyType
-final class PyTypeMethodUnimplemented extends PyBuiltinMethod<PyType> {
-    private final String name;
-    PyTypeMethodUnimplemented(PyObject _self, String _name) { super((PyType)_self); name = _name; }
-    @Override public String methodName() { return name; }
-    @Override public PyObject call(PyObject[] args, PyDict kwargs) {
-        throw new UnsupportedOperationException("type." + name + "() unimplemented");
-    }
-}
-// END GENERATED CODE: PyType
-
 class PyBuiltinType extends PyType {
     protected final String typeName;
     protected final Class<? extends PyObject> instanceClass;

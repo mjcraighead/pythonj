@@ -244,16 +244,6 @@ public final class PyBytes extends PyObject {
     }
 }
 
-// BEGIN GENERATED CODE: PyBytes
-final class PyBytesMethodUnimplemented extends PyBuiltinMethod<PyBytes> {
-    private final String name;
-    PyBytesMethodUnimplemented(PyObject _self, String _name) { super((PyBytes)_self); name = _name; }
-    @Override public String methodName() { return name; }
-    @Override public PyObject call(PyObject[] args, PyDict kwargs) {
-        throw new UnsupportedOperationException("bytes." + name + "() unimplemented");
-    }
-}
-// END GENERATED CODE: PyBytes
 final class PyBytesClassMethod_fromhex extends PyBuiltinMethod<PyType> {
     PyBytesClassMethod_fromhex(PyType self) { super(self); }
     @Override public String methodName() { return "fromhex"; }

@@ -1445,47 +1445,20 @@ def gen_code(spec_path: str, java_path: str) -> None:
                 '\n',
             ]
 
+            if name in UNIMPLEMENTED_METHODS:
+                gen_lines += [
+                    f'final class {java_name}MethodUnimplemented extends PyBuiltinMethod<{java_name}> {{\n',
+                    '    private final String name;\n',
+                    f'    {java_name}MethodUnimplemented(PyObject _self, String _name) {{ super(({java_name})_self); name = _name; }}\n',
+                    '    @Override public String methodName() { return name; }\n',
+                    '    @Override public PyObject call(PyObject[] args, PyDict kwargs) {\n',
+                    f'        throw new UnsupportedOperationException("{name}." + name + "() unimplemented");\n',
+                    '    }\n',
+                    '}\n',
+                    '\n',
+                ]
+
             for line in gen_lines:
-                f.write(line)
-
-def gen_code_inline(spec_path: str) -> None:
-    with open(spec_path) as f:
-        spec = json.load(f)
-
-    for name in spec:
-        if name not in UNIMPLEMENTED_METHODS:
-            continue
-
-        java_name = get_java_name(name)
-        if name in {'_io.BufferedReader', '_io.TextIOWrapper'}:
-            java_path = 'runtime/PyFile.java'
-        elif name in EXCEPTION_TYPES:
-            java_path = 'runtime/PyExceptions.java'
-        elif name == 'type':
-            java_path = f'runtime/Runtime.java'
-        else:
-            java_path = f'runtime/{java_name}.java'
-        with open(java_path) as f:
-            source_lines = f.readlines()
-
-        begin_tag = f'// BEGIN GENERATED CODE: {java_name}\n'
-        end_tag = f'// END GENERATED CODE: {java_name}\n'
-        begin_index = source_lines.index(begin_tag) + 1
-        end_index = source_lines.index(end_tag)
-        gen_lines = [
-            f'final class {java_name}MethodUnimplemented extends PyBuiltinMethod<{java_name}> {{\n',
-            '    private final String name;\n',
-            f'    {java_name}MethodUnimplemented(PyObject _self, String _name) {{ super(({java_name})_self); name = _name; }}\n',
-            '    @Override public String methodName() { return name; }\n',
-            '    @Override public PyObject call(PyObject[] args, PyDict kwargs) {\n',
-            f'        throw new UnsupportedOperationException("{name}." + name + "() unimplemented");\n',
-            '    }\n',
-            '}\n',
-        ]
-        source_lines[begin_index:end_index] = gen_lines
-
-        with open(java_path, 'w') as f:
-            for line in source_lines:
                 f.write(line)
 
 def main() -> None:
@@ -1503,7 +1476,6 @@ def main() -> None:
     os.mkdir('runtime/_out')
     gen_spec('runtime/_out/spec.json')
     gen_code('runtime/_out/spec.json', 'runtime/_out/PyGenerated.java')
-    gen_code_inline('runtime/_out/spec.json')
     codegen_time = time.perf_counter() - start
     print(f'{codegen_time=:.3f}')
 

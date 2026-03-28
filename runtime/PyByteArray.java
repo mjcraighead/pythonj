@@ -239,16 +239,6 @@ public final class PyByteArray extends PyObject {
     }
 }
 
-// BEGIN GENERATED CODE: PyByteArray
-final class PyByteArrayMethodUnimplemented extends PyBuiltinMethod<PyByteArray> {
-    private final String name;
-    PyByteArrayMethodUnimplemented(PyObject _self, String _name) { super((PyByteArray)_self); name = _name; }
-    @Override public String methodName() { return name; }
-    @Override public PyObject call(PyObject[] args, PyDict kwargs) {
-        throw new UnsupportedOperationException("bytearray." + name + "() unimplemented");
-    }
-}
-// END GENERATED CODE: PyByteArray
 final class PyByteArrayClassMethod_fromhex extends PyBuiltinMethod<PyType> {
     PyByteArrayClassMethod_fromhex(PyType self) { super(self); }
     @Override public String methodName() { return "fromhex"; }
