@@ -10,9 +10,11 @@ abstract class PyBuiltinFunction extends PyBuiltinFunctionOrMethod {
     protected PyBuiltinFunction(String name) { funcName = name; }
     @Override public final String repr() { return "<built-in function " + funcName + ">"; }
     protected PyObject exactlyOneArg(PyObject[] args, PyDict kwargs) {
-        Runtime.requireNoKwArgs(kwargs, funcName);
+        if ((kwargs != null) && kwargs.boolValue()) {
+            throw Runtime.raiseNoKwArgs(funcName);
+        }
         if (args.length != 1) {
-            throw PyTypeError.raiseFormat("%s() takes exactly one argument (%d given)", funcName, args.length);
+            throw Runtime.raiseOneArg(args, funcName);
         }
         return args[0];
     }

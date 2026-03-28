@@ -1479,9 +1479,9 @@ def gen_code(spec_path: str, java_path: str) -> None:
                     writer.write('}')
                     writer.write(f'if (args.length != {n_args}) {{')
                     if n_args == 0:
-                        writer.write(f'throw Runtime.raiseExactNoArgs(args, "{name}.{method_name}");')
+                        writer.write(f'throw Runtime.raiseNoArgs(args, "{name}.{method_name}");')
                     elif n_args == 1:
-                        writer.write(f'throw Runtime.raiseExactOneArg(args, "{name}.{method_name}");')
+                        writer.write(f'throw Runtime.raiseOneArg(args, "{name}.{method_name}");')
                     else:
                         writer.write(f'throw Runtime.raiseExactArgs(args, {n_args}, "{method_name}");')
                     writer.write('}')

@@ -265,10 +265,10 @@ public final class Runtime {
     public static PyRaise raiseExactArgs(PyObject[] args, int n, String name) {
         return PyTypeError.raiseFormat("%s expected %d argument%s, got %d", name, n, (n == 1) ? "" : "s", args.length);
     }
-    public static PyRaise raiseExactNoArgs(PyObject[] args, String name) {
+    public static PyRaise raiseNoArgs(PyObject[] args, String name) {
         return PyTypeError.raiseFormat("%s() takes no arguments (%d given)", name, args.length);
     }
-    public static PyRaise raiseExactOneArg(PyObject[] args, String name) {
+    public static PyRaise raiseOneArg(PyObject[] args, String name) {
         return PyTypeError.raiseFormat("%s() takes exactly one argument (%d given)", name, args.length);
     }
     public static void requireNoKwArgs(PyDict kwargs, String name) {
