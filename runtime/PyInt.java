@@ -444,51 +444,7 @@ public final class PyInt extends PyObject {
         }
         return toBytesImpl(length, byteorder, signed);
     }
-    public static PyObject pymethod_from_bytes(PyType self, PyObject[] args, PyDict kwargs) {
-        int argsLength = args.length;
-        PyObject bytes = (argsLength >= 1) ? args[0] : null;
-        PyObject byteorder = (argsLength >= 2) ? args[1] : null;
-        PyObject signedObj = PyBool.false_singleton;
-        if ((kwargs != null) && kwargs.boolValue()) {
-            long kwargsLen = kwargs.len();
-            if ((argsLength == 0) && (kwargsLen > 3)) {
-                throw Runtime.raiseAtMostKwArgs("from_bytes", 3, kwargsLen);
-            }
-            if (argsLength + kwargsLen > 3) {
-                throw Runtime.raiseAtMostArgs("from_bytes", 3, argsLength + kwargsLen);
-            }
-            String unknownKw = null;
-            for (var x: kwargs.items.entrySet()) {
-                PyString kw = (PyString)x.getKey(); // PyString validated at call site
-                if (kw.value.equals("bytes")) {
-                    if (bytes != null) {
-                        throw Runtime.raiseArgGivenByNameAndPosition("from_bytes", "bytes", 1);
-                    }
-                    bytes = x.getValue();
-                } else if (kw.value.equals("byteorder")) {
-                    if (byteorder != null) {
-                        throw Runtime.raiseArgGivenByNameAndPosition("from_bytes", "byteorder", 2);
-                    }
-                    byteorder = x.getValue();
-                } else if (kw.value.equals("signed")) {
-                    signedObj = x.getValue();
-                } else if (unknownKw == null) {
-                    unknownKw = kw.value;
-                }
-            }
-            if (bytes == null) {
-                throw PyTypeError.raise("from_bytes() missing required argument 'bytes' (pos 1)");
-            }
-            if (unknownKw != null) {
-                throw Runtime.raiseUnexpectedKwArg("from_bytes", unknownKw);
-            }
-        } else if (argsLength > 3) {
-            throw Runtime.raiseAtMostArgs("from_bytes", 3, argsLength);
-        } else if (argsLength > 2) {
-            throw Runtime.raiseAtMostPosArgs("from_bytes", 2, argsLength);
-        } else if (argsLength < 1) {
-            throw PyTypeError.raise("from_bytes() missing required argument 'bytes' (pos 1)");
-        }
+    public static PyInt fromBytesImpl(PyObject bytes, PyObject byteorder, PyObject signedObj) {
         boolean signed = signedObj.boolValue();
         boolean littleEndian = false;
         if (byteorder != null) {
@@ -575,5 +531,52 @@ public final class PyInt extends PyObject {
             result = (result << 8) | (bigEndianData[i] & 0xFF);
         }
         return new PyInt(result);
+    }
+    public static PyObject pymethod_from_bytes(PyType self, PyObject[] args, PyDict kwargs) {
+        int argsLength = args.length;
+        PyObject bytes = (argsLength >= 1) ? args[0] : null;
+        PyObject byteorder = (argsLength >= 2) ? args[1] : null;
+        PyObject signedObj = PyBool.false_singleton;
+        if ((kwargs != null) && kwargs.boolValue()) {
+            long kwargsLen = kwargs.len();
+            if ((argsLength == 0) && (kwargsLen > 3)) {
+                throw Runtime.raiseAtMostKwArgs("from_bytes", 3, kwargsLen);
+            }
+            if (argsLength + kwargsLen > 3) {
+                throw Runtime.raiseAtMostArgs("from_bytes", 3, argsLength + kwargsLen);
+            }
+            String unknownKw = null;
+            for (var x: kwargs.items.entrySet()) {
+                PyString kw = (PyString)x.getKey(); // PyString validated at call site
+                if (kw.value.equals("bytes")) {
+                    if (bytes != null) {
+                        throw Runtime.raiseArgGivenByNameAndPosition("from_bytes", "bytes", 1);
+                    }
+                    bytes = x.getValue();
+                } else if (kw.value.equals("byteorder")) {
+                    if (byteorder != null) {
+                        throw Runtime.raiseArgGivenByNameAndPosition("from_bytes", "byteorder", 2);
+                    }
+                    byteorder = x.getValue();
+                } else if (kw.value.equals("signed")) {
+                    signedObj = x.getValue();
+                } else if (unknownKw == null) {
+                    unknownKw = kw.value;
+                }
+            }
+            if (bytes == null) {
+                throw PyTypeError.raise("from_bytes() missing required argument 'bytes' (pos 1)");
+            }
+            if (unknownKw != null) {
+                throw Runtime.raiseUnexpectedKwArg("from_bytes", unknownKw);
+            }
+        } else if (argsLength > 3) {
+            throw Runtime.raiseAtMostArgs("from_bytes", 3, argsLength);
+        } else if (argsLength > 2) {
+            throw Runtime.raiseAtMostPosArgs("from_bytes", 2, argsLength);
+        } else if (argsLength < 1) {
+            throw PyTypeError.raise("from_bytes() missing required argument 'bytes' (pos 1)");
+        }
+        return fromBytesImpl(bytes, byteorder, signedObj);
     }
 }
