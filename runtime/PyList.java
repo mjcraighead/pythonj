@@ -8,6 +8,12 @@ import java.util.Collections;
 import java.util.Iterator;
 
 public final class PyList extends PyObject {
+    record SortKeyedItem(PyObject item, PyObject key) implements Comparable<SortKeyedItem> {
+        @Override public int compareTo(SortKeyedItem rhs) {
+            return key.compareTo(rhs.key);
+        }
+    }
+
     static final class PyListIter extends PyIter {
         private static final PyBuiltinType type_singleton = new PyBuiltinType("list_iterator", PyListIter.class);
 
@@ -284,28 +290,49 @@ public final class PyList extends PyObject {
         Collections.reverse(items);
         return PyNone.singleton;
     }
-    public PyNone sortImpl() {
-        Collections.sort(items);
+    public PyNone sortImpl(PyObject keyFunc, PyObject reverseObj) {
+        boolean reverse = reverseObj.boolValue();
+        if (keyFunc == PyNone.singleton) {
+            Collections.sort(items);
+        } else {
+            var keyedItems = new ArrayList<SortKeyedItem>(items.size());
+            for (var item: items) {
+                keyedItems.add(new SortKeyedItem(item, keyFunc.call(new PyObject[] {item}, null)));
+            }
+            Collections.sort(keyedItems);
+            items.clear();
+            for (var keyedItem: keyedItems) {
+                items.add(keyedItem.item);
+            }
+        }
+        if (reverse) {
+            Collections.reverse(items);
+        }
         return PyNone.singleton;
     }
     public PyNone pymethod_sort(PyObject[] args, PyDict kwargs) {
+        PyObject key = PyNone.singleton;
+        PyObject reverse = PyBool.false_singleton;
         if ((kwargs != null) && kwargs.boolValue()) { // XXX Handle more cases correctly here
             if (kwargs.len() > 2) {
                 throw Runtime.raiseAtMostKwArgs("sort", 2, kwargs.len());
             }
             for (var x: kwargs.items.entrySet()) {
-                PyString key = (PyString)x.getKey(); // PyString validated at call site
-                if (!key.value.equals("key") && !key.value.equals("reverse")) {
-                    throw Runtime.raiseUnexpectedKwArg("sort", key.value);
+                PyString kw = (PyString)x.getKey(); // PyString validated at call site
+                if (kw.value.equals("key")) {
+                    key = x.getValue();
+                } else if (kw.value.equals("reverse")) {
+                    reverse = x.getValue();
+                } else {
+                    throw Runtime.raiseUnexpectedKwArg("sort", kw.value);
                 }
             }
-            throw new IllegalArgumentException("list.sort() does not accept kwargs");
         }
         if (args.length > 2) {
             throw Runtime.raiseAtMostArgs("sort", 2, args.length);
         } else if (args.length != 0) {
             throw PyTypeError.raise("sort() takes no positional arguments");
         }
-        return sortImpl();
+        return sortImpl(key, reverse);
     }
 }
