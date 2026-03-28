@@ -312,7 +312,7 @@ public final class PyDict extends PyObject {
             throw new IllegalArgumentException("dict() takes 0 or 1 arguments");
         }
         var ret = new PyDict();
-        ret.pymethod_update(args, kwargs);
+        ret.updateImpl(args, kwargs);
         return ret;
     }
 
@@ -424,7 +424,7 @@ public final class PyDict extends PyObject {
         items.put(key, defaultValue);
         return defaultValue;
     }
-    public void pymethod_update(PyObject[] args, PyDict kwargs) {
+    private void updateImpl(PyObject[] args, PyDict kwargs) {
         if (args.length == 1) {
             var arg = args[0];
             if (arg instanceof PyDict dict) { // XXX support arbitrary mappings here
@@ -461,6 +461,11 @@ public final class PyDict extends PyObject {
             items.putAll(kwargs.items);
         }
     }
+    public PyNone pymethod_update(PyObject[] args, PyDict kwargs) {
+        Runtime.requireMaxArgs(args, 1, "update");
+        updateImpl(args, kwargs);
+        return PyNone.singleton;
+    }
     public PyDictValues pymethod_values() { return new PyDictValues(items); }
 }
 
@@ -479,14 +484,5 @@ final class PyDictClassMethod_fromkeys extends PyBuiltinMethod<PyType> {
             ret.items.put(key, value);
         }
         return ret;
-    }
-}
-final class PyDictMethod_update extends PyBuiltinMethod<PyDict> {
-    PyDictMethod_update(PyObject _self) { super((PyDict)_self); }
-    @Override public String methodName() { return "update"; }
-    @Override public PyNone call(PyObject[] args, PyDict kwargs) {
-        Runtime.requireMaxArgs(args, 1, "update");
-        self.pymethod_update(args, kwargs);
-        return PyNone.singleton;
     }
 }

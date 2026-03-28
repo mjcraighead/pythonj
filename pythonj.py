@@ -1369,7 +1369,8 @@ GEN_METHODS = {
     },
     'dict': {
         'clear': [], 'copy': [], 'get': [REQUIRED, 'PyNone.singleton'], 'items': [], 'keys': [],
-        'pop': [REQUIRED, 'null'], 'popitem': [], 'setdefault': [REQUIRED, 'PyNone.singleton'], 'values': [],
+        'pop': [REQUIRED, 'null'], 'popitem': [], 'setdefault': [REQUIRED, 'PyNone.singleton'],
+        'update': [VARARGS, KWARGS], 'values': [],
     },
     'int': {
         'as_integer_ratio': [], 'bit_count': [], 'bit_length': [], 'conjugate': [], 'is_integer': [],
