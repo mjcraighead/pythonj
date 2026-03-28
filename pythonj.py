@@ -1498,13 +1498,14 @@ def gen_code(spec_path: str, java_path: str) -> None:
                     writer.write(f'throw Runtime.raiseNoKwArgs("{py_name}.{method_name}");')
                     writer.write('}')
                     if args == [VARARGS]:
-                        args = 'args'
+                        bind_args = ['args']
                     else:
                         assert args.count(VARARGS) == 0, args # VARARGS is only allowed by itself currently
                         writer.write('int argsLength = args.length;')
                         min_args = args.count(REQUIRED)
                         max_args = len(args)
                         assert args[min_args:].count(REQUIRED) == 0, args # REQUIRED may only be at start of list
+                        bind_args = [f'args[{i}]' for i in range(min_args)]
                         if min_args == max_args:
                             writer.write(f'if (argsLength != {max_args}) {{')
                             if max_args == 0:
@@ -1514,7 +1515,6 @@ def gen_code(spec_path: str, java_path: str) -> None:
                             else:
                                 writer.write(f'throw Runtime.raiseExactArgs(args, {max_args}, "{method_name}");')
                             writer.write('}')
-                            args = ', '.join(f'args[{i}]' for i in range(max_args))
                         else:
                             if min_args > 0:
                                 writer.write(f'if (argsLength < {min_args}) {{')
@@ -1523,12 +1523,10 @@ def gen_code(spec_path: str, java_path: str) -> None:
                             writer.write(f'if (argsLength > {max_args}) {{')
                             writer.write(f'throw Runtime.raiseMaxArgs(args, {max_args}, "{method_name}");')
                             writer.write('}')
-                            for i in range(min_args):
-                                writer.write(f'PyObject arg{i} = args[{i}];')
                             for i in range(min_args, max_args):
                                 writer.write(f'PyObject arg{i} = (argsLength >= {i+1}) ? args[{i}] : {args[i]};')
-                            args = ', '.join(f'arg{i}' for i in range(max_args))
-                    writer.write(f'return self.pymethod_{method_name}({args});')
+                                bind_args.append(f'arg{i}')
+                    writer.write(f"return self.pymethod_{method_name}({', '.join(bind_args)});")
                     writer.write('}')
                     writer.write('}')
                 writer.write('')
