@@ -1171,7 +1171,7 @@ class PythonjVisitor(ast.NodeVisitor):
                 func_code.extend([
                     f'{prefix}if (kwName.equals({java_string_literal(arg_name)})) {{',
                     f'if ({local_arg_names[i]} != null) {{',
-                    f'throw Runtime.raiseUserMultipleValues({py_name_java}, {java_string_literal(arg_name)});',
+                    f'throw Runtime.raiseMultipleValues({py_name_java}, {java_string_literal(arg_name)});',
                     '}',
                     f'{local_arg_names[i]} = kwValue;',
                     '}',

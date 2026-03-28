@@ -325,7 +325,7 @@ public final class Runtime {
     public static PyRaise raiseUnexpectedKwArg(String name, String kwName) {
         return PyTypeError.raiseFormat("%s() got an unexpected keyword argument %s", name, PyString.reprOf(kwName));
     }
-    public static PyRaise raiseUserMultipleValues(String name, String argName) {
+    public static PyRaise raiseMultipleValues(String name, String argName) {
         return PyTypeError.raiseFormat("%s() got multiple values for argument %s", name, PyString.reprOf(argName));
     }
     public static PyRaise raiseNamedReadOnlyAttr(PyType owner, String key) {
