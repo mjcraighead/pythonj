@@ -305,7 +305,6 @@ final class PyListMethod_pop extends PyBuiltinMethod<PyList> {
     @Override public String methodName() { return "pop"; }
     @Override public PyObject call(PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, "list.pop");
-        Runtime.requireMinArgs(args, 0, "pop");
         Runtime.requireMaxArgs(args, 1, "pop");
         PyObject index = (args.length >= 1) ? args[0] : PyInt.singleton_neg1;
         return self.pymethod_pop(index);
