@@ -420,12 +420,12 @@ public final class PyInt extends PyObject {
                 PyString kw = (PyString)x.getKey(); // PyString validated at call site
                 if (kw.value.equals("length")) {
                     if (argsLength >= 1) {
-                        throw PyTypeError.raise("argument for to_bytes() given by name ('length') and position (1)");
+                        throw Runtime.raiseArgGivenByNameAndPosition("to_bytes", "length", 1);
                     }
                     length = x.getValue();
                 } else if (kw.value.equals("byteorder")) {
                     if (argsLength >= 2) {
-                        throw PyTypeError.raise("argument for to_bytes() given by name ('byteorder') and position (2)");
+                        throw Runtime.raiseArgGivenByNameAndPosition("to_bytes", "byteorder", 2);
                     }
                     byteorder = x.getValue();
                 } else if (kw.value.equals("signed")) {
@@ -462,12 +462,12 @@ public final class PyInt extends PyObject {
                 PyString kw = (PyString)x.getKey(); // PyString validated at call site
                 if (kw.value.equals("bytes")) {
                     if (bytes != null) {
-                        throw PyTypeError.raise("argument for from_bytes() given by name ('bytes') and position (1)");
+                        throw Runtime.raiseArgGivenByNameAndPosition("from_bytes", "bytes", 1);
                     }
                     bytes = x.getValue();
                 } else if (kw.value.equals("byteorder")) {
                     if (byteorder != null) {
-                        throw PyTypeError.raise("argument for from_bytes() given by name ('byteorder') and position (2)");
+                        throw Runtime.raiseArgGivenByNameAndPosition("from_bytes", "byteorder", 2);
                     }
                     byteorder = x.getValue();
                 } else if (kw.value.equals("signed")) {

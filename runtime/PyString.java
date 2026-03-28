@@ -300,7 +300,7 @@ public final class PyString extends PyObject {
                 PyString key = (PyString)x.getKey(); // PyString validated at call site
                 if (key.value.equals("sep")) {
                     if (sep != null) {
-                        throw PyTypeError.raise("argument for split() given by name ('sep') and position (1)");
+                        throw Runtime.raiseArgGivenByNameAndPosition("split", "sep", 1);
                     }
                     sep = x.getValue();
                 } else if (key.value.equals("maxsplit")) {

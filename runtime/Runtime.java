@@ -331,6 +331,9 @@ public final class Runtime {
     public static PyRaise raiseAtMostKwArgs(String name, long max, long given) {
         return PyTypeError.raiseFormat("%s() takes at most %d keyword arguments (%d given)", name, max, given);
     }
+    public static PyRaise raiseArgGivenByNameAndPosition(String name, String argName, int position) {
+        return PyTypeError.raiseFormat("argument for %s() given by name (%s) and position (%d)", name, PyString.reprOf(argName), position);
+    }
     public static PyRaise raiseUnexpectedKwArg(String name, String kwName) {
         return PyTypeError.raiseFormat("%s() got an unexpected keyword argument %s", name, PyString.reprOf(kwName));
     }
