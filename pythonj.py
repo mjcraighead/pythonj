@@ -1474,7 +1474,9 @@ def gen_code(spec_path: str, java_path: str) -> None:
                     writer.write(f'{java_name}Method_{method_name}(PyObject _self) {{ super(({java_name})_self); }}')
                     writer.write(f'@Override public String methodName() {{ return "{method_name}"; }}')
                     writer.write('@Override public PyObject call(PyObject[] args, PyDict kwargs) {')
-                    writer.write(f'Runtime.requireNoKwArgs(kwargs, "{name}.{method_name}");')
+                    writer.write('if ((kwargs != null) && kwargs.boolValue()) {')
+                    writer.write(f'throw Runtime.raiseNoKwArgs("{name}.{method_name}");')
+                    writer.write('}')
                     if n_args < 2:
                         writer.write(f'Runtime.requireExactArgsAlt(args, {n_args}, "{name}.{method_name}");')
                     else:

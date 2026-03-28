@@ -259,9 +259,12 @@ abstract class PyFunction extends PyTruthyObject {
 
 // Helper functions used by the builtins and code generator
 public final class Runtime {
+    public static PyRaise raiseNoKwArgs(String name) {
+        return PyTypeError.raise(name + "() takes no keyword arguments");
+    }
     public static void requireNoKwArgs(PyDict kwargs, String name) {
         if ((kwargs != null) && kwargs.boolValue()) {
-            throw PyTypeError.raiseFormat("%s() takes no keyword arguments", name);
+            throw raiseNoKwArgs(name);
         }
     }
     public static void requireExactArgs(PyObject[] args, int n, String name) {
