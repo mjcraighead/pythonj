@@ -291,7 +291,7 @@ public final class PyList extends PyObject {
     public PyNone pymethod_sort(PyObject[] args, PyDict kwargs) {
         if ((kwargs != null) && kwargs.boolValue()) { // XXX Handle more cases correctly here
             if (kwargs.len() > 2) {
-                throw PyTypeError.raiseFormat("sort() takes at most 2 keyword arguments (%d given)", kwargs.len());
+                throw Runtime.raiseAtMostKwArgs("sort", 2, kwargs.len());
             }
             for (var x: kwargs.items.entrySet()) {
                 PyString key = (PyString)x.getKey(); // PyString validated at call site
@@ -302,7 +302,7 @@ public final class PyList extends PyObject {
             throw new IllegalArgumentException("list.sort() does not accept kwargs");
         }
         if (args.length > 2) {
-            throw PyTypeError.raiseFormat("sort() takes at most 2 arguments (%d given)", args.length);
+            throw Runtime.raiseAtMostArgs("sort", 2, args.length);
         } else if (args.length != 0) {
             throw PyTypeError.raise("sort() takes no positional arguments");
         }

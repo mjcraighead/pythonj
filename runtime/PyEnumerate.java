@@ -40,7 +40,7 @@ public final class PyEnumerate extends PyIter {
         } else if (args.length == 0) {
             throw PyTypeError.raise("enumerate() missing required argument 'iterable'");
         } else {
-            throw PyTypeError.raiseFormat("enumerate() takes at most 2 arguments (%d given)", totalArgs);
+            throw Runtime.raiseAtMostArgs("enumerate", 2, totalArgs);
         }
     }
 

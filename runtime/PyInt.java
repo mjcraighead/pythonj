@@ -391,9 +391,9 @@ public final class PyInt extends PyObject {
             throw new IllegalArgumentException("int.to_bytes() does not accept kwargs");
         }
         if (args.length > 3) {
-            throw PyTypeError.raiseFormat("to_bytes() takes at most 3 arguments (%d given)", args.length);
+            throw Runtime.raiseAtMostArgs("to_bytes", 3, args.length);
         } else if (args.length > 2) {
-            throw PyTypeError.raiseFormat("to_bytes() takes at most 2 positional arguments (%d given)", args.length);
+            throw Runtime.raiseAtMostPosArgs("to_bytes", 2, args.length);
         }
         PyObject length = (args.length >= 1) ? args[0] : PyInt.singleton_1;
         PyObject byteorder = (args.length >= 2) ? args[1] : null;
@@ -404,9 +404,9 @@ public final class PyInt extends PyObject {
             throw new IllegalArgumentException("int.from_bytes() does not accept kwargs");
         }
         if (args.length > 3) {
-            throw PyTypeError.raiseFormat("from_bytes() takes at most 3 arguments (%d given)", args.length);
+            throw Runtime.raiseAtMostArgs("from_bytes", 3, args.length);
         } else if (args.length > 2) {
-            throw PyTypeError.raiseFormat("from_bytes() takes at most 2 positional arguments (%d given)", args.length);
+            throw Runtime.raiseAtMostPosArgs("from_bytes", 2, args.length);
         } else if (args.length < 1) {
             throw PyTypeError.raise("from_bytes() missing required argument 'bytes' (pos 1)");
         }

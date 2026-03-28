@@ -322,6 +322,15 @@ public final class Runtime {
         return PyTypeError.raiseFormat("%s() takes from %d to %d positional arguments but %d %s given",
             name, min, max, args.length, (args.length == 1) ? "was" : "were");
     }
+    public static PyRaise raiseAtMostArgs(String name, long max, long given) {
+        return PyTypeError.raiseFormat("%s() takes at most %d arguments (%d given)", name, max, given);
+    }
+    public static PyRaise raiseAtMostPosArgs(String name, long max, long given) {
+        return PyTypeError.raiseFormat("%s() takes at most %d positional arguments (%d given)", name, max, given);
+    }
+    public static PyRaise raiseAtMostKwArgs(String name, long max, long given) {
+        return PyTypeError.raiseFormat("%s() takes at most %d keyword arguments (%d given)", name, max, given);
+    }
     public static PyRaise raiseUnexpectedKwArg(String name, String kwName) {
         return PyTypeError.raiseFormat("%s() got an unexpected keyword argument %s", name, PyString.reprOf(kwName));
     }

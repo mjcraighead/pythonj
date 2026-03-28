@@ -288,13 +288,13 @@ public final class PyString extends PyObject {
         PyObject maxsplit = null;
         if ((kwargs != null) && kwargs.boolValue()) {
             if ((args.length == 0) && (kwargs.len() > 2)) {
-                throw PyTypeError.raiseFormat("split() takes at most 2 keyword arguments (%d given)", kwargs.len());
+                throw Runtime.raiseAtMostKwArgs("split", 2, kwargs.len());
             }
             if (args.length + kwargs.len() > 2) {
-                throw PyTypeError.raiseFormat("split() takes at most 2 arguments (%d given)", args.length + kwargs.len());
+                throw Runtime.raiseAtMostArgs("split", 2, args.length + kwargs.len());
             }
         } else if (args.length > 2) {
-            throw PyTypeError.raiseFormat("split() takes at most 2 arguments (%d given)", args.length);
+            throw Runtime.raiseAtMostArgs("split", 2, args.length);
         }
         if (args.length >= 1) {
             sep = args[0];
