@@ -96,7 +96,7 @@ final class PyTextIOWrapperMethod_close extends PyBuiltinMethod<PyTextIOWrapper>
             throw Runtime.raiseNoKwArgs("TextIOWrapper.close");
         }
         if (args.length != 0) {
-            throw Runtime.raiseExactArgsAlt(args, 0, "TextIOWrapper.close");
+            throw Runtime.raiseExactNoArgs(args, "TextIOWrapper.close");
         }
         return self.pymethod_close();
     }
@@ -170,7 +170,7 @@ final class PyBufferedReaderMethod_close extends PyBuiltinMethod<PyBufferedReade
             throw Runtime.raiseNoKwArgs("BufferedReader.close");
         }
         if (args.length != 0) {
-            throw Runtime.raiseExactArgsAlt(args, 0, "BufferedReader.close");
+            throw Runtime.raiseExactNoArgs(args, "BufferedReader.close");
         }
         return self.pymethod_close();
     }
