@@ -4,14 +4,6 @@
 
 import java.util.Locale;
 
-final class PyStringStaticMethod_maketrans extends PyBuiltinMethod<PyType> {
-    PyStringStaticMethod_maketrans(PyType _self) { super(_self); }
-    @Override public String methodName() { return "maketrans"; }
-    @Override public PyObject call(PyObject[] args, PyDict kwargs) {
-        throw new UnsupportedOperationException("str.maketrans unimplemented");
-    }
-}
-
 public final class PyString extends PyObject {
     public static final PyString empty_singleton = new PyString("");
 
@@ -402,4 +394,12 @@ public final class PyString extends PyObject {
         }
     }
     public PyString pymethod_upper() { return new PyString(value.toUpperCase(Locale.ROOT)); }
+}
+
+final class PyStringStaticMethod_maketrans extends PyBuiltinMethod<PyType> {
+    PyStringStaticMethod_maketrans(PyType _self) { super(_self); }
+    @Override public String methodName() { return "maketrans"; }
+    @Override public PyObject call(PyObject[] args, PyDict kwargs) {
+        throw new UnsupportedOperationException("str.maketrans unimplemented");
+    }
 }

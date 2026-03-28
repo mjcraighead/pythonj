@@ -5,21 +5,6 @@
 import java.io.ByteArrayOutputStream;
 import java.util.Arrays;
 
-final class PyByteArrayClassMethod_fromhex extends PyBuiltinMethod<PyType> {
-    PyByteArrayClassMethod_fromhex(PyType self) { super(self); }
-    @Override public String methodName() { return "fromhex"; }
-    @Override public PyObject call(PyObject[] args, PyDict kwargs) {
-        throw new UnsupportedOperationException("bytearray.fromhex() unimplemented");
-    }
-}
-final class PyByteArrayStaticMethod_maketrans extends PyBuiltinMethod<PyType> {
-    PyByteArrayStaticMethod_maketrans(PyType self) { super(self); }
-    @Override public String methodName() { return "maketrans"; }
-    @Override public PyObject call(PyObject[] args, PyDict kwargs) {
-        throw new UnsupportedOperationException("bytearray.maketrans() unimplemented");
-    }
-}
-
 public final class PyByteArray extends PyObject {
     static final class PyByteArrayIter extends PyIter {
         private static final PyBuiltinType type_singleton = new PyBuiltinType("bytearray_iterator", PyByteArrayIter.class);
@@ -262,5 +247,20 @@ public final class PyByteArray extends PyObject {
             }
         }
         return s + "')";
+    }
+}
+
+final class PyByteArrayClassMethod_fromhex extends PyBuiltinMethod<PyType> {
+    PyByteArrayClassMethod_fromhex(PyType self) { super(self); }
+    @Override public String methodName() { return "fromhex"; }
+    @Override public PyObject call(PyObject[] args, PyDict kwargs) {
+        throw new UnsupportedOperationException("bytearray.fromhex() unimplemented");
+    }
+}
+final class PyByteArrayStaticMethod_maketrans extends PyBuiltinMethod<PyType> {
+    PyByteArrayStaticMethod_maketrans(PyType self) { super(self); }
+    @Override public String methodName() { return "maketrans"; }
+    @Override public PyObject call(PyObject[] args, PyDict kwargs) {
+        throw new UnsupportedOperationException("bytearray.maketrans() unimplemented");
     }
 }
