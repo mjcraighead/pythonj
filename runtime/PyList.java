@@ -237,8 +237,11 @@ public final class PyList extends PyObject {
         }
         return PyNone.singleton;
     }
-    public PyInt pymethod_index(PyObject arg) {
-        int index = items.indexOf(arg);
+    public PyInt pymethod_index(PyObject value, PyObject start, PyObject stop) {
+        if ((start != null) || (stop != null)) {
+            throw new UnsupportedOperationException("'start' and 'stop' arguments are not supported");
+        }
+        int index = items.indexOf(value);
         if (index == -1) {
             throw PyValueError.raise("list.index(x): x not in list");
         }
@@ -287,19 +290,6 @@ public final class PyList extends PyObject {
     }
 }
 
-final class PyListMethod_index extends PyBuiltinMethod<PyList> {
-    PyListMethod_index(PyObject _self) { super((PyList)_self); }
-    @Override public String methodName() { return "index"; }
-    @Override public PyInt call(PyObject[] args, PyDict kwargs) {
-        Runtime.requireNoKwArgs(kwargs, "list.index");
-        Runtime.requireMinArgs(args, 1, "index");
-        Runtime.requireMaxArgs(args, 3, "index");
-        if (args.length != 1) {
-            throw new IllegalArgumentException("list.index() takes 1 argument");
-        }
-        return self.pymethod_index(args[0]);
-    }
-}
 final class PyListMethod_sort extends PyBuiltinMethod<PyList> {
     PyListMethod_sort(PyObject _self) { super((PyList)_self); }
     @Override public String methodName() { return "sort"; }

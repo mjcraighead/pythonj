@@ -1375,7 +1375,8 @@ GEN_METHODS = {
     },
     'list': {
         'append': [REQUIRED], 'clear': [], 'copy': [], 'count': [REQUIRED], 'extend': [REQUIRED],
-        'insert': [REQUIRED, REQUIRED], 'pop': ['PyInt.singleton_neg1'], 'remove': [REQUIRED], 'reverse': [],
+        'index': [REQUIRED, 'null', 'null'], 'insert': [REQUIRED, REQUIRED], 'pop': ['PyInt.singleton_neg1'],
+        'remove': [REQUIRED], 'reverse': [],
     },
     'set': {
         'add': [REQUIRED], 'clear': [], 'copy': [], 'difference': [VARARGS], 'difference_update': [VARARGS],
