@@ -1134,7 +1134,7 @@ class PythonjVisitor(ast.NodeVisitor):
             '}',
             '@Override public PyObject call(PyObject[] args, PyDict kwargs) {',
             'int argsLength = args.length;',
-            *(f'PyObject {name} = null;' for name in local_arg_names),
+            *(f'PyObject {name} = (argsLength >= {i + 1}) ? args[{i}] : null;' for (i, name) in enumerate(local_arg_names)),
             'if ((kwargs == null) || !kwargs.boolValue()) {',
         ]
         if n_required == n_args:
@@ -1155,11 +1155,7 @@ class PythonjVisitor(ast.NodeVisitor):
                 f'throw Runtime.raiseUserFromToArgs(args, {n_required}, {n_args}, {py_name_java});',
                 '}',
             ])
-        for (i, name) in enumerate(local_arg_names):
-            func_code.append(f'if (argsLength > {i}) {{ {name} = args[{i}]; }}')
         func_code.append('} else {')
-        for (i, name) in enumerate(local_arg_names):
-            func_code.append(f'if (argsLength > {i}) {{ {name} = args[{i}]; }}')
         func_code.extend([
             'for (var x: kwargs.items.entrySet()) {',
             'String kwName = ((PyString)x.getKey()).value;',

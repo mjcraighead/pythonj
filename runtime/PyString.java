@@ -284,9 +284,9 @@ public final class PyString extends PyObject {
         return ret;
     }
     public PyList pymethod_split(PyObject[] args, PyDict kwargs) {
-        PyObject sep = null;
-        PyObject maxsplit = null;
         int argsLength = args.length;
+        PyObject sep = (argsLength >= 1) ? args[0] : null;
+        PyObject maxsplit = (argsLength >= 2) ? args[1] : null;
         if ((kwargs != null) && kwargs.boolValue()) {
             if ((argsLength == 0) && (kwargs.len() > 2)) {
                 throw Runtime.raiseAtMostKwArgs("split", 2, kwargs.len());
@@ -296,12 +296,6 @@ public final class PyString extends PyObject {
             }
         } else if (argsLength > 2) {
             throw Runtime.raiseAtMostArgs("split", 2, argsLength);
-        }
-        if (argsLength >= 1) {
-            sep = args[0];
-        }
-        if (argsLength >= 2) {
-            maxsplit = args[1];
         }
         if ((kwargs != null) && kwargs.boolValue()) {
             for (var x: kwargs.items.entrySet()) {
