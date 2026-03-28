@@ -402,4 +402,8 @@ public final class Runtime {
         }
         throw new UnsupportedOperationException(msg);
     }
+    public static String getDefaultTextEncoding() {
+        String os = System.getProperty("os.name").toLowerCase();
+        return os.contains("win") ? "cp1252" : "UTF-8"; // XXX extremely basic, good enough for now
+    }
 }
