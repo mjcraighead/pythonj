@@ -1342,10 +1342,6 @@ UNIMPLEMENTED_METHODS = {
         'rindex', 'rjust', 'rpartition', 'rsplit', 'rstrip', 'split', 'splitlines', 'startswith', 'strip',
         'translate', 'zfill',
     },
-    'set': {
-        'difference', 'difference_update', 'intersection', 'intersection_update',
-        'symmetric_difference', 'symmetric_difference_update', 'union',
-    },
     'str': {
         'center', 'count', 'encode', 'endswith', 'expandtabs', 'format', 'format_map', 'index', 'ljust',
         'lstrip', 'partition', 'removeprefix', 'removesuffix', 'replace', 'rfind', 'rindex', 'rjust',
@@ -1364,6 +1360,7 @@ UNIMPLEMENTED_METHODS = {
 }
 
 REQUIRED = object()
+VARARGS = object()
 GEN_METHODS = {
     'bytes': {
         'capitalize': [], 'isalnum': [], 'isalpha': [], 'isascii': [], 'isdigit': [], 'islower': [],
@@ -1381,8 +1378,11 @@ GEN_METHODS = {
         'insert': [REQUIRED, REQUIRED], 'pop': ['PyInt.singleton_neg1'], 'remove': [REQUIRED], 'reverse': [],
     },
     'set': {
-        'add': [REQUIRED], 'clear': [], 'copy': [], 'discard': [REQUIRED], 'isdisjoint': [REQUIRED],
-        'issubset': [REQUIRED], 'issuperset': [REQUIRED], 'pop': [], 'remove': [REQUIRED],
+        'add': [REQUIRED], 'clear': [], 'copy': [], 'difference': [VARARGS], 'difference_update': [VARARGS],
+        'discard': [REQUIRED], 'isdisjoint': [REQUIRED], 'intersection': [VARARGS],
+        'intersection_update': [VARARGS], 'issubset': [REQUIRED], 'issuperset': [REQUIRED],
+        'pop': [], 'remove': [REQUIRED], 'symmetric_difference': [REQUIRED],
+        'symmetric_difference_update': [REQUIRED], 'union': [VARARGS], 'update': [VARARGS],
     },
     'slice': {'indices': [REQUIRED]},
     'str': {
@@ -1496,33 +1496,37 @@ def gen_code(spec_path: str, java_path: str) -> None:
                     writer.write('if ((kwargs != null) && kwargs.boolValue()) {')
                     writer.write(f'throw Runtime.raiseNoKwArgs("{py_name}.{method_name}");')
                     writer.write('}')
-                    writer.write('int argsLength = args.length;')
-                    min_args = args.count(REQUIRED)
-                    max_args = len(args)
-                    assert args[min_args:].count(REQUIRED) == 0, args # REQUIRED may only be at start of list
-                    if min_args == max_args:
-                        writer.write(f'if (argsLength != {max_args}) {{')
-                        if max_args == 0:
-                            writer.write(f'throw Runtime.raiseNoArgs(args, "{py_name}.{method_name}");')
-                        elif max_args == 1:
-                            writer.write(f'throw Runtime.raiseOneArg(args, "{py_name}.{method_name}");')
-                        else:
-                            writer.write(f'throw Runtime.raiseExactArgs(args, {max_args}, "{method_name}");')
-                        writer.write('}')
-                        args = ', '.join(f'args[{i}]' for i in range(max_args))
+                    if args == [VARARGS]:
+                        args = 'args'
                     else:
-                        if min_args > 0:
-                            writer.write(f'if (argsLength < {min_args}) {{')
-                            writer.write(f'throw Runtime.raiseMinArgs(args, {min_args}, "{method_name}");')
+                        assert args.count(VARARGS) == 0, args # VARARGS is only allowed by itself currently
+                        writer.write('int argsLength = args.length;')
+                        min_args = args.count(REQUIRED)
+                        max_args = len(args)
+                        assert args[min_args:].count(REQUIRED) == 0, args # REQUIRED may only be at start of list
+                        if min_args == max_args:
+                            writer.write(f'if (argsLength != {max_args}) {{')
+                            if max_args == 0:
+                                writer.write(f'throw Runtime.raiseNoArgs(args, "{py_name}.{method_name}");')
+                            elif max_args == 1:
+                                writer.write(f'throw Runtime.raiseOneArg(args, "{py_name}.{method_name}");')
+                            else:
+                                writer.write(f'throw Runtime.raiseExactArgs(args, {max_args}, "{method_name}");')
                             writer.write('}')
-                        writer.write(f'if (argsLength > {max_args}) {{')
-                        writer.write(f'throw Runtime.raiseMaxArgs(args, {max_args}, "{method_name}");')
-                        writer.write('}')
-                        for i in range(min_args):
-                            writer.write(f'PyObject arg{i} = args[{i}];')
-                        for i in range(min_args, max_args):
-                            writer.write(f'PyObject arg{i} = (argsLength >= {i+1}) ? args[{i}] : {args[i]};')
-                        args = ', '.join(f'arg{i}' for i in range(max_args))
+                            args = ', '.join(f'args[{i}]' for i in range(max_args))
+                        else:
+                            if min_args > 0:
+                                writer.write(f'if (argsLength < {min_args}) {{')
+                                writer.write(f'throw Runtime.raiseMinArgs(args, {min_args}, "{method_name}");')
+                                writer.write('}')
+                            writer.write(f'if (argsLength > {max_args}) {{')
+                            writer.write(f'throw Runtime.raiseMaxArgs(args, {max_args}, "{method_name}");')
+                            writer.write('}')
+                            for i in range(min_args):
+                                writer.write(f'PyObject arg{i} = args[{i}];')
+                            for i in range(min_args, max_args):
+                                writer.write(f'PyObject arg{i} = (argsLength >= {i+1}) ? args[{i}] : {args[i]};')
+                            args = ', '.join(f'arg{i}' for i in range(max_args))
                     writer.write(f'return self.pymethod_{method_name}({args});')
                     writer.write('}')
                     writer.write('}')

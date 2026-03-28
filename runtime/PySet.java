@@ -235,18 +235,16 @@ public final class PySet extends PyObject {
     }
 
     public PyObject pymethod_copy() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_difference(PyObject[] others) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_difference_update(PyObject[] others) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_intersection(PyObject[] others) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_intersection_update(PyObject[] others) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_isdisjoint(PyObject other) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_issubset(PyObject other) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_issuperset(PyObject other) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_pop() { throw new UnsupportedOperationException(); }
     public PyObject pymethod_remove(PyObject elem) { throw new UnsupportedOperationException(); }
-}
-
-final class PySetMethod_update extends PyBuiltinMethod<PySet> {
-    PySetMethod_update(PyObject _self) { super((PySet)_self); }
-    @Override public String methodName() { return "update"; }
-    @Override public PyNone call(PyObject[] args, PyDict kwargs) {
-        Runtime.requireNoKwArgs(kwargs, "set.update");
-        return self.pymethod_update(args);
-    }
+    public PyObject pymethod_symmetric_difference(PyObject other) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_symmetric_difference_update(PyObject other) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_union(PyObject[] others) { throw new UnsupportedOperationException(); }
 }
