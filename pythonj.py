@@ -1134,21 +1134,16 @@ class PythonjVisitor(ast.NodeVisitor):
             '}',
             '@Override public PyObject call(PyObject[] args, PyDict kwargs) {',
             'int argsLength = args.length;',
+            *(f'PyObject {name} = null;' for name in local_arg_names),
+            'if ((kwargs == null) || !kwargs.boolValue()) {',
         ]
-        for (i, name) in enumerate(local_arg_names):
-            if i < n_required:
-                func_code.append(f'PyObject {name} = null;')
-            else:
-                func_code.append(f'PyObject {name} = {JavaPyConstant(arg_defaults[i - n_required]).emit_java(self.emit_ctx)};')
         if n_required == n_args:
             func_code.extend([
-                'if ((kwargs == null) || !kwargs.boolValue()) {',
                 f'if (argsLength != {n_args}) {{',
                 f'throw Runtime.raiseUserExactArgs(args, {n_args}, {py_name_java}{", " if arg_names_java else ""}{arg_names_java});',
                 '}',
             ])
         else:
-            func_code.append('if ((kwargs == null) || !kwargs.boolValue()) {')
             if n_required != 0:
                 func_code.extend([
                     f'if (argsLength < {n_required}) {{',
@@ -1162,12 +1157,9 @@ class PythonjVisitor(ast.NodeVisitor):
             ])
         for (i, name) in enumerate(local_arg_names):
             func_code.append(f'if (argsLength > {i}) {{ {name} = args[{i}]; }}')
-        func_code.extend([
-            '} else {',
-            f'boolean[] seen = new boolean[{n_args}];',
-        ])
+        func_code.append('} else {')
         for (i, name) in enumerate(local_arg_names):
-            func_code.append(f'if (argsLength > {i}) {{ {name} = args[{i}]; seen[{i}] = true; }}')
+            func_code.append(f'if (argsLength > {i}) {{ {name} = args[{i}]; }}')
         func_code.extend([
             'for (var x: kwargs.items.entrySet()) {',
             'String kwName = ((PyString)x.getKey()).value;',
@@ -1178,11 +1170,10 @@ class PythonjVisitor(ast.NodeVisitor):
                 prefix = '' if i == 0 else 'else '
                 func_code.extend([
                     f'{prefix}if (kwName.equals({java_string_literal(arg_name)})) {{',
-                    f'if (seen[{i}]) {{',
+                    f'if ({local_arg_names[i]} != null) {{',
                     f'throw Runtime.raiseUserMultipleValues({py_name_java}, {java_string_literal(arg_name)});',
                     '}',
                     f'{local_arg_names[i]} = kwValue;',
-                    f'seen[{i}] = true;',
                     '}',
                 ])
         func_code.extend([
@@ -1198,8 +1189,8 @@ class PythonjVisitor(ast.NodeVisitor):
                 '}',
             ])
             if n_required != 0:
-                func_code.append(f'if ({ " || ".join(f"!seen[{i}]" for i in range(n_required)) }) {{')
-                func_code.append(f'throw Runtime.raiseUserMissingKwArgs({py_name_java}, seen, {required_arg_names_java});')
+                func_code.append(f'if ({ " || ".join(f"{local_arg_names[i]} == null" for i in range(n_required)) }) {{')
+                func_code.append(f'throw Runtime.raiseUserMissingKwArgs({py_name_java}, new PyObject[] {{{", ".join(local_arg_names[:n_required])}}}, {required_arg_names_java});')
                 func_code.append('}')
         else:
             func_code.extend([
@@ -1208,6 +1199,8 @@ class PythonjVisitor(ast.NodeVisitor):
                 '}',
             ])
         func_code.append('}')
+        for (i, name) in enumerate(local_arg_names[n_required:]):
+            func_code.append(f'if ({name} == null) {{ {name} = {JavaPyConstant(arg_defaults[i]).emit_java(self.emit_ctx)}; }}')
         if self.scope.used_expr_discard:
             func_code.append('PyObject expr_discard;')
         for name in sorted(self.scope.locals):

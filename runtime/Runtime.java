@@ -309,10 +309,10 @@ public final class Runtime {
     public static PyRaise raiseUserMissingArgs(int nBound, String name, String... argNames) {
         return raiseUserMissingArgsImpl(name, Arrays.asList(argNames).subList(nBound, argNames.length));
     }
-    public static PyRaise raiseUserMissingKwArgs(String name, boolean[] seen, String... argNames) {
+    public static PyRaise raiseUserMissingKwArgs(String name, PyObject[] boundArgs, String... argNames) {
         var missingArgNames = new ArrayList<String>();
         for (int i = 0; i < argNames.length; i++) {
-            if (!seen[i]) {
+            if (boundArgs[i] == null) {
                 missingArgNames.add(argNames[i]);
             }
         }
