@@ -1393,8 +1393,8 @@ GEN_METHODS = {
         'swapcase': [], 'title': [], 'upper': [],
     },
     'tuple': {'count': [REQUIRED], 'index': [REQUIRED, 'null', 'null']},
-    '_io.BufferedReader': {'close': []},
-    '_io.TextIOWrapper': {'close': []},
+    '_io.BufferedReader': {'close': [], 'read': ['null']},
+    '_io.TextIOWrapper': {'close': [], 'readline': ['null']},
 }
 
 def get_java_name(name: str) -> str:
