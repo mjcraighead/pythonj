@@ -481,36 +481,6 @@ final class PyDictClassMethod_fromkeys extends PyBuiltinMethod<PyType> {
         return ret;
     }
 }
-final class PyDictMethod_get extends PyBuiltinMethod<PyDict> {
-    PyDictMethod_get(PyObject _self) { super((PyDict)_self); }
-    @Override public String methodName() { return "get"; }
-    @Override public PyObject call(PyObject[] args, PyDict kwargs) {
-        Runtime.requireNoKwArgs(kwargs, "dict.get");
-        Runtime.requireMinArgs(args, 1, "get");
-        Runtime.requireMaxArgs(args, 2, "get");
-        return self.pymethod_get(args[0], (args.length == 2) ? args[1] : PyNone.singleton);
-    }
-}
-final class PyDictMethod_pop extends PyBuiltinMethod<PyDict> {
-    PyDictMethod_pop(PyObject _self) { super((PyDict)_self); }
-    @Override public String methodName() { return "pop"; }
-    @Override public PyObject call(PyObject[] args, PyDict kwargs) {
-        Runtime.requireNoKwArgs(kwargs, "dict.pop");
-        Runtime.requireMinArgs(args, 1, "pop");
-        Runtime.requireMaxArgs(args, 2, "pop");
-        return self.pymethod_pop(args[0], (args.length == 2) ? args[1] : null);
-    }
-}
-final class PyDictMethod_setdefault extends PyBuiltinMethod<PyDict> {
-    PyDictMethod_setdefault(PyObject _self) { super((PyDict)_self); }
-    @Override public String methodName() { return "setdefault"; }
-    @Override public PyObject call(PyObject[] args, PyDict kwargs) {
-        Runtime.requireNoKwArgs(kwargs, "dict.setdefault");
-        Runtime.requireMinArgs(args, 1, "setdefault");
-        Runtime.requireMaxArgs(args, 2, "setdefault");
-        return self.pymethod_setdefault(args[0], (args.length == 2) ? args[1] : PyNone.singleton);
-    }
-}
 final class PyDictMethod_update extends PyBuiltinMethod<PyDict> {
     PyDictMethod_update(PyObject _self) { super((PyDict)_self); }
     @Override public String methodName() { return "update"; }

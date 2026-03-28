@@ -1365,20 +1365,23 @@ UNIMPLEMENTED_METHODS = {
     },
     'BaseException': {'add_note', 'with_traceback'},
 }
+REQUIRED = object()
 GEN_METHODS = {
     'dict': {
-        'clear': 0, 'copy': 0, 'items': 0, 'keys': 0, 'popitem': 0, 'values': 0,
+        'clear': [], 'copy': [], 'get': [REQUIRED, 'PyNone.singleton'], 'items': [], 'keys': [],
+        'pop': [REQUIRED, 'null'], 'popitem': [], 'setdefault': [REQUIRED, 'PyNone.singleton'], 'values': [],
     },
     'int': {
-        'as_integer_ratio': 0, 'bit_count': 0, 'bit_length': 0, 'conjugate': 0, 'is_integer': 0,
+        'as_integer_ratio': [], 'bit_count': [], 'bit_length': [], 'conjugate': [], 'is_integer': [],
     },
     'list': {
-        'append': 1, 'clear': 0, 'copy': 0, 'count': 1, 'extend': 1, 'insert': 2, 'remove': 1, 'reverse': 0,
+        'append': [REQUIRED], 'clear': [], 'copy': [], 'count': [REQUIRED], 'extend': [REQUIRED],
+        'insert': [REQUIRED, REQUIRED], 'remove': [REQUIRED], 'reverse': [],
     },
-    'set': {'add': 1, 'clear': 0, 'discard': 1},
-    'slice': {'indices': 1},
-    'str': {'join': 1, 'lower': 0, 'upper': 0},
-    'tuple': {'count': 1},
+    'set': {'add': [REQUIRED], 'clear': [], 'discard': [REQUIRED]},
+    'slice': {'indices': [REQUIRED]},
+    'str': {'join': [REQUIRED], 'lower': [], 'upper': []},
+    'tuple': {'count': [REQUIRED]},
 }
 
 def get_java_name(name: str) -> str:
@@ -1468,8 +1471,7 @@ def gen_code(spec_path: str, java_path: str) -> None:
                 writer.write('')
 
             if name in GEN_METHODS:
-                for (method_name, n_args) in GEN_METHODS[name].items():
-                    args = ', '.join(f'args[{i}]' for i in range(n_args))
+                for (method_name, args) in GEN_METHODS[name].items():
                     writer.write(f'final class {java_name}Method_{method_name} extends PyBuiltinMethod<{java_name}> {{')
                     writer.write(f'{java_name}Method_{method_name}(PyObject _self) {{ super(({java_name})_self); }}')
                     writer.write(f'@Override public String methodName() {{ return "{method_name}"; }}')
@@ -1477,14 +1479,26 @@ def gen_code(spec_path: str, java_path: str) -> None:
                     writer.write('if ((kwargs != null) && kwargs.boolValue()) {')
                     writer.write(f'throw Runtime.raiseNoKwArgs("{name}.{method_name}");')
                     writer.write('}')
-                    writer.write(f'if (args.length != {n_args}) {{')
-                    if n_args == 0:
-                        writer.write(f'throw Runtime.raiseNoArgs(args, "{name}.{method_name}");')
-                    elif n_args == 1:
-                        writer.write(f'throw Runtime.raiseOneArg(args, "{name}.{method_name}");')
+                    min_args = args.count(REQUIRED)
+                    max_args = len(args)
+                    if min_args == max_args:
+                        writer.write(f'if (args.length != {max_args}) {{')
+                        if max_args == 0:
+                            writer.write(f'throw Runtime.raiseNoArgs(args, "{name}.{method_name}");')
+                        elif max_args == 1:
+                            writer.write(f'throw Runtime.raiseOneArg(args, "{name}.{method_name}");')
+                        else:
+                            writer.write(f'throw Runtime.raiseExactArgs(args, {max_args}, "{method_name}");')
+                        writer.write('}')
+                        args = ', '.join(f'args[{i}]' for i in range(max_args))
                     else:
-                        writer.write(f'throw Runtime.raiseExactArgs(args, {n_args}, "{method_name}");')
-                    writer.write('}')
+                        writer.write(f'Runtime.requireMinArgs(args, {min_args}, "{method_name}");')
+                        writer.write(f'Runtime.requireMaxArgs(args, {max_args}, "{method_name}");')
+                        for i in range(min_args):
+                            writer.write(f'PyObject arg{i} = args[{i}];')
+                        for i in range(min_args, max_args):
+                            writer.write(f'PyObject arg{i} = (args.length >= {i+1}) ? args[{i}] : {args[i]};')
+                        args = ', '.join(f'arg{i}' for i in range(max_args))
                     writer.write(f'return self.pymethod_{method_name}({args});')
                     writer.write('}')
                     writer.write('}')
