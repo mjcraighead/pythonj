@@ -22,17 +22,6 @@ abstract class PyIter extends PyTruthyObject {
 }
 
 abstract class PyType extends PyTruthyObject {
-// BEGIN GENERATED CODE: PyType
-    protected static final class PyTypeMethodUnimplemented extends PyBuiltinMethod<PyType> {
-        private final String name;
-        PyTypeMethodUnimplemented(PyObject _self, String _name) { super((PyType)_self); name = _name; }
-        @Override public String methodName() { return name; }
-        @Override public PyObject call(PyObject[] args, PyDict kwargs) {
-            throw new UnsupportedOperationException("type." + name + "() unimplemented");
-        }
-    }
-// END GENERATED CODE: PyType
-
     public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
         if (args.length != 1) {
             throw new IllegalArgumentException("type() takes 1 argument");
@@ -62,6 +51,17 @@ abstract class PyType extends PyTruthyObject {
         throw new UnsupportedOperationException("type.__doc__ unimplemented");
     }
 }
+
+// BEGIN GENERATED CODE: PyType
+final class PyTypeMethodUnimplemented extends PyBuiltinMethod<PyType> {
+    private final String name;
+    PyTypeMethodUnimplemented(PyObject _self, String _name) { super((PyType)_self); name = _name; }
+    @Override public String methodName() { return name; }
+    @Override public PyObject call(PyObject[] args, PyDict kwargs) {
+        throw new UnsupportedOperationException("type." + name + "() unimplemented");
+    }
+}
+// END GENERATED CODE: PyType
 
 class PyBuiltinType extends PyType {
     protected final String typeName;

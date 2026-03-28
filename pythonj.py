@@ -1411,7 +1411,7 @@ def gen_code(spec_path: str, java_path: str) -> None:
                 elif v['kind'] == 'method':
                     doc = 'null' if v['doc'] is None else java_string_literal(v['doc'])
                     if name in UNIMPLEMENTED_METHODS and k in UNIMPLEMENTED_METHODS[name]:
-                        constructor = f'obj -> new {java_name}.{java_name}MethodUnimplemented(obj, {java_string_literal(k)})'
+                        constructor = f'obj -> new {java_name}MethodUnimplemented(obj, {java_string_literal(k)})'
                     else:
                         constructor = f'{java_name}.{java_name}Method_{k}::new'
                     gen_lines.append(f"    private static final PyMethodDescriptor pyattr_{k} = new PyMethodDescriptor(singleton, {java_string_literal(k)}, {constructor}, {doc});\n")
@@ -1473,14 +1473,14 @@ def gen_code_inline(spec_path: str) -> None:
         begin_index = source_lines.index(begin_tag) + 1
         end_index = source_lines.index(end_tag)
         gen_lines = [
-            f'    protected static final class {java_name}MethodUnimplemented extends PyBuiltinMethod<{java_name}> {{\n',
-            '        private final String name;\n',
-            f'        {java_name}MethodUnimplemented(PyObject _self, String _name) {{ super(({java_name})_self); name = _name; }}\n',
-            '        @Override public String methodName() { return name; }\n',
-            '        @Override public PyObject call(PyObject[] args, PyDict kwargs) {\n',
-            f'            throw new UnsupportedOperationException("{name}." + name + "() unimplemented");\n',
-            '        }\n',
+            f'final class {java_name}MethodUnimplemented extends PyBuiltinMethod<{java_name}> {{\n',
+            '    private final String name;\n',
+            f'    {java_name}MethodUnimplemented(PyObject _self, String _name) {{ super(({java_name})_self); name = _name; }}\n',
+            '    @Override public String methodName() { return name; }\n',
+            '    @Override public PyObject call(PyObject[] args, PyDict kwargs) {\n',
+            f'        throw new UnsupportedOperationException("{name}." + name + "() unimplemented");\n',
             '    }\n',
+            '}\n',
         ]
         source_lines[begin_index:end_index] = gen_lines
 

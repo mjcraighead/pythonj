@@ -11,16 +11,6 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 
 final class PyTextIOWrapper extends PyIter {
-// BEGIN GENERATED CODE: PyTextIOWrapper
-    protected static final class PyTextIOWrapperMethodUnimplemented extends PyBuiltinMethod<PyTextIOWrapper> {
-        private final String name;
-        PyTextIOWrapperMethodUnimplemented(PyObject _self, String _name) { super((PyTextIOWrapper)_self); name = _name; }
-        @Override public String methodName() { return name; }
-        @Override public PyObject call(PyObject[] args, PyDict kwargs) {
-            throw new UnsupportedOperationException("_io.TextIOWrapper." + name + "() unimplemented");
-        }
-    }
-// END GENERATED CODE: PyTextIOWrapper
     protected static final class PyTextIOWrapperMethod_close extends PyBuiltinMethod<PyTextIOWrapper> {
         PyTextIOWrapperMethod_close(PyObject _self) { super((PyTextIOWrapper)_self); }
         @Override public String methodName() { return "close"; }
@@ -120,17 +110,18 @@ final class PyTextIOWrapper extends PyIter {
     static PyObject pygetset__CHUNK_SIZE(PyObject obj) { throw new UnsupportedOperationException("TextIOWrapper._CHUNK_SIZE unsupported"); }
 }
 
-final class PyBufferedReader extends PyIter {
-// BEGIN GENERATED CODE: PyBufferedReader
-    protected static final class PyBufferedReaderMethodUnimplemented extends PyBuiltinMethod<PyBufferedReader> {
-        private final String name;
-        PyBufferedReaderMethodUnimplemented(PyObject _self, String _name) { super((PyBufferedReader)_self); name = _name; }
-        @Override public String methodName() { return name; }
-        @Override public PyObject call(PyObject[] args, PyDict kwargs) {
-            throw new UnsupportedOperationException("_io.BufferedReader." + name + "() unimplemented");
-        }
+// BEGIN GENERATED CODE: PyTextIOWrapper
+final class PyTextIOWrapperMethodUnimplemented extends PyBuiltinMethod<PyTextIOWrapper> {
+    private final String name;
+    PyTextIOWrapperMethodUnimplemented(PyObject _self, String _name) { super((PyTextIOWrapper)_self); name = _name; }
+    @Override public String methodName() { return name; }
+    @Override public PyObject call(PyObject[] args, PyDict kwargs) {
+        throw new UnsupportedOperationException("_io.TextIOWrapper." + name + "() unimplemented");
     }
-// END GENERATED CODE: PyBufferedReader
+}
+// END GENERATED CODE: PyTextIOWrapper
+
+final class PyBufferedReader extends PyIter {
     protected static final class PyBufferedReaderMethod_close extends PyBuiltinMethod<PyBufferedReader> {
         PyBufferedReaderMethod_close(PyObject _self) { super((PyBufferedReader)_self); }
         @Override public String methodName() { return "close"; }
@@ -199,3 +190,14 @@ final class PyBufferedReader extends PyIter {
     static PyObject pygetset_name(PyObject obj) { throw new UnsupportedOperationException("BufferedReader.name unsupported"); }
     static PyObject pygetset_mode(PyObject obj) { throw new UnsupportedOperationException("BufferedReader.mode unsupported"); }
 }
+
+// BEGIN GENERATED CODE: PyBufferedReader
+final class PyBufferedReaderMethodUnimplemented extends PyBuiltinMethod<PyBufferedReader> {
+    private final String name;
+    PyBufferedReaderMethodUnimplemented(PyObject _self, String _name) { super((PyBufferedReader)_self); name = _name; }
+    @Override public String methodName() { return name; }
+    @Override public PyObject call(PyObject[] args, PyDict kwargs) {
+        throw new UnsupportedOperationException("_io.BufferedReader." + name + "() unimplemented");
+    }
+}
+// END GENERATED CODE: PyBufferedReader
