@@ -1477,10 +1477,12 @@ def gen_code(spec_path: str, java_path: str) -> None:
                     writer.write('if ((kwargs != null) && kwargs.boolValue()) {')
                     writer.write(f'throw Runtime.raiseNoKwArgs("{name}.{method_name}");')
                     writer.write('}')
+                    writer.write(f'if (args.length != {n_args}) {{')
                     if n_args < 2:
-                        writer.write(f'Runtime.requireExactArgsAlt(args, {n_args}, "{name}.{method_name}");')
+                        writer.write(f'throw Runtime.raiseExactArgsAlt(args, {n_args}, "{name}.{method_name}");')
                     else:
-                        writer.write(f'Runtime.requireExactArgs(args, {n_args}, "{method_name}");')
+                        writer.write(f'throw Runtime.raiseExactArgs(args, {n_args}, "{method_name}");')
+                    writer.write('}')
                     writer.write(f'return self.pymethod_{method_name}({args});')
                     writer.write('}')
                     writer.write('}')

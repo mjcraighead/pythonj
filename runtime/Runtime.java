@@ -262,6 +262,18 @@ public final class Runtime {
     public static PyRaise raiseNoKwArgs(String name) {
         return PyTypeError.raise(name + "() takes no keyword arguments");
     }
+    public static PyRaise raiseExactArgs(PyObject[] args, int n, String name) {
+        return PyTypeError.raiseFormat("%s expected %d argument%s, got %d", name, n, (n == 1) ? "" : "s", args.length);
+    }
+    public static PyRaise raiseExactArgsAlt(PyObject[] args, int n, String name) {
+        if (n == 0) {
+            return PyTypeError.raiseFormat("%s() takes no arguments (%d given)", name, args.length);
+        } else if (n == 1) {
+            return PyTypeError.raiseFormat("%s() takes exactly one argument (%d given)", name, args.length);
+        } else { // XXX Figure out what to do in this case
+            throw new IllegalArgumentException(String.format("%s expected %d argument%s, got %d", name, n, (n == 1) ? "" : "s", args.length));
+        }
+    }
     public static void requireNoKwArgs(PyDict kwargs, String name) {
         if ((kwargs != null) && kwargs.boolValue()) {
             throw raiseNoKwArgs(name);
@@ -269,18 +281,12 @@ public final class Runtime {
     }
     public static void requireExactArgs(PyObject[] args, int n, String name) {
         if (args.length != n) {
-            throw PyTypeError.raiseFormat("%s expected %d argument%s, got %d", name, n, (n == 1) ? "" : "s", args.length);
+            throw raiseExactArgs(args, n, name);
         }
     }
     public static void requireExactArgsAlt(PyObject[] args, int n, String name) {
         if (args.length != n) {
-            if (n == 0) {
-                throw PyTypeError.raiseFormat("%s() takes no arguments (%d given)", name, args.length);
-            } else if (n == 1) {
-                throw PyTypeError.raiseFormat("%s() takes exactly one argument (%d given)", name, args.length);
-            } else { // XXX Figure out what to do in this case
-                throw new IllegalArgumentException(String.format("%s expected %d argument%s, got %d", name, n, (n == 1) ? "" : "s", args.length));
-            }
+            throw raiseExactArgsAlt(args, n, name);
         }
     }
     public static PyRaise raiseUserExactArgs(PyObject[] args, int n, String name, String... argNames) {
