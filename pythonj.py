@@ -1365,6 +1365,21 @@ UNIMPLEMENTED_METHODS = {
     },
     'BaseException': {'add_note', 'with_traceback'},
 }
+GEN_METHODS = {
+    'dict': {
+        'clear': 0, 'copy': 0, 'items': 0, 'keys': 0, 'popitem': 0, 'values': 0,
+    },
+    'int': {
+        'as_integer_ratio': 0, 'bit_count': 0, 'bit_length': 0, 'conjugate': 0, 'is_integer': 0,
+    },
+    'list': {
+        'append': 1, 'clear': 0, 'copy': 0, 'count': 1, 'extend': 1, 'insert': 2, 'remove': 1, 'reverse': 0,
+    },
+    'set': {'add': 1, 'clear': 0, 'discard': 1},
+    'slice': {'indices': 1},
+    'str': {'join': 1, 'lower': 0, 'upper': 0},
+    'tuple': {'count': 1},
+}
 
 def get_java_name(name: str) -> str:
     if name.startswith('_io.'):
@@ -1457,6 +1472,27 @@ def gen_code(spec_path: str, java_path: str) -> None:
                     '}\n'
                     '\n'
                 )
+
+            if name in GEN_METHODS:
+                for (method_name, n_args) in GEN_METHODS[name].items():
+                    args = ', '.join(f'args[{i}]' for i in range(n_args))
+                    f.write(
+                        f'final class {java_name}Method_{method_name} extends PyBuiltinMethod<{java_name}> {{\n'
+                        f'    {java_name}Method_{method_name}(PyObject _self) {{ super(({java_name})_self); }}\n'
+                        f'    @Override public String methodName() {{ return "{method_name}"; }}\n'
+                        '    @Override public PyObject call(PyObject[] args, PyDict kwargs) {\n'
+                        f'        Runtime.requireNoKwArgs(kwargs, "{name}.{method_name}");\n'
+                    )
+                    if n_args < 2:
+                        f.write(f'        Runtime.requireExactArgsAlt(args, {n_args}, "{name}.{method_name}");\n')
+                    else:
+                        f.write(f'        Runtime.requireExactArgs(args, {n_args}, "{method_name}");\n')
+                    f.write(
+                        f'        return self.pymethod_{method_name}({args});\n'
+                        '    }\n'
+                        '}\n'
+                    )
+                f.write('\n')
 
 def main() -> None:
     parser = argparse.ArgumentParser()

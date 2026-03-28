@@ -388,42 +388,6 @@ public final class PyInt extends PyObject {
     }
 }
 
-final class PyIntMethod_as_integer_ratio extends PyBuiltinMethod<PyInt> {
-    PyIntMethod_as_integer_ratio(PyObject _self) { super((PyInt)_self); }
-    @Override public String methodName() { return "as_integer_ratio"; }
-    @Override public PyTuple call(PyObject[] args, PyDict kwargs) {
-        Runtime.requireNoKwArgs(kwargs, "int.as_integer_ratio");
-        Runtime.requireExactArgsAlt(args, 0, "int.as_integer_ratio");
-        return self.pymethod_as_integer_ratio();
-    }
-}
-final class PyIntMethod_bit_count extends PyBuiltinMethod<PyInt> {
-    PyIntMethod_bit_count(PyObject _self) { super((PyInt)_self); }
-    @Override public String methodName() { return "bit_count"; }
-    @Override public PyInt call(PyObject[] args, PyDict kwargs) {
-        Runtime.requireNoKwArgs(kwargs, "int.bit_count");
-        Runtime.requireExactArgsAlt(args, 0, "int.bit_count");
-        return self.pymethod_bit_count();
-    }
-}
-final class PyIntMethod_bit_length extends PyBuiltinMethod<PyInt> {
-    PyIntMethod_bit_length(PyObject _self) { super((PyInt)_self); }
-    @Override public String methodName() { return "bit_length"; }
-    @Override public PyInt call(PyObject[] args, PyDict kwargs) {
-        Runtime.requireNoKwArgs(kwargs, "int.bit_length");
-        Runtime.requireExactArgsAlt(args, 0, "int.bit_length");
-        return self.pymethod_bit_length();
-    }
-}
-final class PyIntMethod_conjugate extends PyBuiltinMethod<PyInt> {
-    PyIntMethod_conjugate(PyObject _self) { super((PyInt)_self); }
-    @Override public String methodName() { return "conjugate"; }
-    @Override public PyInt call(PyObject[] args, PyDict kwargs) {
-        Runtime.requireNoKwArgs(kwargs, "int.conjugate");
-        Runtime.requireExactArgsAlt(args, 0, "int.conjugate");
-        return self.pymethod_conjugate();
-    }
-}
 final class PyIntClassMethod_from_bytes extends PyBuiltinMethod<PyType> {
     PyIntClassMethod_from_bytes(PyType self) { super(self); }
     @Override public String methodName() { return "from_bytes"; }
@@ -489,15 +453,6 @@ final class PyIntClassMethod_from_bytes extends PyBuiltinMethod<PyType> {
             }
         }
         return new PyInt(result);
-    }
-}
-final class PyIntMethod_is_integer extends PyBuiltinMethod<PyInt> {
-    PyIntMethod_is_integer(PyObject _self) { super((PyInt)_self); }
-    @Override public String methodName() { return "is_integer"; }
-    @Override public PyBool call(PyObject[] args, PyDict kwargs) {
-        Runtime.requireNoKwArgs(kwargs, "int.is_integer");
-        Runtime.requireExactArgsAlt(args, 0, "int.is_integer");
-        return self.pymethod_is_integer();
     }
 }
 final class PyIntMethod_to_bytes extends PyBuiltinMethod<PyInt> {

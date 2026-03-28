@@ -321,24 +321,6 @@ final class PyStringMethod_find extends PyBuiltinMethod<PyString> {
         return self.pymethod_find(sub, start, end);
     }
 }
-final class PyStringMethod_join extends PyBuiltinMethod<PyString> {
-    PyStringMethod_join(PyObject _self) { super((PyString)_self); }
-    @Override public String methodName() { return "join"; }
-    @Override public PyString call(PyObject[] args, PyDict kwargs) {
-        Runtime.requireNoKwArgs(kwargs, "str.join");
-        Runtime.requireExactArgsAlt(args, 1, "str.join");
-        return self.pymethod_join(args[0]);
-    }
-}
-final class PyStringMethod_lower extends PyBuiltinMethod<PyString> {
-    PyStringMethod_lower(PyObject _self) { super((PyString)_self); }
-    @Override public String methodName() { return "lower"; }
-    @Override public PyString call(PyObject[] args, PyDict kwargs) {
-        Runtime.requireNoKwArgs(kwargs, "str.lower");
-        Runtime.requireExactArgsAlt(args, 0, "str.lower");
-        return self.pymethod_lower();
-    }
-}
 final class PyStringStaticMethod_maketrans extends PyBuiltinMethod<PyType> {
     PyStringStaticMethod_maketrans(PyType _self) { super(_self); }
     @Override public String methodName() { return "maketrans"; }
@@ -381,14 +363,5 @@ final class PyStringMethod_startswith extends PyBuiltinMethod<PyString> {
         PyObject start = (args.length >= 2) ? args[1] : PyNone.singleton;
         PyObject end = (args.length >= 3) ? args[2] : PyNone.singleton;
         return self.pymethod_startswith(prefix, start, end);
-    }
-}
-final class PyStringMethod_upper extends PyBuiltinMethod<PyString> {
-    PyStringMethod_upper(PyObject _self) { super((PyString)_self); }
-    @Override public String methodName() { return "upper"; }
-    @Override public PyString call(PyObject[] args, PyDict kwargs) {
-        Runtime.requireNoKwArgs(kwargs, "str.upper");
-        Runtime.requireExactArgsAlt(args, 0, "str.upper");
-        return self.pymethod_upper();
     }
 }
