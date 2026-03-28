@@ -169,6 +169,7 @@ final class PyBuiltinFunctionsImpl {
     static PyInt pyfunc_len(PyObject arg) { return new PyInt(arg.len()); }
     static PyObject minMaxImpl(PyObject[] args, PyDict kwargs, String name, boolean isMax) {
         int argsLength = args.length;
+        Runtime.requireMinArgs(args, 1, name);
         PyObject defaultObj = null;
         PyObject keyFunc = PyNone.singleton;
         if ((kwargs != null) && kwargs.boolValue()) {
@@ -186,7 +187,6 @@ final class PyBuiltinFunctionsImpl {
                 }
             }
         }
-        Runtime.requireMinArgs(args, 1, name);
         if (argsLength == 1) {
             var iter = args[0].iter();
             PyObject ret = iter.next();
