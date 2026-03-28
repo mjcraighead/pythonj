@@ -1376,12 +1376,17 @@ GEN_METHODS = {
     },
     'list': {
         'append': [REQUIRED], 'clear': [], 'copy': [], 'count': [REQUIRED], 'extend': [REQUIRED],
-        'insert': [REQUIRED, REQUIRED], 'remove': [REQUIRED], 'reverse': [],
+        'insert': [REQUIRED, REQUIRED], 'pop': ['PyInt.singleton_neg1'], 'remove': [REQUIRED], 'reverse': [],
     },
     'set': {'add': [REQUIRED], 'clear': [], 'discard': [REQUIRED]},
     'slice': {'indices': [REQUIRED]},
-    'str': {'join': [REQUIRED], 'lower': [], 'upper': []},
-    'tuple': {'count': [REQUIRED]},
+    'str': {
+        'find': [REQUIRED, 'PyNone.singleton', 'PyNone.singleton'], 'join': [REQUIRED], 'lower': [],
+        'startswith': [REQUIRED, 'PyNone.singleton', 'PyNone.singleton'], 'upper': [],
+    },
+    'tuple': {'count': [REQUIRED], 'index': [REQUIRED, 'null', 'null']},
+    '_io.BufferedReader': {'close': []},
+    '_io.TextIOWrapper': {'close': []},
 }
 
 def get_java_name(name: str) -> str:
@@ -1471,13 +1476,17 @@ def gen_code(spec_path: str, java_path: str) -> None:
                 writer.write('')
 
             if name in GEN_METHODS:
+                if '.' in name:
+                    py_name = name.rsplit('.')[1]
+                else:
+                    py_name = name
                 for (method_name, args) in GEN_METHODS[name].items():
                     writer.write(f'final class {java_name}Method_{method_name} extends PyBuiltinMethod<{java_name}> {{')
                     writer.write(f'{java_name}Method_{method_name}(PyObject _self) {{ super(({java_name})_self); }}')
                     writer.write(f'@Override public String methodName() {{ return "{method_name}"; }}')
                     writer.write('@Override public PyObject call(PyObject[] args, PyDict kwargs) {')
                     writer.write('if ((kwargs != null) && kwargs.boolValue()) {')
-                    writer.write(f'throw Runtime.raiseNoKwArgs("{name}.{method_name}");')
+                    writer.write(f'throw Runtime.raiseNoKwArgs("{py_name}.{method_name}");')
                     writer.write('}')
                     writer.write('int argsLength = args.length;')
                     min_args = args.count(REQUIRED)
@@ -1486,17 +1495,18 @@ def gen_code(spec_path: str, java_path: str) -> None:
                     if min_args == max_args:
                         writer.write(f'if (argsLength != {max_args}) {{')
                         if max_args == 0:
-                            writer.write(f'throw Runtime.raiseNoArgs(args, "{name}.{method_name}");')
+                            writer.write(f'throw Runtime.raiseNoArgs(args, "{py_name}.{method_name}");')
                         elif max_args == 1:
-                            writer.write(f'throw Runtime.raiseOneArg(args, "{name}.{method_name}");')
+                            writer.write(f'throw Runtime.raiseOneArg(args, "{py_name}.{method_name}");')
                         else:
                             writer.write(f'throw Runtime.raiseExactArgs(args, {max_args}, "{method_name}");')
                         writer.write('}')
                         args = ', '.join(f'args[{i}]' for i in range(max_args))
                     else:
-                        writer.write(f'if (argsLength < {min_args}) {{')
-                        writer.write(f'throw Runtime.raiseMinArgs(args, {min_args}, "{method_name}");')
-                        writer.write('}')
+                        if min_args > 0:
+                            writer.write(f'if (argsLength < {min_args}) {{')
+                            writer.write(f'throw Runtime.raiseMinArgs(args, {min_args}, "{method_name}");')
+                            writer.write('}')
                         writer.write(f'if (argsLength > {max_args}) {{')
                         writer.write(f'throw Runtime.raiseMaxArgs(args, {max_args}, "{method_name}");')
                         writer.write('}')

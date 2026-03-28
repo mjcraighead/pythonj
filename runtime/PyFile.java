@@ -88,19 +88,6 @@ final class PyTextIOWrapper extends PyIter {
     static PyObject pygetset__CHUNK_SIZE(PyObject obj) { throw new UnsupportedOperationException("TextIOWrapper._CHUNK_SIZE unsupported"); }
 }
 
-final class PyTextIOWrapperMethod_close extends PyBuiltinMethod<PyTextIOWrapper> {
-    PyTextIOWrapperMethod_close(PyObject _self) { super((PyTextIOWrapper)_self); }
-    @Override public String methodName() { return "close"; }
-    @Override public PyNone call(PyObject[] args, PyDict kwargs) {
-        if ((kwargs != null) && kwargs.boolValue()) {
-            throw Runtime.raiseNoKwArgs("TextIOWrapper.close");
-        }
-        if (args.length != 0) {
-            throw Runtime.raiseNoArgs(args, "TextIOWrapper.close");
-        }
-        return self.pymethod_close();
-    }
-}
 final class PyTextIOWrapperMethod_readline extends PyBuiltinMethod<PyTextIOWrapper> {
     PyTextIOWrapperMethod_readline(PyObject _self) { super((PyTextIOWrapper)_self); }
     @Override public String methodName() { return "readline"; }
@@ -162,19 +149,6 @@ final class PyBufferedReader extends PyIter {
     static PyObject pygetset_mode(PyObject obj) { throw new UnsupportedOperationException("BufferedReader.mode unsupported"); }
 }
 
-final class PyBufferedReaderMethod_close extends PyBuiltinMethod<PyBufferedReader> {
-    PyBufferedReaderMethod_close(PyObject _self) { super((PyBufferedReader)_self); }
-    @Override public String methodName() { return "close"; }
-    @Override public PyNone call(PyObject[] args, PyDict kwargs) {
-        if ((kwargs != null) && kwargs.boolValue()) {
-            throw Runtime.raiseNoKwArgs("BufferedReader.close");
-        }
-        if (args.length != 0) {
-            throw Runtime.raiseNoArgs(args, "BufferedReader.close");
-        }
-        return self.pymethod_close();
-    }
-}
 final class PyBufferedReaderMethod_read extends PyBuiltinMethod<PyBufferedReader> {
     PyBufferedReaderMethod_read(PyObject _self) { super((PyBufferedReader)_self); }
     @Override public String methodName() { return "read"; }

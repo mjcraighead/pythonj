@@ -300,16 +300,6 @@ final class PyListMethod_index extends PyBuiltinMethod<PyList> {
         return self.pymethod_index(args[0]);
     }
 }
-final class PyListMethod_pop extends PyBuiltinMethod<PyList> {
-    PyListMethod_pop(PyObject _self) { super((PyList)_self); }
-    @Override public String methodName() { return "pop"; }
-    @Override public PyObject call(PyObject[] args, PyDict kwargs) {
-        Runtime.requireNoKwArgs(kwargs, "list.pop");
-        Runtime.requireMaxArgs(args, 1, "pop");
-        PyObject index = (args.length >= 1) ? args[0] : PyInt.singleton_neg1;
-        return self.pymethod_pop(index);
-    }
-}
 final class PyListMethod_sort extends PyBuiltinMethod<PyList> {
     PyListMethod_sort(PyObject _self) { super((PyList)_self); }
     @Override public String methodName() { return "sort"; }

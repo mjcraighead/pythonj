@@ -308,19 +308,6 @@ public final class PyString extends PyObject {
     public PyString pymethod_upper() { return new PyString(value.toUpperCase(Locale.ROOT)); }
 }
 
-final class PyStringMethod_find extends PyBuiltinMethod<PyString> {
-    PyStringMethod_find(PyObject _self) { super((PyString)_self); }
-    @Override public String methodName() { return "find"; }
-    @Override public PyInt call(PyObject[] args, PyDict kwargs) {
-        Runtime.requireNoKwArgs(kwargs, "str.find");
-        Runtime.requireMinArgs(args, 1, "find");
-        Runtime.requireMaxArgs(args, 3, "find");
-        PyObject sub = args[0];
-        PyObject start = (args.length >= 2) ? args[1] : PyNone.singleton;
-        PyObject end = (args.length >= 3) ? args[2] : PyNone.singleton;
-        return self.pymethod_find(sub, start, end);
-    }
-}
 final class PyStringStaticMethod_maketrans extends PyBuiltinMethod<PyType> {
     PyStringStaticMethod_maketrans(PyType _self) { super(_self); }
     @Override public String methodName() { return "maketrans"; }
@@ -350,18 +337,5 @@ final class PyStringMethod_split extends PyBuiltinMethod<PyString> {
         PyObject sep = (args.length >= 1) ? args[0] : PyNone.singleton;
         PyObject maxsplit = (args.length >= 2) ? args[1] : PyInt.singleton_neg1;
         return self.pymethod_split(sep, maxsplit);
-    }
-}
-final class PyStringMethod_startswith extends PyBuiltinMethod<PyString> {
-    PyStringMethod_startswith(PyObject _self) { super((PyString)_self); }
-    @Override public String methodName() { return "startswith"; }
-    @Override public PyBool call(PyObject[] args, PyDict kwargs) {
-        Runtime.requireNoKwArgs(kwargs, "str.startswith");
-        Runtime.requireMinArgs(args, 1, "startswith");
-        Runtime.requireMaxArgs(args, 3, "startswith");
-        PyObject prefix = args[0];
-        PyObject start = (args.length >= 2) ? args[1] : PyNone.singleton;
-        PyObject end = (args.length >= 3) ? args[2] : PyNone.singleton;
-        return self.pymethod_startswith(prefix, start, end);
     }
 }
