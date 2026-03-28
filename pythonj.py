@@ -1413,7 +1413,7 @@ def gen_code(spec_path: str, java_path: str) -> None:
                     if name in UNIMPLEMENTED_METHODS and k in UNIMPLEMENTED_METHODS[name]:
                         constructor = f'obj -> new {java_name}MethodUnimplemented(obj, {java_string_literal(k)})'
                     else:
-                        constructor = f'{java_name}.{java_name}Method_{k}::new'
+                        constructor = f'{java_name}Method_{k}::new'
                     f.write(f"    private static final PyMethodDescriptor pyattr_{k} = new PyMethodDescriptor(singleton, {java_string_literal(k)}, {constructor}, {doc});\n")
                 elif v['kind'] == 'classmethod':
                     doc = 'null' if v['doc'] is None else java_string_literal(v['doc'])

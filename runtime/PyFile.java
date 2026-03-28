@@ -11,28 +11,6 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 
 final class PyTextIOWrapper extends PyIter {
-    protected static final class PyTextIOWrapperMethod_close extends PyBuiltinMethod<PyTextIOWrapper> {
-        PyTextIOWrapperMethod_close(PyObject _self) { super((PyTextIOWrapper)_self); }
-        @Override public String methodName() { return "close"; }
-        @Override public PyNone call(PyObject[] args, PyDict kwargs) {
-            Runtime.requireNoKwArgs(kwargs, "TextIOWrapper.close");
-            Runtime.requireExactArgsAlt(args, 0, "TextIOWrapper.close");
-            return self.pymethod_close();
-        }
-    }
-    protected static final class PyTextIOWrapperMethod_readline extends PyBuiltinMethod<PyTextIOWrapper> {
-        PyTextIOWrapperMethod_readline(PyObject _self) { super((PyTextIOWrapper)_self); }
-        @Override public String methodName() { return "readline"; }
-        @Override public PyString call(PyObject[] args, PyDict kwargs) {
-            Runtime.requireNoKwArgs(kwargs, "TextIOWrapper.readline");
-            Runtime.requireMaxArgs(args, 1, "readline");
-            if (args.length != 0) {
-                throw new UnsupportedOperationException("'size' argument to TextIOWrapper.readline() is not supported");
-            }
-            return self.pymethod_readline();
-        }
-    }
-
     private final PyObject name;
     public final BufferedReader reader;
 
@@ -110,29 +88,29 @@ final class PyTextIOWrapper extends PyIter {
     static PyObject pygetset__CHUNK_SIZE(PyObject obj) { throw new UnsupportedOperationException("TextIOWrapper._CHUNK_SIZE unsupported"); }
 }
 
-final class PyBufferedReader extends PyIter {
-    protected static final class PyBufferedReaderMethod_close extends PyBuiltinMethod<PyBufferedReader> {
-        PyBufferedReaderMethod_close(PyObject _self) { super((PyBufferedReader)_self); }
-        @Override public String methodName() { return "close"; }
-        @Override public PyNone call(PyObject[] args, PyDict kwargs) {
-            Runtime.requireNoKwArgs(kwargs, "BufferedReader.close");
-            Runtime.requireExactArgsAlt(args, 0, "BufferedReader.close");
-            return self.pymethod_close();
-        }
+final class PyTextIOWrapperMethod_close extends PyBuiltinMethod<PyTextIOWrapper> {
+    PyTextIOWrapperMethod_close(PyObject _self) { super((PyTextIOWrapper)_self); }
+    @Override public String methodName() { return "close"; }
+    @Override public PyNone call(PyObject[] args, PyDict kwargs) {
+        Runtime.requireNoKwArgs(kwargs, "TextIOWrapper.close");
+        Runtime.requireExactArgsAlt(args, 0, "TextIOWrapper.close");
+        return self.pymethod_close();
     }
-    protected static final class PyBufferedReaderMethod_read extends PyBuiltinMethod<PyBufferedReader> {
-        PyBufferedReaderMethod_read(PyObject _self) { super((PyBufferedReader)_self); }
-        @Override public String methodName() { return "read"; }
-        @Override public PyBytes call(PyObject[] args, PyDict kwargs) {
-            Runtime.requireNoKwArgs(kwargs, "BufferedReader.read");
-            Runtime.requireMaxArgs(args, 1, "read");
-            if (args.length != 0) {
-                throw new UnsupportedOperationException("'size' argument to BufferedReader.read() is not supported");
-            }
-            return self.pymethod_read();
+}
+final class PyTextIOWrapperMethod_readline extends PyBuiltinMethod<PyTextIOWrapper> {
+    PyTextIOWrapperMethod_readline(PyObject _self) { super((PyTextIOWrapper)_self); }
+    @Override public String methodName() { return "readline"; }
+    @Override public PyString call(PyObject[] args, PyDict kwargs) {
+        Runtime.requireNoKwArgs(kwargs, "TextIOWrapper.readline");
+        Runtime.requireMaxArgs(args, 1, "readline");
+        if (args.length != 0) {
+            throw new UnsupportedOperationException("'size' argument to TextIOWrapper.readline() is not supported");
         }
+        return self.pymethod_readline();
     }
+}
 
+final class PyBufferedReader extends PyIter {
     private final PyObject name;
     public final BufferedInputStream reader;
 
@@ -178,4 +156,26 @@ final class PyBufferedReader extends PyIter {
     static PyObject pygetset_closed(PyObject obj) { throw new UnsupportedOperationException("BufferedReader.closed unsupported"); }
     static PyObject pygetset_name(PyObject obj) { throw new UnsupportedOperationException("BufferedReader.name unsupported"); }
     static PyObject pygetset_mode(PyObject obj) { throw new UnsupportedOperationException("BufferedReader.mode unsupported"); }
+}
+
+final class PyBufferedReaderMethod_close extends PyBuiltinMethod<PyBufferedReader> {
+    PyBufferedReaderMethod_close(PyObject _self) { super((PyBufferedReader)_self); }
+    @Override public String methodName() { return "close"; }
+    @Override public PyNone call(PyObject[] args, PyDict kwargs) {
+        Runtime.requireNoKwArgs(kwargs, "BufferedReader.close");
+        Runtime.requireExactArgsAlt(args, 0, "BufferedReader.close");
+        return self.pymethod_close();
+    }
+}
+final class PyBufferedReaderMethod_read extends PyBuiltinMethod<PyBufferedReader> {
+    PyBufferedReaderMethod_read(PyObject _self) { super((PyBufferedReader)_self); }
+    @Override public String methodName() { return "read"; }
+    @Override public PyBytes call(PyObject[] args, PyDict kwargs) {
+        Runtime.requireNoKwArgs(kwargs, "BufferedReader.read");
+        Runtime.requireMaxArgs(args, 1, "read");
+        if (args.length != 0) {
+            throw new UnsupportedOperationException("'size' argument to BufferedReader.read() is not supported");
+        }
+        return self.pymethod_read();
+    }
 }

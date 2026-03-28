@@ -27,84 +27,6 @@ public final class PyString extends PyObject {
         @Override public PyBuiltinType type() { return type_singleton; }
     };
 
-    protected static final class PyStringMethod_find extends PyBuiltinMethod<PyString> {
-        PyStringMethod_find(PyObject _self) { super((PyString)_self); }
-        @Override public String methodName() { return "find"; }
-        @Override public PyInt call(PyObject[] args, PyDict kwargs) {
-            Runtime.requireNoKwArgs(kwargs, "str.find");
-            Runtime.requireMinArgs(args, 1, "find");
-            Runtime.requireMaxArgs(args, 3, "find");
-            PyObject sub = args[0];
-            PyObject start = (args.length >= 2) ? args[1] : PyNone.singleton;
-            PyObject end = (args.length >= 3) ? args[2] : PyNone.singleton;
-            return self.pymethod_find(sub, start, end);
-        }
-    }
-    protected static final class PyStringMethod_join extends PyBuiltinMethod<PyString> {
-        PyStringMethod_join(PyObject _self) { super((PyString)_self); }
-        @Override public String methodName() { return "join"; }
-        @Override public PyString call(PyObject[] args, PyDict kwargs) {
-            Runtime.requireNoKwArgs(kwargs, "str.join");
-            Runtime.requireExactArgsAlt(args, 1, "str.join");
-            return self.pymethod_join(args[0]);
-        }
-    }
-    protected static final class PyStringMethod_lower extends PyBuiltinMethod<PyString> {
-        PyStringMethod_lower(PyObject _self) { super((PyString)_self); }
-        @Override public String methodName() { return "lower"; }
-        @Override public PyString call(PyObject[] args, PyDict kwargs) {
-            Runtime.requireNoKwArgs(kwargs, "str.lower");
-            Runtime.requireExactArgsAlt(args, 0, "str.lower");
-            return self.pymethod_lower();
-        }
-    }
-    protected static final class PyStringMethod_split extends PyBuiltinMethod<PyString> {
-        PyStringMethod_split(PyObject _self) { super((PyString)_self); }
-        @Override public String methodName() { return "split"; }
-        @Override public PyList call(PyObject[] args, PyDict kwargs) {
-            if ((kwargs != null) && kwargs.boolValue()) { // XXX Handle more cases correctly here
-                if (kwargs.len() > 2) {
-                    throw PyTypeError.raiseFormat("split() takes at most 2 keyword arguments (%d given)", kwargs.len());
-                }
-                for (var x: kwargs.items.entrySet()) {
-                    PyString key = (PyString)x.getKey(); // PyString validated at call site
-                    if (!key.value.equals("sep") && !key.value.equals("maxsplit")) {
-                        throw PyTypeError.raise("split() got an unexpected keyword argument " + key.repr());
-                    }
-                }
-                throw new IllegalArgumentException("str.split() does not accept kwargs");
-            }
-            if (args.length > 2) {
-                throw PyTypeError.raiseFormat("split() takes at most 2 arguments (%d given)", args.length);
-            }
-            PyObject sep = (args.length >= 1) ? args[0] : PyNone.singleton;
-            PyObject maxsplit = (args.length >= 2) ? args[1] : PyInt.singleton_neg1;
-            return self.pymethod_split(sep, maxsplit);
-        }
-    }
-    protected static final class PyStringMethod_startswith extends PyBuiltinMethod<PyString> {
-        PyStringMethod_startswith(PyObject _self) { super((PyString)_self); }
-        @Override public String methodName() { return "startswith"; }
-        @Override public PyBool call(PyObject[] args, PyDict kwargs) {
-            Runtime.requireNoKwArgs(kwargs, "str.startswith");
-            Runtime.requireMinArgs(args, 1, "startswith");
-            Runtime.requireMaxArgs(args, 3, "startswith");
-            PyObject prefix = args[0];
-            PyObject start = (args.length >= 2) ? args[1] : PyNone.singleton;
-            PyObject end = (args.length >= 3) ? args[2] : PyNone.singleton;
-            return self.pymethod_startswith(prefix, start, end);
-        }
-    }
-    protected static final class PyStringMethod_upper extends PyBuiltinMethod<PyString> {
-        PyStringMethod_upper(PyObject _self) { super((PyString)_self); }
-        @Override public String methodName() { return "upper"; }
-        @Override public PyString call(PyObject[] args, PyDict kwargs) {
-            Runtime.requireNoKwArgs(kwargs, "str.upper");
-            Runtime.requireExactArgsAlt(args, 0, "str.upper");
-            return self.pymethod_upper();
-        }
-    }
-
     public final String value;
 
     PyString(String _value) { value = _value; }
@@ -386,10 +308,87 @@ public final class PyString extends PyObject {
     public PyString pymethod_upper() { return new PyString(value.toUpperCase(Locale.ROOT)); }
 }
 
+final class PyStringMethod_find extends PyBuiltinMethod<PyString> {
+    PyStringMethod_find(PyObject _self) { super((PyString)_self); }
+    @Override public String methodName() { return "find"; }
+    @Override public PyInt call(PyObject[] args, PyDict kwargs) {
+        Runtime.requireNoKwArgs(kwargs, "str.find");
+        Runtime.requireMinArgs(args, 1, "find");
+        Runtime.requireMaxArgs(args, 3, "find");
+        PyObject sub = args[0];
+        PyObject start = (args.length >= 2) ? args[1] : PyNone.singleton;
+        PyObject end = (args.length >= 3) ? args[2] : PyNone.singleton;
+        return self.pymethod_find(sub, start, end);
+    }
+}
+final class PyStringMethod_join extends PyBuiltinMethod<PyString> {
+    PyStringMethod_join(PyObject _self) { super((PyString)_self); }
+    @Override public String methodName() { return "join"; }
+    @Override public PyString call(PyObject[] args, PyDict kwargs) {
+        Runtime.requireNoKwArgs(kwargs, "str.join");
+        Runtime.requireExactArgsAlt(args, 1, "str.join");
+        return self.pymethod_join(args[0]);
+    }
+}
+final class PyStringMethod_lower extends PyBuiltinMethod<PyString> {
+    PyStringMethod_lower(PyObject _self) { super((PyString)_self); }
+    @Override public String methodName() { return "lower"; }
+    @Override public PyString call(PyObject[] args, PyDict kwargs) {
+        Runtime.requireNoKwArgs(kwargs, "str.lower");
+        Runtime.requireExactArgsAlt(args, 0, "str.lower");
+        return self.pymethod_lower();
+    }
+}
 final class PyStringStaticMethod_maketrans extends PyBuiltinMethod<PyType> {
     PyStringStaticMethod_maketrans(PyType _self) { super(_self); }
     @Override public String methodName() { return "maketrans"; }
     @Override public PyObject call(PyObject[] args, PyDict kwargs) {
         throw new UnsupportedOperationException("str.maketrans unimplemented");
+    }
+}
+final class PyStringMethod_split extends PyBuiltinMethod<PyString> {
+    PyStringMethod_split(PyObject _self) { super((PyString)_self); }
+    @Override public String methodName() { return "split"; }
+    @Override public PyList call(PyObject[] args, PyDict kwargs) {
+        if ((kwargs != null) && kwargs.boolValue()) { // XXX Handle more cases correctly here
+            if (kwargs.len() > 2) {
+                throw PyTypeError.raiseFormat("split() takes at most 2 keyword arguments (%d given)", kwargs.len());
+            }
+            for (var x: kwargs.items.entrySet()) {
+                PyString key = (PyString)x.getKey(); // PyString validated at call site
+                if (!key.value.equals("sep") && !key.value.equals("maxsplit")) {
+                    throw PyTypeError.raise("split() got an unexpected keyword argument " + key.repr());
+                }
+            }
+            throw new IllegalArgumentException("str.split() does not accept kwargs");
+        }
+        if (args.length > 2) {
+            throw PyTypeError.raiseFormat("split() takes at most 2 arguments (%d given)", args.length);
+        }
+        PyObject sep = (args.length >= 1) ? args[0] : PyNone.singleton;
+        PyObject maxsplit = (args.length >= 2) ? args[1] : PyInt.singleton_neg1;
+        return self.pymethod_split(sep, maxsplit);
+    }
+}
+final class PyStringMethod_startswith extends PyBuiltinMethod<PyString> {
+    PyStringMethod_startswith(PyObject _self) { super((PyString)_self); }
+    @Override public String methodName() { return "startswith"; }
+    @Override public PyBool call(PyObject[] args, PyDict kwargs) {
+        Runtime.requireNoKwArgs(kwargs, "str.startswith");
+        Runtime.requireMinArgs(args, 1, "startswith");
+        Runtime.requireMaxArgs(args, 3, "startswith");
+        PyObject prefix = args[0];
+        PyObject start = (args.length >= 2) ? args[1] : PyNone.singleton;
+        PyObject end = (args.length >= 3) ? args[2] : PyNone.singleton;
+        return self.pymethod_startswith(prefix, start, end);
+    }
+}
+final class PyStringMethod_upper extends PyBuiltinMethod<PyString> {
+    PyStringMethod_upper(PyObject _self) { super((PyString)_self); }
+    @Override public String methodName() { return "upper"; }
+    @Override public PyString call(PyObject[] args, PyDict kwargs) {
+        Runtime.requireNoKwArgs(kwargs, "str.upper");
+        Runtime.requireExactArgsAlt(args, 0, "str.upper");
+        return self.pymethod_upper();
     }
 }

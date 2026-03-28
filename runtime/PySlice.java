@@ -3,16 +3,6 @@
 // SPDX-License-Identifier: MIT
 
 public final class PySlice extends PyTruthyObject {
-    protected static final class PySliceMethod_indices extends PyBuiltinMethod<PySlice> {
-        PySliceMethod_indices(PyObject _self) { super((PySlice)_self); }
-        @Override public String methodName() { return "indices"; }
-        @Override public PyTuple call(PyObject[] args, PyDict kwargs) {
-            Runtime.requireNoKwArgs(kwargs, "slice.indices");
-            Runtime.requireExactArgsAlt(args, 1, "slice.indices");
-            return self.pymethod_indices(args[0]);
-        }
-    }
-
     public final PyObject start, stop, step;
 
     PySlice(PyObject _start, PyObject _stop, PyObject _step) {
@@ -135,4 +125,14 @@ public final class PySlice extends PyTruthyObject {
     static PyObject pymember_start(PyObject obj) { return ((PySlice)obj).start; }
     static PyObject pymember_step(PyObject obj) { return ((PySlice)obj).step; }
     static PyObject pymember_stop(PyObject obj) { return ((PySlice)obj).stop; }
+}
+
+final class PySliceMethod_indices extends PyBuiltinMethod<PySlice> {
+    PySliceMethod_indices(PyObject _self) { super((PySlice)_self); }
+    @Override public String methodName() { return "indices"; }
+    @Override public PyTuple call(PyObject[] args, PyDict kwargs) {
+        Runtime.requireNoKwArgs(kwargs, "slice.indices");
+        Runtime.requireExactArgsAlt(args, 1, "slice.indices");
+        return self.pymethod_indices(args[0]);
+    }
 }

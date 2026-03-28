@@ -24,29 +24,6 @@ public final class PyTuple extends PyObject {
         @Override public PyBuiltinType type() { return type_singleton; }
     };
 
-    protected static final class PyTupleMethod_count extends PyBuiltinMethod<PyTuple> {
-        PyTupleMethod_count(PyObject _self) { super((PyTuple)_self); }
-        @Override public String methodName() { return "count"; }
-        @Override public PyInt call(PyObject[] args, PyDict kwargs) {
-            Runtime.requireNoKwArgs(kwargs, "tuple.count");
-            Runtime.requireExactArgsAlt(args, 1, "tuple.count");
-            return self.pymethod_count(args[0]);
-        }
-    }
-    protected static final class PyTupleMethod_index extends PyBuiltinMethod<PyTuple> {
-        PyTupleMethod_index(PyObject _self) { super((PyTuple)_self); }
-        @Override public String methodName() { return "index"; }
-        @Override public PyInt call(PyObject[] args, PyDict kwargs) {
-            Runtime.requireNoKwArgs(kwargs, "tuple.index");
-            Runtime.requireMinArgs(args, 1, "index");
-            Runtime.requireMaxArgs(args, 3, "index");
-            PyObject value = args[0];
-            PyObject start = (args.length >= 2) ? args[1] : null;
-            PyObject stop = (args.length >= 3) ? args[2] : null;
-            return self.pymethod_index(value, start, stop);
-        }
-    }
-
     public final PyObject[] items;
 
     PyTuple() { items = new PyObject[] {}; }
@@ -209,5 +186,28 @@ public final class PyTuple extends PyObject {
             }
         }
         throw PyValueError.raise("tuple.index(x): x not in tuple");
+    }
+}
+
+final class PyTupleMethod_count extends PyBuiltinMethod<PyTuple> {
+    PyTupleMethod_count(PyObject _self) { super((PyTuple)_self); }
+    @Override public String methodName() { return "count"; }
+    @Override public PyInt call(PyObject[] args, PyDict kwargs) {
+        Runtime.requireNoKwArgs(kwargs, "tuple.count");
+        Runtime.requireExactArgsAlt(args, 1, "tuple.count");
+        return self.pymethod_count(args[0]);
+    }
+}
+final class PyTupleMethod_index extends PyBuiltinMethod<PyTuple> {
+    PyTupleMethod_index(PyObject _self) { super((PyTuple)_self); }
+    @Override public String methodName() { return "index"; }
+    @Override public PyInt call(PyObject[] args, PyDict kwargs) {
+        Runtime.requireNoKwArgs(kwargs, "tuple.index");
+        Runtime.requireMinArgs(args, 1, "index");
+        Runtime.requireMaxArgs(args, 3, "index");
+        PyObject value = args[0];
+        PyObject start = (args.length >= 2) ? args[1] : null;
+        PyObject stop = (args.length >= 3) ? args[2] : null;
+        return self.pymethod_index(value, start, stop);
     }
 }

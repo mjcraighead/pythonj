@@ -20,127 +20,6 @@ public final class PyList extends PyObject {
         @Override public PyBuiltinType type() { return type_singleton; }
     };
 
-    protected static final class PyListMethod_append extends PyBuiltinMethod<PyList> {
-        PyListMethod_append(PyObject _self) { super((PyList)_self); }
-        @Override public String methodName() { return "append"; }
-        @Override public PyNone call(PyObject[] args, PyDict kwargs) {
-            Runtime.requireNoKwArgs(kwargs, "list.append");
-            Runtime.requireExactArgsAlt(args, 1, "list.append");
-            return self.pymethod_append(args[0]);
-        }
-    }
-    protected static final class PyListMethod_clear extends PyBuiltinMethod<PyList> {
-        PyListMethod_clear(PyObject _self) { super((PyList)_self); }
-        @Override public String methodName() { return "clear"; }
-        @Override public PyNone call(PyObject[] args, PyDict kwargs) {
-            Runtime.requireNoKwArgs(kwargs, "list.clear");
-            Runtime.requireExactArgsAlt(args, 0, "list.clear");
-            return self.pymethod_clear();
-        }
-    }
-    protected static final class PyListMethod_copy extends PyBuiltinMethod<PyList> {
-        PyListMethod_copy(PyObject _self) { super((PyList)_self); }
-        @Override public String methodName() { return "copy"; }
-        @Override public PyList call(PyObject[] args, PyDict kwargs) {
-            Runtime.requireNoKwArgs(kwargs, "list.copy");
-            Runtime.requireExactArgsAlt(args, 0, "list.copy");
-            return self.pymethod_copy();
-        }
-    }
-    protected static final class PyListMethod_count extends PyBuiltinMethod<PyList> {
-        PyListMethod_count(PyObject _self) { super((PyList)_self); }
-        @Override public String methodName() { return "count"; }
-        @Override public PyInt call(PyObject[] args, PyDict kwargs) {
-            Runtime.requireNoKwArgs(kwargs, "list.count");
-            Runtime.requireExactArgsAlt(args, 1, "list.count");
-            return self.pymethod_count(args[0]);
-        }
-    }
-    protected static final class PyListMethod_extend extends PyBuiltinMethod<PyList> {
-        PyListMethod_extend(PyObject _self) { super((PyList)_self); }
-        @Override public String methodName() { return "extend"; }
-        @Override public PyNone call(PyObject[] args, PyDict kwargs) {
-            Runtime.requireNoKwArgs(kwargs, "list.extend");
-            Runtime.requireExactArgsAlt(args, 1, "list.extend");
-            return self.pymethod_extend(args[0]);
-        }
-    }
-    protected static final class PyListMethod_index extends PyBuiltinMethod<PyList> {
-        PyListMethod_index(PyObject _self) { super((PyList)_self); }
-        @Override public String methodName() { return "index"; }
-        @Override public PyInt call(PyObject[] args, PyDict kwargs) {
-            Runtime.requireNoKwArgs(kwargs, "list.index");
-            Runtime.requireMinArgs(args, 1, "index");
-            Runtime.requireMaxArgs(args, 3, "index");
-            if (args.length != 1) {
-                throw new IllegalArgumentException("list.index() takes 1 argument");
-            }
-            return self.pymethod_index(args[0]);
-        }
-    }
-    protected static final class PyListMethod_insert extends PyBuiltinMethod<PyList> {
-        PyListMethod_insert(PyObject _self) { super((PyList)_self); }
-        @Override public String methodName() { return "insert"; }
-        @Override public PyNone call(PyObject[] args, PyDict kwargs) {
-            Runtime.requireNoKwArgs(kwargs, "list.insert");
-            Runtime.requireExactArgs(args, 2, "insert");
-            return self.pymethod_insert(args[0], args[1]);
-        }
-    }
-    protected static final class PyListMethod_pop extends PyBuiltinMethod<PyList> {
-        PyListMethod_pop(PyObject _self) { super((PyList)_self); }
-        @Override public String methodName() { return "pop"; }
-        @Override public PyObject call(PyObject[] args, PyDict kwargs) {
-            Runtime.requireNoKwArgs(kwargs, "list.pop");
-            Runtime.requireMinArgs(args, 0, "pop");
-            Runtime.requireMaxArgs(args, 1, "pop");
-            PyObject index = (args.length >= 1) ? args[0] : PyInt.singleton_neg1;
-            return self.pymethod_pop(index);
-        }
-    }
-    protected static final class PyListMethod_remove extends PyBuiltinMethod<PyList> {
-        PyListMethod_remove(PyObject _self) { super((PyList)_self); }
-        @Override public String methodName() { return "remove"; }
-        @Override public PyNone call(PyObject[] args, PyDict kwargs) {
-            Runtime.requireNoKwArgs(kwargs, "list.remove");
-            Runtime.requireExactArgsAlt(args, 1, "list.remove");
-            return self.pymethod_remove(args[0]);
-        }
-    }
-    protected static final class PyListMethod_reverse extends PyBuiltinMethod<PyList> {
-        PyListMethod_reverse(PyObject _self) { super((PyList)_self); }
-        @Override public String methodName() { return "reverse"; }
-        @Override public PyNone call(PyObject[] args, PyDict kwargs) {
-            Runtime.requireNoKwArgs(kwargs, "list.reverse");
-            Runtime.requireExactArgsAlt(args, 0, "list.reverse");
-            return self.pymethod_reverse();
-        }
-    }
-    protected static final class PyListMethod_sort extends PyBuiltinMethod<PyList> {
-        PyListMethod_sort(PyObject _self) { super((PyList)_self); }
-        @Override public String methodName() { return "sort"; }
-        @Override public PyNone call(PyObject[] args, PyDict kwargs) {
-            if ((kwargs != null) && kwargs.boolValue()) { // XXX Handle more cases correctly here
-                if (kwargs.len() > 2) {
-                    throw PyTypeError.raiseFormat("sort() takes at most 2 keyword arguments (%d given)", kwargs.len());
-                }
-                for (var x: kwargs.items.entrySet()) {
-                    PyString key = (PyString)x.getKey(); // PyString validated at call site
-                    if (!key.value.equals("key") && !key.value.equals("reverse")) {
-                        throw PyTypeError.raise("sort() got an unexpected keyword argument " + key.repr());
-                    }
-                }
-                throw new IllegalArgumentException("list.sort() does not accept kwargs");
-            }
-            if (args.length > 2) {
-                throw PyTypeError.raiseFormat("sort() takes at most 2 arguments (%d given)", args.length);
-            } else if (args.length != 0) {
-                throw PyTypeError.raise("sort() takes no positional arguments");
-            }
-            return self.pymethod_sort();
-        }
-    }
-
     public final ArrayList<PyObject> items;
 
     PyList() {
@@ -405,5 +284,126 @@ public final class PyList extends PyObject {
     public PyNone pymethod_sort() {
         Collections.sort(items);
         return PyNone.singleton;
+    }
+}
+
+final class PyListMethod_append extends PyBuiltinMethod<PyList> {
+    PyListMethod_append(PyObject _self) { super((PyList)_self); }
+    @Override public String methodName() { return "append"; }
+    @Override public PyNone call(PyObject[] args, PyDict kwargs) {
+        Runtime.requireNoKwArgs(kwargs, "list.append");
+        Runtime.requireExactArgsAlt(args, 1, "list.append");
+        return self.pymethod_append(args[0]);
+    }
+}
+final class PyListMethod_clear extends PyBuiltinMethod<PyList> {
+    PyListMethod_clear(PyObject _self) { super((PyList)_self); }
+    @Override public String methodName() { return "clear"; }
+    @Override public PyNone call(PyObject[] args, PyDict kwargs) {
+        Runtime.requireNoKwArgs(kwargs, "list.clear");
+        Runtime.requireExactArgsAlt(args, 0, "list.clear");
+        return self.pymethod_clear();
+    }
+}
+final class PyListMethod_copy extends PyBuiltinMethod<PyList> {
+    PyListMethod_copy(PyObject _self) { super((PyList)_self); }
+    @Override public String methodName() { return "copy"; }
+    @Override public PyList call(PyObject[] args, PyDict kwargs) {
+        Runtime.requireNoKwArgs(kwargs, "list.copy");
+        Runtime.requireExactArgsAlt(args, 0, "list.copy");
+        return self.pymethod_copy();
+    }
+}
+final class PyListMethod_count extends PyBuiltinMethod<PyList> {
+    PyListMethod_count(PyObject _self) { super((PyList)_self); }
+    @Override public String methodName() { return "count"; }
+    @Override public PyInt call(PyObject[] args, PyDict kwargs) {
+        Runtime.requireNoKwArgs(kwargs, "list.count");
+        Runtime.requireExactArgsAlt(args, 1, "list.count");
+        return self.pymethod_count(args[0]);
+    }
+}
+final class PyListMethod_extend extends PyBuiltinMethod<PyList> {
+    PyListMethod_extend(PyObject _self) { super((PyList)_self); }
+    @Override public String methodName() { return "extend"; }
+    @Override public PyNone call(PyObject[] args, PyDict kwargs) {
+        Runtime.requireNoKwArgs(kwargs, "list.extend");
+        Runtime.requireExactArgsAlt(args, 1, "list.extend");
+        return self.pymethod_extend(args[0]);
+    }
+}
+final class PyListMethod_index extends PyBuiltinMethod<PyList> {
+    PyListMethod_index(PyObject _self) { super((PyList)_self); }
+    @Override public String methodName() { return "index"; }
+    @Override public PyInt call(PyObject[] args, PyDict kwargs) {
+        Runtime.requireNoKwArgs(kwargs, "list.index");
+        Runtime.requireMinArgs(args, 1, "index");
+        Runtime.requireMaxArgs(args, 3, "index");
+        if (args.length != 1) {
+            throw new IllegalArgumentException("list.index() takes 1 argument");
+        }
+        return self.pymethod_index(args[0]);
+    }
+}
+final class PyListMethod_insert extends PyBuiltinMethod<PyList> {
+    PyListMethod_insert(PyObject _self) { super((PyList)_self); }
+    @Override public String methodName() { return "insert"; }
+    @Override public PyNone call(PyObject[] args, PyDict kwargs) {
+        Runtime.requireNoKwArgs(kwargs, "list.insert");
+        Runtime.requireExactArgs(args, 2, "insert");
+        return self.pymethod_insert(args[0], args[1]);
+    }
+}
+final class PyListMethod_pop extends PyBuiltinMethod<PyList> {
+    PyListMethod_pop(PyObject _self) { super((PyList)_self); }
+    @Override public String methodName() { return "pop"; }
+    @Override public PyObject call(PyObject[] args, PyDict kwargs) {
+        Runtime.requireNoKwArgs(kwargs, "list.pop");
+        Runtime.requireMinArgs(args, 0, "pop");
+        Runtime.requireMaxArgs(args, 1, "pop");
+        PyObject index = (args.length >= 1) ? args[0] : PyInt.singleton_neg1;
+        return self.pymethod_pop(index);
+    }
+}
+final class PyListMethod_remove extends PyBuiltinMethod<PyList> {
+    PyListMethod_remove(PyObject _self) { super((PyList)_self); }
+    @Override public String methodName() { return "remove"; }
+    @Override public PyNone call(PyObject[] args, PyDict kwargs) {
+        Runtime.requireNoKwArgs(kwargs, "list.remove");
+        Runtime.requireExactArgsAlt(args, 1, "list.remove");
+        return self.pymethod_remove(args[0]);
+    }
+}
+final class PyListMethod_reverse extends PyBuiltinMethod<PyList> {
+    PyListMethod_reverse(PyObject _self) { super((PyList)_self); }
+    @Override public String methodName() { return "reverse"; }
+    @Override public PyNone call(PyObject[] args, PyDict kwargs) {
+        Runtime.requireNoKwArgs(kwargs, "list.reverse");
+        Runtime.requireExactArgsAlt(args, 0, "list.reverse");
+        return self.pymethod_reverse();
+    }
+}
+final class PyListMethod_sort extends PyBuiltinMethod<PyList> {
+    PyListMethod_sort(PyObject _self) { super((PyList)_self); }
+    @Override public String methodName() { return "sort"; }
+    @Override public PyNone call(PyObject[] args, PyDict kwargs) {
+        if ((kwargs != null) && kwargs.boolValue()) { // XXX Handle more cases correctly here
+            if (kwargs.len() > 2) {
+                throw PyTypeError.raiseFormat("sort() takes at most 2 keyword arguments (%d given)", kwargs.len());
+            }
+            for (var x: kwargs.items.entrySet()) {
+                PyString key = (PyString)x.getKey(); // PyString validated at call site
+                if (!key.value.equals("key") && !key.value.equals("reverse")) {
+                    throw PyTypeError.raise("sort() got an unexpected keyword argument " + key.repr());
+                }
+            }
+            throw new IllegalArgumentException("list.sort() does not accept kwargs");
+        }
+        if (args.length > 2) {
+            throw PyTypeError.raiseFormat("sort() takes at most 2 arguments (%d given)", args.length);
+        } else if (args.length != 0) {
+            throw PyTypeError.raise("sort() takes no positional arguments");
+        }
+        return self.pymethod_sort();
     }
 }

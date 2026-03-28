@@ -20,42 +20,6 @@ public final class PySet extends PyObject {
         @Override public PyBuiltinType type() { return type_singleton; }
     };
 
-    protected static final class PySetMethod_add extends PyBuiltinMethod<PySet> {
-        PySetMethod_add(PyObject _self) { super((PySet)_self); }
-        @Override public String methodName() { return "add"; }
-        @Override public PyNone call(PyObject[] args, PyDict kwargs) {
-            Runtime.requireNoKwArgs(kwargs, "set.add");
-            Runtime.requireExactArgsAlt(args, 1, "set.add");
-            return self.pymethod_add(args[0]);
-        }
-    }
-    protected static final class PySetMethod_clear extends PyBuiltinMethod<PySet> {
-        PySetMethod_clear(PyObject _self) { super((PySet)_self); }
-        @Override public String methodName() { return "clear"; }
-        @Override public PyNone call(PyObject[] args, PyDict kwargs) {
-            Runtime.requireNoKwArgs(kwargs, "set.clear");
-            Runtime.requireExactArgsAlt(args, 0, "set.clear");
-            return self.pymethod_clear();
-        }
-    }
-    protected static final class PySetMethod_discard extends PyBuiltinMethod<PySet> {
-        PySetMethod_discard(PyObject _self) { super((PySet)_self); }
-        @Override public String methodName() { return "discard"; }
-        @Override public PyNone call(PyObject[] args, PyDict kwargs) {
-            Runtime.requireNoKwArgs(kwargs, "set.discard");
-            Runtime.requireExactArgsAlt(args, 1, "set.discard");
-            return self.pymethod_discard(args[0]);
-        }
-    }
-    protected static final class PySetMethod_update extends PyBuiltinMethod<PySet> {
-        PySetMethod_update(PyObject _self) { super((PySet)_self); }
-        @Override public String methodName() { return "update"; }
-        @Override public PyNone call(PyObject[] args, PyDict kwargs) {
-            Runtime.requireNoKwArgs(kwargs, "set.update");
-            return self.pymethod_update(args);
-        }
-    }
-
     public final HashSet<PyObject> items;
 
     PySet() {
@@ -268,5 +232,41 @@ public final class PySet extends PyObject {
             Runtime.addIterableToCollection(items, arg);
         }
         return PyNone.singleton;
+    }
+}
+
+final class PySetMethod_add extends PyBuiltinMethod<PySet> {
+    PySetMethod_add(PyObject _self) { super((PySet)_self); }
+    @Override public String methodName() { return "add"; }
+    @Override public PyNone call(PyObject[] args, PyDict kwargs) {
+        Runtime.requireNoKwArgs(kwargs, "set.add");
+        Runtime.requireExactArgsAlt(args, 1, "set.add");
+        return self.pymethod_add(args[0]);
+    }
+}
+final class PySetMethod_clear extends PyBuiltinMethod<PySet> {
+    PySetMethod_clear(PyObject _self) { super((PySet)_self); }
+    @Override public String methodName() { return "clear"; }
+    @Override public PyNone call(PyObject[] args, PyDict kwargs) {
+        Runtime.requireNoKwArgs(kwargs, "set.clear");
+        Runtime.requireExactArgsAlt(args, 0, "set.clear");
+        return self.pymethod_clear();
+    }
+}
+final class PySetMethod_discard extends PyBuiltinMethod<PySet> {
+    PySetMethod_discard(PyObject _self) { super((PySet)_self); }
+    @Override public String methodName() { return "discard"; }
+    @Override public PyNone call(PyObject[] args, PyDict kwargs) {
+        Runtime.requireNoKwArgs(kwargs, "set.discard");
+        Runtime.requireExactArgsAlt(args, 1, "set.discard");
+        return self.pymethod_discard(args[0]);
+    }
+}
+final class PySetMethod_update extends PyBuiltinMethod<PySet> {
+    PySetMethod_update(PyObject _self) { super((PySet)_self); }
+    @Override public String methodName() { return "update"; }
+    @Override public PyNone call(PyObject[] args, PyDict kwargs) {
+        Runtime.requireNoKwArgs(kwargs, "set.update");
+        return self.pymethod_update(args);
     }
 }
