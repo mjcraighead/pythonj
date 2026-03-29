@@ -126,6 +126,74 @@ class bytes:
                 ret.append(c)
         return bytes(ret)
 
+    def count(self, sub, start, end):
+        indices = slice(start, end).indices(len(self))
+        start = indices[0]
+        end = indices[1]
+        if __pythonj_isinstance__(sub, int):
+            if sub < 0 or sub > 255:
+                raise ValueError('byte must be in range(0, 256)')
+            ret = 0
+            for i in range(start, end):
+                if self[i] == sub:
+                    ret += 1
+            return ret
+        if not (__pythonj_isinstance__(sub, bytes) or __pythonj_isinstance__(sub, bytearray)):
+            raise TypeError("argument should be integer or bytes-like object, not '" + type(sub).__name__ + "'")
+        sub_len = len(sub)
+        if sub_len == 0:
+            return end - start + 1
+        ret = 0
+        i = start
+        limit = end - sub_len
+        while i <= limit:
+            if self[i:i + sub_len] == sub:
+                ret += 1
+                i += sub_len
+            else:
+                i += 1
+        return ret
+
+    def endswith(self, suffix, start, end):
+        if __pythonj_isinstance__(suffix, tuple):
+            for item in suffix:
+                if self.endswith(item, start, end):
+                    return True
+            return False
+        if not (__pythonj_isinstance__(suffix, bytes) or __pythonj_isinstance__(suffix, bytearray)):
+            raise TypeError('endswith first arg must be bytes or a tuple of bytes, not ' + type(suffix).__name__)
+        if len(suffix) == 0 and start is not None and start > len(self):
+            return False
+        indices = slice(start, end).indices(len(self))
+        start = indices[0]
+        end = indices[1]
+        suffix_len = len(suffix)
+        if suffix_len > end - start:
+            return False
+        return self[end - suffix_len:end] == suffix
+
+    def find(self, sub, start, end):
+        indices = slice(start, end).indices(len(self))
+        start = indices[0]
+        end = indices[1]
+        if __pythonj_isinstance__(sub, int):
+            if sub < 0 or sub > 255:
+                raise ValueError('byte must be in range(0, 256)')
+            for i in range(start, end):
+                if self[i] == sub:
+                    return i
+            return -1
+        if not (__pythonj_isinstance__(sub, bytes) or __pythonj_isinstance__(sub, bytearray)):
+            raise TypeError("argument should be integer or bytes-like object, not '" + type(sub).__name__ + "'")
+        sub_len = len(sub)
+        if sub_len == 0:
+            return start
+        limit = end - sub_len
+        for i in range(start, limit + 1):
+            if self[i:i + sub_len] == sub:
+                return i
+        return -1
+
     def fromhex(self, string):
         is_str = __pythonj_isinstance__(string, str)
         is_bytes = __pythonj_isinstance__(string, bytes)
@@ -169,6 +237,12 @@ class bytes:
             ret.append(value)
             i += 2
         return self(ret)
+
+    def index(self, sub, start, end):
+        ret = self.find(sub, start, end)
+        if ret == -1:
+            raise ValueError('subsection not found')
+        return ret
 
     def isalnum(self):
         if not self:
@@ -251,6 +325,62 @@ class bytes:
             else:
                 ret.append(c)
         return bytes(ret)
+
+    def removeprefix(self, prefix):
+        if self.startswith(prefix, None, None):
+            return self[len(prefix):]
+        return self
+
+    def removesuffix(self, suffix):
+        if suffix and self.endswith(suffix, None, None):
+            return self[:-len(suffix)]
+        return self
+
+    def rfind(self, sub, start, end):
+        indices = slice(start, end).indices(len(self))
+        start = indices[0]
+        end = indices[1]
+        if __pythonj_isinstance__(sub, int):
+            if sub < 0 or sub > 255:
+                raise ValueError('byte must be in range(0, 256)')
+            for i in range(end - 1, start - 1, -1):
+                if self[i] == sub:
+                    return i
+            return -1
+        if not (__pythonj_isinstance__(sub, bytes) or __pythonj_isinstance__(sub, bytearray)):
+            raise TypeError("argument should be integer or bytes-like object, not '" + type(sub).__name__ + "'")
+        sub_len = len(sub)
+        if sub_len == 0:
+            return end
+        limit = end - sub_len
+        for i in range(limit, start - 1, -1):
+            if self[i:i + sub_len] == sub:
+                return i
+        return -1
+
+    def rindex(self, sub, start, end):
+        ret = self.rfind(sub, start, end)
+        if ret == -1:
+            raise ValueError('subsection not found')
+        return ret
+
+    def startswith(self, prefix, start, end):
+        if __pythonj_isinstance__(prefix, tuple):
+            for item in prefix:
+                if self.startswith(item, start, end):
+                    return True
+            return False
+        if not (__pythonj_isinstance__(prefix, bytes) or __pythonj_isinstance__(prefix, bytearray)):
+            raise TypeError('startswith first arg must be bytes or a tuple of bytes, not ' + type(prefix).__name__)
+        if len(prefix) == 0 and start is not None and start > len(self):
+            return False
+        indices = slice(start, end).indices(len(self))
+        start = indices[0]
+        end = indices[1]
+        prefix_len = len(prefix)
+        if prefix_len > end - start:
+            return False
+        return self[start:start + prefix_len] == prefix
 
     def swapcase(self):
         ret = []

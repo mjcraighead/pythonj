@@ -267,28 +267,19 @@ public final class PyBytes extends PyObject {
         return new PyBytes(out.toByteArray());
     }
     public PyObject pymethod_center(PyObject width, PyObject fillchar) { throw new UnsupportedOperationException(); }
-    public PyObject pymethod_count(PyObject sub, PyObject start, PyObject end) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_decode(PyObject encoding, PyObject errors) { throw new UnsupportedOperationException(); }
-    public PyObject pymethod_endswith(PyObject suffix, PyObject start, PyObject end) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_expandtabs(PyObject tabsize) { throw new UnsupportedOperationException(); }
-    public PyObject pymethod_find(PyObject sub, PyObject start, PyObject end) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_hex(PyObject sep, PyObject bytes_per_sep) { throw new UnsupportedOperationException(); }
-    public PyObject pymethod_index(PyObject sub, PyObject start, PyObject end) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_ljust(PyObject width, PyObject fillchar) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_lstrip(PyObject bytes) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_partition(PyObject sep) { throw new UnsupportedOperationException(); }
-    public PyObject pymethod_removeprefix(PyObject prefix) { throw new UnsupportedOperationException(); }
-    public PyObject pymethod_removesuffix(PyObject suffix) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_replace(PyObject old, PyObject _new, PyObject count) { throw new UnsupportedOperationException(); }
-    public PyObject pymethod_rfind(PyObject sub, PyObject start, PyObject end) { throw new UnsupportedOperationException(); }
-    public PyObject pymethod_rindex(PyObject sub, PyObject start, PyObject end) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_rjust(PyObject width, PyObject fillchar) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_rpartition(PyObject sep) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_rsplit(PyObject sep, PyObject maxsplit) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_rstrip(PyObject bytes) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_split(PyObject sep, PyObject maxsplit) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_splitlines(PyObject keepends) { throw new UnsupportedOperationException(); }
-    public PyObject pymethod_startswith(PyObject prefix, PyObject start, PyObject end) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_strip(PyObject bytes) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_translate(PyObject table, PyObject delete) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_zfill(PyObject width) { throw new UnsupportedOperationException(); }

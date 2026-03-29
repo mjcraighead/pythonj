@@ -1741,7 +1741,7 @@ RAW_ARGS_KWARGS_BUILTINS = {'max', 'min', 'print'}
 
 PYTHON_IMPLS = {
     'builtins': {'abs', 'all', 'any', 'bin', 'delattr', 'format', 'getattr', 'hash', 'hasattr', 'isinstance', 'issubclass', 'len', 'next', 'oct', 'repr', 'setattr', 'sum'},
-    'bytes': {'capitalize', 'fromhex', 'isalnum', 'isalpha', 'isascii', 'isdigit', 'islower', 'isspace', 'istitle', 'isupper', 'lower', 'swapcase', 'title', 'upper'},
+    'bytes': {'capitalize', 'count', 'endswith', 'find', 'fromhex', 'index', 'isalnum', 'isalpha', 'isascii', 'isdigit', 'islower', 'isspace', 'istitle', 'isupper', 'lower', 'removeprefix', 'removesuffix', 'rfind', 'rindex', 'startswith', 'swapcase', 'title', 'upper'},
     'dict': {'fromkeys', 'setdefault'},
     'float': {'conjugate'},
     'int': {'as_integer_ratio', 'conjugate', 'is_integer'},
