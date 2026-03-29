@@ -6,6 +6,14 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Iterator, Optional, TextIO
 
+JAVA_RESERVED_WORDS = {
+    'abstract', 'assert', 'boolean', 'break', 'byte', 'case', 'catch', 'char', 'class', 'const', 'continue',
+    'default', 'do', 'double', 'else', 'enum', 'extends', 'final', 'finally', 'float', 'for', 'goto', 'if',
+    'implements', 'import', 'instanceof', 'int', 'interface', 'long', 'native', 'new', 'package', 'private',
+    'protected', 'public', 'return', 'short', 'static', 'strictfp', 'super', 'switch', 'synchronized', 'this',
+    'throw', 'throws', 'transient', 'try', 'void', 'volatile', 'while',
+}
+
 def int_name(i: int) -> str:
     """Return the Java variable name to use for the PyInt singleton with a given value."""
     return f'int_singleton_neg{-i}' if i < 0 else f'int_singleton_{i}'

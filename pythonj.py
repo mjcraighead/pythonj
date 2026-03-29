@@ -1317,16 +1317,8 @@ PYTHON_AUTHORED_IMPLS = {
 def make_param(name: str, default: object = inspect.Parameter.empty) -> inspect.Parameter:
     return inspect.Parameter(name, inspect.Parameter.POSITIONAL_ONLY, default=default)
 
-JAVA_RESERVED_WORDS = {
-    'abstract', 'assert', 'boolean', 'break', 'byte', 'case', 'catch', 'char', 'class', 'const', 'continue',
-    'default', 'do', 'double', 'else', 'enum', 'extends', 'final', 'finally', 'float', 'for', 'goto', 'if',
-    'implements', 'import', 'instanceof', 'int', 'interface', 'long', 'native', 'new', 'package', 'private',
-    'protected', 'public', 'return', 'short', 'static', 'strictfp', 'super', 'switch', 'synchronized', 'this',
-    'throw', 'throws', 'transient', 'try', 'void', 'volatile', 'while',
-}
-
 def java_local_name(name: str) -> str:
-    if name in JAVA_RESERVED_WORDS:
+    if name in ir.JAVA_RESERVED_WORDS:
         return f'pyarg_{name}'
     return name
 
