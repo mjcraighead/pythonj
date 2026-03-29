@@ -1724,6 +1724,11 @@ def get_runtime_obj(name: str) -> object:
     else:
         return getattr(builtins, name)
 
+def get_top_level_function_names(path: str) -> set[str]:
+    with open(path, encoding='utf-8') as f:
+        node = ast.parse(f.read(), path)
+    return {x.name for x in node.body if isinstance(x, ast.FunctionDef)}
+
 def gen_spec(spec_path: str) -> None:
     spec = {}
     for name in [*BUILTIN_TYPES, *sorted(EXCEPTION_TYPES),
@@ -1792,32 +1797,6 @@ NULL = object()
 RAW_ARGS_KWARGS_BUILTINS = {'max', 'min', 'print'}
 
 PYTHON_IMPLS = {
-    '_runtime': {
-        '_pyj_format_apply_width',
-        '_pyj_format_group_digits',
-        '_pyj_format_parse_common',
-        '_pyj_format_split_sign',
-        '_pyj_format_zero_fill_grouped',
-        '_pyj_raise_invalid_format_spec',
-        '_pyj_raise_unknown_format_code',
-        '_pyj_float_apply_zero_fill',
-        '_pyj_float_is_zero_result',
-        '_pyj_float_sign_prefix',
-        '_pyj_int_base_digits',
-        '_pyj_percent_arg_seq',
-        '_pyj_percent_int_arg',
-        '_pyj_percent_item_text',
-        'max_iterable',
-        'min_iterable',
-        'pyj_float_finish_text',
-        'pyj_float_parse_spec',
-        'pyj_float_special_text',
-        'pyj_int_format',
-        'pyj_int_parse_spec',
-        'pyj_percent_format',
-        'pyj_str_format',
-        'pyj_str_parse_spec',
-    },
     'builtins': {'abs', 'all', 'any', 'delattr', 'format', 'getattr', 'hash', 'hasattr', 'isinstance', 'issubclass', 'len', 'next', 'repr', 'setattr', 'sum'},
     'bytes': {'capitalize', 'isalnum', 'isalpha', 'isascii', 'isdigit', 'islower', 'isspace', 'istitle', 'isupper', 'lower', 'swapcase', 'title', 'upper'},
     'dict': {'setdefault'},
@@ -2337,8 +2316,9 @@ def gen_code(spec_path: str, java_path: str) -> None:
                     writer.write('}')
                 writer.write('')
 
-        if PYTHON_IMPLS['_runtime']:
-            for func_name in sorted(PYTHON_IMPLS['_runtime']):
+        python_runtime_impls = get_top_level_function_names('pythonj_runtime.py')
+        if python_runtime_impls:
+            for func_name in sorted(python_runtime_impls):
                 (helper_classes, helper_method) = translate_python_runtime_impl(func_name, pool)
                 python_runtime_helper_classes.extend(helper_classes)
                 python_runtime_helper_methods.append(helper_method)
