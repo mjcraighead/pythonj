@@ -79,16 +79,16 @@ final class PyTextIOWrapper extends PyIter {
         return (ret != null) ? ret : PyString.empty_singleton;
     }
 
-    static PyObject pymember_encoding(PyObject obj) { throw new UnsupportedOperationException("TextIOWrapper.encoding unsupported"); }
-    static PyObject pymember_buffer(PyObject obj) { throw new UnsupportedOperationException("TextIOWrapper.buffer unsupported"); }
-    static PyObject pymember_line_buffering(PyObject obj) { throw new UnsupportedOperationException("TextIOWrapper.line_buffering unsupported"); }
-    static PyObject pymember_write_through(PyObject obj) { throw new UnsupportedOperationException("TextIOWrapper.write_through unsupported"); }
-    static PyObject pymember__finalizing(PyObject obj) { throw new UnsupportedOperationException("TextIOWrapper._finalizing unsupported"); }
-    static PyObject pygetset_name(PyObject obj) { throw new UnsupportedOperationException("TextIOWrapper.name unsupported"); }
-    static PyObject pygetset_closed(PyObject obj) { throw new UnsupportedOperationException("TextIOWrapper.closed unsupported"); }
-    static PyObject pygetset_newlines(PyObject obj) { throw new UnsupportedOperationException("TextIOWrapper.newlines unsupported"); }
-    static PyObject pygetset_errors(PyObject obj) { throw new UnsupportedOperationException("TextIOWrapper.errors unsupported"); }
-    static PyObject pygetset__CHUNK_SIZE(PyObject obj) { throw new UnsupportedOperationException("TextIOWrapper._CHUNK_SIZE unsupported"); }
+    static PyObject pymember_encoding(PyObject obj) { throw new UnsupportedOperationException(); }
+    static PyObject pymember_buffer(PyObject obj) { throw new UnsupportedOperationException(); }
+    static PyObject pymember_line_buffering(PyObject obj) { throw new UnsupportedOperationException(); }
+    static PyObject pymember_write_through(PyObject obj) { throw new UnsupportedOperationException(); }
+    static PyObject pymember__finalizing(PyObject obj) { throw new UnsupportedOperationException(); }
+    static PyObject pygetset_name(PyObject obj) { throw new UnsupportedOperationException(); }
+    static PyObject pygetset_closed(PyObject obj) { throw new UnsupportedOperationException(); }
+    static PyObject pygetset_newlines(PyObject obj) { throw new UnsupportedOperationException(); }
+    static PyObject pygetset_errors(PyObject obj) { throw new UnsupportedOperationException(); }
+    static PyObject pygetset__CHUNK_SIZE(PyObject obj) { throw new UnsupportedOperationException(); }
 }
 
 final class PyBufferedReader extends PyIter {
@@ -135,9 +135,9 @@ final class PyBufferedReader extends PyIter {
         }
     }
 
-    static PyObject pymember_raw(PyObject obj) { throw new UnsupportedOperationException("BufferedReader.raw unsupported"); }
-    static PyObject pymember__finalizing(PyObject obj) { throw new UnsupportedOperationException("BufferedReader._finalizing unsupported"); }
-    static PyObject pygetset_closed(PyObject obj) { throw new UnsupportedOperationException("BufferedReader.closed unsupported"); }
-    static PyObject pygetset_name(PyObject obj) { throw new UnsupportedOperationException("BufferedReader.name unsupported"); }
-    static PyObject pygetset_mode(PyObject obj) { throw new UnsupportedOperationException("BufferedReader.mode unsupported"); }
+    static PyObject pymember_raw(PyObject obj) { throw new UnsupportedOperationException(); }
+    static PyObject pymember__finalizing(PyObject obj) { throw new UnsupportedOperationException(); }
+    static PyObject pygetset_closed(PyObject obj) { throw new UnsupportedOperationException(); }
+    static PyObject pygetset_name(PyObject obj) { throw new UnsupportedOperationException(); }
+    static PyObject pygetset_mode(PyObject obj) { throw new UnsupportedOperationException(); }
 }

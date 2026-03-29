@@ -1366,12 +1366,10 @@ def get_runtime_obj(name: str) -> object:
 
 def gen_spec(spec_path: str) -> None:
     spec = {}
-    for name in ['bool', 'bytearray', 'bytes', 'dict', 'enumerate', 'float', 'int', 'list', 'object', 'range',
-                 'reversed', 'set', 'slice', 'staticmethod', 'str', 'tuple', 'type', 'zip',
+    for name in [*BUILTIN_TYPES, *sorted(EXCEPTION_TYPES),
                  'types.BuiltinFunctionType', 'types.ClassMethodDescriptorType',
                  'types.FunctionType', 'types.GetSetDescriptorType', 'types.MemberDescriptorType',
-                 'types.MethodDescriptorType', 'types.NoneType', '_io.BufferedReader', '_io.TextIOWrapper',
-                 *sorted(EXCEPTION_TYPES)]:
+                 'types.MethodDescriptorType', 'types.NoneType', '_io.BufferedReader', '_io.TextIOWrapper']:
         obj = get_runtime_obj(name)
         attrs = {}
         for (k, v) in obj.__dict__.items():

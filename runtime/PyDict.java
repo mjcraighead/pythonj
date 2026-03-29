@@ -395,6 +395,14 @@ public final class PyDict extends PyObject {
         ret.items.putAll(items);
         return ret;
     }
+    public static PyDict pymethod_fromkeys(PyType self, PyObject iterable, PyObject value) {
+        var ret = new PyDict();
+        var iter = iterable.iter();
+        for (var key = iter.next(); key != null; key = iter.next()) {
+            ret.items.put(key, value);
+        }
+        return ret;
+    }
     public PyObject pymethod_get(PyObject key, PyObject defaultValue) {
         return items.getOrDefault(key, defaultValue);
     }
@@ -474,13 +482,4 @@ public final class PyDict extends PyObject {
         return PyNone.singleton;
     }
     public PyDictValues pymethod_values() { return new PyDictValues(items); }
-
-    public static PyDict pymethod_fromkeys(PyType self, PyObject iterable, PyObject value) {
-        var ret = new PyDict();
-        var iter = iterable.iter();
-        for (var key = iter.next(); key != null; key = iter.next()) {
-            ret.items.put(key, value);
-        }
-        return ret;
-    }
 }

@@ -35,7 +35,7 @@ class PyBaseException extends PyTruthyObject {
         return s.append(")").toString();
     }
 
-    static PyObject pygetset_args(PyObject obj) { throw new UnsupportedOperationException("BaseException.args unsupported"); }
+    static PyObject pygetset_args(PyObject obj) { throw new UnsupportedOperationException(); }
 
     public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, type.name());
@@ -78,8 +78,8 @@ final class PyAttributeError extends PyException {
         return new PyRaise(new PyAttributeError(new PyString(String.format(fmt, args))));
     }
 
-    static PyObject pymember_name(PyObject obj) { throw new UnsupportedOperationException("AttributeError.name unsupported"); }
-    static PyObject pymember_obj(PyObject obj) { throw new UnsupportedOperationException("AttributeError.obj unsupported"); }
+    static PyObject pymember_name(PyObject obj) { throw new UnsupportedOperationException(); }
+    static PyObject pymember_obj(PyObject obj) { throw new UnsupportedOperationException(); }
 
     public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
         if ((kwargs != null) && kwargs.boolValue()) {
@@ -177,7 +177,7 @@ final class PyStopIteration extends PyException {
         return new PyStopIteration(args);
     }
 
-    static PyObject pymember_value(PyObject obj) { throw new UnsupportedOperationException("StopIteration.value unsupported"); }
+    static PyObject pymember_value(PyObject obj) { throw new UnsupportedOperationException(); }
 }
 
 final class PyTypeError extends PyException {
