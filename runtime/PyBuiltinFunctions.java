@@ -91,31 +91,9 @@ final class PyBuiltinFunctionsImpl {
             }
         }
         if (argsLength == 1) {
-            var iter = args[0].iter();
-            PyObject ret = iter.next();
-            if (ret == null) {
-                if (defaultObj != null) {
-                    return defaultObj;
-                }
-                throw PyValueError.raise(name + "() iterable argument is empty");
-            }
-            if (keyFunc == PyNone.singleton) {
-                for (var item = iter.next(); item != null; item = iter.next()) {
-                    if (isMax ? item.gt(ret) : item.lt(ret)) {
-                        ret = item;
-                    }
-                }
-            } else {
-                PyObject retKey = keyFunc.call(new PyObject[] {ret}, null);
-                for (var item = iter.next(); item != null; item = iter.next()) {
-                    PyObject itemKey = keyFunc.call(new PyObject[] {item}, null);
-                    if (isMax ? itemKey.gt(retKey) : itemKey.lt(retKey)) {
-                        ret = item;
-                        retKey = itemKey;
-                    }
-                }
-            }
-            return ret;
+            return isMax
+                ? PyRuntimePythonImpl.pyfunc_max_iterable(args[0], defaultObj, keyFunc)
+                : PyRuntimePythonImpl.pyfunc_min_iterable(args[0], defaultObj, keyFunc);
         } else {
             if (defaultObj != null) {
                 throw PyTypeError.raise("Cannot specify a default for " + name + "() with multiple positional arguments");
