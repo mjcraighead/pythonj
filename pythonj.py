@@ -1071,7 +1071,7 @@ class PythonjVisitor(ast.NodeVisitor):
             self.code.append(JavaAssignStatement(JavaIdentifier('expr_discard'), value))
             self.scope.used_expr_discard = True
 
-    def check_args(self, lineno: int, args: ast.arguments) -> tuple[list[str], list[None | bool | int | str | bytes]]:
+    def check_args(self, lineno: int, args: ast.arguments) -> tuple[list[str], list[None | bool | int | float | str | bytes]]:
         if args.posonlyargs:
             self.error(lineno, 'position-only arguments are unsupported')
         if args.vararg:
@@ -1123,7 +1123,7 @@ class PythonjVisitor(ast.NodeVisitor):
     def qualname(self, name: str) -> str:
         return name if not self.qualname_stack else f'{self.qualname_stack[-1]}.<locals>.{name}'
 
-    def add_function(self, py_name: str, java_name: str, arg_names: list[str], arg_defaults: list[None | bool | int | str | bytes], body: list[JavaStatement],
+    def add_function(self, py_name: str, java_name: str, arg_names: list[str], arg_defaults: list[None | bool | int | float | str | bytes], body: list[JavaStatement],
                      invisible_args: bool = False) -> None:
         n_args = len(arg_names)
         n_required = n_args - len(arg_defaults)
