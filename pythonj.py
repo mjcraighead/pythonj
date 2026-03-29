@@ -1554,6 +1554,12 @@ def emit_default_java_expr(default: object) -> ir.Expr:
         return ir.Identifier(inferred)
     return ir.PyConstant(default)
 
+def runtime_throw(method: str, args_: list[ir.Expr]) -> ir.ThrowStatement:
+    return ir.ThrowStatement(ir.MethodCall(ir.Identifier('Runtime'), method, args_))
+
+def type_error_throw(msg: str) -> ir.ThrowStatement:
+    return ir.ThrowStatement(ir.MethodCall(ir.Identifier('PyTypeError'), 'raise', [ir.StrLiteral(msg)]))
+
 def build_arg_binding_ir(shape: SignatureShape, positional_name: str,
                          kw_name: str, kw_overflow_args_length: str,
                          noarg_name: str) -> tuple[list[ir.Statement], list[ir.Expr]]:
@@ -1568,15 +1574,6 @@ def build_arg_binding_ir(shape: SignatureShape, positional_name: str,
     unknown_kw = ir.Identifier('unknownKw')
     entry_value = ir.MethodCall(ir.Identifier('x'), 'getValue', [])
     kwargs_items = ir.MethodCall(ir.Field(kwargs, 'items'), 'entrySet', [])
-
-    def throw_stmt(target: ir.Expr) -> ir.ThrowStatement:
-        return ir.ThrowStatement(target)
-
-    def runtime_throw(method: str, args_: list[ir.Expr]) -> ir.ThrowStatement:
-        return throw_stmt(ir.MethodCall(ir.Identifier('Runtime'), method, args_))
-
-    def type_error_throw(msg: str) -> ir.ThrowStatement:
-        return throw_stmt(ir.MethodCall(ir.Identifier('PyTypeError'), 'raise', [ir.StrLiteral(msg)]))
 
     def kw_loop_body(known_params: list[inspect.Parameter], include_poskw_duplicates: bool) -> list[ir.Statement]:
         statements: list[ir.Statement] = [
