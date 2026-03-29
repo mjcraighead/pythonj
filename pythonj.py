@@ -1781,16 +1781,14 @@ UNIMPLEMENTED_METHODS = {
 NULL = object()
 RAW_ARGS_KWARGS_BUILTINS = {'max', 'min', 'print'}
 
-PYTHON_BUILTIN_IMPLS = {'abs', 'all', 'any', 'delattr', 'format', 'getattr', 'hash', 'hasattr', 'isinstance', 'issubclass', 'len', 'next', 'repr', 'setattr', 'sum'}
-PYTHON_METHOD_IMPLS = {
-    ('dict', 'setdefault'),
-    ('float', 'conjugate'),
-    ('int', 'conjugate'),
-    ('int', 'is_integer'),
-    ('str', 'removeprefix'),
-    ('str', 'removesuffix'),
+PYTHON_IMPLS = {
+    '_runtime': {'max_iterable', 'min_iterable'},
+    'builtins': {'abs', 'all', 'any', 'delattr', 'format', 'getattr', 'hash', 'hasattr', 'isinstance', 'issubclass', 'len', 'next', 'repr', 'setattr', 'sum'},
+    'dict': {'setdefault'},
+    'float': {'conjugate'},
+    'int': {'conjugate', 'is_integer'},
+    'str': {'removeprefix', 'removesuffix'},
 }
-PYTHON_RUNTIME_IMPLS = {'max_iterable', 'min_iterable'}
 
 def make_param(name: str, default: object = inspect.Parameter.empty) -> inspect.Parameter:
     return inspect.Parameter(name, inspect.Parameter.POSITIONAL_ONLY, default=default)
@@ -2266,7 +2264,7 @@ def gen_code(spec_path: str, java_path: str) -> None:
                     else:
                         assert False, (name, method_name, kind)
                     method_impl_target = None
-                    if kind == 'method' and (name, method_name) in PYTHON_METHOD_IMPLS:
+                    if kind == 'method' and method_name in PYTHON_IMPLS.get(name, set()):
                         helper_name = f'{name.replace(".", "_")}__{method_name}'
                         method_impl_target = f'PyBuiltinMethodsPythonImpl.pyfunc_{helper_name}'
                         (helper_classes, helper_method) = translate_python_method_impl(name, method_name, pool)
@@ -2296,8 +2294,8 @@ def gen_code(spec_path: str, java_path: str) -> None:
                     writer.write('}')
                 writer.write('')
 
-        if PYTHON_RUNTIME_IMPLS:
-            for func_name in sorted(PYTHON_RUNTIME_IMPLS):
+        if PYTHON_IMPLS['_runtime']:
+            for func_name in sorted(PYTHON_IMPLS['_runtime']):
                 (helper_classes, helper_method) = translate_python_runtime_impl(func_name, pool)
                 python_runtime_helper_classes.extend(helper_classes)
                 python_runtime_helper_methods.append(helper_method)
@@ -2313,7 +2311,7 @@ def gen_code(spec_path: str, java_path: str) -> None:
             writer.write('}')
             writer.write('')
 
-        if PYTHON_METHOD_IMPLS:
+        if any(PYTHON_IMPLS.get(name, set()) for name in ('dict', 'float', 'int', 'str')):
             for code in python_method_helper_classes:
                 for line in code:
                     writer.write(line)
@@ -2326,8 +2324,8 @@ def gen_code(spec_path: str, java_path: str) -> None:
             writer.write('}')
             writer.write('')
 
-        if PYTHON_BUILTIN_IMPLS:
-            for func_name in sorted(PYTHON_BUILTIN_IMPLS):
+        if PYTHON_IMPLS['builtins']:
+            for func_name in sorted(PYTHON_IMPLS['builtins']):
                 (helper_classes, helper_method) = translate_python_builtin_impl(func_name, pool)
                 python_builtin_helper_classes.extend(helper_classes)
                 python_builtin_helper_methods.append(helper_method)
@@ -2366,7 +2364,7 @@ def gen_code(spec_path: str, java_path: str) -> None:
                     func_name,
                     pool,
                 )
-            if func_name in PYTHON_BUILTIN_IMPLS:
+            if func_name in PYTHON_IMPLS['builtins']:
                 writer.write(f'return PyBuiltinFunctionsPythonImpl.pyfunc_{func_name}({", ".join(bind_args)});')
             else:
                 writer.write(f'return PyBuiltinFunctionsImpl.pyfunc_{func_name}({", ".join(bind_args)});')
