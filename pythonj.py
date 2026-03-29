@@ -19,7 +19,7 @@ import subprocess
 import sys
 import time
 import types
-from typing import Iterator, Optional, TextIO
+from typing import Iterator, Optional, TextIO, cast
 import _io
 
 BUILTIN_FUNCTIONS = {
@@ -1161,8 +1161,11 @@ class PythonjVisitor(ast.NodeVisitor):
         if node.orelse:
             self.error(node.lineno, "'else' clauses in 'try' statements are unsupported")
         for handler in node.handlers:
-            if handler.type and not (isinstance(handler.type, ast.Name) and handler.type.id == 'BaseException'):
-                self.error(node.lineno, "only catch-all 'except:' or 'except BaseException [as e]:' clauses in 'try' statements are supported")
+            if handler.type is not None:
+                if not isinstance(handler.type, ast.Name):
+                    self.error(node.lineno, "only 'except SomeException [as e]:' with a named built-in exception is supported")
+                elif handler.type.id not in EXCEPTION_TYPES:
+                    self.error(node.lineno, "only built-in exception names are supported in 'except' clauses")
 
         try_body = self.visit_block(node.body)
 
@@ -1174,6 +1177,14 @@ class PythonjVisitor(ast.NodeVisitor):
             exc_name = self.scope.make_temp()
             handler = node.handlers[0]
             with self.new_block() as catch_body:
+                if handler.type is not None:
+                    caught_exc = JavaField(JavaIdentifier(exc_name), 'exc')
+                    expected_exc = JavaIdentifier(f'Py{cast(ast.Name, handler.type).id}')
+                    catch_body.extend(if_statement(
+                        unary_op('!', JavaBinaryOp('instanceof', caught_exc, expected_exc)),
+                        [JavaThrowStatement(JavaIdentifier(exc_name))],
+                        [],
+                    ))
                 if handler.name is not None:
                     catch_body.append(JavaAssignStatement(self.ident_expr(handler.name), JavaField(JavaIdentifier(exc_name), 'exc')))
                 for statement in handler.body:
