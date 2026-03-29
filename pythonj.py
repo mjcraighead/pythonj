@@ -1732,9 +1732,7 @@ def get_class_functions(node: ast.Module, class_name: str) -> dict[str, ast.Func
     return {x.name: x for x in classes[class_name].body if isinstance(x, ast.FunctionDef)}
 
 UNIMPLEMENTED_METHODS = {
-    'bytearray': {'count', 'endswith', 'find', 'hex', 'index', 'rfind', 'rindex', 'startswith'},
-    'bytes': {'count', 'endswith', 'find', 'hex', 'index', 'rfind', 'rindex', 'startswith'},
-    'str': {'count', 'format', 'index', 'rfind', 'rindex'},
+    'str': {'format'},
     'type': {'mro'},
 }
 

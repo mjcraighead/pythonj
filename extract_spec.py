@@ -71,13 +71,37 @@ SYNTHETIC_PARAMS = {
     'dict': {
         'pop': [make_param('key'), make_param('defaultValue', NULL)],
     },
+    'bytearray': {
+        'count': [make_param('sub'), make_param('start', None), make_param('end', None)],
+        'endswith': [make_param('suffix'), make_param('start', None), make_param('end', None)],
+        'find': [make_param('sub'), make_param('start', None), make_param('end', None)],
+        'hex': [make_param('sep', NULL), make_param('bytes_per_sep', 1)],
+        'index': [make_param('sub'), make_param('start', None), make_param('end', None)],
+        'rfind': [make_param('sub'), make_param('start', None), make_param('end', None)],
+        'rindex': [make_param('sub'), make_param('start', None), make_param('end', None)],
+        'startswith': [make_param('prefix'), make_param('start', None), make_param('end', None)],
+    },
+    'bytes': {
+        'count': [make_param('sub'), make_param('start', None), make_param('end', None)],
+        'endswith': [make_param('suffix'), make_param('start', None), make_param('end', None)],
+        'find': [make_param('sub'), make_param('start', None), make_param('end', None)],
+        'hex': [make_param('sep', NULL), make_param('bytes_per_sep', 1)],
+        'index': [make_param('sub'), make_param('start', None), make_param('end', None)],
+        'rfind': [make_param('sub'), make_param('start', None), make_param('end', None)],
+        'rindex': [make_param('sub'), make_param('start', None), make_param('end', None)],
+        'startswith': [make_param('prefix'), make_param('start', None), make_param('end', None)],
+    },
     'list': {
         'index': [make_param('value'), make_param('start', NULL), make_param('stop', NULL)],
     },
     'str': {
+        'count': [make_param('sub'), make_param('start', None), make_param('end', None)],
         'endswith': [make_param('suffix'), make_param('start', None), make_param('end', None)],
         'find': [make_param('sub'), make_param('start', None), make_param('end', None)],
+        'index': [make_param('sub'), make_param('start', None), make_param('end', None)],
         'maketrans': [make_param('x'), make_param('y', NULL), make_param('z', NULL)],
+        'rfind': [make_param('sub'), make_param('start', None), make_param('end', None)],
+        'rindex': [make_param('sub'), make_param('start', None), make_param('end', None)],
         'startswith': [make_param('prefix'), make_param('start', None), make_param('end', None)],
     },
     '_io.TextIOWrapper': {

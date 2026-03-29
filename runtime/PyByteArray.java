@@ -244,9 +244,14 @@ public final class PyByteArray extends PyObject {
     public PyObject pymethod_center(PyObject width, PyObject fillchar) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_clear() { throw new UnsupportedOperationException(); }
     public PyObject pymethod_copy() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_count(PyObject sub, PyObject start, PyObject end) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_decode(PyObject encoding, PyObject errors) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_endswith(PyObject suffix, PyObject start, PyObject end) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_expandtabs(PyObject tabsize) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_extend(PyObject iterable_of_ints) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_find(PyObject sub, PyObject start, PyObject end) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_hex(PyObject sep, PyObject bytes_per_sep) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_index(PyObject sub, PyObject start, PyObject end) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_insert(PyObject index, PyObject item) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_isalnum() { throw new UnsupportedOperationException(); }
     public PyObject pymethod_isalpha() { throw new UnsupportedOperationException(); }
@@ -268,12 +273,15 @@ public final class PyByteArray extends PyObject {
     public PyObject pymethod_removesuffix(PyObject suffix) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_resize(PyObject size) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_reverse() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_rfind(PyObject sub, PyObject start, PyObject end) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_rindex(PyObject sub, PyObject start, PyObject end) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_rjust(PyObject width, PyObject fillchar) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_rpartition(PyObject sep) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_rsplit(PyObject sep, PyObject maxsplit) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_rstrip(PyObject bytes) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_split(PyObject sep, PyObject maxsplit) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_splitlines(PyObject keepends) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_startswith(PyObject prefix, PyObject start, PyObject end) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_strip(PyObject bytes) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_swapcase() { throw new UnsupportedOperationException(); }
     public PyObject pymethod_title() { throw new UnsupportedOperationException(); }

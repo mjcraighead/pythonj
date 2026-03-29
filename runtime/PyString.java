@@ -363,9 +363,11 @@ public final class PyString extends PyObject {
     public PyObject pymethod_capitalize() { throw new UnsupportedOperationException(); }
     public PyObject pymethod_casefold() { throw new UnsupportedOperationException(); }
     public PyObject pymethod_center(PyObject width, PyObject fillchar) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_count(PyObject sub, PyObject start, PyObject end) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_encode(PyObject encoding, PyObject errors) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_expandtabs(PyObject tabsize) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_format_map(PyObject mapping) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_index(PyObject sub, PyObject start, PyObject end) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_isalnum() { throw new UnsupportedOperationException(); }
     public PyObject pymethod_isalpha() { throw new UnsupportedOperationException(); }
     public PyObject pymethod_isascii() { throw new UnsupportedOperationException(); }
@@ -381,6 +383,8 @@ public final class PyString extends PyObject {
     public static PyObject pymethod_maketrans(PyObject x, PyObject y, PyObject z) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_partition(PyObject sep) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_replace(PyObject old, PyObject _new, PyObject count) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_rfind(PyObject sub, PyObject start, PyObject end) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_rindex(PyObject sub, PyObject start, PyObject end) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_rjust(PyObject width, PyObject fillchar) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_rpartition(PyObject sep) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_rsplit(PyObject sep, PyObject maxsplit) { throw new UnsupportedOperationException(); }
