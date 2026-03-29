@@ -350,6 +350,9 @@ public final class Runtime {
     public static PyInt pythonjLen(PyObject obj) {
         return new PyInt(obj.len());
     }
+    public static PyInt pythonjIndex(PyObject obj) {
+        return new PyInt(obj.indexValue());
+    }
     public static PyInt pythonjHash(PyObject obj) {
         return new PyInt(obj.hashCode());
     }

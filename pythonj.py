@@ -23,9 +23,9 @@ from typing import Iterator, Optional, TextIO, cast
 import _io
 
 BUILTIN_FUNCTIONS = {
-    'abs', 'all', 'any', 'ascii', 'chr', 'delattr', 'dir', 'format', 'getattr', 'hasattr', 'hash', 'hex',
+    'abs', 'all', 'any', 'ascii', 'bin', 'chr', 'delattr', 'dir', 'format', 'getattr', 'hasattr', 'hash', 'hex',
     'isinstance', 'issubclass', 'iter', 'len', 'max', 'min', 'next', 'open', 'ord', 'print', 'repr',
-    'setattr', 'sorted', 'sum',
+    'setattr', 'sorted', 'sum', 'oct',
 }
 BUILTIN_TYPES = {
     'bool': 'PyBool',
@@ -958,6 +958,9 @@ class PythonjVisitor(ast.NodeVisitor):
                 case '__pythonj_hash__':
                     assert len(node.args) == 1 and not node.keywords, node.args
                     return JavaMethodCall(JavaIdentifier('Runtime'), 'pythonjHash', [self.visit(node.args[0])])
+                case '__pythonj_index__':
+                    assert len(node.args) == 1 and not node.keywords, node.args
+                    return JavaMethodCall(JavaIdentifier('Runtime'), 'pythonjIndex', [self.visit(node.args[0])])
                 case '__pythonj_isinstance_single__':
                     assert len(node.args) == 2 and not node.keywords, node.args
                     if isinstance(node.args[1], ast.Name) and node.args[1].id in ISINSTANCE_SINGLE_FASTPATH_BUILTIN_TYPES:
@@ -1797,7 +1800,7 @@ NULL = object()
 RAW_ARGS_KWARGS_BUILTINS = {'max', 'min', 'print'}
 
 PYTHON_IMPLS = {
-    'builtins': {'abs', 'all', 'any', 'delattr', 'format', 'getattr', 'hash', 'hasattr', 'isinstance', 'issubclass', 'len', 'next', 'repr', 'setattr', 'sum'},
+    'builtins': {'abs', 'all', 'any', 'bin', 'delattr', 'format', 'getattr', 'hash', 'hasattr', 'isinstance', 'issubclass', 'len', 'next', 'oct', 'repr', 'setattr', 'sum'},
     'bytes': {'capitalize', 'isalnum', 'isalpha', 'isascii', 'isdigit', 'islower', 'isspace', 'istitle', 'isupper', 'lower', 'swapcase', 'title', 'upper'},
     'dict': {'setdefault'},
     'float': {'conjugate'},

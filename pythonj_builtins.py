@@ -17,6 +17,12 @@ def any(iterable):
             return True
     return False
 
+def bin(arg):
+    value = __pythonj_index__(arg)
+    if value < 0:
+        return '-0b' + format(-value, 'b')
+    return '0b' + format(value, 'b')
+
 def delattr(obj, name):
     if not __pythonj_isinstance_single__(name, str):
         raise TypeError('attribute name must be string, not ' + repr(type(name).__name__))
@@ -73,6 +79,12 @@ def next(iterator, default):
             return default
         raise StopIteration()
     return ret
+
+def oct(arg):
+    value = __pythonj_index__(arg)
+    if value < 0:
+        return '-0o' + format(-value, 'o')
+    return '0o' + format(value, 'o')
 
 def repr(arg):
     return __pythonj_repr__(arg)
