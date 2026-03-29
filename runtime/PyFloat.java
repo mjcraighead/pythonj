@@ -193,16 +193,35 @@ public final class PyFloat extends PyObject {
         if ((grouping != null) && grouping.equals("_")) {
             ret = ret.replace(',', '_');
         }
-        if (postprocessAlt && (ret.indexOf('.') == -1)) {
+        if (javaType.equals("g") || javaType.equals("G")) {
             int expIndex = ret.indexOf('e');
             if (expIndex == -1) {
                 expIndex = ret.indexOf('E');
             }
-            if (expIndex == -1) {
-                ret += ".";
-            } else {
-                ret = ret.substring(0, expIndex) + "." + ret.substring(expIndex);
+            String expSuffix = "";
+            String mantissa = ret;
+            if (expIndex != -1) {
+                mantissa = ret.substring(0, expIndex);
+                expSuffix = ret.substring(expIndex);
             }
+            int dotIndex = mantissa.indexOf('.');
+            if (dotIndex != -1) {
+                if (postprocessAlt) {
+                    // Keep Java's trailing zeros for %#g/%#G.
+                } else {
+                    int i = mantissa.length();
+                    while ((i > dotIndex + 1) && (mantissa.charAt(i - 1) == '0')) {
+                        i--;
+                    }
+                    if ((i == dotIndex + 1) && (mantissa.charAt(dotIndex) == '.')) {
+                        i--;
+                    }
+                    mantissa = mantissa.substring(0, i);
+                }
+            } else if (postprocessAlt) {
+                mantissa += ".";
+            }
+            ret = mantissa + expSuffix;
         }
         return ret;
     }

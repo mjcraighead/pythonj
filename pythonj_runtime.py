@@ -396,51 +396,144 @@ def _pyj_percent_arg_seq(args):
         return args
     return (args,)
 
-def _pyj_percent_int_arg(arg, conv):
-    try:
-        return int(arg)
-    except BaseException:
-        if conv == 'd':
-            raise TypeError(f'%d format: a real number is required, not {type(arg).__name__}')
-        raise TypeError(f'%{conv} format: an integer is required, not {type(arg).__name__}')
+def _pyj_percent_real_arg(arg, conv):
+    if isinstance(arg, bool) or isinstance(arg, (int, float)):
+        return float(arg)
+    raise TypeError(f'must be real number, not {type(arg).__name__}')
 
-def _pyj_percent_item_text(conv, flags, width, arg):
+def _pyj_percent_signed_int_arg(arg, conv):
+    if isinstance(arg, bool) or isinstance(arg, (int, float)):
+        return int(arg)
+    raise TypeError(f'%{conv} format: a real number is required, not {type(arg).__name__}')
+
+def _pyj_percent_index_arg(arg, conv):
+    if isinstance(arg, (int, bool)):
+        return int(arg)
+    raise TypeError(f'%{conv} format: an integer is required, not {type(arg).__name__}')
+
+def _pyj_percent_apply_width(text, flags, width):
+    if width is None:
+        return text
+    fill = ' '
+    if ('0' in flags) and ('-' not in flags):
+        fill = '0'
+    align = '<' if '-' in flags else '>'
+    return _pyj_format_apply_width(text, fill, align, width, '>')
+
+def _pyj_percent_without_zero_flag(flags):
+    ret = []
+    for c in flags:
+        if c != '0':
+            ret.append(c)
+    return ''.join(ret)
+
+def _pyj_percent_int_text(value, flags, width, precision, conv):
+    is_negative = value < 0
+    abs_value = -value if is_negative else value
+    sign_prefix = '-'
+    if not is_negative:
+        sign_prefix = ''
+        if '+' in flags:
+            sign_prefix = '+'
+        elif ' ' in flags:
+            sign_prefix = ' '
+
+    prefix = ''
+    if conv in 'diu':
+        digits = str(abs_value)
+    elif conv == 'o':
+        digits = _pyj_int_base_digits(abs_value, 8, '01234567')
+        if '#' in flags:
+            prefix = '0o'
+    elif conv == 'x':
+        digits = _pyj_int_base_digits(abs_value, 16, '0123456789abcdef')
+        if '#' in flags:
+            prefix = '0x'
+    elif conv == 'X':
+        digits = _pyj_int_base_digits(abs_value, 16, '0123456789ABCDEF')
+        if '#' in flags:
+            prefix = '0X'
+    else:
+        assert False, conv
+
+    if precision is not None and len(digits) < precision:
+        digits = ('0' * (precision - len(digits))) + digits
+
+    text = sign_prefix + prefix + digits
+    if width is None or len(text) >= width:
+        return text
+
+    if ('0' in flags) and ('-' not in flags):
+        return sign_prefix + prefix + ('0' * (width - len(text))) + digits
+    return _pyj_percent_apply_width(text, flags, width)
+
+def _pyj_percent_float_text(flags, width, precision, conv, arg):
+    spec = ''
+    if '-' in flags:
+        spec += '<'
+    if '+' in flags:
+        spec += '+'
+    elif ' ' in flags:
+        spec += ' '
+    if '#' in flags:
+        spec += '#'
+    if ('0' in flags) and ('-' not in flags) and (width is not None):
+        spec += '0' + str(width)
+    elif width is not None:
+        spec += str(width)
+    if precision is not None:
+        spec += '.' + str(precision)
+    spec += conv
+    return format(_pyj_percent_real_arg(arg, conv), spec)
+
+def _pyj_percent_char_text(arg):
+    if isinstance(arg, str):
+        if len(arg) != 1:
+            raise TypeError(f'%c requires an int or a unicode character, not a string of length {len(arg)}')
+        return arg
+    if not isinstance(arg, (int, bool)):
+        raise TypeError(f'%c requires an int or a unicode character, not {type(arg).__name__}')
+    code = int(arg)
+    if code < 0 or code > 0x10FFFF:
+        raise OverflowError('%c arg not in range(0x110000)')
+    return chr(code)
+
+def _pyj_percent_item_text(conv, flags, width, precision, arg):
     if conv == 's':
         text = str(arg)
-    elif conv == 'r':
+        if precision is not None:
+            text = text[:precision]
+        return _pyj_percent_apply_width(text, _pyj_percent_without_zero_flag(flags), width)
+    if conv == 'r':
         text = repr(arg)
-    elif conv == 'd':
-        spec = '+' if '+' in flags else (' ' if ' ' in flags else '')
-        if ('0' in flags) and ('-' not in flags) and (width is not None):
-            spec += '0' + str(width)
-            width = None
-        spec += 'd'
-        text = pyj_int_format(_pyj_percent_int_arg(arg, conv), spec)
-    elif conv == 'x':
-        spec = '+' if '+' in flags else (' ' if ' ' in flags else '')
-        if '#' in flags:
-            spec += '#'
-        if ('0' in flags) and ('-' not in flags) and (width is not None):
-            spec += '0' + str(width)
-            width = None
-        spec += 'x'
-        text = pyj_int_format(_pyj_percent_int_arg(arg, conv), spec)
-    elif conv == 'X':
-        spec = '+' if '+' in flags else (' ' if ' ' in flags else '')
-        if '#' in flags:
-            spec += '#'
-        if ('0' in flags) and ('-' not in flags) and (width is not None):
-            spec += '0' + str(width)
-            width = None
-        spec += 'X'
-        text = pyj_int_format(_pyj_percent_int_arg(arg, conv), spec)
-    else:
-        raise ValueError(conv)
+        if precision is not None:
+            text = text[:precision]
+        return _pyj_percent_apply_width(text, _pyj_percent_without_zero_flag(flags), width)
+    if conv == 'a':
+        text = ascii(arg)
+        if precision is not None:
+            text = text[:precision]
+        return _pyj_percent_apply_width(text, _pyj_percent_without_zero_flag(flags), width)
+    if conv == 'c':
+        return _pyj_percent_apply_width(_pyj_percent_char_text(arg), _pyj_percent_without_zero_flag(flags), width)
+    if conv in 'diu':
+        return _pyj_percent_int_text(_pyj_percent_signed_int_arg(arg, conv), flags, width, precision, conv)
+    if conv in 'oxX':
+        return _pyj_percent_int_text(_pyj_percent_index_arg(arg, conv), flags, width, precision, conv)
+    if conv in 'eEfFgG':
+        if precision is None and conv in 'eEfF':
+            precision = 6
+        return _pyj_percent_float_text(flags, width, precision, conv, arg)
+    raise ValueError(conv)
 
-    if width is not None:
-        align = '<' if '-' in flags else '>'
-        text = _pyj_format_apply_width(text, ' ', align, width, '>')
-    return text
+def _pyj_percent_take_star_value(arg_seq, arg_index):
+    if arg_index >= len(arg_seq):
+        raise TypeError('not enough arguments for format string')
+    value = arg_seq[arg_index]
+    arg_index += 1
+    if not isinstance(value, int):
+        raise TypeError('* wants int')
+    return (int(value), arg_index)
 
 def pyj_percent_format(fmt, args):
     arg_seq = _pyj_percent_arg_seq(args)
@@ -483,15 +576,46 @@ def pyj_percent_format(fmt, args):
                 flags += fmt[i]
             i += 1
 
-        width_start = i
-        while i < n and fmt[i].isdecimal():
+        width = None
+        if i < n and fmt[i] == '*':
+            width, arg_index = _pyj_percent_take_star_value(arg_seq, arg_index)
             i += 1
-        width = int(fmt[width_start:i]) if i > width_start else None
+            if width < 0:
+                width = -width
+                if '-' not in flags:
+                    flags += '-'
+        else:
+            width_start = i
+            while i < n and fmt[i].isdecimal():
+                i += 1
+            width = int(fmt[width_start:i]) if i > width_start else None
+
+        precision = None
+        if i < n and fmt[i] == '.':
+            i += 1
+            if i < n and fmt[i] == '*':
+                precision, arg_index = _pyj_percent_take_star_value(arg_seq, arg_index)
+                i += 1
+            else:
+                precision_start = i
+                while i < n and fmt[i].isdecimal():
+                    i += 1
+                if i == precision_start:
+                    precision = 0
+                else:
+                    precision = int(fmt[precision_start:i])
+            if precision < 0:
+                precision = 0
+
+        if i < n and fmt[i] in 'hlL':
+            i += 1
 
         if i == n:
             raise ValueError('incomplete format')
         conv = fmt[i]
         i += 1
+        if conv not in 'diuoxXeEfFgGcrsa':
+            raise ValueError(f"unsupported format character {conv!r} (0x{ord(conv):x}) at index {i - 1}")
 
         if mapping_key is None:
             if arg_index >= len(arg_seq):
@@ -500,7 +624,7 @@ def pyj_percent_format(fmt, args):
             arg_index += 1
         else:
             arg = args[mapping_key]
-        out.append(_pyj_percent_item_text(conv, flags, width, arg))
+        out.append(_pyj_percent_item_text(conv, flags, width, precision, arg))
 
     if (not used_mapping) and (arg_index != len(arg_seq)):
         raise TypeError('not all arguments converted during string formatting')
