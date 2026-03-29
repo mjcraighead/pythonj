@@ -49,11 +49,44 @@ public final class PySet extends PyObject {
         return ret;
     }
 
-    static HashSet<PyObject> xor(Set<PyObject> lhs, Set<PyObject> rhs) {
-        var result = new HashSet<PyObject>(lhs);
+    static HashSet<PyObject> materializeIterable(PyObject obj) {
+        var result = new HashSet<PyObject>();
+        Runtime.addIterableToCollection(result, obj);
+        return result;
+    }
+    static HashSet<PyObject> intersectionPreserveLeft(Iterable<PyObject> lhs, Set<PyObject> rhs) {
+        var result = new HashSet<PyObject>();
+        for (var x: lhs) {
+            if (rhs.contains(x)) {
+                result.add(x);
+            }
+        }
+        return result;
+    }
+    static HashSet<PyObject> unionPreserveLeft(Iterable<PyObject> lhs, Iterable<PyObject> rhs) {
+        var result = new HashSet<PyObject>();
+        for (var x: lhs) {
+            result.add(x);
+        }
         for (var x: rhs) {
-            if (!result.add(x)) {
-                result.remove(x);
+            result.add(x);
+        }
+        return result;
+    }
+    static HashSet<PyObject> differencePreserveLeft(Iterable<PyObject> lhs, Set<PyObject> rhs) {
+        var result = new HashSet<PyObject>();
+        for (var x: lhs) {
+            if (!rhs.contains(x)) {
+                result.add(x);
+            }
+        }
+        return result;
+    }
+    static HashSet<PyObject> symmetricDifferencePreserveLeft(Iterable<PyObject> lhs, Set<PyObject> lhsSet, Iterable<PyObject> rhs, Set<PyObject> rhsSet) {
+        var result = differencePreserveLeft(lhs, rhsSet);
+        for (var x: rhs) {
+            if (!lhsSet.contains(x)) {
+                result.add(x);
             }
         }
         return result;
@@ -73,17 +106,27 @@ public final class PySet extends PyObject {
     }
 
     @Override public PyObject and(PyObject rhs) {
-        if (rhs instanceof PySet rhsSet) {
-            var result = new HashSet<PyObject>(items);
-            result.retainAll(rhsSet.items);
-            return new PySet(result);
+        var rhsSet = rhs.asSetOrNull();
+        if (rhsSet != null) {
+            if (items.size() < rhsSet.size()) {
+                return new PySet(intersectionPreserveLeft(items, rhsSet));
+            } else {
+                return new PySet(intersectionPreserveLeft(rhsSet, items));
+            }
         } else {
             return super.and(rhs);
         }
     }
     @Override public PyObject andInPlace(PyObject rhs) {
-        if (rhs instanceof PySet rhsSet) {
-            items.retainAll(rhsSet.items);
+        var rhsSet = rhs.asSetOrNull();
+        if (rhsSet != null) {
+            var lhs = new HashSet<PyObject>(items);
+            items.clear();
+            if (lhs.size() < rhsSet.size()) {
+                items.addAll(intersectionPreserveLeft(lhs, rhsSet));
+            } else {
+                items.addAll(intersectionPreserveLeft(rhsSet, lhs));
+            }
             return this;
         } else {
             return super.andInPlace(rhs);
@@ -91,16 +134,16 @@ public final class PySet extends PyObject {
     }
     @Override public PyObject or(PyObject rhs) {
         if (rhs instanceof PySet rhsSet) {
-            var result = new HashSet<PyObject>(items);
-            result.addAll(rhsSet.items);
-            return new PySet(result);
+            return new PySet(unionPreserveLeft(items, rhsSet.items));
         } else {
             return super.or(rhs);
         }
     }
     @Override public PyObject orInPlace(PyObject rhs) {
         if (rhs instanceof PySet rhsSet) {
-            items.addAll(rhsSet.items);
+            var lhs = new HashSet<PyObject>(items);
+            items.clear();
+            items.addAll(unionPreserveLeft(lhs, rhsSet.items));
             return this;
         } else {
             return super.orInPlace(rhs);
@@ -108,16 +151,16 @@ public final class PySet extends PyObject {
     }
     @Override public PyObject sub(PyObject rhs) {
         if (rhs instanceof PySet rhsSet) {
-            var result = new HashSet<PyObject>(items);
-            result.removeAll(rhsSet.items);
-            return new PySet(result);
+            return new PySet(differencePreserveLeft(items, rhsSet.items));
         } else {
             return super.sub(rhs);
         }
     }
     @Override public PyObject subInPlace(PyObject rhs) {
         if (rhs instanceof PySet rhsSet) {
-            items.removeAll(rhsSet.items);
+            var lhs = new HashSet<PyObject>(items);
+            items.clear();
+            items.addAll(differencePreserveLeft(lhs, rhsSet.items));
             return this;
         } else {
             return super.subInPlace(rhs);
@@ -125,7 +168,7 @@ public final class PySet extends PyObject {
     }
     @Override public PyObject xor(PyObject rhs) {
         if (rhs instanceof PySet rhsSet) {
-            return new PySet(xor(items, rhsSet.items));
+            return new PySet(symmetricDifferencePreserveLeft(items, items, rhsSet.items, rhsSet.items));
         } else {
             return super.xor(rhs);
         }
@@ -136,11 +179,9 @@ public final class PySet extends PyObject {
                 items.clear();
                 return this;
             }
-            for (var x: rhsSet.items) {
-                if (!items.add(x)) {
-                    items.remove(x);
-                }
-            }
+            var lhs = new HashSet<PyObject>(items);
+            items.clear();
+            items.addAll(symmetricDifferencePreserveLeft(lhs, lhs, rhsSet.items, rhsSet.items));
             return this;
         } else {
             return super.xorInPlace(rhs);

@@ -68,44 +68,50 @@ public final class PyDict extends PyObject {
 
         @Override public PyObject and(PyObject rhs) {
             var itemsSet = materializeSet();
-            var result = new HashSet<PyObject>();
-            var iter = rhs.iter();
-            for (var item = iter.next(); item != null; item = iter.next()) {
-                if (itemsSet.contains(item)) {
-                    result.add(item);
-                }
+            var rhsSet = rhs.asSetOrNull();
+            if (rhsSet != null) {
+                return new PySet(PySet.intersectionPreserveLeft(itemsSet, rhsSet));
+            } else {
+                return new PySet(PySet.intersectionPreserveLeft(PySet.materializeIterable(rhs), itemsSet));
             }
-            return new PySet(result);
         }
         @Override public PyObject or(PyObject rhs) {
             var itemsSet = materializeSet();
-            Runtime.addIterableToCollection(itemsSet, rhs);
-            return new PySet(itemsSet);
+            return new PySet(PySet.unionPreserveLeft(itemsSet, PySet.materializeIterable(rhs)));
         }
         @Override public PyObject sub(PyObject rhs) {
             var itemsSet = materializeSet();
-            var iter = rhs.iter();
-            for (var item = iter.next(); item != null; item = iter.next()) {
-                itemsSet.remove(item);
-            }
-            return new PySet(itemsSet);
+            return new PySet(PySet.differencePreserveLeft(itemsSet, PySet.materializeIterable(rhs)));
         }
         @Override public PyObject xor(PyObject rhs) {
             var itemsSet = materializeSet();
-            var rhsSet = new HashSet<PyObject>();
-            Runtime.addIterableToCollection(rhsSet, rhs);
-            return new PySet(PySet.xor(itemsSet, rhsSet));
+            var rhsSet = PySet.materializeIterable(rhs);
+            return new PySet(PySet.symmetricDifferencePreserveLeft(itemsSet, itemsSet, rhsSet, rhsSet));
         }
-        @Override public PyObject rand(PyObject rhs) { return and(rhs); }
-        @Override public PyObject ror(PyObject rhs) { return or(rhs); }
+        @Override public PyObject rand(PyObject rhs) {
+            var itemsSet = materializeSet();
+            var rhsSet = rhs.asSetOrNull();
+            if (rhsSet != null) {
+                return new PySet(PySet.intersectionPreserveLeft(itemsSet, rhsSet));
+            } else {
+                return new PySet(PySet.intersectionPreserveLeft(PySet.materializeIterable(rhs), itemsSet));
+            }
+        }
+        @Override public PyObject ror(PyObject rhs) {
+            var itemsSet = materializeSet();
+            var rhsSet = PySet.materializeIterable(rhs);
+            return new PySet(PySet.unionPreserveLeft(rhsSet, itemsSet));
+        }
         @Override public PyObject rsub(PyObject rhs) {
             var itemsSet = materializeSet();
-            var rhsSet = new HashSet<PyObject>();
-            Runtime.addIterableToCollection(rhsSet, rhs);
-            rhsSet.removeAll(itemsSet);
-            return new PySet(rhsSet);
+            var rhsSet = PySet.materializeIterable(rhs);
+            return new PySet(PySet.differencePreserveLeft(rhsSet, itemsSet));
         }
-        @Override public PyObject rxor(PyObject rhs) { return xor(rhs); }
+        @Override public PyObject rxor(PyObject rhs) {
+            var itemsSet = materializeSet();
+            var rhsSet = PySet.materializeIterable(rhs);
+            return new PySet(PySet.symmetricDifferencePreserveLeft(rhsSet, rhsSet, itemsSet, itemsSet));
+        }
 
         @Override public boolean ge(PyObject rhs) {
             var rhsSet = rhs.asSetOrNull();
@@ -172,42 +178,43 @@ public final class PyDict extends PyObject {
         PyDictKeys(LinkedHashMap<PyObject, PyObject> _items) { items = _items; }
 
         @Override public PySet and(PyObject rhs) {
-            var result = new HashSet<PyObject>();
-            var iter = rhs.iter();
-            for (var item = iter.next(); item != null; item = iter.next()) {
-                if (items.containsKey(item)) {
-                    result.add(item);
-                }
+            var rhsSet = rhs.asSetOrNull();
+            if (rhsSet != null) {
+                return new PySet(PySet.intersectionPreserveLeft(items.keySet(), rhsSet));
+            } else {
+                return new PySet(PySet.intersectionPreserveLeft(PySet.materializeIterable(rhs), items.keySet()));
             }
-            return new PySet(result);
         }
         @Override public PyObject or(PyObject rhs) {
-            var result = new HashSet<PyObject>(items.keySet());
-            Runtime.addIterableToCollection(result, rhs);
-            return new PySet(result);
+            return new PySet(PySet.unionPreserveLeft(items.keySet(), PySet.materializeIterable(rhs)));
         }
         @Override public PyObject sub(PyObject rhs) {
-            var result = new HashSet<PyObject>(items.keySet());
-            var iter = rhs.iter();
-            for (var item = iter.next(); item != null; item = iter.next()) {
-                result.remove(item);
-            }
-            return new PySet(result);
+            return new PySet(PySet.differencePreserveLeft(items.keySet(), PySet.materializeIterable(rhs)));
         }
         @Override public PyObject xor(PyObject rhs) {
-            var rhsSet = new HashSet<PyObject>();
-            Runtime.addIterableToCollection(rhsSet, rhs);
-            return new PySet(PySet.xor(items.keySet(), rhsSet));
+            var rhsSet = PySet.materializeIterable(rhs);
+            return new PySet(PySet.symmetricDifferencePreserveLeft(items.keySet(), items.keySet(), rhsSet, rhsSet));
         }
-        @Override public PyObject rand(PyObject rhs) { return and(rhs); }
-        @Override public PyObject ror(PyObject rhs) { return or(rhs); }
+        @Override public PyObject rand(PyObject rhs) {
+            var rhsSet = rhs.asSetOrNull();
+            if (rhsSet != null) {
+                return new PySet(PySet.intersectionPreserveLeft(items.keySet(), rhsSet));
+            } else {
+                return new PySet(PySet.intersectionPreserveLeft(PySet.materializeIterable(rhs), items.keySet()));
+            }
+        }
+        @Override public PyObject ror(PyObject rhs) {
+            var rhsSet = PySet.materializeIterable(rhs);
+            return new PySet(PySet.unionPreserveLeft(rhsSet, items.keySet()));
+        }
         @Override public PyObject rsub(PyObject rhs) {
-            var result = new HashSet<PyObject>();
-            Runtime.addIterableToCollection(result, rhs);
-            result.removeAll(items.keySet());
-            return new PySet(result);
+            var rhsSet = PySet.materializeIterable(rhs);
+            return new PySet(PySet.differencePreserveLeft(rhsSet, items.keySet()));
         }
-        @Override public PyObject rxor(PyObject rhs) { return xor(rhs); }
+        @Override public PyObject rxor(PyObject rhs) {
+            var rhsSet = PySet.materializeIterable(rhs);
+            return new PySet(PySet.symmetricDifferencePreserveLeft(rhsSet, rhsSet, items.keySet(), items.keySet()));
+        }
 
         @Override public boolean ge(PyObject rhs) {
             var rhsSet = rhs.asSetOrNull();
