@@ -110,6 +110,7 @@ final class PyJsonModule extends PyModule {
     @Override public PyObject getAttr(String key) {
         switch (key) {
             case "encode_basestring_ascii": return PyJsonFunction_encode_basestring_ascii.singleton;
+            case "scanstring": return PyJsonFunction_scanstring.singleton;
             default: return super.getAttr(key);
         }
     }

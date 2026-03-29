@@ -32,6 +32,22 @@ final class PyJsonFunction_encode_basestring_ascii extends PyBuiltinFunction {
     }
 }
 
+final class PyJsonFunction_scanstring extends PyBuiltinFunction {
+    public static final PyJsonFunction_scanstring singleton = new PyJsonFunction_scanstring();
+
+    private PyJsonFunction_scanstring() { super("scanstring"); }
+
+    @Override public PyObject call(PyObject[] args, PyDict kwargs) {
+        if ((kwargs != null) && kwargs.boolValue()) {
+            throw Runtime.raiseNoKwArgs("_json.scanstring");
+        }
+        if (args.length != 2) {
+            throw Runtime.raiseExactArgs(args, 2, "_json.scanstring");
+        }
+        return PyBuiltinFunctionsImpl.pyfunc_json_scanstring(args[0], args[1]);
+    }
+}
+
 final class PyMathFunction_copysign extends PyBuiltinFunction {
     public static final PyMathFunction_copysign singleton = new PyMathFunction_copysign();
 
@@ -142,6 +158,76 @@ final class PyBuiltinFunctionsImpl {
         }
         out.append('"');
         return new PyString(out.toString());
+    }
+    private static PyValueError jsonScanstringError(String msg, String s, int pos) {
+        int line = 1;
+        int col = 1;
+        for (int i = 0; i < pos; i++) {
+            if (s.charAt(i) == '\n') {
+                line++;
+                col = 1;
+            } else {
+                col++;
+            }
+        }
+        return new PyValueError(new PyString(String.format("%s: line %d column %d (char %d)", msg, line, col, pos)));
+    }
+    static PyTuple pyfunc_json_scanstring(PyObject sObj, PyObject endObj) {
+        if (!(sObj instanceof PyString sStr)) {
+            throw PyTypeError.raise("first argument must be a string, not " + sObj.type().name());
+        }
+        String s = sStr.value;
+        int start = (int)endObj.indexValue();
+        int i = start;
+        var out = new StringBuilder();
+        while (true) {
+            if (i >= s.length()) {
+                throw new PyRaise(jsonScanstringError("Unterminated string starting at", s, start - 1));
+            }
+            char c = s.charAt(i);
+            if (c == '"') {
+                return new PyTuple(new PyObject[] {new PyString(out.toString()), new PyInt(i + 1)});
+            }
+            if (c == '\\') {
+                i++;
+                if (i >= s.length()) {
+                    throw new PyRaise(jsonScanstringError("Unterminated string starting at", s, start - 1));
+                }
+                char esc = s.charAt(i);
+                switch (esc) {
+                    case '"': out.append('"'); break;
+                    case '\\': out.append('\\'); break;
+                    case '/': out.append('/'); break;
+                    case 'b': out.append('\b'); break;
+                    case 'f': out.append('\f'); break;
+                    case 'n': out.append('\n'); break;
+                    case 'r': out.append('\r'); break;
+                    case 't': out.append('\t'); break;
+                    case 'u': {
+                        if (i + 4 >= s.length()) {
+                            throw new PyRaise(jsonScanstringError("Invalid \\uXXXX escape", s, i));
+                        }
+                        int code = 0;
+                        for (int j = 1; j <= 4; j++) {
+                            int digit = Character.digit(s.charAt(i + j), 16);
+                            if (digit < 0) {
+                                throw new PyRaise(jsonScanstringError("Invalid \\uXXXX escape", s, i));
+                            }
+                            code = (code << 4) | digit;
+                        }
+                        out.append((char)code);
+                        i += 4;
+                        break;
+                    }
+                    default:
+                        throw new PyRaise(jsonScanstringError("Invalid \\escape", s, i - 1));
+                }
+                i++;
+                continue;
+            }
+            out.append(c);
+            i++;
+        }
     }
     private static double requireMathReal(PyObject arg) {
         if ((arg instanceof PyFloat) || (arg instanceof PyInt) || (arg instanceof PyBool)) {
