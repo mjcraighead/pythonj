@@ -23,6 +23,14 @@ abstract class PyIter extends PyTruthyObject {
     @Override public final PyIter iter() { return this; }
 }
 
+final class PyCell {
+    PyObject obj;
+
+    PyCell(PyObject _obj) {
+        obj = _obj;
+    }
+}
+
 abstract class PyType extends PyTruthyObject {
     public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
         if (args.length != 1) {

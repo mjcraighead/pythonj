@@ -538,16 +538,48 @@ class SymbolTableVisitor(ast.NodeVisitor):
     def visit_GeneratorExp(self, node):
         self._visit_comp(node)
 
+class DirectNestedScopeVisitor(ast.NodeVisitor):
+    __slots__ = ('children',)
+    children: list[ast.AST]
+
+    def __init__(self):
+        self.children = []
+
+    def visit_FunctionDef(self, node):
+        self.children.append(node)
+    def visit_AsyncFunctionDef(self, node):
+        self.children.append(node)
+    def visit_Lambda(self, node):
+        self.children.append(node)
+    def visit_ListComp(self, node):
+        self.children.append(node)
+    def visit_SetComp(self, node):
+        self.children.append(node)
+    def visit_DictComp(self, node):
+        self.children.append(node)
+    def visit_GeneratorExp(self, node):
+        self.children.append(node)
+
+@dataclass
+class ScopeInfo:
+    locals: set[str]
+    explicit_globals: set[str]
+    nonlocals: set[str]
+    cell_vars: set[str]
+    needs_from_outer: set[str]
+
 class ScopeKind(Enum):
     MODULE = 1
     FUNCTION = 2
 
 class Scope:
-    __slots__ = ('parent', 'kind', 'locals', 'explicit_globals', 'n_temps', 'used_expr_discard')
+    __slots__ = ('parent', 'kind', 'locals', 'explicit_globals', 'cell_vars', 'free_vars', 'n_temps', 'used_expr_discard')
     parent: Optional['Scope']
     kind: ScopeKind
     locals: set[str]
     explicit_globals: set[str]
+    cell_vars: set[str]
+    free_vars: set[str]
     n_temps: int
     used_expr_discard: bool
 
@@ -556,6 +588,8 @@ class Scope:
         self.kind = kind
         self.locals = set()
         self.explicit_globals = set()
+        self.cell_vars = set()
+        self.free_vars = set()
         self.n_temps = 0
         self.used_expr_discard = False
 
@@ -571,15 +605,18 @@ class Scope:
 # will compile into.  Partial mitigations are likely to be easier than a total fix.
 # XXX "invokedynamic" might help us a lot, but there is no way to access it from Java source
 class PythonjVisitor(ast.NodeVisitor):
-    __slots__ = ('path', 'n_errors', 'n_lambdas', 'qualname_stack', 'scope', 'global_code', 'code',
+    __slots__ = ('path', 'n_errors', 'n_functions', 'n_lambdas', 'qualname_stack', 'scope', 'global_code', 'code',
+                 'scope_infos',
                  'emit_ctx', 'break_name', 'functions', 'allow_intrinsics')
     path: str
     n_errors: int
+    n_functions: int
     n_lambdas: int
     qualname_stack: list[str]
     scope: Scope
     global_code: list[JavaStatement]
     code: list[JavaStatement]
+    scope_infos: dict[ast.AST, ScopeInfo]
     emit_ctx: EmitContext
     break_name: Optional[str]
     functions: dict[str, list[str]]
@@ -588,11 +625,13 @@ class PythonjVisitor(ast.NodeVisitor):
     def __init__(self, path: str):
         self.path = path
         self.n_errors = 0
+        self.n_functions = 0
         self.n_lambdas = 0
         self.qualname_stack = []
         self.scope = Scope(None, ScopeKind.MODULE)
         self.global_code = [JavaVariableDecl('PyObject', 'expr_discard', None)] # XXX remove this variable if not needed
         self.code = self.global_code
+        self.scope_infos = {}
         self.emit_ctx = EmitContext()
         self.break_name = None
         self.functions = {}
@@ -609,6 +648,8 @@ class PythonjVisitor(ast.NodeVisitor):
     def ident_expr(self, name: str) -> JavaExpr:
         if self.allow_intrinsics and name == '__pythonj_null__':
             return JavaIdentifier('null')
+        elif self.scope.kind == ScopeKind.FUNCTION and (name in self.scope.cell_vars or name in self.scope.free_vars):
+            return JavaField(JavaIdentifier(f'pycell_{name}'), 'obj')
         elif self.scope.kind == ScopeKind.FUNCTION and name in self.scope.locals:
             return JavaIdentifier(f'pylocal_{name}')
         elif name in BUILTIN_TYPES:
@@ -619,6 +660,69 @@ class PythonjVisitor(ast.NodeVisitor):
             return JavaField(JavaIdentifier(f'PyBuiltinFunction_{name}'), 'singleton')
         else:
             return JavaIdentifier(f'pyglobal_{name}')
+
+    def resolve_free_vars(self, lineno: int, scope_info: ScopeInfo, func_type: str) -> set[str]:
+        free_vars = set()
+        for name in scope_info.needs_from_outer:
+            parent_scope = self.scope
+            found = False
+            while parent_scope:
+                if name in parent_scope.explicit_globals:
+                    break
+                if parent_scope.kind == ScopeKind.FUNCTION and name in (parent_scope.locals | parent_scope.cell_vars | parent_scope.free_vars):
+                    free_vars.add(name)
+                    found = True
+                    break
+                parent_scope = parent_scope.parent
+            if name in scope_info.nonlocals and not found:
+                self.error(lineno, f"no binding for nonlocal {name!r} found")
+        return free_vars
+
+    def get_scope_info(self, node: ast.AST) -> ScopeInfo:
+        if node in self.scope_infos:
+            return self.scope_infos[node]
+
+        symbol_table = SymbolTableVisitor()
+        child_visitor = DirectNestedScopeVisitor()
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            symbol_table.writes.update(arg.arg for arg in node.args.args)
+            for statement in node.body:
+                symbol_table.visit(statement)
+                child_visitor.visit(statement)
+        elif isinstance(node, ast.Lambda):
+            symbol_table.writes.update(arg.arg for arg in node.args.args)
+            symbol_table.visit(node.body)
+            child_visitor.visit(node.body)
+        else:
+            assert isinstance(node, (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)), node
+            generators = node.generators
+            elts: list[ast.expr] = [node.elt] if not isinstance(node, ast.DictComp) else [node.key, node.value]
+            for (i, generator) in enumerate(generators):
+                if i != 0:
+                    symbol_table.visit(generator.iter)
+                    child_visitor.visit(generator.iter)
+                symbol_table.visit(generator.target)
+                child_visitor.visit(generator.target)
+                for _if in generator.ifs:
+                    symbol_table.visit(_if)
+                    child_visitor.visit(_if)
+            for elt in elts:
+                symbol_table.visit(elt)
+                child_visitor.visit(elt)
+
+        locals = symbol_table.writes - symbol_table.globals - symbol_table.nonlocals
+        needs_from_outer = (symbol_table.reads | symbol_table.nonlocals) - locals - symbol_table.globals
+        cell_vars = set()
+        for child in child_visitor.children:
+            child_info = self.get_scope_info(child)
+            for name in child_info.needs_from_outer:
+                if name in locals:
+                    cell_vars.add(name)
+                elif name not in symbol_table.globals:
+                    needs_from_outer.add(name)
+        scope_info = ScopeInfo(locals, symbol_table.globals.copy(), symbol_table.nonlocals.copy(), cell_vars, needs_from_outer)
+        self.scope_infos[node] = scope_info
+        return scope_info
 
     def generic_visit(self, node):
         """Print an error for all unknown constructs in translation."""
@@ -1095,24 +1199,13 @@ class PythonjVisitor(ast.NodeVisitor):
         return ([arg.arg for arg in args.args], defaults)
 
     @contextmanager
-    def new_function(self, lineno: int, symbol_table: SymbolTableVisitor, func_type: str, qualname: str) -> Iterator[None]:
-        if symbol_table.nonlocals:
-            self.error(lineno, "'nonlocal' is unsupported")
-
-        free_vars = symbol_table.reads - symbol_table.writes
-        free_vars -= symbol_table.globals # exclude any that match 'global' in current scope
-        parent_scope = self.scope
-        while parent_scope:
-            free_vars -= parent_scope.explicit_globals # exclude any that match 'global' in parent scope
-            if parent_scope.kind == ScopeKind.FUNCTION and (match_names := free_vars & parent_scope.locals):
-                for name in match_names:
-                    self.error(lineno, f'{func_type} capture of local {name!r} is unsupported')
-            parent_scope = parent_scope.parent
-
+    def new_function(self, scope_info: ScopeInfo, free_vars: set[str], qualname: str) -> Iterator[None]:
         saved_scope = self.scope
         self.scope = Scope(self.scope, ScopeKind.FUNCTION)
-        self.scope.locals = symbol_table.writes - symbol_table.globals
-        self.scope.explicit_globals = symbol_table.globals.copy()
+        self.scope.locals = scope_info.locals.copy()
+        self.scope.explicit_globals = scope_info.explicit_globals.copy()
+        self.scope.cell_vars = scope_info.cell_vars.copy()
+        self.scope.free_vars = free_vars.copy()
         self.qualname_stack.append(qualname)
         try:
             yield
@@ -1127,18 +1220,21 @@ class PythonjVisitor(ast.NodeVisitor):
                      invisible_args: bool = False) -> None:
         n_args = len(arg_names)
         n_required = n_args - len(arg_defaults)
-        local_arg_names = [arg if invisible_args else f'pylocal_{arg}' for arg in arg_names]
+        bind_arg_names = [f'pyarg_{arg}' for arg in arg_names]
+        free_var_names = sorted(self.scope.free_vars)
         py_name_java = java_string_literal(py_name)
         arg_names_java = ', '.join(java_string_literal(arg) for arg in arg_names)
         required_arg_names_java = ', '.join(java_string_literal(arg) for arg in arg_names[:n_required])
         func_code = [
             f'private static final class {java_name} extends PyFunction {{',
-            f'{java_name}() {{',
+            *(f'private final PyCell pycell_{name};' for name in free_var_names),
+            (f'{java_name}({", ".join(f"PyCell pycell_{name}" for name in free_var_names)}) {{' if free_var_names else f'{java_name}() {{'),
             f'super({py_name_java});',
+            *(f'this.pycell_{name} = pycell_{name};' for name in free_var_names),
             '}',
             '@Override public PyObject call(PyObject[] args, PyDict kwargs) {',
             'int argsLength = args.length;',
-            *(f'PyObject {name} = (argsLength >= {i + 1}) ? args[{i}] : null;' for (i, name) in enumerate(local_arg_names)),
+            *(f'PyObject {name} = (argsLength >= {i + 1}) ? args[{i}] : null;' for (i, name) in enumerate(bind_arg_names)),
             'if ((kwargs == null) || !kwargs.boolValue()) {',
         ]
         if n_required == n_args:
@@ -1170,10 +1266,10 @@ class PythonjVisitor(ast.NodeVisitor):
                 prefix = '' if i == 0 else 'else '
                 func_code.extend([
                     f'{prefix}if (kwName.equals({java_string_literal(arg_name)})) {{',
-                    f'if ({local_arg_names[i]} != null) {{',
+                    f'if ({bind_arg_names[i]} != null) {{',
                     f'throw Runtime.raiseMultipleValues({py_name_java}, {java_string_literal(arg_name)});',
                     '}',
-                    f'{local_arg_names[i]} = kwValue;',
+                    f'{bind_arg_names[i]} = kwValue;',
                     '}',
                 ])
         func_code.extend([
@@ -1189,8 +1285,8 @@ class PythonjVisitor(ast.NodeVisitor):
                 '}',
             ])
             if n_required != 0:
-                func_code.append(f'if ({ " || ".join(f"{local_arg_names[i]} == null" for i in range(n_required)) }) {{')
-                func_code.append(f'throw Runtime.raiseUserMissingKwArgs({py_name_java}, new PyObject[] {{{", ".join(local_arg_names[:n_required])}}}, {required_arg_names_java});')
+                func_code.append(f'if ({ " || ".join(f"{bind_arg_names[i]} == null" for i in range(n_required)) }) {{')
+                func_code.append(f'throw Runtime.raiseUserMissingKwArgs({py_name_java}, new PyObject[] {{{", ".join(bind_arg_names[:n_required])}}}, {required_arg_names_java});')
                 func_code.append('}')
         else:
             func_code.extend([
@@ -1199,11 +1295,19 @@ class PythonjVisitor(ast.NodeVisitor):
                 '}',
             ])
         func_code.append('}')
-        for (i, name) in enumerate(local_arg_names[n_required:]):
+        for (i, name) in enumerate(bind_arg_names[n_required:]):
             func_code.append(f'if ({name} == null) {{ {name} = {JavaPyConstant(arg_defaults[i]).emit_java(self.emit_ctx)}; }}')
         if self.scope.used_expr_discard:
             func_code.append('PyObject expr_discard;')
-        for name in sorted(self.scope.locals):
+        for (arg_name, bind_arg_name) in zip(arg_names, bind_arg_names):
+            if arg_name in self.scope.cell_vars:
+                func_code.append(f'PyCell pycell_{arg_name} = new PyCell({bind_arg_name});')
+            else:
+                local_arg_name = arg_name if invisible_args else f'pylocal_{arg_name}'
+                func_code.append(f'PyObject {local_arg_name} = {bind_arg_name};')
+        for name in sorted(self.scope.cell_vars - set(arg_names)):
+            func_code.append(f'PyCell pycell_{name} = new PyCell({JavaPyConstant(None).emit_java(self.emit_ctx)});')
+        for name in sorted(self.scope.locals - self.scope.cell_vars - set(arg_names)):
             if invisible_args or name not in arg_names:
                 func_code.append(f'PyObject pylocal_{name};')
         func_code.extend(block_emit_java(block_simplify([*body, JavaReturnStatement(JavaPyConstant(None))]), self.emit_ctx))
@@ -1225,15 +1329,13 @@ class PythonjVisitor(ast.NodeVisitor):
 
         (arg_names, arg_defaults) = self.check_args(node.lineno, node.args)
         qualname = self.qualname(node.name)
-        java_name = f'pyfunc_{node.name}'
-        self.code.append(JavaAssignStatement(self.ident_expr(node.name), JavaCreateObject(java_name, [])))
+        java_name = f'pyfunc_{node.name}_{self.n_functions}'
+        self.n_functions += 1
+        scope_info = self.get_scope_info(node)
+        free_vars = self.resolve_free_vars(node.lineno, scope_info, 'nested function')
+        self.code.append(JavaAssignStatement(self.ident_expr(node.name), JavaCreateObject(java_name, [JavaIdentifier(f'pycell_{name}') for name in sorted(free_vars)])))
 
-        symbol_table = SymbolTableVisitor()
-        symbol_table.writes.update(arg_names)
-        for statement in node.body:
-            symbol_table.visit(statement)
-
-        with self.new_function(node.lineno, symbol_table, 'nested function', qualname):
+        with self.new_function(scope_info, free_vars, qualname):
             body = self.visit_block(node.body)
             self.add_function(qualname, java_name, arg_names, arg_defaults, body)
 
@@ -1243,18 +1345,17 @@ class PythonjVisitor(ast.NodeVisitor):
         java_name = f'pylambda{self.n_lambdas}'
         self.n_lambdas += 1
 
-        symbol_table = SymbolTableVisitor()
-        symbol_table.writes.update(arg_names)
-        symbol_table.visit(node.body)
-        assert not symbol_table.globals, symbol_table.globals # should not be possible in a lambda
-        assert not symbol_table.nonlocals, symbol_table.nonlocals # should not be possible in a lambda
+        scope_info = self.get_scope_info(node)
+        assert not scope_info.explicit_globals, scope_info.explicit_globals # should not be possible in a lambda
+        assert not scope_info.nonlocals, scope_info.nonlocals # should not be possible in a lambda
+        free_vars = self.resolve_free_vars(node.lineno, scope_info, 'lambda')
 
-        with self.new_function(node.lineno, symbol_table, 'lambda', qualname):
+        with self.new_function(scope_info, free_vars, qualname):
             with self.new_block() as body:
                 body.append(JavaReturnStatement(self.visit(node.body)))
             self.add_function(qualname, java_name, arg_names, arg_defaults, body)
 
-        return JavaCreateObject(java_name, [])
+        return JavaCreateObject(java_name, [JavaIdentifier(f'pycell_{name}') for name in sorted(free_vars)])
 
     def _lower_comp_generator(self, generator: ast.comprehension, iterable: JavaExpr, statements: list[JavaStatement]) -> list[JavaStatement]:
         for _if in reversed(generator.ifs):
@@ -1275,28 +1376,18 @@ class PythonjVisitor(ast.NodeVisitor):
             )
         ]
 
-    def _lower_comp(self, py_name: str, type_name: str, method_name: str, lineno: int,
+    def _lower_comp(self, node: ast.expr, py_name: str, type_name: str, method_name: str, lineno: int,
                     generators: list[ast.comprehension], elts: list[ast.expr]) -> JavaExpr:
         arg_name = 'iterable'
         java_name = f'pylambda{self.n_lambdas}'
         self.n_lambdas += 1
 
-        symbol_table = SymbolTableVisitor()
-        for (i, generator) in enumerate(generators):
-            if generator.is_async:
-                self.error(lineno, 'asynchronous generators are unsupported')
-            if i != 0: # generators[0].iter is evaluated outside the lambda
-                symbol_table.visit(generator.iter)
-            symbol_table.visit(generator.target)
-            for _if in generator.ifs:
-                symbol_table.visit(_if)
-        for elt in elts:
-            symbol_table.visit(elt)
-        assert not symbol_table.globals, symbol_table.globals # should not be possible in a comprehension
-        assert not symbol_table.nonlocals, symbol_table.nonlocals # should not be possible in a comprehension
-
         qualname = self.qualname(py_name)
-        with self.new_function(lineno, symbol_table, 'comprehension', qualname):
+        scope_info = self.get_scope_info(node)
+        assert not scope_info.explicit_globals, scope_info.explicit_globals # should not be possible in a comprehension
+        assert not scope_info.nonlocals, scope_info.nonlocals # should not be possible in a comprehension
+        free_vars = self.resolve_free_vars(lineno, scope_info, 'comprehension')
+        with self.new_function(scope_info, free_vars, qualname):
             with self.new_block() as body:
                 temp_result = self.scope.make_temp()
                 statements: list[JavaStatement] = [
@@ -1312,16 +1403,16 @@ class PythonjVisitor(ast.NodeVisitor):
                 ]
             self.add_function(qualname, java_name, [arg_name], [], body, invisible_args=True)
 
-        return JavaMethodCall(JavaCreateObject(java_name, []), 'call', [JavaCreateArray('PyObject', [self.visit(generators[0].iter)]), JavaIdentifier('null')])
+        return JavaMethodCall(JavaCreateObject(java_name, [JavaIdentifier(f'pycell_{name}') for name in sorted(free_vars)]), 'call', [JavaCreateArray('PyObject', [self.visit(generators[0].iter)]), JavaIdentifier('null')])
 
     def visit_ListComp(self, node) -> JavaExpr:
-        return self._lower_comp('<listcomp>', 'PyList', 'pymethod_append', node.lineno, node.generators, [node.elt])
+        return self._lower_comp(node, '<listcomp>', 'PyList', 'pymethod_append', node.lineno, node.generators, [node.elt])
 
     def visit_SetComp(self, node) -> JavaExpr:
-        return self._lower_comp('<setcomp>', 'PySet', 'pymethod_add', node.lineno, node.generators, [node.elt])
+        return self._lower_comp(node, '<setcomp>', 'PySet', 'pymethod_add', node.lineno, node.generators, [node.elt])
 
     def visit_DictComp(self, node) -> JavaExpr:
-        return self._lower_comp('<dictcomp>', 'PyDict', 'setItem', node.lineno, node.generators, [node.key, node.value])
+        return self._lower_comp(node, '<dictcomp>', 'PyDict', 'setItem', node.lineno, node.generators, [node.key, node.value])
 
     def visit_Module(self, node) -> None:
         symbol_table = SymbolTableVisitor()
