@@ -943,7 +943,7 @@ class PythonjVisitor(ast.NodeVisitor):
                 case '__pythonj_index__':
                     assert len(node.args) == 1 and not node.keywords, node.args
                     return JavaMethodCall(JavaIdentifier('Runtime'), 'pythonjIndex', [self.visit(node.args[0])])
-                case '__pythonj_isinstance_single__':
+                case '__pythonj_isinstance__':
                     assert len(node.args) == 2 and not node.keywords, node.args
                     if isinstance(node.args[1], ast.Name) and node.args[1].id in ISINSTANCE_SINGLE_FASTPATH_BUILTIN_TYPES:
                         builtin_type = node.args[1].id
@@ -951,10 +951,10 @@ class PythonjVisitor(ast.NodeVisitor):
                         return JavaMethodCall(JavaIdentifier('PyBool'), 'create', [
                             JavaBinaryOp('instanceof', self.visit(node.args[0]), JavaIdentifier(extract_spec.BUILTIN_TYPES[builtin_type]))
                         ])
-                    return JavaMethodCall(JavaIdentifier('Runtime'), 'pythonjIsInstanceSingle', [self.visit(node.args[0]), self.visit(node.args[1])])
-                case '__pythonj_issubclass_single__':
+                    return JavaMethodCall(JavaIdentifier('Runtime'), 'pythonjIsInstance', [self.visit(node.args[0]), self.visit(node.args[1])])
+                case '__pythonj_issubclass__':
                     assert len(node.args) == 2 and not node.keywords, node.args
-                    return JavaMethodCall(JavaIdentifier('Runtime'), 'pythonjIsSubclassSingle', [self.visit(node.args[0]), self.visit(node.args[1])])
+                    return JavaMethodCall(JavaIdentifier('Runtime'), 'pythonjIsSubclass', [self.visit(node.args[0]), self.visit(node.args[1])])
                 case '__pythonj_iter__':
                     assert len(node.args) == 1 and not node.keywords, node.args
                     return JavaMethodCall(self.visit(node.args[0]), 'iter', [])

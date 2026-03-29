@@ -451,7 +451,7 @@ public final class Runtime {
     public static PyInt pythonjHash(PyObject obj) {
         return new PyInt(obj.hashCode());
     }
-    public static PyBool pythonjIsInstanceSingle(PyObject obj, PyObject type) {
+    public static PyBool pythonjIsInstance(PyObject obj, PyObject type) {
         if (type instanceof PyConcreteType typeClass) {
             return PyBool.create(typeClass.instanceClass.isInstance(obj));
         } else if (type instanceof PyType) {
@@ -460,7 +460,7 @@ public final class Runtime {
             throw PyTypeError.raise("isinstance() arg 2 must be a type, a tuple of types, or a union");
         }
     }
-    public static PyBool pythonjIsSubclassSingle(PyObject obj, PyObject type) {
+    public static PyBool pythonjIsSubclass(PyObject obj, PyObject type) {
         if (obj instanceof PyConcreteType objClass &&
             type instanceof PyConcreteType typeClass) {
             return PyBool.create(typeClass.instanceClass.isAssignableFrom(objClass.instanceClass));

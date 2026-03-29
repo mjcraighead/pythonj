@@ -24,17 +24,17 @@ def bin(arg):
     return '0b' + format(value, 'b')
 
 def delattr(obj, name):
-    if not __pythonj_isinstance_single__(name, str):
+    if not __pythonj_isinstance__(name, str):
         raise TypeError('attribute name must be string, not ' + repr(type(name).__name__))
     return __pythonj_delattr__(obj, name)
 
 def format(value, format_spec):
-    if not __pythonj_isinstance_single__(format_spec, str):
+    if not __pythonj_isinstance__(format_spec, str):
         raise TypeError('format() argument 2 must be str, not ' + type(format_spec).__name__)
     return __pythonj_format__(value, format_spec)
 
 def getattr(obj, name, default):
-    if not __pythonj_isinstance_single__(name, str):
+    if not __pythonj_isinstance__(name, str):
         raise TypeError('attribute name must be string, not ' + repr(type(name).__name__))
     try:
         return __pythonj_getattr__(obj, name)
@@ -54,20 +54,20 @@ def hash(arg):
     return __pythonj_hash__(arg)
 
 def isinstance(obj, class_or_tuple):
-    if __pythonj_isinstance_single__(class_or_tuple, tuple):
+    if __pythonj_isinstance__(class_or_tuple, tuple):
         for x in class_or_tuple:
             if isinstance(obj, x):
                 return True
         return False
-    return __pythonj_isinstance_single__(obj, class_or_tuple)
+    return __pythonj_isinstance__(obj, class_or_tuple)
 
 def issubclass(obj, class_or_tuple):
-    if __pythonj_isinstance_single__(class_or_tuple, tuple):
+    if __pythonj_isinstance__(class_or_tuple, tuple):
         for x in class_or_tuple:
             if issubclass(obj, x):
                 return True
         return False
-    return __pythonj_issubclass_single__(obj, class_or_tuple)
+    return __pythonj_issubclass__(obj, class_or_tuple)
 
 def len(arg):
     return __pythonj_len__(arg)
@@ -90,16 +90,16 @@ def repr(arg):
     return __pythonj_repr__(arg)
 
 def setattr(obj, name, value):
-    if not __pythonj_isinstance_single__(name, str):
+    if not __pythonj_isinstance__(name, str):
         raise TypeError('attribute name must be string, not ' + repr(type(name).__name__))
     return __pythonj_setattr__(obj, name, value)
 
 def sum(iterable, start):
-    if __pythonj_isinstance_single__(start, str):
+    if __pythonj_isinstance__(start, str):
         raise TypeError("sum() can't sum strings [use ''.join(seq) instead]")
-    if __pythonj_isinstance_single__(start, bytes):
+    if __pythonj_isinstance__(start, bytes):
         raise TypeError("sum() can't sum bytes [use b''.join(seq) instead]")
-    if __pythonj_isinstance_single__(start, bytearray):
+    if __pythonj_isinstance__(start, bytearray):
         raise TypeError("sum() can't sum bytearray [use b''.join(seq) instead]")
     for item in iterable:
         start = start + item
@@ -127,9 +127,9 @@ class bytes:
         return bytes(ret)
 
     def fromhex(self, string):
-        is_str = __pythonj_isinstance_single__(string, str)
-        is_bytes = __pythonj_isinstance_single__(string, bytes)
-        is_bytearray = __pythonj_isinstance_single__(string, bytearray)
+        is_str = __pythonj_isinstance__(string, str)
+        is_bytes = __pythonj_isinstance__(string, bytes)
+        is_bytearray = __pythonj_isinstance__(string, bytearray)
         if not (is_str or is_bytes or is_bytearray):
             raise TypeError('fromhex() argument must be str or bytes-like, not ' + type(string).__name__)
         ret = []
@@ -327,14 +327,14 @@ class range:
 
 class str:
     def removeprefix(self, prefix):
-        if not __pythonj_isinstance_single__(prefix, str):
+        if not __pythonj_isinstance__(prefix, str):
             raise TypeError("removeprefix() argument must be str, not " + type(prefix).__name__)
         if self.startswith(prefix):
             return self[len(prefix):]
         return self
 
     def removesuffix(self, suffix):
-        if not __pythonj_isinstance_single__(suffix, str):
+        if not __pythonj_isinstance__(suffix, str):
             raise TypeError("removesuffix() argument must be str, not " + type(suffix).__name__)
         if suffix and self.endswith(suffix):
             return self[:-len(suffix)]

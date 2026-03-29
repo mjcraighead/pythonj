@@ -406,12 +406,12 @@ def _pyj_percent_arg_seq(args):
     return (args,)
 
 def _pyj_percent_real_arg(arg, conv):
-    if isinstance(arg, bool) or isinstance(arg, (int, float)):
+    if isinstance(arg, (bool, int, float)):
         return float(arg)
     raise TypeError(f'must be real number, not {type(arg).__name__}')
 
 def _pyj_percent_signed_int_arg(arg, conv):
-    if isinstance(arg, bool) or isinstance(arg, (int, float)):
+    if isinstance(arg, (bool, int, float)):
         return int(arg)
     raise TypeError(f'%{conv} format: a real number is required, not {type(arg).__name__}')
 
