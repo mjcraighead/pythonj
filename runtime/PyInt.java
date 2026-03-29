@@ -258,6 +258,8 @@ public final class PyInt extends PyObject {
             return value >= rhsInt.value;
         } else if (rhs instanceof PyBool rhsBool) {
             return value >= rhsBool.asInt();
+        } else if (rhs instanceof PyFloat rhsFloat) {
+            return value >= rhsFloat.value;
         } else {
             return super.ge(rhs);
         }
@@ -267,6 +269,8 @@ public final class PyInt extends PyObject {
             return value > rhsInt.value;
         } else if (rhs instanceof PyBool rhsBool) {
             return value > rhsBool.asInt();
+        } else if (rhs instanceof PyFloat rhsFloat) {
+            return value > rhsFloat.value;
         } else {
             return super.gt(rhs);
         }
@@ -276,6 +280,8 @@ public final class PyInt extends PyObject {
             return value <= rhsInt.value;
         } else if (rhs instanceof PyBool rhsBool) {
             return value <= rhsBool.asInt();
+        } else if (rhs instanceof PyFloat rhsFloat) {
+            return value <= rhsFloat.value;
         } else {
             return super.le(rhs);
         }
@@ -285,6 +291,8 @@ public final class PyInt extends PyObject {
             return value < rhsInt.value;
         } else if (rhs instanceof PyBool rhsBool) {
             return value < rhsBool.asInt();
+        } else if (rhs instanceof PyFloat rhsFloat) {
+            return value < rhsFloat.value;
         } else {
             return super.lt(rhs);
         }
@@ -299,6 +307,8 @@ public final class PyInt extends PyObject {
             return value == rhsInt.value;
         } else if (rhs instanceof PyBool rhsBool) {
             return value == rhsBool.asInt();
+        } else if (rhs instanceof PyFloat rhsFloat) {
+            return floatValue() == rhsFloat.value;
         } else {
             return false;
         }
