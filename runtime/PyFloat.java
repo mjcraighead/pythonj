@@ -459,7 +459,7 @@ public final class PyFloat extends PyObject {
         if ((number instanceof PyFloat) || (number instanceof PyInt) || (number instanceof PyBool)) {
             return new PyFloat(number.floatValue());
         }
-        throw new UnsupportedOperationException();
+        throw PyTypeError.raise("must be real number, not " + number.type().name());
     }
     public static PyObject pymethod_fromhex(PyType self, PyObject s) {
         throw new UnsupportedOperationException();
