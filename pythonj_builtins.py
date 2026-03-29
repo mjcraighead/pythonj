@@ -139,7 +139,7 @@ class bytes:
                     ret += 1
             return ret
         if not (__pythonj_isinstance__(sub, bytes) or __pythonj_isinstance__(sub, bytearray)):
-            raise TypeError("argument should be integer or bytes-like object, not '" + type(sub).__name__ + "'")
+            raise TypeError('argument should be integer or bytes-like object, not ' + repr(type(sub).__name__))
         sub_len = len(sub)
         if sub_len == 0:
             return end - start + 1
@@ -184,7 +184,7 @@ class bytes:
                     return i
             return -1
         if not (__pythonj_isinstance__(sub, bytes) or __pythonj_isinstance__(sub, bytearray)):
-            raise TypeError("argument should be integer or bytes-like object, not '" + type(sub).__name__ + "'")
+            raise TypeError('argument should be integer or bytes-like object, not ' + repr(type(sub).__name__))
         sub_len = len(sub)
         if sub_len == 0:
             return start
@@ -365,6 +365,29 @@ class bytes:
                 ret.append(c)
         return bytes(ret)
 
+    def lstrip(self, bytes_arg):
+        if bytes_arg is None:
+            strip_set = b' \t\n\r\x0b\x0c'
+        elif __pythonj_isinstance__(bytes_arg, bytes) or __pythonj_isinstance__(bytes_arg, bytearray):
+            strip_set = bytes_arg
+        else:
+            raise TypeError('a bytes-like object is required, not ' + repr(type(bytes_arg).__name__))
+        i = 0
+        n = len(self)
+        while i < n and self[i] in strip_set:
+            i += 1
+        return self[i:]
+
+    def partition(self, sep):
+        if not (__pythonj_isinstance__(sep, bytes) or __pythonj_isinstance__(sep, bytearray)):
+            raise TypeError('a bytes-like object is required, not ' + repr(type(sep).__name__))
+        if len(sep) == 0:
+            raise ValueError('empty separator')
+        i = self.find(sep, None, None)
+        if i == -1:
+            return (self, b'', b'')
+        return (self[:i], sep, self[i + len(sep):])
+
     def removeprefix(self, prefix):
         if self.startswith(prefix, None, None):
             return self[len(prefix):]
@@ -387,7 +410,7 @@ class bytes:
                     return i
             return -1
         if not (__pythonj_isinstance__(sub, bytes) or __pythonj_isinstance__(sub, bytearray)):
-            raise TypeError("argument should be integer or bytes-like object, not '" + type(sub).__name__ + "'")
+            raise TypeError('argument should be integer or bytes-like object, not ' + repr(type(sub).__name__))
         sub_len = len(sub)
         if sub_len == 0:
             return end
@@ -402,6 +425,28 @@ class bytes:
         if ret == -1:
             raise ValueError('subsection not found')
         return ret
+
+    def rpartition(self, sep):
+        if not (__pythonj_isinstance__(sep, bytes) or __pythonj_isinstance__(sep, bytearray)):
+            raise TypeError('a bytes-like object is required, not ' + repr(type(sep).__name__))
+        if len(sep) == 0:
+            raise ValueError('empty separator')
+        i = self.rfind(sep, None, None)
+        if i == -1:
+            return (b'', b'', self)
+        return (self[:i], sep, self[i + len(sep):])
+
+    def rstrip(self, bytes_arg):
+        if bytes_arg is None:
+            strip_set = b' \t\n\r\x0b\x0c'
+        elif __pythonj_isinstance__(bytes_arg, bytes) or __pythonj_isinstance__(bytes_arg, bytearray):
+            strip_set = bytes_arg
+        else:
+            raise TypeError('a bytes-like object is required, not ' + repr(type(bytes_arg).__name__))
+        i = len(self)
+        while i > 0 and self[i - 1] in strip_set:
+            i -= 1
+        return self[:i]
 
     def startswith(self, prefix, start, end):
         if __pythonj_isinstance__(prefix, tuple):
@@ -420,6 +465,9 @@ class bytes:
         if prefix_len > end - start:
             return False
         return self[start:start + prefix_len] == prefix
+
+    def strip(self, bytes_arg):
+        return self.lstrip(bytes_arg).rstrip(bytes_arg)
 
     def swapcase(self):
         ret = []
