@@ -174,6 +174,6 @@ def str__removeprefix(self, prefix):
 def str__removesuffix(self, suffix):
     if not __pythonj_isinstance_single__(suffix, str):
         raise TypeError("removesuffix() argument must be str, not " + type(suffix).__name__)
-    if suffix and (len(suffix) <= len(self)) and (self[-len(suffix):] == suffix):
+    if suffix and self.endswith(suffix):
         return self[:-len(suffix)]
     return self
