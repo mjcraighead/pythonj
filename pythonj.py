@@ -1228,12 +1228,12 @@ class PythonjVisitor(ast.NodeVisitor):
                 '}',
             ])
         func_code.append('} else {')
-        func_code.extend([
-            'for (var x: kwargs.items.entrySet()) {',
-            'String kwName = ((PyString)x.getKey()).value;',
-            'PyObject kwValue = x.getValue();',
-        ])
         if arg_names:
+            func_code.extend([
+                'for (var x: kwargs.items.entrySet()) {',
+                'String kwName = ((PyString)x.getKey()).value;',
+                'PyObject kwValue = x.getValue();',
+            ])
             for (i, arg_name) in enumerate(arg_names):
                 prefix = '' if i == 0 else 'else '
                 func_code.extend([
@@ -1244,12 +1244,17 @@ class PythonjVisitor(ast.NodeVisitor):
                     f'{bind_arg_names[i]} = kwValue;',
                     '}',
                 ])
-        func_code.extend([
-            ('else {' if arg_names else '{'),
-            f'throw Runtime.raiseUnexpectedKwArg({py_name_java}, kwName);',
-            '}',
-            '}',
-        ])
+            func_code.extend([
+                'else {',
+                f'throw Runtime.raiseUnexpectedKwArg({py_name_java}, kwName);',
+                '}',
+                '}',
+            ])
+        else:
+            func_code.extend([
+                'String kwName = ((PyString)kwargs.items.keySet().iterator().next()).value;',
+                f'throw Runtime.raiseUnexpectedKwArg({py_name_java}, kwName);',
+            ])
         if n_args != 0:
             func_code.extend([
                 f'if (argsLength > {n_args}) {{',
@@ -1260,12 +1265,6 @@ class PythonjVisitor(ast.NodeVisitor):
                 func_code.append(f'if ({ " || ".join(f"{bind_arg_names[i]} == null" for i in range(n_required)) }) {{')
                 func_code.append(f'throw Runtime.raiseUserMissingKwArgs({py_name_java}, new PyObject[] {{{", ".join(bind_arg_names[:n_required])}}}, {required_arg_names_java});')
                 func_code.append('}')
-        else:
-            func_code.extend([
-                'if (argsLength != 0) {',
-                f'throw Runtime.raiseUserExactArgs(args, 0, {py_name_java});',
-                '}',
-            ])
         func_code.append('}')
         for (i, name) in enumerate(bind_arg_names[n_required:]):
             func_code.append(f'if ({name} == null) {{ {name} = {JavaPyConstant(arg_defaults[i]).emit_java(self.emit_ctx)}; }}')
