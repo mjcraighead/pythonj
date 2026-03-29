@@ -1801,8 +1801,8 @@ RAW_ARGS_KWARGS_BUILTINS = {'max', 'min', 'print'}
 
 PYTHON_IMPLS = {
     'builtins': {'abs', 'all', 'any', 'bin', 'delattr', 'format', 'getattr', 'hash', 'hasattr', 'isinstance', 'issubclass', 'len', 'next', 'oct', 'repr', 'setattr', 'sum'},
-    'bytes': {'capitalize', 'isalnum', 'isalpha', 'isascii', 'isdigit', 'islower', 'isspace', 'istitle', 'isupper', 'lower', 'swapcase', 'title', 'upper'},
-    'dict': {'setdefault'},
+    'bytes': {'capitalize', 'fromhex', 'isalnum', 'isalpha', 'isascii', 'isdigit', 'islower', 'isspace', 'istitle', 'isupper', 'lower', 'swapcase', 'title', 'upper'},
+    'dict': {'fromkeys', 'setdefault'},
     'float': {'conjugate'},
     'int': {'as_integer_ratio', 'conjugate', 'is_integer'},
     'str': {'removeprefix', 'removesuffix'},
@@ -2289,7 +2289,7 @@ def gen_code(spec_path: str, java_path: str) -> None:
                     else:
                         assert False, (name, method_name, kind)
                     method_impl_target = None
-                    if kind == 'method' and method_name in PYTHON_IMPLS.get(name, set()):
+                    if kind in {'method', 'classmethod'} and method_name in PYTHON_IMPLS.get(name, set()):
                         helper_name = f'{name.replace(".", "_")}__{method_name}'
                         method_impl_target = f'PyBuiltinMethodsPythonImpl.pyfunc_{helper_name}'
                         (helper_classes, helper_method) = translate_python_method_impl(name, method_name, pool)
@@ -2312,7 +2312,10 @@ def gen_code(spec_path: str, java_path: str) -> None:
                     if kind == 'classmethod':
                         bind_args = ['self'] + bind_args
                     if method_impl_target is not None:
-                        writer.write(f"return {method_impl_target}(self{', ' if bind_args else ''}{', '.join(bind_args)});")
+                        if kind == 'classmethod':
+                            writer.write(f"return {method_impl_target}({', '.join(bind_args)});")
+                        else:
+                            writer.write(f"return {method_impl_target}(self{', ' if bind_args else ''}{', '.join(bind_args)});")
                     else:
                         writer.write(f"return {method_target}.pymethod_{method_name}({', '.join(bind_args)});")
                     writer.write('}')
@@ -2337,7 +2340,7 @@ def gen_code(spec_path: str, java_path: str) -> None:
             writer.write('}')
             writer.write('')
 
-        if any(PYTHON_IMPLS.get(name, set()) for name in ('dict', 'float', 'int', 'str')):
+        if any(PYTHON_IMPLS.get(name, set()) for name in PYTHON_IMPLS if name != 'builtins'):
             for code in python_method_helper_classes:
                 for line in code:
                     writer.write(line)

@@ -9,6 +9,12 @@ def dict__setdefault(self, key, defaultValue):
     self[key] = defaultValue
     return defaultValue
 
+def dict__fromkeys(self, iterable, value):
+    ret = self()
+    for key in iterable:
+        ret[key] = value
+    return ret
+
 def bytes__capitalize(self):
     ret = []
     seen_alpha = False
@@ -28,6 +34,50 @@ def bytes__capitalize(self):
         else:
             ret.append(c)
     return bytes(ret)
+
+def bytes__fromhex(self, string):
+    is_str = __pythonj_isinstance_single__(string, str)
+    is_bytes = __pythonj_isinstance_single__(string, bytes)
+    is_bytearray = __pythonj_isinstance_single__(string, bytearray)
+    if not (is_str or is_bytes or is_bytearray):
+        raise TypeError('fromhex() argument must be str or bytes-like, not ' + type(string).__name__)
+    ret = []
+    i = 0
+    n = len(string)
+    while i < n:
+        c = string[i]
+        if is_str:
+            c = ord(c)
+        if c in b' \t\n\r\x0b\x0c':
+            i += 1
+            continue
+        if i + 1 >= n:
+            raise ValueError('fromhex() arg must contain an even number of hexadecimal digits')
+        hi = string[i]
+        lo = string[i + 1]
+        if is_str:
+            hi = ord(hi)
+            lo = ord(lo)
+        if 48 <= hi <= 57:
+            value = hi - 48
+        elif 97 <= hi <= 102:
+            value = hi - 97 + 10
+        elif 65 <= hi <= 70:
+            value = hi - 65 + 10
+        else:
+            raise ValueError('non-hexadecimal number found in fromhex() arg at position ' + str(i))
+        value *= 16
+        if 48 <= lo <= 57:
+            value += lo - 48
+        elif 97 <= lo <= 102:
+            value += lo - 97 + 10
+        elif 65 <= lo <= 70:
+            value += lo - 65 + 10
+        else:
+            raise ValueError('non-hexadecimal number found in fromhex() arg at position ' + str(i + 1))
+        ret.append(value)
+        i += 2
+    return self(ret)
 
 def bytes__isalnum(self):
     if not self:

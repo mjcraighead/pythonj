@@ -245,7 +245,6 @@ public final class PyBytes extends PyObject {
         return s + "'";
     }
 
-    public static PyObject pymethod_fromhex(PyType self, PyObject string) { throw new UnsupportedOperationException(); }
     public PyBytes pymethod_join(PyObject arg) {
         var out = new ByteArrayOutputStream();
         if (!arg.hasIter()) {
