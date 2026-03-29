@@ -338,9 +338,6 @@ public final class PyInt extends PyObject {
     static PyObject pygetset_numerator(PyObject obj) { return obj; }
     static PyObject pygetset_real(PyObject obj) { return obj; }
 
-    public PyTuple pymethod_as_integer_ratio() {
-        return new PyTuple(new PyObject[]{this, PyInt.singleton_1});
-    }
     public PyInt pymethod_bit_count() {
         if (value == Long.MIN_VALUE) {
             return PyInt.singleton_1;

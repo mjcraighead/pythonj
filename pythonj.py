@@ -1807,7 +1807,7 @@ PYTHON_IMPLS = {
     'builtins': {'abs', 'all', 'any', 'delattr', 'format', 'getattr', 'hash', 'hasattr', 'isinstance', 'issubclass', 'len', 'next', 'repr', 'setattr', 'sum'},
     'dict': {'setdefault'},
     'float': {'conjugate'},
-    'int': {'conjugate', 'is_integer'},
+    'int': {'as_integer_ratio', 'conjugate', 'is_integer'},
     'str': {'removeprefix', 'removesuffix'},
 }
 

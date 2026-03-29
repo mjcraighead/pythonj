@@ -12,6 +12,9 @@ def dict__setdefault(self, key, defaultValue):
 def float__conjugate(self):
     return self
 
+def int__as_integer_ratio(self):
+    return (self, 1)
+
 def int__conjugate(self):
     return self
 
