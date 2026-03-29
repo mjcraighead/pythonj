@@ -2,6 +2,8 @@
 # Copyright (c) 2012-2026 Matt Craighead
 # SPDX-License-Identifier: MIT
 
+import typing
+
 def max_iterable(iterable, default_obj, key_func):
     it = __pythonj_iter__(iterable)
     ret = __pythonj_next__(it)
@@ -42,7 +44,7 @@ def min_iterable(iterable, default_obj, key_func):
                 ret_key = item_key
     return ret
 
-def _pyj_format_parse_common(spec):
+def _pyj_format_parse_common(spec) -> tuple:
     i = 0
     n = len(spec)
     fill = ' '
@@ -102,18 +104,18 @@ def _pyj_format_parse_common(spec):
         i += 1
     return (fill, align, sign, z, alt, zero, width, grouping, precision, type_char, i, n)
 
-def _pyj_raise_unknown_format_code(type_char, type_name):
+def _pyj_raise_unknown_format_code(type_char, type_name) -> typing.NoReturn:
     raise ValueError(f"Unknown format code {type_char!r} for object of type '{type_name}'")
 
-def _pyj_raise_invalid_format_spec(spec, type_name):
+def _pyj_raise_invalid_format_spec(spec, type_name) -> typing.NoReturn:
     raise ValueError(f"Invalid format specifier {spec!r} for object of type '{type_name}'")
 
-def _pyj_format_split_sign(text):
+def _pyj_format_split_sign(text) -> tuple:
     if text and text[0] in '+- ':
         return (text[0], text[1:])
     return ('', text)
 
-def _pyj_format_apply_width(text, fill, align, width, default_align):
+def _pyj_format_apply_width(text, fill, align, width, default_align) -> str:
     if width is None or len(text) >= width:
         return text
 
@@ -135,7 +137,7 @@ def _pyj_format_apply_width(text, fill, align, width, default_align):
         return sign + pad + rest
     assert False, align
 
-def _pyj_format_group_digits(digits, grouping, group_size):
+def _pyj_format_group_digits(digits, grouping, group_size) -> str:
     if grouping is None:
         return digits
     parts = []
@@ -147,7 +149,7 @@ def _pyj_format_group_digits(digits, grouping, group_size):
     parts.reverse()
     return grouping.join(parts)
 
-def _pyj_format_zero_fill_grouped(sign, prefix, digits, grouping, group_size, suffix, width):
+def _pyj_format_zero_fill_grouped(sign, prefix, digits, grouping, group_size, suffix, width) -> str:
     if grouping is None:
         return sign + prefix + ('0' * (width - len(sign) - len(prefix) - len(digits) - len(suffix))) + digits + suffix
 
@@ -160,7 +162,7 @@ def _pyj_format_zero_fill_grouped(sign, prefix, digits, grouping, group_size, su
         digits = ('0' * (digits_len - len(digits))) + digits
     return sign + prefix + _pyj_format_group_digits(digits, grouping, group_size) + suffix
 
-def _pyj_int_base_digits(value, base, alphabet):
+def _pyj_int_base_digits(value, base, alphabet) -> str:
     if value == 0:
         return '0'
     ret = []
@@ -170,7 +172,7 @@ def _pyj_int_base_digits(value, base, alphabet):
     ret.reverse()
     return ''.join(ret)
 
-def pyj_float_parse_spec(spec):
+def pyj_float_parse_spec(spec) -> tuple:
     fill, align, sign, z, alt, zero, width, grouping, precision, type_char, i, n = _pyj_format_parse_common(spec)
 
     if type_char and type_char not in 'eEfFgGn%':
@@ -187,10 +189,10 @@ def pyj_float_parse_spec(spec):
 
     return (fill, align, sign, z, alt, width, grouping, precision, type_char)
 
-def pyj_int_parse_spec(spec):
+def pyj_int_parse_spec(spec) -> tuple:
     return _pyj_int_like_parse_spec(spec, 'int')
 
-def _pyj_int_like_parse_spec(spec, type_name):
+def _pyj_int_like_parse_spec(spec, type_name) -> tuple:
     fill, align, sign, z, alt, zero, width, grouping, precision, type_char, i, n = _pyj_format_parse_common(spec)
 
     if z:
@@ -221,7 +223,7 @@ def _pyj_int_like_parse_spec(spec, type_name):
 
     return (fill, align, sign, alt, width, grouping, type_char)
 
-def pyj_str_parse_spec(spec):
+def pyj_str_parse_spec(spec) -> tuple:
     fill, align, sign, z, alt, zero, width, grouping, precision, type_char, i, n = _pyj_format_parse_common(spec)
 
     if sign != '-':
@@ -263,7 +265,7 @@ def pyj_float_special_text(value, type_char):
         text += '%'
     return text
 
-def _pyj_float_is_zero_result(magnitude_text):
+def _pyj_float_is_zero_result(magnitude_text) -> bool:
     for c in magnitude_text:
         if c in '0.,_%':
             continue
@@ -274,7 +276,7 @@ def _pyj_float_is_zero_result(magnitude_text):
         return False
     return True
 
-def _pyj_float_sign_prefix(value, sign, z, magnitude_text):
+def _pyj_float_sign_prefix(value, sign, z, magnitude_text) -> str:
     import math
     if not math.isfinite(value):
         if not math.isinf(value):
@@ -302,7 +304,7 @@ def _pyj_float_sign_prefix(value, sign, z, magnitude_text):
         return ' '
     return ''
 
-def _pyj_float_apply_zero_fill(text, grouping, width):
+def _pyj_float_apply_zero_fill(text, grouping, width) -> str:
     sign, magnitude = _pyj_format_split_sign(text)
     if grouping is None:
         return sign + ('0' * (width - len(sign) - len(magnitude))) + magnitude
@@ -330,13 +332,13 @@ def _pyj_float_apply_zero_fill(text, grouping, width):
 
     return _pyj_format_zero_fill_grouped(sign, '', integer_digits, grouping, 3, fractional_suffix + exp_suffix, width)
 
-def pyj_float_finish_text(fill, align, sign, z, width, grouping, value, magnitude_text):
+def pyj_float_finish_text(fill, align, sign, z, width, grouping, value, magnitude_text) -> str:
     text = _pyj_float_sign_prefix(value, sign, z, magnitude_text) + magnitude_text
     if align == '=' and fill == '0' and width is not None:
         return _pyj_float_apply_zero_fill(text, grouping, width)
     return _pyj_format_apply_width(text, fill, align, width, '>')
 
-def pyj_int_format(value, spec):
+def pyj_int_format(value, spec) -> str:
     fill, align, sign, alt, width, grouping, type_char = pyj_int_parse_spec(spec)
 
     is_negative = value < 0
@@ -389,38 +391,38 @@ def pyj_int_format(value, spec):
     text = sign_prefix + prefix + grouped_digits
     return _pyj_format_apply_width(text, fill, align, width, '>')
 
-def pyj_bool_format(value, spec):
+def pyj_bool_format(value, spec) -> str:
     if spec == '':
         return 'True' if value else 'False'
     _pyj_int_like_parse_spec(spec, 'bool')
     return pyj_int_format(1 if value else 0, spec)
 
-def pyj_str_format(value, spec):
+def pyj_str_format(value, spec) -> str:
     fill, align, width, precision = pyj_str_parse_spec(spec)
     text = value if precision is None else value[:precision]
     return _pyj_format_apply_width(text, fill, align, width, '<')
 
-def _pyj_percent_arg_seq(args):
+def _pyj_percent_arg_seq(args) -> tuple:
     if isinstance(args, tuple):
         return args
     return (args,)
 
-def _pyj_percent_real_arg(arg, conv):
+def _pyj_percent_real_arg(arg, conv) -> float:
     if isinstance(arg, (bool, int, float)):
         return float(arg)
     raise TypeError(f'must be real number, not {type(arg).__name__}')
 
-def _pyj_percent_signed_int_arg(arg, conv):
+def _pyj_percent_signed_int_arg(arg, conv) -> int:
     if isinstance(arg, (bool, int, float)):
         return int(arg)
     raise TypeError(f'%{conv} format: a real number is required, not {type(arg).__name__}')
 
-def _pyj_percent_index_arg(arg, conv):
+def _pyj_percent_index_arg(arg, conv) -> int:
     if isinstance(arg, (int, bool)):
         return int(arg)
     raise TypeError(f'%{conv} format: an integer is required, not {type(arg).__name__}')
 
-def _pyj_percent_apply_width(text, flags, width):
+def _pyj_percent_apply_width(text, flags, width) -> str:
     if width is None:
         return text
     fill = ' '
@@ -429,14 +431,14 @@ def _pyj_percent_apply_width(text, flags, width):
     align = '<' if '-' in flags else '>'
     return _pyj_format_apply_width(text, fill, align, width, '>')
 
-def _pyj_percent_without_zero_flag(flags):
+def _pyj_percent_without_zero_flag(flags) -> str:
     ret = []
     for c in flags:
         if c != '0':
             ret.append(c)
     return ''.join(ret)
 
-def _pyj_percent_int_text(value, flags, width, precision, conv):
+def _pyj_percent_int_text(value, flags, width, precision, conv) -> str:
     is_negative = value < 0
     abs_value = -value if is_negative else value
     sign_prefix = '-'
@@ -476,7 +478,7 @@ def _pyj_percent_int_text(value, flags, width, precision, conv):
         return sign_prefix + prefix + ('0' * (width - len(text))) + digits
     return _pyj_percent_apply_width(text, flags, width)
 
-def _pyj_percent_float_text(flags, width, precision, conv, arg):
+def _pyj_percent_float_text(flags, width, precision, conv, arg) -> str:
     spec = ''
     if '-' in flags:
         spec += '<'
@@ -495,7 +497,7 @@ def _pyj_percent_float_text(flags, width, precision, conv, arg):
     spec += conv
     return format(_pyj_percent_real_arg(arg, conv), spec)
 
-def _pyj_percent_char_text(arg):
+def _pyj_percent_char_text(arg) -> str:
     if isinstance(arg, str):
         if len(arg) != 1:
             raise TypeError(f'%c requires an int or a unicode character, not a string of length {len(arg)}')
@@ -507,7 +509,7 @@ def _pyj_percent_char_text(arg):
         raise OverflowError('%c arg not in range(0x110000)')
     return chr(code)
 
-def _pyj_percent_item_text(conv, flags, width, precision, arg):
+def _pyj_percent_item_text(conv, flags, width, precision, arg) -> str:
     if conv == 's':
         text = str(arg)
         if precision is not None:
@@ -535,7 +537,7 @@ def _pyj_percent_item_text(conv, flags, width, precision, arg):
         return _pyj_percent_float_text(flags, width, precision, conv, arg)
     raise ValueError(conv)
 
-def _pyj_percent_take_star_value(arg_seq, arg_index):
+def _pyj_percent_take_star_value(arg_seq, arg_index) -> tuple:
     if arg_index >= len(arg_seq):
         raise TypeError('not enough arguments for format string')
     value = arg_seq[arg_index]
@@ -544,7 +546,7 @@ def _pyj_percent_take_star_value(arg_seq, arg_index):
         raise TypeError('* wants int')
     return (int(value), arg_index)
 
-def pyj_percent_format(fmt, args):
+def pyj_percent_format(fmt, args) -> str:
     arg_seq = _pyj_percent_arg_seq(args)
     arg_index = 0
     used_mapping = False

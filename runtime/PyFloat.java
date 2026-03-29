@@ -402,7 +402,7 @@ public final class PyFloat extends PyObject {
     @Override public String str() { return strOf(value); }
     @Override public PyConcreteType type() { return PyFloatType.singleton; }
     @Override public String format(String formatSpec) {
-        PyTuple parsed = (PyTuple)PyRuntimePythonImpl.pyfunc_pyj_float_parse_spec(new PyString(formatSpec));
+        PyTuple parsed = PyRuntimePythonImpl.pyfunc_pyj_float_parse_spec(new PyString(formatSpec));
         String fill = ((PyString)parsed.items[0]).value;
         PyObject alignObj = parsed.items[1];
         String sign = ((PyString)parsed.items[2]).value;
@@ -434,7 +434,7 @@ public final class PyFloat extends PyObject {
                 magnitudeText += "%";
             }
         }
-        return ((PyString)PyRuntimePythonImpl.pyfunc_pyj_float_finish_text(
+        return PyRuntimePythonImpl.pyfunc_pyj_float_finish_text(
             new PyString(fill),
             alignObj,
             new PyString(sign),
@@ -443,7 +443,7 @@ public final class PyFloat extends PyObject {
             groupingObj,
             this,
             new PyString(magnitudeText)
-        )).value;
+        ).value;
     }
 
     public PyObject pymethod_as_integer_ratio() {

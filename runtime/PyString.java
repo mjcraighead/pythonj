@@ -63,7 +63,7 @@ public final class PyString extends PyObject {
         return new PyString(s.toString());
     }
     @Override public PyString mod(PyObject rhs) {
-        return (PyString)PyRuntimePythonImpl.pyfunc_pyj_percent_format(this, rhs);
+        return PyRuntimePythonImpl.pyfunc_pyj_percent_format(this, rhs);
     }
     @Override public PyString rmul(PyObject rhs) { return mul(rhs); }
 
@@ -152,7 +152,7 @@ public final class PyString extends PyObject {
     @Override public int hashCode() { return value.hashCode(); }
     @Override public long len() { return value.length(); }
     @Override public String format(String formatSpec) {
-        return ((PyString)PyRuntimePythonImpl.pyfunc_pyj_str_format(this, new PyString(formatSpec))).value;
+        return PyRuntimePythonImpl.pyfunc_pyj_str_format(this, new PyString(formatSpec)).value;
     }
     @Override public String str() { return value; }
     public static String reprOf(String value) {

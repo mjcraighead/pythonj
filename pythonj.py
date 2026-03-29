@@ -645,7 +645,8 @@ class ScopeAnalyzer(ast.NodeVisitor):
         self._analyze_scope_node(node)
 
 class Scope:
-    __slots__ = ('parent', 'info', 'qualname', 'free_vars', 'locals_are_fields', 'n_temps', 'used_expr_discard')
+    __slots__ = ('parent', 'info', 'qualname', 'free_vars', 'locals_are_fields', 'n_temps', 'used_expr_discard',
+                 'expected_return_java_type')
     parent: Optional['Scope']
     info: ScopeInfo
     qualname: Optional[str]
@@ -653,8 +654,10 @@ class Scope:
     locals_are_fields: bool
     n_temps: int
     used_expr_discard: bool
+    expected_return_java_type: Optional[str]
 
-    def __init__(self, parent: Optional['Scope'], info: ScopeInfo, qualname: Optional[str] = None):
+    def __init__(self, parent: Optional['Scope'], info: ScopeInfo, qualname: Optional[str] = None,
+                 expected_return_java_type: Optional[str] = None):
         self.parent = parent
         self.info = info
         self.qualname = qualname
@@ -662,6 +665,7 @@ class Scope:
         self.locals_are_fields = False
         self.n_temps = 0
         self.used_expr_discard = False
+        self.expected_return_java_type = expected_return_java_type
 
     def make_temp(self) -> str:
         """Assign and return a new temporary variable name."""
@@ -1139,7 +1143,11 @@ class PythonjVisitor(ast.NodeVisitor):
 
     def visit_Return(self, node) -> None:
         assert self.scope.info.kind == ScopeKind.FUNCTION, node
+        if self.scope.expected_return_java_type == 'NoReturn':
+            self.error(node.lineno, 'NoReturn helper functions may not contain return statements')
         value = self.visit(node.value) if node.value else JavaPyConstant(None)
+        if self.scope.expected_return_java_type is not None and self.scope.expected_return_java_type not in {'PyObject', 'NoReturn'}:
+            value = JavaCastExpr(self.scope.expected_return_java_type, value)
         self.code.append(JavaReturnStatement(value))
 
     def visit_Raise(self, node) -> None:
@@ -1324,9 +1332,10 @@ class PythonjVisitor(ast.NodeVisitor):
         return ([arg.arg for arg in args.args], defaults)
 
     @contextmanager
-    def new_function(self, scope_info: ScopeInfo, free_vars: set[str], qualname: str) -> Iterator[None]:
+    def new_function(self, scope_info: ScopeInfo, free_vars: set[str], qualname: str,
+                     expected_return_java_type: Optional[str] = None) -> Iterator[None]:
         saved_scope = self.scope
-        self.scope = Scope(self.scope, scope_info, qualname)
+        self.scope = Scope(self.scope, scope_info, qualname, expected_return_java_type)
         self.scope.free_vars = free_vars.copy()
         try:
             yield
@@ -1837,6 +1846,21 @@ def decode_signature(spec: Optional[dict[str, object]]) -> Optional[list[inspect
         ))
     return params
 
+SUPPORTED_HELPER_RETURN_TYPES = {'bool', 'bytes', 'float', 'int', 'str', 'tuple'}
+
+def decode_helper_return_annotation(annotation: Optional[ast.expr]) -> str:
+    if annotation is None:
+        return 'PyObject'
+    if isinstance(annotation, ast.Constant) and annotation.value is None:
+        return 'PyNone'
+    if isinstance(annotation, ast.Name) and annotation.id == 'NoReturn':
+        return 'NoReturn'
+    if isinstance(annotation, ast.Name) and annotation.id in SUPPORTED_HELPER_RETURN_TYPES:
+        return extract_spec.BUILTIN_TYPES[annotation.id]
+    if isinstance(annotation, ast.Attribute) and annotation.attr == 'NoReturn' and isinstance(annotation.value, ast.Name) and annotation.value.id == 'typing':
+        return 'NoReturn'
+    raise ValueError(f'unsupported helper return annotation: {ast.dump(annotation)}')
+
 @dataclass(slots=True)
 class SignatureShape:
     params: list[inspect.Parameter]
@@ -1882,9 +1906,11 @@ def get_module_function_params(spec: dict[str, object], module_name: str, func_n
     attrs = cast(dict[str, dict[str, object]], cast(dict[str, object], spec[module_name])['attrs'])
     return decode_signature(cast(Optional[dict[str, object]], attrs[func_name].get('signature')))
 
-def emit_python_function_static(visitor: PythonjVisitor, func_name: str, arg_names: list[str], body: list[JavaStatement]) -> list[str]:
+def emit_python_function_static(visitor: PythonjVisitor, func_name: str, arg_names: list[str], body: list[JavaStatement],
+                                return_java_type: str) -> list[str]:
+    java_return_type = 'PyNone' if return_java_type == 'NoReturn' else return_java_type
     func_code = [
-        f'static PyObject pyfunc_{func_name}({", ".join(f"PyObject pyarg_{arg}" for arg in arg_names)}) {{',
+        f'static {java_return_type} pyfunc_{func_name}({", ".join(f"PyObject pyarg_{arg}" for arg in arg_names)}) {{',
     ]
     if visitor.scope.used_expr_discard:
         func_code.append('PyObject expr_discard;')
@@ -1897,7 +1923,13 @@ def emit_python_function_static(visitor: PythonjVisitor, func_name: str, arg_nam
         func_code.append(f'PyCell pycell_{name} = new PyCell({JavaPyConstant(None).emit_java(visitor.pool)});')
     for name in sorted(visitor.scope.info.locals - visitor.scope.info.cell_vars - set(arg_names)):
         func_code.append(f'PyObject pylocal_{name};')
-    func_code.extend(block_emit_java(block_simplify([*body, JavaReturnStatement(JavaPyConstant(None))]), visitor.pool))
+    if return_java_type == 'NoReturn':
+        func_code.extend(block_emit_java(block_simplify(body), visitor.pool))
+    else:
+        implicit_return: JavaStatement = JavaReturnStatement(JavaPyConstant(None))
+        if return_java_type != 'PyObject':
+            implicit_return = JavaReturnStatement(JavaCastExpr(return_java_type, JavaPyConstant(None)))
+        func_code.extend(block_emit_java(block_simplify([*body, implicit_return]), visitor.pool))
     func_code.append('}')
     return func_code
 
@@ -1914,15 +1946,24 @@ def translate_python_impl_node(node: ast.Module, func: ast.FunctionDef, emitted_
         visitor.python_helper_names = python_helper_names
         assert python_helper_class is not None, python_helper_class
         visitor.python_helper_class = python_helper_class
+    try:
+        return_java_type = decode_helper_return_annotation(func.returns)
+    except ValueError as e:
+        visitor.error(func.lineno, str(e))
+        return_java_type = 'PyObject'
 
     (arg_names, arg_defaults) = visitor.check_args(func.lineno, func.args)
     assert not arg_defaults, (emitted_name, arg_defaults)
     scope_info = visitor.scope_infos[func]
     free_vars = visitor.resolve_free_vars(func.lineno, scope_info, role)
     assert not free_vars, (emitted_name, free_vars)
-    with visitor.new_function(scope_info, free_vars, func.name):
+    with visitor.new_function(scope_info, free_vars, func.name, return_java_type):
         body = visitor.visit_block(func.body)
-        helper_method = emit_python_function_static(visitor, emitted_name, arg_names, body)
+        if return_java_type == 'NoReturn' and not block_ends_control_flow(body):
+            visitor.error(func.lineno, f'NoReturn helper function {func.name} may implicitly fall through')
+        elif return_java_type not in {'PyObject', 'PyNone'} and not block_ends_control_flow(body):
+            visitor.error(func.lineno, f'annotated function {func.name} may implicitly return None')
+        helper_method = emit_python_function_static(visitor, emitted_name, arg_names, body, return_java_type)
     assert visitor.n_errors == 0, (emitted_name, visitor.n_errors)
     return (list(visitor.functions.values()), helper_method)
 
