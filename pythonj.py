@@ -1429,28 +1429,79 @@ UNIMPLEMENTED_METHODS = {
 REQUIRED = object()
 VARARGS = object()
 KWARGS = object()
+OMITTED = object()
 METHOD_ARG_OVERRIDES = {
-    'dict': {'pop': [REQUIRED, 'null'], 'update': [VARARGS, KWARGS]},
-    'list': {'index': [REQUIRED, 'null', 'null']},
-    'str': {
-        'find': [REQUIRED, 'PyNone.singleton', 'PyNone.singleton'],
-        'maketrans': [REQUIRED, 'null', 'null'],
-        'startswith': [REQUIRED, 'PyNone.singleton', 'PyNone.singleton'],
-    },
-    'tuple': {'index': [REQUIRED, 'null', 'null']},
+    'dict': {'update': [VARARGS, KWARGS]},
 }
 
 BUILTIN_FUNCTION_ARG_OVERRIDES = {
-    'dir': ['null'],
-    'getattr': [REQUIRED, REQUIRED, 'null'],
-    'iter': [REQUIRED, 'null'],
     'max': [VARARGS, KWARGS],
     'min': [VARARGS, KWARGS],
-    'next': [REQUIRED, 'null'],
     'open': [VARARGS, KWARGS],
     'print': [VARARGS, KWARGS],
 }
 
+def make_param(name: str, default: object = inspect.Parameter.empty) -> inspect.Parameter:
+    return inspect.Parameter(name, inspect.Parameter.POSITIONAL_ONLY, default=default)
+
+SYNTHETIC_BUILTIN_FUNCTION_PARAMS = {
+    'dir': [
+        make_param('object', OMITTED),
+    ],
+    'getattr': [
+        make_param('object'),
+        make_param('name'),
+        make_param('default', OMITTED),
+    ],
+    'iter': [
+        make_param('iterable'),
+        make_param('sentinel', OMITTED),
+    ],
+    'next': [
+        make_param('iterator'),
+        make_param('default', OMITTED),
+    ],
+}
+
+SYNTHETIC_METHOD_PARAMS = {
+    'dict': {
+        'pop': [
+            make_param('key'),
+            make_param('defaultValue', OMITTED),
+        ],
+    },
+    'list': {
+        'index': [
+            make_param('value'),
+            make_param('start', OMITTED),
+            make_param('stop', OMITTED),
+        ],
+    },
+    'str': {
+        'find': [
+            make_param('sub'),
+            make_param('start', None),
+            make_param('end', None),
+        ],
+        'maketrans': [
+            make_param('x'),
+            make_param('y', OMITTED),
+            make_param('z', OMITTED),
+        ],
+        'startswith': [
+            make_param('prefix'),
+            make_param('start', None),
+            make_param('end', None),
+        ],
+    },
+    'tuple': {
+        'index': [
+            make_param('value'),
+            make_param('start', OMITTED),
+            make_param('stop', OMITTED),
+        ],
+    },
+}
 
 def get_signature_params(target: object, implicit_name: Optional[str]) -> Optional[list[inspect.Parameter]]:
     try:
@@ -1464,25 +1515,34 @@ def get_signature_params(target: object, implicit_name: Optional[str]) -> Option
     return params
 
 def get_method_params(name: str, method_name: str) -> Optional[list[inspect.Parameter]]:
+    synthetic = SYNTHETIC_METHOD_PARAMS.get(name, {}).get(method_name)
+    if synthetic is not None:
+        return synthetic
     obj = get_runtime_obj(name)
     desc = obj.__dict__.get(method_name)
     if desc is None:
         return None
     desc_type = type(desc)
     if desc_type is types.MethodDescriptorType:
-        return get_signature_params(desc, 'self')
+        params = get_signature_params(desc, 'self')
     elif desc_type is types.ClassMethodDescriptorType:
-        return get_signature_params(desc, 'type')
+        params = get_signature_params(desc, 'type')
     elif desc_type is staticmethod:
-        return get_signature_params(getattr(obj, method_name), None)
+        params = get_signature_params(getattr(obj, method_name), None)
     else:
-        return None
+        params = None
+    if params is not None:
+        return params
+    return None
 
 def get_builtin_function_params(name: str) -> Optional[list[inspect.Parameter]]:
     desc = builtins.__dict__.get(name)
     if type(desc) is not types.BuiltinFunctionType:
         return None
-    return get_signature_params(desc, None)
+    params = get_signature_params(desc, None)
+    if params is not None:
+        return params
+    return SYNTHETIC_BUILTIN_FUNCTION_PARAMS.get(name)
 
 @dataclass(slots=True)
 class BindingShape:
@@ -1569,6 +1629,8 @@ def collect_default_fields(params: list[inspect.Parameter], field_prefix: str) -
 def infer_default_expr(default: object) -> Optional[str]:
     if default is None:
         return 'PyNone.singleton'
+    elif default is OMITTED:
+        return 'null'
     elif default is False or default is True:
         return f'PyBool.{str(default).lower()}_singleton'
     elif type(default) is int:
