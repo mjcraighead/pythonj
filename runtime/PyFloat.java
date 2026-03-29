@@ -10,6 +10,62 @@ public final class PyFloat extends PyObject {
 
     PyFloat(double _value) { value = _value; }
 
+    private static String zeros(int n) {
+        StringBuilder ret = new StringBuilder();
+        for (int i = 0; i < n; i++) {
+            ret.append('0');
+        }
+        return ret.toString();
+    }
+    private static String trimFixedFraction(String s) {
+        while (s.endsWith("0") && !s.endsWith(".0")) {
+            s = s.substring(0, s.length() - 1);
+        }
+        return s;
+    }
+    private static String pythonStyleFiniteStr(double value) {
+        String s = Double.toString(value);
+        int eIndex = s.indexOf('E');
+        if (eIndex == -1) {
+            return s;
+        }
+
+        String sign = "";
+        if (s.startsWith("-")) {
+            sign = "-";
+            s = s.substring(1);
+            eIndex -= 1;
+        }
+
+        String mantissa = s.substring(0, eIndex);
+        int exponent = Integer.parseInt(s.substring(eIndex + 1));
+        String digits = mantissa.replace(".", "");
+        int dotIndex = mantissa.indexOf('.');
+        int fractionalDigits = (dotIndex == -1) ? 0 : (mantissa.length() - dotIndex - 1);
+
+        if ((exponent >= -4) && (exponent < 16)) {
+            int decimalPos = digits.length() - fractionalDigits + exponent;
+            String ret;
+            if (decimalPos <= 0) {
+                ret = "0." + zeros(-decimalPos) + digits;
+            } else if (decimalPos >= digits.length()) {
+                ret = digits + zeros(decimalPos - digits.length()) + ".0";
+            } else {
+                ret = digits.substring(0, decimalPos) + "." + digits.substring(decimalPos);
+            }
+            return sign + trimFixedFraction(ret);
+        }
+
+        String expDigits = Integer.toString(Math.abs(exponent));
+        if (expDigits.length() < 2) {
+            expDigits = "0" + expDigits;
+        }
+        if (mantissa.endsWith(".0")) {
+            mantissa = mantissa.substring(0, mantissa.length() - 2);
+        }
+        return sign + mantissa + "e" + ((exponent >= 0) ? "+" : "-") + expDigits;
+    }
+
     private static long[] finiteIntegerRatio(double value) {
         long bits = Double.doubleToRawLongBits(value);
         boolean negative = bits < 0;
@@ -101,7 +157,7 @@ public final class PyFloat extends PyObject {
         } else if (value == Double.NEGATIVE_INFINITY) {
             return "-inf";
         } else {
-            return Double.toString(value);
+            return pythonStyleFiniteStr(value);
         }
     }
     private static String formatFiniteCore(double value, boolean alt, String grouping, Long precision, String typeChar) {

@@ -1782,7 +1782,7 @@ UNIMPLEMENTED_METHODS = {
         'readinto1', 'readline', 'seek', 'seekable', 'tell', 'truncate',
     },
     '_io.TextIOWrapper': {
-        'detach', 'fileno', 'flush', 'isatty', 'read', 'readable', 'reconfigure', 'seek', 'seekable', 'tell',
+        'detach', 'fileno', 'flush', 'isatty', 'readable', 'reconfigure', 'seek', 'seekable', 'tell',
         'truncate', 'writable', 'write',
     },
     'BaseException': {'add_note', 'with_traceback'},
@@ -1839,6 +1839,9 @@ SYNTHETIC_PARAMS = {
         'find': [make_param('sub'), make_param('start', None), make_param('end', None)],
         'maketrans': [make_param('x'), make_param('y', NULL), make_param('z', NULL)],
         'startswith': [make_param('prefix'), make_param('start', None), make_param('end', None)],
+    },
+    '_io.TextIOWrapper': {
+        'read': [make_param('size', -1)],
     },
     'tuple': {
         'index': [make_param('value'), make_param('start', NULL), make_param('stop', NULL)],

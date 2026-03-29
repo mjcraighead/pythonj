@@ -78,6 +78,27 @@ final class PyTextIOWrapper extends PyIter {
         PyString ret = next();
         return (ret != null) ? ret : PyString.empty_singleton;
     }
+    public PyString pymethod_read(PyObject size) {
+        if (!size.equals(PyInt.singleton_neg1)) {
+            throw new UnsupportedOperationException("'size' argument to TextIOWrapper.read() is not supported");
+        }
+        try {
+            StringBuilder s = new StringBuilder();
+            for (;;) {
+                int c = reader.read();
+                if (c == -1) {
+                    break;
+                }
+                s.append((char)c);
+            }
+            if (s.isEmpty()) {
+                return PyString.empty_singleton;
+            }
+            return new PyString(s.toString());
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
 
     static PyObject pymember_encoding(PyObject obj) { throw new UnsupportedOperationException(); }
     static PyObject pymember_buffer(PyObject obj) { throw new UnsupportedOperationException(); }
