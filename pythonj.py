@@ -2180,14 +2180,16 @@ def gen_code(spec_path: str, java_path: str) -> None:
                     writer.write(f'private static final PyStaticMethod pyattr_{k} = new PyStaticMethod(singleton, {java_string_literal(k)}, {constructor});')
                 else:
                     assert False, (name, k, v)
-            writer.write(f'private static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>({len(attrs)});')
+            writer.write('private static final class AttrsHolder {')
+            writer.write(f'static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>({len(attrs)});')
             writer.write('static {')
             for k in attrs:
                 writer.write(f'attrs.put(new PyString("{k}"), pyattr_{k});')
             writer.write('}')
+            writer.write('}')
             writer.write('')
             writer.write(f'private {java_name}Type() {{ super({java_string_literal(py_name)}, {java_name}.class, {java_name}::newObj); }}')
-            writer.write('@Override public java.util.Map<PyObject, PyObject> getAttributes() { return attrs; }')
+            writer.write('@Override public java.util.Map<PyObject, PyObject> getAttributes() { return AttrsHolder.attrs; }')
             writer.write('@Override public PyObject lookupAttr(String name) {')
             writer.write('switch (name) {')
             for (k, v) in attrs.items():
