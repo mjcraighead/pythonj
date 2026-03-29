@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # pythonj (https://github.com/mjcraighead/pythonj)
 # Copyright (c) 2012-2026 Matt Craighead
 # SPDX-License-Identifier: MIT

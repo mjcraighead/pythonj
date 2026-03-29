@@ -1,0 +1,483 @@
+# pythonj (https://github.com/mjcraighead/pythonj)
+# Copyright (c) 2012-2026 Matt Craighead
+# SPDX-License-Identifier: MIT
+
+from abc import ABC, abstractmethod
+from dataclasses import dataclass
+from typing import Iterator, Optional, TextIO
+
+def int_name(i: int) -> str:
+    """Return the Java variable name to use for the PyInt singleton with a given value."""
+    return f'int_singleton_neg{-i}' if i < 0 else f'int_singleton_{i}'
+
+CHAR_ESCAPE = {
+    '"': r'\"',
+    '\\': r'\\',
+    '\n': r'\n',
+    '\r': r'\r',
+    '\t': r'\t',
+    '\b': r'\b',
+    '\f': r'\f',
+}
+def java_string_literal(s: str) -> str:
+    """Escape a Python string into a Java string literal with all special characters escaped."""
+    out = ['"']
+    for c in s:
+        if c in CHAR_ESCAPE:
+            out.append(CHAR_ESCAPE[c])
+        else:
+            o = ord(c)
+            if 0xD800 <= o <= 0xDFFF:
+                raise ValueError(f'cannot encode string containing surrogate code points: {s!r}')
+            assert o <= 0xFFFF, o # XXX implement surrogate pairs for astral chars
+            if 0x20 <= o <= 0x7E: # safe ASCII
+                out.append(c)
+            else:
+                out.append(f'\\u{o:04x}')
+    out.append('"')
+    return ''.join(out)
+
+class ConstantPool:
+    __slots__ = ('all_ints', 'all_strings', 'all_floats', 'all_tuples', 'all_bytes', 'holder_name')
+    all_ints: set[int]
+    all_strings: dict[str, int]
+    all_floats: dict[float, int]
+    all_tuples: dict[tuple[object, ...], int]
+    all_bytes: dict[bytes, int]
+    holder_name: Optional[str]
+
+    def __init__(self, holder_name: Optional[str] = None):
+        self.all_ints = set()
+        self.all_strings = {}
+        self.all_floats = {}
+        self.all_tuples = {}
+        self.all_bytes = {}
+        self.holder_name = holder_name
+
+    def qualify(self, name: str) -> str:
+        return name if self.holder_name is None else f'{self.holder_name}.{name}'
+
+    def emit_constant(self, value: object) -> str:
+        if value is None:
+            return 'PyNone.singleton'
+        elif value is False or value is True:
+            return f'PyBool.{str(value).lower()}_singleton'
+        elif isinstance(value, int):
+            if -1 <= value <= 1:
+                if value < 0:
+                    return f'PyInt.singleton_neg{-value}'
+                else:
+                    return f'PyInt.singleton_{value}'
+            self.all_ints.add(value)
+            return self.qualify(int_name(value))
+        elif isinstance(value, str):
+            if not value:
+                return 'PyString.empty_singleton'
+            if value not in self.all_strings:
+                self.all_strings[value] = len(self.all_strings)
+            return self.qualify(f'str_singleton_{self.all_strings[value]}')
+        elif isinstance(value, float):
+            if value not in self.all_floats:
+                self.all_floats[value] = len(self.all_floats)
+            return self.qualify(f'float_singleton_{self.all_floats[value]}')
+        elif isinstance(value, tuple):
+            if not value:
+                return 'PyTuple.empty_singleton'
+            if value not in self.all_tuples:
+                for x in value:
+                    self.emit_constant(x)
+                self.all_tuples[value] = len(self.all_tuples)
+            return self.qualify(f'tuple_singleton_{self.all_tuples[value]}')
+        else:
+            assert isinstance(value, bytes), value
+            if not value:
+                return 'PyBytes.empty_singleton'
+            if value not in self.all_bytes:
+                self.all_bytes[value] = len(self.all_bytes)
+            return self.qualify(f'bytes_singleton_{self.all_bytes[value]}')
+
+    def emit_pool(self) -> Iterator[str]:
+        if self.holder_name is not None:
+            yield f'final class {self.holder_name} {{'
+        field_prefix = 'private static final' if self.holder_name is None else 'static final'
+        for i in sorted(self.all_ints):
+            value = JavaCreateObject('PyInt', [JavaIntLiteral(i, 'L')])
+            yield f'{field_prefix} PyInt {int_name(i)} = {value.emit_java(self)};'
+        for (k, v) in sorted(self.all_strings.items()):
+            value = JavaCreateObject('PyString', [JavaStrLiteral(k)])
+            yield f'{field_prefix} PyString str_singleton_{v} = {value.emit_java(self)};'
+        for (k, v) in sorted(self.all_floats.items()):
+            yield f'{field_prefix} PyFloat float_singleton_{v} = new PyFloat({k!r});'
+        for (k, v) in sorted(self.all_tuples.items(), key=lambda x: x[1]):
+            value = JavaCreateObject('PyTuple', [JavaCreateArray('PyObject', [JavaPyConstant(x) for x in k])])
+            yield f'{field_prefix} PyTuple tuple_singleton_{v} = {value.emit_java(self)};'
+        for (k, v) in sorted(self.all_bytes.items()):
+            value = JavaCreateObject('PyBytes', [JavaCreateArray('byte', [JavaIntLiteral(((x + 0x80) & 0xFF) - 0x80, '') for x in k])])
+            yield f'{field_prefix} PyBytes bytes_singleton_{v} = {value.emit_java(self)};'
+        if self.holder_name is not None:
+            yield '}'
+
+class JavaExpr(ABC):
+    @abstractmethod
+    def emit_java(self, pool: ConstantPool) -> str:
+        raise NotImplementedError()
+
+@dataclass(slots=True)
+class JavaIntLiteral(JavaExpr):
+    value: int
+    suffix: str
+    def emit_java(self, pool: ConstantPool) -> str:
+        return f'{self.value}{self.suffix}'
+
+@dataclass(slots=True)
+class JavaStrLiteral(JavaExpr):
+    s: str
+    def emit_java(self, pool: ConstantPool) -> str:
+        return java_string_literal(self.s)
+
+@dataclass(slots=True)
+class JavaIdentifier(JavaExpr):
+    name: str
+    def emit_java(self, pool: ConstantPool) -> str:
+        return self.name
+
+@dataclass(slots=True)
+class JavaField(JavaExpr):
+    obj: JavaExpr
+    field: str
+    def emit_java(self, pool: ConstantPool) -> str:
+        return f'{self.obj.emit_java(pool)}.{self.field}'
+
+@dataclass(slots=True)
+class JavaArrayAccess(JavaExpr):
+    obj: JavaExpr
+    index: JavaExpr
+    def emit_java(self, pool: ConstantPool) -> str:
+        return f'{self.obj.emit_java(pool)}[{self.index.emit_java(pool)}]'
+
+@dataclass(slots=True)
+class JavaCastExpr(JavaExpr):
+    type: str
+    expr: JavaExpr
+    def emit_java(self, pool: ConstantPool) -> str:
+        return f'(({self.type}){self.expr.emit_java(pool)})'
+
+@dataclass(slots=True)
+class JavaUnaryOp(JavaExpr):
+    op: str
+    operand: JavaExpr
+    def emit_java(self, pool: ConstantPool) -> str:
+        return f'({self.op}{self.operand.emit_java(pool)})'
+
+@dataclass(slots=True)
+class JavaBinaryOp(JavaExpr):
+    op: str
+    lhs: JavaExpr
+    rhs: JavaExpr
+    def emit_java(self, pool: ConstantPool) -> str:
+        return f'({self.lhs.emit_java(pool)} {self.op} {self.rhs.emit_java(pool)})'
+
+@dataclass(slots=True)
+class JavaCondOp(JavaExpr):
+    cond: JavaExpr
+    true: JavaExpr
+    false: JavaExpr
+    def emit_java(self, pool: ConstantPool) -> str:
+        return f'({self.cond.emit_java(pool)} ? {self.true.emit_java(pool)} : {self.false.emit_java(pool)})'
+
+@dataclass(slots=True)
+class JavaCreateObject(JavaExpr):
+    type: str
+    args: list[JavaExpr]
+    def emit_java(self, pool: ConstantPool) -> str:
+        return f"new {self.type}({', '.join(arg.emit_java(pool) for arg in self.args)})"
+
+@dataclass(slots=True)
+class JavaCreateArray(JavaExpr):
+    type: str
+    elts: list[JavaExpr]
+    def emit_java(self, pool: ConstantPool) -> str:
+        return f"new {self.type}[] {{{', '.join(x.emit_java(pool) for x in self.elts)}}}"
+
+@dataclass(slots=True)
+class JavaMethodCall(JavaExpr):
+    obj: JavaExpr
+    method: str
+    args: list[JavaExpr]
+    def emit_java(self, pool: ConstantPool) -> str:
+        return f"{self.obj.emit_java(pool)}.{self.method}({', '.join(arg.emit_java(pool) for arg in self.args)})"
+
+@dataclass(slots=True)
+class JavaAssignExpr(JavaExpr):
+    lhs: JavaExpr
+    rhs: JavaExpr
+    def emit_java(self, pool: ConstantPool) -> str:
+        return f'({self.lhs.emit_java(pool)} = {self.rhs.emit_java(pool)})'
+
+@dataclass(slots=True)
+class JavaPyConstant(JavaExpr):
+    value: object
+    def emit_java(self, pool: ConstantPool) -> str:
+        return pool.emit_constant(self.value)
+
+class JavaStatement(ABC):
+    def ends_control_flow(self) -> bool:
+        return False
+
+    @abstractmethod
+    def emit_java(self, pool: ConstantPool) -> Iterator[str]:
+        raise NotImplementedError()
+
+@dataclass(slots=True)
+class JavaVariableDecl(JavaStatement):
+    type: str
+    name: str
+    value: Optional[JavaExpr]
+    def emit_java(self, pool: ConstantPool) -> Iterator[str]:
+        if self.value:
+            yield f'{self.type} {self.name} = {self.value.emit_java(pool)};'
+        else:
+            yield f'{self.type} {self.name};'
+
+@dataclass(slots=True)
+class JavaAssignStatement(JavaStatement):
+    lhs: JavaExpr
+    rhs: JavaExpr
+    def emit_java(self, pool: ConstantPool) -> Iterator[str]:
+        yield f'{self.lhs.emit_java(pool)} = {self.rhs.emit_java(pool)};'
+
+@dataclass(slots=True)
+class JavaExprStatement(JavaStatement):
+    call: JavaCreateObject | JavaMethodCall # only limited types of expressions allowed by Java grammar
+    def emit_java(self, pool: ConstantPool) -> Iterator[str]:
+        yield f'{self.call.emit_java(pool)};'
+
+@dataclass(slots=True)
+class JavaBreakStatement(JavaStatement):
+    name: Optional[str]
+    def ends_control_flow(self) -> bool:
+        return True
+    def emit_java(self, pool: ConstantPool) -> Iterator[str]:
+        yield f'break {self.name};' if self.name else 'break;'
+
+@dataclass(slots=True)
+class JavaContinueStatement(JavaStatement):
+    def ends_control_flow(self) -> bool:
+        return True
+    def emit_java(self, pool: ConstantPool) -> Iterator[str]:
+        yield 'continue;'
+
+@dataclass(slots=True)
+class JavaReturnStatement(JavaStatement):
+    expr: JavaExpr
+    def ends_control_flow(self) -> bool:
+        return True
+    def emit_java(self, pool: ConstantPool) -> Iterator[str]:
+        yield f'return {self.expr.emit_java(pool)};'
+
+@dataclass(slots=True)
+class JavaThrowStatement(JavaStatement):
+    expr: JavaExpr
+    def ends_control_flow(self) -> bool:
+        return True
+    def emit_java(self, pool: ConstantPool) -> Iterator[str]:
+        yield f'throw {self.expr.emit_java(pool)};'
+
+def block_simplify(block: list[JavaStatement]) -> list[JavaStatement]:
+    ret = []
+    for s in block:
+        ret.append(s)
+        if s.ends_control_flow():
+            break
+    return ret
+
+def block_emit_java(block: list[JavaStatement], pool: ConstantPool) -> Iterator[str]:
+    for s in block:
+        yield from s.emit_java(pool)
+
+def block_ends_control_flow(block: list[JavaStatement]) -> bool:
+    return bool(block) and block[-1].ends_control_flow()
+
+@dataclass(slots=True)
+class JavaIfStatement(JavaStatement):
+    cond: JavaExpr
+    body: list[JavaStatement]
+    orelse: list[JavaStatement]
+
+    def __post_init__(self):
+        self.body = block_simplify(self.body)
+        self.orelse = block_simplify(self.orelse)
+
+    def ends_control_flow(self) -> bool:
+        return block_ends_control_flow(self.body) and block_ends_control_flow(self.orelse)
+
+    def emit_java(self, pool: ConstantPool) -> Iterator[str]:
+        yield f'if ({self.cond.emit_java(pool)}) {{'
+        yield from block_emit_java(self.body, pool)
+        if self.orelse:
+            yield '} else {'
+            yield from block_emit_java(self.orelse, pool)
+        yield '}'
+
+@dataclass(slots=True)
+class JavaWhileStatement(JavaStatement):
+    cond: JavaExpr
+    body: list[JavaStatement]
+
+    def __post_init__(self):
+        self.body = block_simplify(self.body)
+
+    def emit_java(self, pool: ConstantPool) -> Iterator[str]:
+        yield f'while ({self.cond.emit_java(pool)}) {{'
+        yield from block_emit_java(self.body, pool)
+        yield '}'
+
+# simplified; init/incr are weird because of semicolons/parens if we try to map them to statement or expr
+@dataclass(slots=True)
+class JavaForStatement(JavaStatement):
+    init_type: str
+    init_name: str
+    init_value: JavaExpr
+    cond: JavaExpr
+    incr_name: str
+    incr_value: JavaExpr
+    body: list[JavaStatement]
+
+    def __post_init__(self):
+        self.body = block_simplify(self.body)
+
+    def emit_java(self, pool: ConstantPool) -> Iterator[str]:
+        yield f'for ({self.init_type} {self.init_name} = {self.init_value.emit_java(pool)}; {self.cond.emit_java(pool)}; {self.incr_name} = {self.incr_value.emit_java(pool)}) {{'
+        yield from block_emit_java(self.body, pool)
+        yield '}'
+
+@dataclass(slots=True)
+class JavaForEachStatement(JavaStatement):
+    var_type: str
+    var_name: str
+    iterable: JavaExpr
+    body: list[JavaStatement]
+
+    def __post_init__(self):
+        self.body = block_simplify(self.body)
+
+    def emit_java(self, pool: ConstantPool) -> Iterator[str]:
+        yield f'for ({self.var_type} {self.var_name}: {self.iterable.emit_java(pool)}) {{'
+        yield from block_emit_java(self.body, pool)
+        yield '}'
+
+@dataclass(slots=True)
+class JavaTryStatement(JavaStatement):
+    try_body: list[JavaStatement]
+    exc_type: Optional[str]
+    exc_name: Optional[str]
+    catch_body: list[JavaStatement]
+    finally_body: list[JavaStatement]
+
+    def __post_init__(self):
+        self.try_body = block_simplify(self.try_body)
+        self.catch_body = block_simplify(self.catch_body)
+        self.finally_body = block_simplify(self.finally_body)
+
+    def ends_control_flow(self) -> bool:
+        if block_ends_control_flow(self.finally_body):
+            return True
+        if self.exc_type is not None:
+            return block_ends_control_flow(self.try_body) and block_ends_control_flow(self.catch_body)
+        else:
+            return block_ends_control_flow(self.try_body)
+
+    def emit_java(self, pool: ConstantPool) -> Iterator[str]:
+        yield 'try {'
+        yield from block_emit_java(self.try_body, pool)
+        if self.exc_type is not None:
+            yield f'}} catch ({self.exc_type} {self.exc_name}) {{'
+            yield from block_emit_java(self.catch_body, pool)
+        else: # if no exception type, should not have an exception name or catch block either
+            assert self.exc_name is None, self.exc_name
+            assert not self.catch_body, self.catch_body
+        if self.finally_body:
+            yield '} finally {'
+            yield from block_emit_java(self.finally_body, pool)
+        yield '}'
+
+@dataclass(slots=True)
+class JavaLabeledBlock(JavaStatement):
+    name: str
+    body: list[JavaStatement]
+
+    def __post_init__(self):
+        self.body = block_simplify(self.body)
+
+    def emit_java(self, pool: ConstantPool) -> Iterator[str]:
+        yield f'{self.name}: {{'
+        yield from block_emit_java(self.body, pool)
+        yield '}'
+
+def unary_op(op: str, operand: JavaExpr) -> JavaExpr:
+    if op == '!' and isinstance(operand, JavaIdentifier):
+        if operand.name == 'false':
+            return JavaIdentifier('true')
+        if operand.name == 'true':
+            return JavaIdentifier('false')
+    return JavaUnaryOp(op, operand)
+
+def bool_value(expr: JavaExpr) -> JavaExpr:
+    if (isinstance(expr, JavaMethodCall) and isinstance(expr.obj, JavaIdentifier) and
+        expr.obj.name == 'PyBool' and expr.method == 'create' and len(expr.args) == 1):
+        return expr.args[0] # return the raw boolean instead of box/unbox
+    if isinstance(expr, JavaPyConstant):
+        return JavaIdentifier('true') if expr.value else JavaIdentifier('false')
+    return JavaMethodCall(expr, 'boolValue', [])
+
+def chained_binary_op(op: str, exprs: list[JavaExpr]) -> JavaExpr:
+    assert len(exprs) >= 1, exprs
+    expr = exprs[0]
+    for term in exprs[1:]:
+        expr = JavaBinaryOp(op, expr, term)
+    return expr
+
+def if_statement(cond: JavaExpr, body: list[JavaStatement], orelse: list[JavaStatement]) -> Iterator[JavaStatement]:
+    if isinstance(cond, JavaIdentifier) and cond.name == 'true':
+        yield from body
+    elif isinstance(cond, JavaIdentifier) and cond.name == 'false':
+        yield from orelse
+    else:
+        yield JavaIfStatement(cond, body, orelse)
+
+def if_chain(conditions_and_bodies: list[tuple[JavaExpr, list[JavaStatement]]],
+             else_body: list[JavaStatement]) -> JavaIfStatement:
+    assert conditions_and_bodies, conditions_and_bodies
+    orelse: list[JavaStatement] = else_body
+    for (cond, body) in reversed(conditions_and_bodies[1:]):
+        orelse = [JavaIfStatement(cond, body, orelse)]
+    return JavaIfStatement(conditions_and_bodies[0][0], conditions_and_bodies[0][1], orelse)
+
+def while_statement(cond: JavaExpr, body: list[JavaStatement]) -> Iterator[JavaStatement]:
+    if isinstance(cond, JavaIdentifier) and cond.name == 'false':
+        pass
+    else:
+        yield JavaWhileStatement(cond, body)
+
+@dataclass(slots=True)
+class IndentedWriter:
+    f: TextIO
+    indent: int
+    def write(self, line: str) -> None:
+        if not line: # write a blank line
+            self.f.write('\n')
+            return
+        if line.startswith('}'):
+            self.indent -= 1
+        self.f.write('    ' * self.indent)
+        self.f.write(line)
+        self.f.write('\n')
+        if line.endswith('{'):
+            self.indent += 1
+
+def emit_java_statements(writer: IndentedWriter, statements: list[JavaStatement], pool: ConstantPool) -> None:
+    for line in block_emit_java(statements, pool):
+        writer.write(line)
+
+def emit_java_statement(writer: IndentedWriter, statement: JavaStatement, pool: ConstantPool) -> None:
+    emit_java_statements(writer, [statement], pool)
