@@ -1431,11 +1431,10 @@ VARARGS = object()
 KWARGS = object()
 METHOD_ARG_OVERRIDES = {
     'dict': {'pop': [REQUIRED, 'null'], 'update': [VARARGS, KWARGS]},
-    'int': {'from_bytes': [VARARGS, KWARGS], 'to_bytes': [VARARGS, KWARGS]},
-    'list': {'index': [REQUIRED, 'null', 'null'], 'sort': [VARARGS, KWARGS]},
+    'list': {'index': [REQUIRED, 'null', 'null']},
     'str': {
         'find': [REQUIRED, 'PyNone.singleton', 'PyNone.singleton'],
-        'maketrans': [REQUIRED, 'null', 'null'], 'split': [VARARGS, KWARGS],
+        'maketrans': [REQUIRED, 'null', 'null'],
         'startswith': [REQUIRED, 'PyNone.singleton', 'PyNone.singleton'],
     },
     'tuple': {'index': [REQUIRED, 'null', 'null']},
@@ -1450,17 +1449,8 @@ BUILTIN_FUNCTION_ARG_OVERRIDES = {
     'next': [REQUIRED, 'null'],
     'open': [VARARGS, KWARGS],
     'print': [VARARGS, KWARGS],
-    'sorted': [VARARGS, KWARGS],
-    'sum': [VARARGS, KWARGS],
 }
 
-LEGACY_BINDER_METHODS = {
-    'dict': {'pop', 'update'},
-    'list': {'index'},
-    'str': {'find', 'maketrans', 'startswith'},
-    'tuple': {'index'},
-}
-LEGACY_BINDER_BUILTINS = {'dir', 'getattr', 'iter', 'max', 'min', 'next', 'open', 'print'}
 
 def get_signature_params(target: object, implicit_name: Optional[str]) -> Optional[list[inspect.Parameter]]:
     try:
@@ -1858,10 +1848,7 @@ def gen_code(spec_path: str, java_path: str) -> None:
                     continue
                 if name in UNIMPLEMENTED_METHODS and method_name in UNIMPLEMENTED_METHODS[name]:
                     continue
-                if (
-                    name in METHOD_ARG_OVERRIDES and method_name in METHOD_ARG_OVERRIDES[name] and
-                    name in LEGACY_BINDER_METHODS and method_name in LEGACY_BINDER_METHODS[name]
-                ):
+                if name in METHOD_ARG_OVERRIDES and method_name in METHOD_ARG_OVERRIDES[name]:
                     binding_shape = BindingShape(METHOD_ARG_OVERRIDES[name][method_name], None)
                 else:
                     params = get_method_params(name, method_name)
@@ -1927,7 +1914,7 @@ def gen_code(spec_path: str, java_path: str) -> None:
                 writer.write('')
 
         for func_name in sorted(BUILTIN_FUNCTIONS):
-            if func_name in BUILTIN_FUNCTION_ARG_OVERRIDES and func_name in LEGACY_BINDER_BUILTINS:
+            if func_name in BUILTIN_FUNCTION_ARG_OVERRIDES:
                 args = BUILTIN_FUNCTION_ARG_OVERRIDES[func_name]
                 kwarg_params = None
             else:
