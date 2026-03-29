@@ -1454,29 +1454,13 @@ BUILTIN_FUNCTION_ARG_OVERRIDES = {
     'sum': [VARARGS, KWARGS],
 }
 
-KWARG_BINDER_METHODS = {
-    '_io.BufferedReader': {'close', 'detach', 'fileno', 'flush', 'isatty', 'readable', 'seekable', 'tell'},
-    '_io.TextIOWrapper': {'close', 'detach', 'fileno', 'flush', 'isatty', 'readable', 'seekable', 'tell', 'writable'},
-    'bytearray': {
-        'capitalize', 'clear', 'copy', 'isalnum', 'isalpha', 'isascii', 'isdigit', 'islower', 'isspace',
-        'istitle', 'isupper', 'lower', 'reverse', 'swapcase', 'title', 'upper',
-    },
-    'bytes': {
-        'capitalize', 'isalnum', 'isalpha', 'isascii', 'isdigit', 'islower', 'isspace',
-        'istitle', 'isupper', 'lower', 'swapcase', 'title', 'upper',
-    },
-    'dict': {'clear', 'copy', 'items', 'keys', 'popitem', 'values'},
-    'int': {'as_integer_ratio', 'bit_count', 'bit_length', 'conjugate', 'from_bytes', 'is_integer', 'to_bytes'},
-    'list': {'clear', 'copy', 'reverse', 'sort'},
-    'set': {'clear', 'copy', 'pop'},
-    'str': {
-        'capitalize', 'casefold', 'isalnum', 'isalpha', 'isascii', 'isdecimal', 'isdigit', 'isidentifier',
-        'islower', 'isnumeric', 'isprintable', 'isspace', 'istitle', 'isupper', 'lower', 'split',
-        'swapcase', 'title', 'upper',
-    },
-    'type': {'mro'},
+LEGACY_BINDER_METHODS = {
+    'dict': {'pop', 'update'},
+    'list': {'index'},
+    'str': {'find', 'maketrans', 'startswith'},
+    'tuple': {'index'},
 }
-KWARG_BINDER_BUILTINS = {'sorted', 'sum'}
+LEGACY_BINDER_BUILTINS = {'dir', 'getattr', 'iter', 'max', 'min', 'next', 'open', 'print'}
 
 def get_signature_params(target: object, implicit_name: Optional[str]) -> Optional[list[inspect.Parameter]]:
     try:
@@ -1876,14 +1860,14 @@ def gen_code(spec_path: str, java_path: str) -> None:
                     continue
                 if (
                     name in METHOD_ARG_OVERRIDES and method_name in METHOD_ARG_OVERRIDES[name] and
-                    not (name in KWARG_BINDER_METHODS and method_name in KWARG_BINDER_METHODS[name])
+                    name in LEGACY_BINDER_METHODS and method_name in LEGACY_BINDER_METHODS[name]
                 ):
                     binding_shape = BindingShape(METHOD_ARG_OVERRIDES[name][method_name], None)
                 else:
                     params = get_method_params(name, method_name)
                     if params is None:
                         continue
-                    binding_shape = classify_binding_shape(analyze_params(params), name in KWARG_BINDER_METHODS and method_name in KWARG_BINDER_METHODS[name])
+                    binding_shape = classify_binding_shape(analyze_params(params), True)
                     if binding_shape.args is None and binding_shape.kwarg_shape is None:
                         continue
                 gen_methods[method_name] = binding_shape
@@ -1943,13 +1927,13 @@ def gen_code(spec_path: str, java_path: str) -> None:
                 writer.write('')
 
         for func_name in sorted(BUILTIN_FUNCTIONS):
-            if func_name in BUILTIN_FUNCTION_ARG_OVERRIDES and func_name not in KWARG_BINDER_BUILTINS:
+            if func_name in BUILTIN_FUNCTION_ARG_OVERRIDES and func_name in LEGACY_BINDER_BUILTINS:
                 args = BUILTIN_FUNCTION_ARG_OVERRIDES[func_name]
                 kwarg_params = None
             else:
                 params = get_builtin_function_params(func_name)
                 assert params is not None, func_name
-                binding_shape = classify_binding_shape(analyze_params(params), func_name in KWARG_BINDER_BUILTINS)
+                binding_shape = classify_binding_shape(analyze_params(params), True)
                 args = binding_shape.args
                 kwarg_params = binding_shape.kwarg_shape
                 assert args is not None or kwarg_params is not None, func_name
