@@ -602,11 +602,12 @@ class ScopeAnalyzer(ast.NodeVisitor):
         self._analyze_scope_node(node)
 
 class Scope:
-    __slots__ = ('parent', 'info', 'qualname', 'free_vars', 'n_temps', 'used_expr_discard')
+    __slots__ = ('parent', 'info', 'qualname', 'free_vars', 'locals_are_fields', 'n_temps', 'used_expr_discard')
     parent: Optional['Scope']
     info: ScopeInfo
     qualname: Optional[str]
     free_vars: set[str]
+    locals_are_fields: bool
     n_temps: int
     used_expr_discard: bool
 
@@ -615,6 +616,7 @@ class Scope:
         self.info = info
         self.qualname = qualname
         self.free_vars = set()
+        self.locals_are_fields = False
         self.n_temps = 0
         self.used_expr_discard = False
 
@@ -674,6 +676,8 @@ class PythonjVisitor(ast.NodeVisitor):
         elif self.scope.info.kind == ScopeKind.FUNCTION and (name in self.scope.info.cell_vars or name in self.scope.free_vars):
             return JavaField(JavaIdentifier(f'pycell_{name}'), 'obj')
         elif self.scope.info.kind == ScopeKind.FUNCTION and name in self.scope.info.locals:
+            if self.scope.locals_are_fields:
+                return JavaField(JavaIdentifier('this'), f'pylocal_{name}')
             return JavaIdentifier(f'pylocal_{name}')
         elif name in BUILTIN_TYPES:
             return JavaField(JavaIdentifier(f'{BUILTIN_TYPES[name]}Type'), 'singleton')
@@ -1387,6 +1391,65 @@ class PythonjVisitor(ast.NodeVisitor):
 
         return JavaMethodCall(JavaCreateObject(java_name, [JavaIdentifier(f'pycell_{name}') for name in sorted(free_vars)]), 'call', [JavaCreateArray('PyObject', [self.visit(generators[0].iter)]), JavaIdentifier('null')])
 
+    def _lower_genexpr(self, node: ast.GeneratorExp) -> JavaExpr:
+        if len(node.generators) != 1:
+            self.error(node.lineno, 'generator expressions with multiple for clauses are unsupported')
+            return JavaMethodCall(JavaCreateObject('PyTuple', []), 'iter', [])
+        generator = node.generators[0]
+        if generator.is_async:
+            self.error(node.lineno, 'async generator expressions are unsupported')
+            return JavaMethodCall(JavaCreateObject('PyTuple', []), 'iter', [])
+
+        qualname = self.qualname('<genexpr>')
+        java_name = f'pylambda{self.n_lambdas}'
+        self.n_lambdas += 1
+
+        scope_info = self.scope_infos[node]
+        assert not scope_info.explicit_globals, scope_info.explicit_globals
+        assert not scope_info.nonlocals, scope_info.nonlocals
+        free_vars = self.resolve_free_vars(node.lineno, scope_info, 'generator expression')
+
+        with self.new_function(scope_info, free_vars, qualname):
+            self.scope.locals_are_fields = True
+            with self.new_block() as next_body:
+                temp_item = self.scope.make_temp()
+                temp_item_expr = JavaIdentifier(temp_item)
+                next_body.append(JavaVariableDecl('PyObject', temp_item, None))
+                body: list[JavaStatement] = [JavaReturnStatement(self.visit(node.elt))]
+                for _if in reversed(generator.ifs):
+                    body = list(if_statement(bool_value(self.visit(_if)), body, [JavaContinueStatement()]))
+                body = [
+                    JavaAssignStatement(temp_item_expr, JavaMethodCall(JavaIdentifier('pyiter_iterable'), 'next', [])),
+                    *if_statement(JavaBinaryOp('==', temp_item_expr, JavaIdentifier('null')), [JavaReturnStatement(JavaIdentifier('null'))], []),
+                    *self.emit_bind(generator.target, temp_item_expr),
+                    *body,
+                ]
+                next_body.append(JavaWhileStatement(JavaIdentifier('true'), body))
+
+            free_var_names = sorted(self.scope.free_vars)
+            func_code = [
+                f'private static final class {java_name} extends PyIter {{',
+                f'private static final PyBuiltinType type_singleton = new PyBuiltinType("generator", {java_name}.class);',
+                *(f'private final PyCell pycell_{name};' for name in free_var_names),
+                'private final PyIter pyiter_iterable;',
+                *(f'private final PyCell pycell_{name} = new PyCell({JavaPyConstant(None).emit_java(self.emit_ctx)});' for name in sorted(self.scope.info.cell_vars)),
+                *(f'private PyObject pylocal_{name} = {JavaPyConstant(None).emit_java(self.emit_ctx)};' for name in sorted(self.scope.info.locals - self.scope.info.cell_vars)),
+                f'{java_name}({", ".join([*(f"PyCell pycell_{name}" for name in free_var_names), "PyObject iterable"])}) {{' if free_var_names else f'{java_name}(PyObject iterable) {{',
+                *(f'this.pycell_{name} = pycell_{name};' for name in free_var_names),
+                'this.pyiter_iterable = iterable.iter();',
+                '}',
+                '@Override public PyObject next() {',
+                *block_emit_java(block_simplify(next_body), self.emit_ctx),
+                '}',
+                f'@Override public String repr() {{ return "<generator object {qualname}>"; }}',
+                '@Override public PyBuiltinType type() { return type_singleton; }',
+                '}',
+            ]
+            assert java_name not in self.functions
+            self.functions[java_name] = func_code
+
+        return JavaCreateObject(java_name, [*(JavaIdentifier(f'pycell_{name}') for name in sorted(free_vars)), self.visit(generator.iter)])
+
     def visit_ListComp(self, node) -> JavaExpr:
         return self._lower_comp(node, '<listcomp>', 'PyList', 'pymethod_append', node.lineno, node.generators, [node.elt])
 
@@ -1395,6 +1458,9 @@ class PythonjVisitor(ast.NodeVisitor):
 
     def visit_DictComp(self, node) -> JavaExpr:
         return self._lower_comp(node, '<dictcomp>', 'PyDict', 'setItem', node.lineno, node.generators, [node.key, node.value])
+
+    def visit_GeneratorExp(self, node) -> JavaExpr:
+        return self._lower_genexpr(node)
 
     def visit_Module(self, node) -> None:
         for statement in node.body:
