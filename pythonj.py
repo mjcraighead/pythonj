@@ -201,6 +201,13 @@ class JavaArrayAccess(JavaExpr):
         return f'{self.obj.emit_java(pool)}[{self.index.emit_java(pool)}]'
 
 @dataclass(slots=True)
+class JavaCastExpr(JavaExpr):
+    type: str
+    expr: JavaExpr
+    def emit_java(self, pool: ConstantPool) -> str:
+        return f'(({self.type}){self.expr.emit_java(pool)})'
+
+@dataclass(slots=True)
 class JavaUnaryOp(JavaExpr):
     op: str
     operand: JavaExpr
@@ -386,6 +393,21 @@ class JavaForStatement(JavaStatement):
 
     def emit_java(self, pool: ConstantPool) -> Iterator[str]:
         yield f'for ({self.init_type} {self.init_name} = {self.init_value.emit_java(pool)}; {self.cond.emit_java(pool)}; {self.incr_name} = {self.incr_value.emit_java(pool)}) {{'
+        yield from block_emit_java(self.body, pool)
+        yield '}'
+
+@dataclass(slots=True)
+class JavaForEachStatement(JavaStatement):
+    var_type: str
+    var_name: str
+    iterable: JavaExpr
+    body: list[JavaStatement]
+
+    def __post_init__(self):
+        self.body = block_simplify(self.body)
+
+    def emit_java(self, pool: ConstantPool) -> Iterator[str]:
+        yield f'for ({self.var_type} {self.var_name}: {self.iterable.emit_java(pool)}) {{'
         yield from block_emit_java(self.body, pool)
         yield '}'
 
@@ -1951,92 +1973,182 @@ def emit_default_expr(default: object, pool: ConstantPool) -> str:
     else:
         return JavaPyConstant(default).emit_java(pool)
 
-def emit_arg_binding(writer: IndentedWriter, shape: SignatureShape, positional_name: str,
+def emit_default_java_expr(default: object) -> JavaExpr:
+    inferred = infer_default_expr(default)
+    if inferred is not None:
+        return JavaIdentifier(inferred)
+    return JavaPyConstant(default)
+
+def emit_java_statements(writer: IndentedWriter, statements: list[JavaStatement], pool: ConstantPool) -> None:
+    for line in block_emit_java(statements, pool):
+        writer.write(line)
+
+def emit_java_statement(writer: IndentedWriter, statement: JavaStatement, pool: ConstantPool) -> None:
+    emit_java_statements(writer, [statement], pool)
+
+def if_chain(conditions_and_bodies: list[tuple[JavaExpr, list[JavaStatement]]],
+             else_body: list[JavaStatement]) -> JavaIfStatement:
+    assert conditions_and_bodies, conditions_and_bodies
+    orelse = else_body
+    for (cond, body) in reversed(conditions_and_bodies[1:]):
+        orelse = [JavaIfStatement(cond, body, orelse)]
+    return JavaIfStatement(conditions_and_bodies[0][0], conditions_and_bodies[0][1], orelse)
+
+def emit_arg_binding(shape: SignatureShape, positional_name: str,
                      kw_name: str, kw_overflow_args_length: str,
-                     noarg_name: str, pool: ConstantPool) -> list[str]:
+                     noarg_name: str) -> tuple[list[JavaStatement], list[JavaExpr]]:
+    args_length = JavaIdentifier('argsLength')
+    args = JavaIdentifier('args')
+    kwargs = JavaIdentifier('kwargs')
+    kwargs_bool = JavaBinaryOp('&&',
+        JavaBinaryOp('!=', kwargs, JavaIdentifier('null')),
+        JavaMethodCall(kwargs, 'boolValue', []),
+    )
+    kwargs_len = JavaIdentifier('kwargsLen')
+    unknown_kw = JavaIdentifier('unknownKw')
+    entry_value = JavaMethodCall(JavaIdentifier('x'), 'getValue', [])
+    kwargs_items = JavaMethodCall(JavaField(kwargs, 'items'), 'entrySet', [])
+
+    def throw_stmt(target: JavaExpr) -> JavaThrowStatement:
+        return JavaThrowStatement(target)
+
+    def runtime_throw(method: str, args_: list[JavaExpr]) -> JavaThrowStatement:
+        return throw_stmt(JavaMethodCall(JavaIdentifier('Runtime'), method, args_))
+
+    def type_error_throw(msg: str) -> JavaThrowStatement:
+        return throw_stmt(JavaMethodCall(JavaIdentifier('PyTypeError'), 'raise', [JavaStrLiteral(msg)]))
+
+    def kw_loop_body(known_params: list[inspect.Parameter], include_poskw_duplicates: bool) -> list[JavaStatement]:
+        statements: list[JavaStatement] = [
+            JavaVariableDecl('PyString', 'kw', JavaCastExpr('PyString', JavaMethodCall(JavaIdentifier('x'), 'getKey', []))),
+        ]
+        conds: list[tuple[JavaExpr, list[JavaStatement]]] = []
+        for (i, param) in enumerate(known_params):
+            body: list[JavaStatement] = []
+            if include_poskw_duplicates and i < len(shape.poskw_params):
+                body.append(JavaIfStatement(
+                    JavaBinaryOp('!=', JavaIdentifier(java_local_name(param.name)), JavaIdentifier('null')),
+                    [runtime_throw('raiseArgGivenByNameAndPosition', [
+                        JavaStrLiteral(kw_name),
+                        JavaStrLiteral(param.name),
+                        JavaIntLiteral(len(shape.posonly_params) + i + 1, ''),
+                    ])],
+                    [],
+                ))
+            body.append(JavaAssignStatement(JavaIdentifier(java_local_name(param.name)), entry_value))
+            conds.append((
+                JavaMethodCall(JavaField(JavaIdentifier('kw'), 'value'), 'equals', [JavaStrLiteral(param.name)]),
+                body,
+            ))
+        else_body = [JavaIfStatement(
+            JavaBinaryOp('==', unknown_kw, JavaIdentifier('null')),
+            [JavaAssignStatement(unknown_kw, JavaField(JavaIdentifier('kw'), 'value'))],
+            [],
+        )]
+        if conds:
+            statements.append(if_chain(conds, else_body))
+        else:
+            statements.extend(else_body)
+        return statements
+
     if not shape.posonly_params and not shape.poskw_params and not shape.kwonly_params and \
         shape.vararg_param is not None and shape.varkw_param is not None:
-        return ['args', 'kwargs']
+        return ([], [args, kwargs])
     if not shape.posonly_params and not shape.poskw_params and not shape.kwonly_params and shape.vararg_param is not None:
-        writer.write('if ((kwargs != null) && kwargs.boolValue()) {')
-        writer.write(f'throw Runtime.raiseNoKwArgs("{noarg_name}");')
-        writer.write('}')
-        return ['args']
+        return ([
+            JavaIfStatement(kwargs_bool, [runtime_throw('raiseNoKwArgs', [JavaStrLiteral(noarg_name)])], []),
+        ], [args])
     if not shape.posonly_params and not shape.poskw_params and shape.kwonly_params and \
         shape.vararg_param is not None and shape.varkw_param is None:
-        writer.write('int argsLength = args.length;')
-        java_param_names = {param.name: java_local_name(param.name) for param in shape.kwonly_params}
+        statements: list[JavaStatement] = [
+            JavaVariableDecl('int', 'argsLength', JavaField(args, 'length')),
+        ]
         for param in shape.kwonly_params:
-            writer.write(f'PyObject {java_param_names[param.name]} = null;')
-        writer.write('if ((kwargs != null) && kwargs.boolValue()) {')
-        writer.write('long kwargsLen = kwargs.len();')
-        writer.write(f'if (kwargsLen > {len(shape.kwonly_params)}) {{')
-        writer.write(f'throw Runtime.raiseAtMostKwArgs("{kw_name}", {len(shape.kwonly_params)}, {kw_overflow_args_length}, kwargsLen);')
-        writer.write('}')
-        writer.write('String unknownKw = null;')
-        writer.write('for (var x: kwargs.items.entrySet()) {')
-        writer.write('PyString kw = (PyString)x.getKey(); // PyString validated at call site')
-        for (i, param) in enumerate(shape.kwonly_params):
-            prefix = 'if' if i == 0 else 'else if'
-            writer.write(f'{prefix} (kw.value.equals("{param.name}")) {{')
-            writer.write(f'{java_param_names[param.name]} = x.getValue();')
-            writer.write('}')
-        writer.write('else if (unknownKw == null) {')
-        writer.write('unknownKw = kw.value;')
-        writer.write('}')
-        writer.write('}')
-        writer.write('if (unknownKw != null) {')
-        writer.write(f'throw Runtime.raiseUnexpectedKwArg("{kw_name}", unknownKw);')
-        writer.write('}')
-        writer.write('}')
-        bind_args = ['args']
+            statements.append(JavaVariableDecl('PyObject', java_local_name(param.name), JavaIdentifier('null')))
+        statements.append(JavaIfStatement(kwargs_bool, [
+            JavaVariableDecl('long', 'kwargsLen', JavaMethodCall(kwargs, 'len', [])),
+            JavaIfStatement(
+                JavaBinaryOp('>', kwargs_len, JavaIntLiteral(len(shape.kwonly_params), '')),
+                [runtime_throw('raiseAtMostKwArgs', [
+                    JavaStrLiteral(kw_name),
+                    JavaIntLiteral(len(shape.kwonly_params), ''),
+                    JavaIdentifier(kw_overflow_args_length),
+                    kwargs_len,
+                ])],
+                [],
+            ),
+            JavaVariableDecl('String', 'unknownKw', JavaIdentifier('null')),
+            JavaForEachStatement('var', 'x', kwargs_items, kw_loop_body(shape.kwonly_params, False)),
+            JavaIfStatement(
+                JavaBinaryOp('!=', unknown_kw, JavaIdentifier('null')),
+                [runtime_throw('raiseUnexpectedKwArg', [JavaStrLiteral(kw_name), unknown_kw])],
+                [],
+            ),
+        ], []))
+        bind_args: list[JavaExpr] = [args]
         for param in shape.kwonly_params:
+            local = JavaIdentifier(java_local_name(param.name))
             if param.default is not inspect.Parameter.empty:
-                writer.write(f'if ({java_param_names[param.name]} == null) {{')
-                writer.write(f'{java_param_names[param.name]} = {emit_default_expr(param.default, pool)};')
-                writer.write('}')
-            bind_args.append(java_param_names[param.name])
-        return bind_args
-    writer.write('int argsLength = args.length;')
+                statements.append(JavaIfStatement(
+                    JavaBinaryOp('==', local, JavaIdentifier('null')),
+                    [JavaAssignStatement(local, emit_default_java_expr(param.default))],
+                    [],
+                ))
+            bind_args.append(local)
+        return (statements, bind_args)
+
+    statements = [JavaVariableDecl('int', 'argsLength', JavaField(args, 'length'))]
     if shape.params and not shape.poskw_params and not shape.kwonly_params and shape.vararg_param is None:
-        writer.write('if ((kwargs != null) && kwargs.boolValue()) {')
-        writer.write(f'throw Runtime.raiseNoKwArgs("{noarg_name}");')
-        writer.write('}')
+        statements.append(JavaIfStatement(kwargs_bool, [runtime_throw('raiseNoKwArgs', [JavaStrLiteral(noarg_name)])], []))
         min_args = sum(param.default is inspect.Parameter.empty for param in shape.posonly_params)
         max_args = len(shape.posonly_params)
-        bind_args = [f'args[{i}]' for i in range(min_args)]
+        bind_args: list[JavaExpr] = [JavaArrayAccess(args, JavaIntLiteral(i, '')) for i in range(min_args)]
         if min_args == max_args:
-            writer.write(f'if (argsLength != {max_args}) {{')
+            err: JavaThrowStatement
             if max_args == 0:
-                writer.write(f'throw Runtime.raiseNoArgs(args, "{noarg_name}");')
+                err = runtime_throw('raiseNoArgs', [args, JavaStrLiteral(noarg_name)])
             elif max_args == 1:
-                writer.write(f'throw Runtime.raiseOneArg(args, "{noarg_name}");')
+                err = runtime_throw('raiseOneArg', [args, JavaStrLiteral(noarg_name)])
             else:
-                writer.write(f'throw Runtime.raiseExactArgs(args, {max_args}, "{kw_name}");')
-            writer.write('}')
+                err = runtime_throw('raiseExactArgs', [args, JavaIntLiteral(max_args, ''), JavaStrLiteral(kw_name)])
+            statements.append(JavaIfStatement(
+                JavaBinaryOp('!=', args_length, JavaIntLiteral(max_args, '')),
+                [err],
+                [],
+            ))
         else:
             if min_args > 0:
-                writer.write(f'if (argsLength < {min_args}) {{')
-                writer.write(f'throw Runtime.raiseMinArgs(args, {min_args}, "{kw_name}");')
-                writer.write('}')
-            writer.write(f'if (argsLength > {max_args}) {{')
-            writer.write(f'throw Runtime.raiseMaxArgs(args, {max_args}, "{kw_name}");')
-            writer.write('}')
+                statements.append(JavaIfStatement(
+                    JavaBinaryOp('<', args_length, JavaIntLiteral(min_args, '')),
+                    [runtime_throw('raiseMinArgs', [args, JavaIntLiteral(min_args, ''), JavaStrLiteral(kw_name)])],
+                    [],
+                ))
+            statements.append(JavaIfStatement(
+                JavaBinaryOp('>', args_length, JavaIntLiteral(max_args, '')),
+                [runtime_throw('raiseMaxArgs', [args, JavaIntLiteral(max_args, ''), JavaStrLiteral(kw_name)])],
+                [],
+            ))
             for i in range(min_args, max_args):
-                writer.write(
-                    f'PyObject arg{i} = (argsLength >= {i+1}) ? args[{i}] : '
-                    f'{emit_default_expr(shape.posonly_params[i].default, pool)};'
-                )
-                bind_args.append(f'arg{i}')
-        return bind_args
+                statements.append(JavaVariableDecl(
+                    'PyObject', f'arg{i}',
+                    JavaCondOp(
+                        JavaBinaryOp('>=', args_length, JavaIntLiteral(i + 1, '')),
+                        JavaArrayAccess(args, JavaIntLiteral(i, '')),
+                        emit_default_java_expr(shape.posonly_params[i].default),
+                    ),
+                ))
+                bind_args.append(JavaIdentifier(f'arg{i}'))
+        return (statements, bind_args)
     if not shape.params:
-        writer.write('if ((kwargs != null) && kwargs.boolValue()) {')
-        writer.write(f'throw Runtime.raiseNoKwArgs("{noarg_name}");')
-        writer.write('}')
-        writer.write('if (argsLength != 0) {')
-        writer.write(f'throw Runtime.raiseNoArgs(args, "{noarg_name}");')
-        writer.write('}')
-        return []
+        statements.extend([
+            JavaIfStatement(kwargs_bool, [runtime_throw('raiseNoKwArgs', [JavaStrLiteral(noarg_name)])], []),
+            JavaIfStatement(
+                JavaBinaryOp('!=', args_length, JavaIntLiteral(0, '')),
+                [runtime_throw('raiseNoArgs', [args, JavaStrLiteral(noarg_name)])],
+                [],
+            ),
+        ])
+        return (statements, [])
     posonly_params = shape.posonly_params
     poskw_params = shape.poskw_params
     kwonly_params = shape.kwonly_params
@@ -2044,109 +2156,135 @@ def emit_arg_binding(writer: IndentedWriter, shape: SignatureShape, positional_n
     max_positional = shape.max_positional
     missing_style = shape.missing_style
     if missing_style == 'exact_args':
-        writer.write(f'if (argsLength != 1) {{ throw Runtime.raiseExactArgs(args, 1, "{positional_name}"); }}')
+        statements.append(JavaIfStatement(
+            JavaBinaryOp('!=', args_length, JavaIntLiteral(1, '')),
+            [runtime_throw('raiseExactArgs', [args, JavaIntLiteral(1, ''), JavaStrLiteral(positional_name)])],
+            [],
+        ))
     elif missing_style == 'min_positional':
-        writer.write('if (argsLength == 0) {')
-        writer.write(f'throw PyTypeError.raise("{positional_name}() takes at least 1 positional argument (0 given)");')
-        writer.write('}')
+        statements.append(JavaIfStatement(
+            JavaBinaryOp('==', args_length, JavaIntLiteral(0, '')),
+            [type_error_throw(f'{positional_name}() takes at least 1 positional argument (0 given)')],
+            [],
+        ))
     java_param_names = {param.name: java_local_name(param.name) for param in shape.params}
     for (i, param) in enumerate(posonly_params + poskw_params):
-        writer.write(f'PyObject {java_param_names[param.name]} = (argsLength >= {i+1}) ? args[{i}] : null;')
+        statements.append(JavaVariableDecl(
+            'PyObject', java_param_names[param.name],
+            JavaCondOp(
+                JavaBinaryOp('>=', args_length, JavaIntLiteral(i + 1, '')),
+                JavaArrayAccess(args, JavaIntLiteral(i, '')),
+                JavaIdentifier('null'),
+            ),
+        ))
     for param in kwonly_params:
-        writer.write(f'PyObject {java_param_names[param.name]} = null;')
+        statements.append(JavaVariableDecl('PyObject', java_param_names[param.name], JavaIdentifier('null')))
     if kwonly_params and not poskw_params:
         if missing_style != 'exact_args' and (max_positional != 0):
             assert False, (positional_name, shape.params, missing_style)
-        writer.write('if ((kwargs != null) && kwargs.boolValue()) {')
-        writer.write('long kwargsLen = kwargs.len();')
-        writer.write(f'if (kwargsLen > {max_total}) {{')
-        writer.write(f'throw Runtime.raiseAtMostKwArgs("{kw_name}", {max_total}, {kw_overflow_args_length}, kwargsLen);')
-        writer.write('}')
-        writer.write('String unknownKw = null;')
-        writer.write('for (var x: kwargs.items.entrySet()) {')
-        writer.write('PyString kw = (PyString)x.getKey(); // PyString validated at call site')
-        for (i, param) in enumerate(kwonly_params):
-            prefix = 'if' if i == 0 else 'else if'
-            writer.write(f'{prefix} (kw.value.equals("{param.name}")) {{')
-            writer.write(f'{java_param_names[param.name]} = x.getValue();')
-            writer.write('}')
-        writer.write('else if (unknownKw == null) {')
-        writer.write('unknownKw = kw.value;')
-        writer.write('}')
-        writer.write('}')
-        writer.write('if (unknownKw != null) {')
-        writer.write(f'throw Runtime.raiseUnexpectedKwArg("{kw_name}", unknownKw);')
-        writer.write('}')
-        writer.write('}')
+        statements.append(JavaIfStatement(kwargs_bool, [
+            JavaVariableDecl('long', 'kwargsLen', JavaMethodCall(kwargs, 'len', [])),
+            JavaIfStatement(
+                JavaBinaryOp('>', kwargs_len, JavaIntLiteral(max_total, '')),
+                [runtime_throw('raiseAtMostKwArgs', [
+                    JavaStrLiteral(kw_name),
+                    JavaIntLiteral(max_total, ''),
+                    JavaIdentifier(kw_overflow_args_length),
+                    kwargs_len,
+                ])],
+                [],
+            ),
+            JavaVariableDecl('String', 'unknownKw', JavaIdentifier('null')),
+            JavaForEachStatement('var', 'x', kwargs_items, kw_loop_body(kwonly_params, False)),
+            JavaIfStatement(
+                JavaBinaryOp('!=', unknown_kw, JavaIdentifier('null')),
+                [runtime_throw('raiseUnexpectedKwArg', [JavaStrLiteral(kw_name), unknown_kw])],
+                [],
+            ),
+        ], []))
         if max_positional == 0:
-            writer.write(f'if (argsLength > {max_total}) {{')
-            writer.write(f'throw Runtime.raiseAtMostArgs("{positional_name}", {max_total}, argsLength);')
-            writer.write('} else if (argsLength != 0) {')
-            writer.write(f'throw PyTypeError.raise("{positional_name}() takes no positional arguments");')
-            writer.write('}')
+            statements.append(JavaIfStatement(
+                JavaBinaryOp('>', args_length, JavaIntLiteral(max_total, '')),
+                [runtime_throw('raiseAtMostArgs', [JavaStrLiteral(positional_name), JavaIntLiteral(max_total, ''), args_length])],
+                [JavaIfStatement(
+                    JavaBinaryOp('!=', args_length, JavaIntLiteral(0, '')),
+                    [type_error_throw(f'{positional_name}() takes no positional arguments')],
+                    [],
+                )],
+            ))
     else:
-        writer.write('if ((kwargs != null) && kwargs.boolValue()) {')
-        writer.write('long kwargsLen = kwargs.len();')
-        writer.write(f'if (argsLength + kwargsLen > {max_total}) {{')
-        writer.write(f'throw Runtime.raiseAtMostKwArgs("{kw_name}", {max_total}, argsLength, kwargsLen);')
-        writer.write('}')
-        writer.write('String unknownKw = null;')
-        writer.write('for (var x: kwargs.items.entrySet()) {')
-        writer.write('PyString kw = (PyString)x.getKey(); // PyString validated at call site')
-        kw_index = len(posonly_params)
-        for (i, param) in enumerate(poskw_params):
-            prefix = 'if' if i == 0 else 'else if'
-            writer.write(f'{prefix} (kw.value.equals("{param.name}")) {{')
-            writer.write(f'if ({java_param_names[param.name]} != null) {{')
-            writer.write(f'throw Runtime.raiseArgGivenByNameAndPosition("{kw_name}", "{param.name}", {kw_index + i + 1});')
-            writer.write('}')
-            writer.write(f'{java_param_names[param.name]} = x.getValue();')
-            writer.write('}')
-        for (i, param) in enumerate(kwonly_params):
-            prefix = 'if' if (not poskw_params and i == 0) else 'else if'
-            writer.write(f'{prefix} (kw.value.equals("{param.name}")) {{')
-            writer.write(f'{java_param_names[param.name]} = x.getValue();')
-            writer.write('}')
-        writer.write('else if (unknownKw == null) {')
-        writer.write('unknownKw = kw.value;')
-        writer.write('}')
-        writer.write('}')
-        for (i, param) in enumerate(posonly_params + poskw_params):
-            if param.default is inspect.Parameter.empty:
-                if missing_style == 'required_arg':
-                    writer.write(f'if ({java_param_names[param.name]} == null) {{')
-                    writer.write(f'throw Runtime.raiseMissingRequiredArg("{positional_name}", "{param.name}", {i + 1});')
-                    writer.write('}')
-                elif param.kind is inspect.Parameter.POSITIONAL_ONLY:
-                    assert missing_style == 'min_positional', (positional_name, param)
-        writer.write('if (unknownKw != null) {')
-        writer.write(f'throw Runtime.raiseUnexpectedKwArg("{kw_name}", unknownKw);')
-        writer.write('}')
-        writer.write('}')
+        statements.append(JavaIfStatement(kwargs_bool, [
+            JavaVariableDecl('long', 'kwargsLen', JavaMethodCall(kwargs, 'len', [])),
+            JavaIfStatement(
+                JavaBinaryOp('>', JavaBinaryOp('+', args_length, kwargs_len), JavaIntLiteral(max_total, '')),
+                [runtime_throw('raiseAtMostKwArgs', [
+                    JavaStrLiteral(kw_name),
+                    JavaIntLiteral(max_total, ''),
+                    args_length,
+                    kwargs_len,
+                ])],
+                [],
+            ),
+            JavaVariableDecl('String', 'unknownKw', JavaIdentifier('null')),
+            JavaForEachStatement('var', 'x', kwargs_items, kw_loop_body(poskw_params + kwonly_params, True)),
+            *([
+                JavaIfStatement(
+                    JavaBinaryOp('==', JavaIdentifier(java_param_names[param.name]), JavaIdentifier('null')),
+                    [runtime_throw('raiseMissingRequiredArg', [
+                        JavaStrLiteral(positional_name),
+                        JavaStrLiteral(param.name),
+                        JavaIntLiteral(i + 1, ''),
+                    ])],
+                    [],
+                )
+                for (i, param) in enumerate(posonly_params + poskw_params)
+                if param.default is inspect.Parameter.empty and missing_style == 'required_arg'
+            ]),
+            JavaIfStatement(
+                JavaBinaryOp('!=', unknown_kw, JavaIdentifier('null')),
+                [runtime_throw('raiseUnexpectedKwArg', [JavaStrLiteral(kw_name), unknown_kw])],
+                [],
+            ),
+        ], []))
         if max_positional < max_total:
-            writer.write(f'if (argsLength > {max_total}) {{')
-            writer.write(f'throw Runtime.raiseAtMostArgs("{positional_name}", {max_total}, argsLength);')
-            writer.write(f'}} else if (argsLength > {max_positional}) {{')
-            writer.write(f'throw Runtime.raiseAtMostPosArgs("{positional_name}", {max_positional}, argsLength);')
-            writer.write('}')
+            statements.append(JavaIfStatement(
+                JavaBinaryOp('>', args_length, JavaIntLiteral(max_total, '')),
+                [runtime_throw('raiseAtMostArgs', [JavaStrLiteral(positional_name), JavaIntLiteral(max_total, ''), args_length])],
+                [JavaIfStatement(
+                    JavaBinaryOp('>', args_length, JavaIntLiteral(max_positional, '')),
+                    [runtime_throw('raiseAtMostPosArgs', [JavaStrLiteral(positional_name), JavaIntLiteral(max_positional, ''), args_length])],
+                    [],
+                )],
+            ))
         else:
-            writer.write(f'if (argsLength > {max_total}) {{')
-            writer.write(f'throw Runtime.raiseAtMostArgs("{positional_name}", {max_total}, argsLength);')
-            writer.write('}')
+            statements.append(JavaIfStatement(
+                JavaBinaryOp('>', args_length, JavaIntLiteral(max_total, '')),
+                [runtime_throw('raiseAtMostArgs', [JavaStrLiteral(positional_name), JavaIntLiteral(max_total, ''), args_length])],
+                [],
+            ))
         if missing_style == 'required_arg':
             for (i, param) in enumerate(posonly_params + poskw_params):
                 if param.default is inspect.Parameter.empty:
-                    writer.write(f'if ({java_param_names[param.name]} == null) {{')
-                    writer.write(f'throw Runtime.raiseMissingRequiredArg("{positional_name}", "{param.name}", {i + 1});')
-                    writer.write('}')
-    bind_args = []
+                    statements.append(JavaIfStatement(
+                        JavaBinaryOp('==', JavaIdentifier(java_param_names[param.name]), JavaIdentifier('null')),
+                        [runtime_throw('raiseMissingRequiredArg', [
+                            JavaStrLiteral(positional_name),
+                            JavaStrLiteral(param.name),
+                            JavaIntLiteral(i + 1, ''),
+                        ])],
+                        [],
+                    ))
+    bind_args: list[JavaExpr] = []
     for param in shape.params:
+        local = JavaIdentifier(java_param_names[param.name])
         if param.default is not inspect.Parameter.empty:
-            writer.write(f'if ({java_param_names[param.name]} == null) {{')
-            writer.write(f'{java_param_names[param.name]} = {emit_default_expr(param.default, pool)};')
-            writer.write('}')
-        bind_args.append(java_param_names[param.name])
-    return bind_args
+            statements.append(JavaIfStatement(
+                JavaBinaryOp('==', local, JavaIdentifier('null')),
+                [JavaAssignStatement(local, emit_default_java_expr(param.default))],
+                [],
+            ))
+        bind_args.append(local)
+    return (statements, bind_args)
 
 def get_java_name(name: str) -> str:
     if name.startswith('_io.'):
@@ -2302,24 +2440,27 @@ def gen_code(spec_path: str, java_path: str) -> None:
                     writer.write(f'@Override public String methodName() {{ return "{method_name}"; }}')
                     writer.write('@Override public PyObject call(PyObject[] args, PyDict kwargs) {')
                     if kwarg_params is None:
-                        bind_args = ['args', 'kwargs']
+                        bind_args = [JavaIdentifier('args'), JavaIdentifier('kwargs')]
                     else:
-                        bind_args = emit_arg_binding(
-                            writer, kwarg_params, method_name,
+                        (bind_statements, bind_args) = emit_arg_binding(
+                            kwarg_params, method_name,
                             method_name,
                             'argsLength',
                             f'{py_name}.{method_name}',
-                            pool,
                         )
+                        emit_java_statements(writer, bind_statements, pool)
                     if kind == 'classmethod':
-                        bind_args = ['self'] + bind_args
+                        bind_args = [JavaIdentifier('self')] + bind_args
                     if method_impl_target is not None:
-                        if kind == 'classmethod':
-                            writer.write(f"return {method_impl_target}({', '.join(bind_args)});")
-                        else:
-                            writer.write(f"return {method_impl_target}(self{', ' if bind_args else ''}{', '.join(bind_args)});")
+                        call_args = bind_args if kind == 'classmethod' else [JavaIdentifier('self'), *bind_args]
+                        call_expr = JavaMethodCall(
+                            JavaIdentifier(method_impl_target.rsplit('.', 1)[0]),
+                            method_impl_target.rsplit('.', 1)[1],
+                            call_args,
+                        )
                     else:
-                        writer.write(f"return {method_target}.pymethod_{method_name}({', '.join(bind_args)});")
+                        call_expr = JavaMethodCall(JavaIdentifier(method_target), f'pymethod_{method_name}', bind_args)
+                    emit_java_statement(writer, JavaReturnStatement(call_expr), pool)
                     writer.write('}')
                     writer.write('}')
                 writer.write('')
@@ -2392,16 +2533,18 @@ def gen_code(spec_path: str, java_path: str) -> None:
                 writer.write('@Override public PyObject call(PyObject[] args, PyDict kwargs) {')
                 full_name = f'{module_name}.{func_name}'
                 if kwarg_params is None:
-                    bind_args = ['args', 'kwargs']
+                    bind_args = [JavaIdentifier('args'), JavaIdentifier('kwargs')]
                 else:
-                    bind_args = emit_arg_binding(
-                        writer, kwarg_params, func_name,
+                    (bind_statements, bind_args) = emit_arg_binding(
+                        kwarg_params, func_name,
                         full_name,
                         'argsLength',
                         full_name,
-                        pool,
                     )
-                writer.write(f'return PyBuiltinFunctionsImpl.pyfunc_{module_name.removeprefix("_")}_{func_name}({", ".join(bind_args)});')
+                    emit_java_statements(writer, bind_statements, pool)
+                emit_java_statement(writer, JavaReturnStatement(
+                    JavaMethodCall(JavaIdentifier('PyBuiltinFunctionsImpl'), f'pyfunc_{module_name.removeprefix("_")}_{func_name}', bind_args)
+                ), pool)
                 writer.write('}')
                 writer.write('}')
                 writer.write('')
@@ -2418,21 +2561,24 @@ def gen_code(spec_path: str, java_path: str) -> None:
             writer.write(f'private PyBuiltinFunction_{func_name}() {{ super("{func_name}"); }}')
             writer.write('@Override public PyObject call(PyObject[] args, PyDict kwargs) {')
             if kwarg_params is None:
-                bind_args = ['args', 'kwargs']
+                bind_args = [JavaIdentifier('args'), JavaIdentifier('kwargs')]
             else:
                 kw_name = 'sort' if func_name == 'sorted' else func_name
                 kw_overflow_args_length = '0' if func_name == 'sorted' else 'argsLength'
-                bind_args = emit_arg_binding(
-                    writer, kwarg_params, func_name,
+                (bind_statements, bind_args) = emit_arg_binding(
+                    kwarg_params, func_name,
                     kw_name,
                     kw_overflow_args_length,
                     func_name,
-                    pool,
                 )
+                emit_java_statements(writer, bind_statements, pool)
             if func_name in PYTHON_IMPLS['builtins']:
-                writer.write(f'return PyBuiltinFunctionsPythonImpl.pyfunc_{func_name}({", ".join(bind_args)});')
+                call_target = 'PyBuiltinFunctionsPythonImpl'
             else:
-                writer.write(f'return PyBuiltinFunctionsImpl.pyfunc_{func_name}({", ".join(bind_args)});')
+                call_target = 'PyBuiltinFunctionsImpl'
+            emit_java_statement(writer, JavaReturnStatement(
+                JavaMethodCall(JavaIdentifier(call_target), f'pyfunc_{func_name}', bind_args)
+            ), pool)
             writer.write('}')
             writer.write('}')
             writer.write('')
