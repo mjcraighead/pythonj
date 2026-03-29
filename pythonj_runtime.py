@@ -246,11 +246,14 @@ def pyj_str_parse_spec(spec):
 
     return (fill, align, width, precision)
 
-def pyj_float_special_text(is_nan, type_char):
-    if is_nan:
+def pyj_float_special_text(value, type_char):
+    import math
+    if math.isnan(value):
         text = 'nan'
-    else:
+    elif math.isinf(value):
         text = 'inf'
+    else:
+        return None
     if type_char in ('E', 'F', 'G'):
         text = text.upper()
     if type_char == '%':
@@ -268,7 +271,9 @@ def _pyj_float_is_zero_result(magnitude_text):
         return False
     return True
 
-def _pyj_float_sign_prefix(is_nan, is_negative, sign, z, magnitude_text):
+def _pyj_float_sign_prefix(value, is_negative, sign, z, magnitude_text):
+    import math
+    is_nan = math.isnan(value)
     if is_nan:
         if sign == '+':
             return '+'
@@ -314,8 +319,8 @@ def _pyj_float_apply_zero_fill(text, grouping, width):
 
     return _pyj_format_zero_fill_grouped(sign, '', integer_digits, grouping, 3, fractional_suffix + exp_suffix, width)
 
-def pyj_float_finish_text(fill, align, sign, z, width, grouping, is_nan, is_negative, magnitude_text):
-    text = _pyj_float_sign_prefix(is_nan, is_negative, sign, z, magnitude_text) + magnitude_text
+def pyj_float_finish_text(fill, align, sign, z, width, grouping, value, is_negative, magnitude_text):
+    text = _pyj_float_sign_prefix(value, is_negative, sign, z, magnitude_text) + magnitude_text
     if align == '=' and fill == '0' and width is not None:
         return _pyj_float_apply_zero_fill(text, grouping, width)
     return _pyj_format_apply_width(text, fill, align, width, '>')

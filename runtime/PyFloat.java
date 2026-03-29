@@ -393,11 +393,11 @@ public final class PyFloat extends PyObject {
         PyObject groupingObj = parsed.items[6];
         PyObject precisionObj = parsed.items[7];
         String typeChar = ((PyString)parsed.items[8]).value;
-        boolean isNan = Double.isNaN(value);
         boolean isNegative = (value < 0.0) || (Double.doubleToRawLongBits(value) == Double.doubleToRawLongBits(-0.0));
         String magnitudeText;
-        if (isNan || Double.isInfinite(value)) {
-            magnitudeText = ((PyString)PyRuntimePythonImpl.pyfunc_pyj_float_special_text(PyBool.create(isNan), new PyString(typeChar))).value;
+        PyObject specialText = PyRuntimePythonImpl.pyfunc_pyj_float_special_text(this, new PyString(typeChar));
+        if (specialText != PyNone.singleton) {
+            magnitudeText = ((PyString)specialText).value;
         } else {
             double coreValue = Math.abs(value);
             if (typeChar.equals("%")) {
@@ -423,7 +423,7 @@ public final class PyFloat extends PyObject {
             PyBool.create(z),
             widthObj,
             groupingObj,
-            PyBool.create(isNan),
+            this,
             PyBool.create(isNegative),
             new PyString(magnitudeText)
         )).value;
