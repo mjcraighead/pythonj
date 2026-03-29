@@ -77,7 +77,7 @@ def pyj_float_parse_spec(spec):
         i += 1
 
     width_start = i
-    while i < n and ('0' <= spec[i] <= '9'):
+    while i < n and spec[i].isdigit():
         i += 1
     width = int(spec[width_start:i]) if i > width_start else None
 
@@ -90,7 +90,7 @@ def pyj_float_parse_spec(spec):
     if i < n and spec[i] == '.':
         i += 1
         precision_start = i
-        while i < n and ('0' <= spec[i] <= '9'):
+        while i < n and spec[i].isdigit():
             i += 1
         if i == precision_start:
             raise ValueError('Format specifier missing precision')
@@ -210,7 +210,7 @@ def pyj_float_apply_zero_fill(text, grouping, width):
 
     has_digit = False
     for c in magnitude:
-        if '0' <= c <= '9':
+        if c.isdigit():
             has_digit = True
             break
     if not has_digit:

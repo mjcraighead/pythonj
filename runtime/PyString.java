@@ -348,6 +348,24 @@ public final class PyString extends PyObject {
         }
     }
     public PyString pymethod_upper() { return new PyString(value.toUpperCase(Locale.ROOT)); }
+    public PyBool pymethod_isdigit() {
+        if (value.isEmpty()) {
+            return PyBool.false_singleton;
+        }
+        for (int i = 0; i < value.length(); ) {
+            int cp = value.codePointAt(i);
+            boolean isDigit = Character.isDigit(cp);
+            if (!isDigit && (Character.getType(cp) == Character.OTHER_NUMBER)) {
+                int numericValue = Character.getNumericValue(cp);
+                isDigit = (numericValue >= 0) && (numericValue <= 9);
+            }
+            if (!isDigit) {
+                return PyBool.false_singleton;
+            }
+            i += Character.charCount(cp);
+        }
+        return PyBool.true_singleton;
+    }
 
     public PyObject pymethod_capitalize() { throw new UnsupportedOperationException(); }
     public PyObject pymethod_casefold() { throw new UnsupportedOperationException(); }
@@ -355,7 +373,6 @@ public final class PyString extends PyObject {
     public PyObject pymethod_isalpha() { throw new UnsupportedOperationException(); }
     public PyObject pymethod_isascii() { throw new UnsupportedOperationException(); }
     public PyObject pymethod_isdecimal() { throw new UnsupportedOperationException(); }
-    public PyObject pymethod_isdigit() { throw new UnsupportedOperationException(); }
     public PyObject pymethod_isidentifier() { throw new UnsupportedOperationException(); }
     public PyObject pymethod_islower() { throw new UnsupportedOperationException(); }
     public PyObject pymethod_isnumeric() { throw new UnsupportedOperationException(); }
