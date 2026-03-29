@@ -135,6 +135,23 @@ final class PyBuiltinFunctionsImpl {
     static PyBool pyfunc_math_isnan(PyObject arg) {
         return PyBool.create(Double.isNaN(requireMathReal(arg)));
     }
+    static PyBool pyfunc_operator_contains(PyObject a, PyObject b) {
+        return PyBool.create(a.contains(b));
+    }
+    static PyNone pyfunc_operator_delitem(PyObject a, PyObject b) {
+        a.delItem(b);
+        return PyNone.singleton;
+    }
+    static PyObject pyfunc_operator_getitem(PyObject a, PyObject b) {
+        return a.getItem(b);
+    }
+    static PyInt pyfunc_operator_index(PyObject a) {
+        return new PyInt(a.indexValue());
+    }
+    static PyNone pyfunc_operator_setitem(PyObject a, PyObject b, PyObject c) {
+        a.setItem(b, c);
+        return PyNone.singleton;
+    }
     private static byte[] requireBytesLikeBuffer(PyObject arg, String name) {
         if (arg instanceof PyBytes argBytes) {
             return argBytes.value;

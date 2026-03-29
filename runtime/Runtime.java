@@ -132,6 +132,23 @@ final class PyMathModule extends PyModule {
     }
 }
 
+final class PyOperatorModule extends PyModule {
+    public static final PyOperatorModule singleton = new PyOperatorModule();
+
+    private PyOperatorModule() { super("operator"); }
+
+    @Override public PyObject getAttr(String key) {
+        switch (key) {
+            case "contains": return PyOperatorFunction_contains.singleton;
+            case "delitem": return PyOperatorFunction_delitem.singleton;
+            case "getitem": return PyOperatorFunction_getitem.singleton;
+            case "index": return PyOperatorFunction_index.singleton;
+            case "setitem": return PyOperatorFunction_setitem.singleton;
+            default: return super.getAttr(key);
+        }
+    }
+}
+
 final class PyTypesModule extends PyModule {
     public static final PyTypesModule singleton = new PyTypesModule();
 
