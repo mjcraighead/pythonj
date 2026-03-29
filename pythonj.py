@@ -1379,6 +1379,121 @@ class PythonjVisitor(ast.NodeVisitor):
             body = self.visit_block(node.body)
             self.add_function(qualname, java_name, arg_names, arg_defaults, body)
 
+    def visit_ClassDef(self, node) -> None:
+        if self.scope.info.kind != ScopeKind.MODULE:
+            self.error(node.lineno, "only module-level class definitions are supported")
+        if node.decorator_list:
+            self.error(node.lineno, 'class decorators are unsupported')
+        if node.bases:
+            self.error(node.lineno, 'class inheritance is unsupported')
+        if node.keywords:
+            self.error(node.lineno, 'class keywords are unsupported')
+
+        slots = None
+        if len(node.body) == 1 and isinstance(node.body[0], ast.Assign):
+            assign = node.body[0]
+            if len(assign.targets) != 1 or not isinstance(assign.targets[0], ast.Name) or assign.targets[0].id != '__slots__':
+                self.error(node.lineno, "only 'class X: pass' and 'class X: __slots__ = (...)' are supported")
+            if not isinstance(assign.value, (ast.Tuple, ast.List)):
+                self.error(node.lineno, "__slots__ must be a tuple or list of strings")
+            slots = []
+            for elt in assign.value.elts:
+                if not isinstance(elt, ast.Constant) or not isinstance(elt.value, str):
+                    self.error(node.lineno, "__slots__ must be a tuple or list of strings")
+                if elt.value in slots:
+                    self.error(node.lineno, 'duplicate name in __slots__')
+                slots.append(elt.value)
+        elif len(node.body) != 1 or not isinstance(node.body[0], ast.Pass):
+            self.error(node.lineno, "only 'class X: pass' and 'class X: __slots__ = (...)' are supported")
+
+        java_name = f'pyclass_{node.name}'
+        type_name = f'{java_name}Type'
+        type_class_name = f'{type_name}Class'
+        class_code = []
+        if slots is None:
+            class_code.extend([
+                f'private static final class {java_name} extends PyBagObject {{',
+                f'{java_name}() {{ super({type_class_name}.singleton); }}',
+                f'public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {{',
+                f'Runtime.requireNoKwArgs(kwargs, type.name());',
+                f'if (args.length != 0) {{',
+                f'throw PyTypeError.raise(type.name() + "() takes no arguments");',
+                f'}}',
+                f'return new {java_name}();',
+                '}',
+                '}',
+            ])
+        else:
+            class_code.extend([
+                f'private static final class {java_name} extends PySlottedObject {{',
+                *[f'private PyObject pyslot_{name} = null;' for name in slots],
+                f'{java_name}() {{ super({type_class_name}.singleton); }}',
+                '@Override public PyObject getAttr(String key) {',
+                'switch (key) {',
+            ])
+            for name in slots:
+                class_code.extend([
+                    f'case {java_string_literal(name)}:',
+                    f'if (pyslot_{name} == null) {{',
+                    'throw raiseMissingAttr(key);',
+                    '}',
+                    f'return pyslot_{name};',
+                ])
+            class_code.extend([
+                'case "__dict__": throw raiseMissingAttr(key);',
+                'default: return super.getAttr(key);',
+                '}',
+                '}',
+                '@Override public void setAttr(String key, PyObject value) {',
+                'switch (key) {',
+            ])
+            for name in slots:
+                class_code.extend([
+                    f'case {java_string_literal(name)}:',
+                    f'pyslot_{name} = value;',
+                    'return;',
+                ])
+            class_code.extend([
+                'case "__class__": throw Runtime.raiseNamedReadOnlyAttr(type(), key);',
+                'default: super.setAttr(key, value);',
+                '}',
+                '}',
+                '@Override public void delAttr(String key) {',
+                'switch (key) {',
+            ])
+            for name in slots:
+                class_code.extend([
+                    f'case {java_string_literal(name)}:',
+                    f'if (pyslot_{name} == null) {{',
+                    'throw raiseMissingAttr(key);',
+                    '}',
+                    f'pyslot_{name} = null;',
+                    'return;',
+                ])
+            class_code.extend([
+                'case "__class__": throw Runtime.raiseNamedReadOnlyAttr(type(), key);',
+                'default: super.delAttr(key);',
+                '}',
+                '}',
+                f'public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {{',
+                f'Runtime.requireNoKwArgs(kwargs, type.name());',
+                f'if (args.length != 0) {{',
+                f'throw PyTypeError.raise(type.name() + "() takes no arguments");',
+                f'}}',
+                f'return new {java_name}();',
+                '}',
+                '}',
+            ])
+        class_code.extend([
+            f'private static final class {type_class_name} extends PyBuiltinType {{',
+            f'private static final {type_class_name} singleton = new {type_class_name}();',
+            f'private {type_class_name}() {{ super({java_string_literal(node.name)}, {java_name}.class, {java_name}::newObj); }}',
+            '}',
+        ])
+        assert java_name not in self.functions
+        self.functions[java_name] = class_code
+        self.code.append(JavaAssignStatement(self.ident_expr(node.name), JavaIdentifier(f'{type_class_name}.singleton')))
+
     def visit_Lambda(self, node) -> JavaExpr:
         (arg_names, arg_defaults) = self.check_args(node.lineno, node.args)
         qualname = self.qualname('<lambda>')

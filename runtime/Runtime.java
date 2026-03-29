@@ -31,6 +31,58 @@ final class PyCell {
     }
 }
 
+abstract class PyBagObject extends PyTruthyObject {
+    private final PyType bagType;
+    private final PyDict attrs = new PyDict();
+
+    protected PyBagObject(PyType _bagType) {
+        bagType = _bagType;
+    }
+
+    @Override public PyObject getAttr(String key) {
+        PyObject value = attrs.items.get(new PyString(key));
+        if (value != null) {
+            return value;
+        }
+        if (key.equals("__dict__")) {
+            return attrs;
+        }
+        return super.getAttr(key);
+    }
+    @Override public void setAttr(String key, PyObject value) {
+        if (key.equals("__class__") || key.equals("__dict__")) {
+            throw Runtime.raiseNamedReadOnlyAttr(type(), key);
+        }
+        attrs.items.put(new PyString(key), value);
+    }
+    @Override public void delAttr(String key) {
+        if (key.equals("__class__") || key.equals("__dict__")) {
+            throw Runtime.raiseNamedReadOnlyAttr(type(), key);
+        }
+        if (attrs.items.remove(new PyString(key)) == null) {
+            throw raiseMissingAttr(key);
+        }
+    }
+
+    @Override public boolean equals(Object rhs) { return this == rhs; }
+    @Override public int hashCode() { return defaultHashCode(); }
+    @Override public String repr() { return defaultRepr(); }
+    @Override public PyType type() { return bagType; }
+}
+
+abstract class PySlottedObject extends PyTruthyObject {
+    private final PyType slotType;
+
+    protected PySlottedObject(PyType _slotType) {
+        slotType = _slotType;
+    }
+
+    @Override public boolean equals(Object rhs) { return this == rhs; }
+    @Override public int hashCode() { return defaultHashCode(); }
+    @Override public String repr() { return defaultRepr(); }
+    @Override public PyType type() { return slotType; }
+}
+
 abstract class PyType extends PyTruthyObject {
     public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
         if (args.length != 1) {
