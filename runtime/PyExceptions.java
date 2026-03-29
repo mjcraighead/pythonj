@@ -214,6 +214,20 @@ final class PyValueError extends PyException {
     }
 }
 
+final class PyZlibError extends PyException {
+    PyZlibError(PyObject... _args) { super(_args); }
+    @Override public PyConcreteType type() { return PyZlibErrorType.singleton; }
+
+    static PyRaise raise(String msg) {
+        return new PyRaise(new PyZlibError(new PyString(msg)));
+    }
+
+    public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
+        Runtime.requireNoKwArgs(kwargs, type.name());
+        return new PyZlibError(args);
+    }
+}
+
 final class PyRaise extends RuntimeException {
     final PyBaseException exc;
     PyRaise(PyBaseException _exc) { exc = _exc; }

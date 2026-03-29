@@ -2,8 +2,13 @@
 // Copyright (c) 2012-2026 Matt Craighead
 // SPDX-License-Identifier: MIT
 
+import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.zip.DataFormatException;
+import java.util.zip.Deflater;
+import java.util.zip.Inflater;
 
 abstract class PyBuiltinFunction extends PyBuiltinFunctionOrMethod {
     protected final String funcName;
@@ -75,6 +80,38 @@ final class PyMathFunction_isnan extends PyBuiltinFunction {
     }
 }
 
+final class PyZlibFunction_compress extends PyBuiltinFunction {
+    public static final PyZlibFunction_compress singleton = new PyZlibFunction_compress();
+
+    private PyZlibFunction_compress() { super("compress"); }
+
+    @Override public PyObject call(PyObject[] args, PyDict kwargs) {
+        if ((kwargs != null) && kwargs.boolValue()) {
+            throw Runtime.raiseNoKwArgs("zlib.compress");
+        }
+        if (args.length != 1) {
+            throw Runtime.raiseOneArg(args, "zlib.compress");
+        }
+        return PyBuiltinFunctionsImpl.pyfunc_zlib_compress(args[0]);
+    }
+}
+
+final class PyZlibFunction_decompress extends PyBuiltinFunction {
+    public static final PyZlibFunction_decompress singleton = new PyZlibFunction_decompress();
+
+    private PyZlibFunction_decompress() { super("decompress"); }
+
+    @Override public PyObject call(PyObject[] args, PyDict kwargs) {
+        if ((kwargs != null) && kwargs.boolValue()) {
+            throw Runtime.raiseNoKwArgs("zlib.decompress");
+        }
+        if (args.length != 1) {
+            throw Runtime.raiseOneArg(args, "zlib.decompress");
+        }
+        return PyBuiltinFunctionsImpl.pyfunc_zlib_decompress(args[0]);
+    }
+}
+
 final class PyBuiltinFunctionsImpl {
     static PyString pyfunc_json_encode_basestring_ascii(PyObject arg) {
         if (!(arg instanceof PyString argStr)) {
@@ -120,6 +157,58 @@ final class PyBuiltinFunctionsImpl {
     }
     static PyBool pyfunc_math_isnan(PyObject arg) {
         return PyBool.create(Double.isNaN(requireMathReal(arg)));
+    }
+    private static byte[] requireBytesLikeBuffer(PyObject arg, String name) {
+        if (arg instanceof PyBytes argBytes) {
+            return argBytes.value;
+        }
+        if (arg instanceof PyByteArray argByteArray) {
+            return argByteArray.value;
+        }
+        throw PyTypeError.raise("a bytes-like object is required, not " + PyString.reprOf(arg.type().name()));
+    }
+    static PyBytes pyfunc_zlib_compress(PyObject arg) {
+        byte[] in = requireBytesLikeBuffer(arg, "zlib.compress");
+        Deflater deflater = new Deflater();
+        deflater.setInput(in);
+        deflater.finish();
+        ByteArrayOutputStream out = new ByteArrayOutputStream(Math.max(64, in.length + 32));
+        byte[] buf = new byte[1024];
+        try {
+            while (!deflater.finished()) {
+                int n = deflater.deflate(buf);
+                if (n > 0) {
+                    out.write(buf, 0, n);
+                }
+            }
+        } finally {
+            deflater.end();
+        }
+        return new PyBytes(out.toByteArray());
+    }
+    static PyBytes pyfunc_zlib_decompress(PyObject arg) {
+        byte[] in = requireBytesLikeBuffer(arg, "zlib.decompress");
+        Inflater inflater = new Inflater();
+        inflater.setInput(in);
+        ByteArrayOutputStream out = new ByteArrayOutputStream(Math.max(64, in.length * 2));
+        byte[] buf = new byte[1024];
+        try {
+            while (!inflater.finished()) {
+                int n = inflater.inflate(buf);
+                if (n > 0) {
+                    out.write(buf, 0, n);
+                } else if (inflater.needsInput() || inflater.needsDictionary()) {
+                    throw PyZlibError.raise("Error -5 while decompressing data: incomplete or truncated stream");
+                } else {
+                    throw PyZlibError.raise("Error -3 while decompressing data: invalid stored block lengths");
+                }
+            }
+        } catch (DataFormatException e) {
+            throw PyZlibError.raise("Error -3 while decompressing data: " + e.getMessage());
+        } finally {
+            inflater.end();
+        }
+        return new PyBytes(out.toByteArray());
     }
     static PyString pyfunc_ascii(PyObject arg) {
         String r = arg.repr();

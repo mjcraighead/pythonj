@@ -130,6 +130,21 @@ final class PyMathModule extends PyModule {
     }
 }
 
+final class PyZlibModule extends PyModule {
+    public static final PyZlibModule singleton = new PyZlibModule();
+
+    private PyZlibModule() { super("zlib"); }
+
+    @Override public PyObject getAttr(String key) {
+        switch (key) {
+            case "compress": return PyZlibFunction_compress.singleton;
+            case "decompress": return PyZlibFunction_decompress.singleton;
+            case "error": return PyZlibErrorType.singleton;
+            default: return super.getAttr(key);
+        }
+    }
+}
+
 abstract class PyType extends PyTruthyObject {
     public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
         if (args.length != 1) {
@@ -220,6 +235,12 @@ final class PyModuleType extends PyConcreteType {
     public static final PyModuleType singleton = new PyModuleType();
 
     private PyModuleType() { super("module", PyModule.class); }
+}
+
+final class PyZlibErrorType extends PyConcreteType {
+    public static final PyZlibErrorType singleton = new PyZlibErrorType();
+
+    private PyZlibErrorType() { super("error", PyZlibError.class, PyZlibError::newObj); }
 }
 
 abstract class PyGettableDescriptor extends PyTruthyObject {

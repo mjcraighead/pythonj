@@ -30,6 +30,7 @@ BUILTIN_FUNCTIONS = {
 BUILTIN_MODULES = {
     '_json': 'PyJsonModule',
     'math': 'PyMathModule',
+    'zlib': 'PyZlibModule',
 }
 BUILTIN_TYPES = {
     'bool': 'PyBool',
