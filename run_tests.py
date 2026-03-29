@@ -29,7 +29,7 @@ def main() -> None:
         shutil.rmtree('runtime/_out')
     os.mkdir('runtime/_out')
     extract_spec.gen_spec('runtime/_out/spec.json')
-    pythonj.gen_code('runtime/_out/spec.json', 'runtime/_out/PyGenerated.java')
+    pythonj.gen_runtime_java('runtime/_out/spec.json', 'runtime/_out/PyGenerated.java')
     codegen_time = time.perf_counter() - start
     print(f'{codegen_time=:.3f}')
 
@@ -49,7 +49,7 @@ def main() -> None:
             node = ast.parse(f.read())
         analyzer = pythonj.ScopeAnalyzer()
         analyzer.visit(node)
-        visitor = pythonj.PythonjVisitor(py_path, analyzer.scope_infos, analyzer.scope_infos[node])
+        visitor = pythonj.LoweringVisitor(py_path, analyzer.scope_infos, analyzer.scope_infos[node])
         visitor.visit(node)
         if visitor.n_errors:
             print(f'Translation failed: {visitor.n_errors} errors')

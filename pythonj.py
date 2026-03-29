@@ -672,7 +672,7 @@ class Scope:
 # the maximum code size limit, and it is somewhat unpredictable how much bytecode our translations
 # will compile into.  Partial mitigations are likely to be easier than a total fix.
 # XXX "invokedynamic" might help us a lot, but there is no way to access it from Java source
-class PythonjVisitor(ast.NodeVisitor):
+class LoweringVisitor(ast.NodeVisitor):
     __slots__ = ('path', 'n_errors', 'n_functions', 'n_lambdas', 'scope', 'global_code', 'code',
                  'scope_infos', 'pool', 'break_name', 'functions', 'allow_intrinsics',
                  'python_helper_names', 'python_helper_class')
@@ -1764,7 +1764,7 @@ UNIMPLEMENTED_METHODS = {
 NULL = object()
 RAW_ARGS_KWARGS_BUILTINS = {'max', 'min'}
 
-PYTHON_IMPLS = {
+PYTHON_AUTHORED_IMPLS = {
     'builtins': {'abs', 'all', 'any', 'bin', 'delattr', 'format', 'getattr', 'hash', 'hasattr', 'isinstance', 'issubclass', 'len', 'next', 'oct', 'repr', 'setattr', 'sum'},
     'bytes': {'capitalize', 'count', 'endswith', 'find', 'fromhex', 'hex', 'index', 'isalnum', 'isalpha', 'isascii', 'isdigit', 'islower', 'isspace', 'istitle', 'isupper', 'lower', 'lstrip', 'partition', 'removeprefix', 'removesuffix', 'rfind', 'rindex', 'rpartition', 'rstrip', 'startswith', 'strip', 'swapcase', 'title', 'upper'},
     'dict': {'fromkeys', 'setdefault'},
@@ -1900,7 +1900,7 @@ def get_module_function_params(spec: dict[str, object], module_name: str, func_n
     attrs = cast(dict[str, dict[str, object]], cast(dict[str, object], spec[module_name])['attrs'])
     return decode_signature(cast(Optional[dict[str, object]], attrs[func_name].get('signature')))
 
-def emit_python_function_static(visitor: PythonjVisitor, func_name: str, arg_names: list[str], body: list[JavaStatement],
+def emit_python_function_static(visitor: LoweringVisitor, func_name: str, arg_names: list[str], body: list[JavaStatement],
                                 return_java_type: str) -> list[str]:
     java_return_type = 'PyNone' if return_java_type == 'NoReturn' else return_java_type
     func_code = [
@@ -1933,7 +1933,7 @@ def translate_python_impl_node(node: ast.Module, func: ast.FunctionDef, emitted_
                                python_helper_class: Optional[str] = None) -> tuple[list[list[str]], list[str]]:
     analyzer = ScopeAnalyzer()
     analyzer.visit(node)
-    visitor = PythonjVisitor(display_name, analyzer.scope_infos, analyzer.scope_infos[node])
+    visitor = LoweringVisitor(display_name, analyzer.scope_infos, analyzer.scope_infos[node])
     visitor.pool = pool
     visitor.allow_intrinsics = True
     if python_helper_names is not None:
@@ -2029,9 +2029,9 @@ def if_chain(conditions_and_bodies: list[tuple[JavaExpr, list[JavaStatement]]],
         orelse = [JavaIfStatement(cond, body, orelse)]
     return JavaIfStatement(conditions_and_bodies[0][0], conditions_and_bodies[0][1], orelse)
 
-def emit_arg_binding(shape: SignatureShape, positional_name: str,
-                     kw_name: str, kw_overflow_args_length: str,
-                     noarg_name: str) -> tuple[list[JavaStatement], list[JavaExpr]]:
+def build_arg_binding_ir(shape: SignatureShape, positional_name: str,
+                         kw_name: str, kw_overflow_args_length: str,
+                         noarg_name: str) -> tuple[list[JavaStatement], list[JavaExpr]]:
     args_length = JavaIdentifier('argsLength')
     args = JavaIdentifier('args')
     kwargs = JavaIdentifier('kwargs')
@@ -2333,7 +2333,7 @@ def get_java_name(name: str) -> str:
     else:
         return extract_spec.BUILTIN_TYPES[name]
 
-def gen_code(spec_path: str, java_path: str) -> None:
+def gen_runtime_java(spec_path: str, java_path: str) -> None:
     with open(spec_path) as f:
         spec = json.load(f)
 
@@ -2464,7 +2464,7 @@ def gen_code(spec_path: str, java_path: str) -> None:
                     else:
                         assert False, (name, method_name, kind)
                     method_impl_target = None
-                    if kind in {'method', 'classmethod'} and method_name in PYTHON_IMPLS.get(name, set()):
+                    if kind in {'method', 'classmethod'} and method_name in PYTHON_AUTHORED_IMPLS.get(name, set()):
                         helper_name = f'{name.replace(".", "_")}__{method_name}'
                         method_impl_target = f'PyBuiltinMethodsPythonImpl.pyfunc_{helper_name}'
                         (helper_classes, helper_method) = translate_python_method_impl(name, method_name, pool)
@@ -2477,7 +2477,7 @@ def gen_code(spec_path: str, java_path: str) -> None:
                     if kwarg_params is None:
                         bind_args = [JavaIdentifier('args'), JavaIdentifier('kwargs')]
                     else:
-                        (bind_statements, bind_args) = emit_arg_binding(
+                        (bind_statements, bind_args) = build_arg_binding_ir(
                             kwarg_params, method_name,
                             method_name,
                             'argsLength',
@@ -2518,7 +2518,7 @@ def gen_code(spec_path: str, java_path: str) -> None:
             writer.write('}')
             writer.write('')
 
-        if any(PYTHON_IMPLS.get(name, set()) for name in PYTHON_IMPLS if name != 'builtins'):
+        if any(PYTHON_AUTHORED_IMPLS.get(name, set()) for name in PYTHON_AUTHORED_IMPLS if name != 'builtins'):
             for code in python_method_helper_classes:
                 for line in code:
                     writer.write(line)
@@ -2531,8 +2531,8 @@ def gen_code(spec_path: str, java_path: str) -> None:
             writer.write('}')
             writer.write('')
 
-        if PYTHON_IMPLS['builtins']:
-            for func_name in sorted(PYTHON_IMPLS['builtins']):
+        if PYTHON_AUTHORED_IMPLS['builtins']:
+            for func_name in sorted(PYTHON_AUTHORED_IMPLS['builtins']):
                 (helper_classes, helper_method) = translate_python_builtin_impl(func_name, pool)
                 python_builtin_helper_classes.extend(helper_classes)
                 python_builtin_helper_methods.append(helper_method)
@@ -2570,7 +2570,7 @@ def gen_code(spec_path: str, java_path: str) -> None:
                 if kwarg_params is None:
                     bind_args = [JavaIdentifier('args'), JavaIdentifier('kwargs')]
                 else:
-                    (bind_statements, bind_args) = emit_arg_binding(
+                    (bind_statements, bind_args) = build_arg_binding_ir(
                         kwarg_params, func_name,
                         full_name,
                         'argsLength',
@@ -2600,14 +2600,14 @@ def gen_code(spec_path: str, java_path: str) -> None:
             else:
                 kw_name = 'sort' if func_name == 'sorted' else func_name
                 kw_overflow_args_length = '0' if func_name == 'sorted' else 'argsLength'
-                (bind_statements, bind_args) = emit_arg_binding(
+                (bind_statements, bind_args) = build_arg_binding_ir(
                     kwarg_params, func_name,
                     kw_name,
                     kw_overflow_args_length,
                     func_name,
                 )
                 emit_java_statements(writer, bind_statements, pool)
-            if func_name in PYTHON_IMPLS['builtins']:
+            if func_name in PYTHON_AUTHORED_IMPLS['builtins']:
                 call_target = 'PyBuiltinFunctionsPythonImpl'
             else:
                 call_target = 'PyBuiltinFunctionsImpl'
