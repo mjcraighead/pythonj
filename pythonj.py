@@ -20,7 +20,8 @@ import sys
 import time
 import types
 from typing import Iterator, Optional, TextIO, cast
-import _io
+
+import extract_spec
 
 BUILTIN_FUNCTIONS = {
     'abs', 'all', 'any', 'ascii', 'bin', 'chr', 'delattr', 'dir', 'format', 'getattr', 'hasattr', 'hash', 'hex',
@@ -1750,14 +1751,6 @@ class PythonjVisitor(ast.NodeVisitor):
         writer.write('}')
         assert writer.indent == 0, writer.indent
 
-def get_runtime_obj(name: str) -> object:
-    if name.startswith('_io.'):
-        return getattr(_io, name.split('.', 1)[1])
-    elif name.startswith('types.'):
-        return getattr(types, name.split('.', 1)[1])
-    else:
-        return getattr(builtins, name)
-
 def get_top_level_function_names(path: str) -> set[str]:
     with open(path, encoding='utf-8') as f:
         node = ast.parse(f.read(), path)
@@ -1773,38 +1766,6 @@ def get_top_level_functions(node: ast.Module) -> dict[str, ast.FunctionDef]:
 def get_class_functions(node: ast.Module, class_name: str) -> dict[str, ast.FunctionDef]:
     classes = {x.name: x for x in node.body if isinstance(x, ast.ClassDef)}
     return {x.name: x for x in classes[class_name].body if isinstance(x, ast.FunctionDef)}
-
-def gen_spec(spec_path: str) -> None:
-    spec = {}
-    for name in [*BUILTIN_TYPES, *sorted(EXCEPTION_TYPES),
-                 'types.BuiltinFunctionType', 'types.ClassMethodDescriptorType',
-                 'types.FunctionType', 'types.GetSetDescriptorType', 'types.MemberDescriptorType',
-                 'types.MethodDescriptorType', 'types.NoneType', '_io.BufferedReader', '_io.TextIOWrapper']:
-        obj = get_runtime_obj(name)
-        attrs = {}
-        for (k, v) in obj.__dict__.items():
-            if k.startswith('__') and k not in {'__doc__'}:
-                continue # only extract a subset of dunders
-            v_type = type(v)
-            if v_type is str:
-                attrs[k] = {'kind': 'string', 'value': v}
-            elif v_type is types.MemberDescriptorType:
-                attrs[k] = {'kind': 'member', 'doc': v.__doc__}
-            elif v_type is types.GetSetDescriptorType:
-                attrs[k] = {'kind': 'getset', 'doc': v.__doc__}
-            elif v_type is types.MethodDescriptorType:
-                attrs[k] = {'kind': 'method', 'doc': v.__doc__}
-            elif v_type is types.ClassMethodDescriptorType:
-                attrs[k] = {'kind': 'classmethod', 'doc': v.__doc__}
-            elif v_type is staticmethod:
-                attrs[k] = {'kind': 'staticmethod'}
-            else:
-                assert False, (name, k, v, v_type)
-        spec[name] = attrs
-
-    with open(spec_path, 'w') as f:
-        json.dump(spec, f, indent=2)
-        f.write('\n')
 
 UNIMPLEMENTED_METHODS = {
     'bytearray': {
@@ -1902,7 +1863,7 @@ def get_method_params(name: str, method_name: str) -> Optional[list[inspect.Para
     synthetic = SYNTHETIC_PARAMS.get(name, {}).get(method_name)
     if synthetic is not None:
         return synthetic
-    obj = get_runtime_obj(name)
+    obj = extract_spec.get_runtime_obj(name)
     desc = obj.__dict__.get(method_name)
     if desc is None:
         return None
@@ -2466,7 +2427,7 @@ def main() -> None:
     if os.path.exists('runtime/_out'):
         shutil.rmtree('runtime/_out')
     os.mkdir('runtime/_out')
-    gen_spec('runtime/_out/spec.json')
+    extract_spec.gen_spec('runtime/_out/spec.json')
     gen_code('runtime/_out/spec.json', 'runtime/_out/PyGenerated.java')
     codegen_time = time.perf_counter() - start
     print(f'{codegen_time=:.3f}')
