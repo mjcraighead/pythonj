@@ -289,9 +289,6 @@ public final class PyFloat extends PyObject {
         long[] ratio = finiteIntegerRatio(value);
         return new PyTuple(new PyObject[]{new PyInt(ratio[0]), new PyInt(ratio[1])});
     }
-    public PyFloat pymethod_conjugate() {
-        return this;
-    }
     public static PyObject pymethod_from_number(PyType self, PyObject number) {
         if ((number instanceof PyFloat) || (number instanceof PyInt) || (number instanceof PyBool)) {
             return new PyFloat(number.floatValue());

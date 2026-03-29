@@ -353,12 +353,6 @@ public final class PyInt extends PyObject {
         }
         return new PyInt(64 - Long.numberOfLeadingZeros(Math.abs(value)));
     }
-    public PyInt pymethod_conjugate() {
-        return this;
-    }
-    public PyBool pymethod_is_integer() {
-        return PyBool.true_singleton;
-    }
     public PyBytes pymethod_to_bytes(PyObject length, PyObject byteorder, PyObject signedObj) {
         int len = Math.toIntExact(length.indexValue());
         boolean littleEndian = false;

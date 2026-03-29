@@ -431,14 +431,6 @@ public final class PyDict extends PyObject {
         items.remove(key);
         return new PyTuple(new PyObject[] {key, value});
     }
-    public PyObject pymethod_setdefault(PyObject key, PyObject defaultValue) {
-        PyObject value = items.get(key);
-        if (value != null) {
-            return value;
-        }
-        items.put(key, defaultValue);
-        return defaultValue;
-    }
     private void updateImpl(PyObject[] args, PyDict kwargs) {
         if (args.length == 1) {
             var arg = args[0];

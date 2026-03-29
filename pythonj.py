@@ -941,6 +941,9 @@ class PythonjVisitor(ast.NodeVisitor):
                 case '__pythonj_delattr__':
                     assert len(node.args) == 2 and not node.keywords, node.args
                     return JavaMethodCall(JavaIdentifier('Runtime'), 'pythonjDelAttr', [self.visit(node.args[0]), self.visit(node.args[1])])
+                case '__pythonj_dict_get__':
+                    assert len(node.args) == 2 and not node.keywords, node.args
+                    return JavaMethodCall(JavaIdentifier('Runtime'), 'pythonjDictGet', [self.visit(node.args[0]), self.visit(node.args[1])])
                 case '__pythonj_format__':
                     assert len(node.args) == 2 and not node.keywords, node.args
                     return JavaMethodCall(JavaIdentifier('Runtime'), 'pythonjFormat', [self.visit(node.args[0]), self.visit(node.args[1])])
@@ -1760,7 +1763,7 @@ UNIMPLEMENTED_METHODS = {
     },
     'str': {
         'center', 'count', 'encode', 'endswith', 'expandtabs', 'format', 'format_map', 'index', 'ljust',
-        'lstrip', 'partition', 'removeprefix', 'removesuffix', 'replace', 'rfind', 'rindex', 'rjust',
+        'lstrip', 'partition', 'replace', 'rfind', 'rindex', 'rjust',
         'rpartition', 'rsplit', 'rstrip', 'splitlines', 'strip', 'translate', 'zfill',
     },
     'type': {'mro'},
@@ -1779,6 +1782,14 @@ NULL = object()
 RAW_ARGS_KWARGS_BUILTINS = {'max', 'min', 'print'}
 
 PYTHON_BUILTIN_IMPLS = {'abs', 'all', 'any', 'delattr', 'format', 'getattr', 'hash', 'hasattr', 'isinstance', 'issubclass', 'len', 'next', 'repr', 'setattr', 'sum'}
+PYTHON_METHOD_IMPLS = {
+    ('dict', 'setdefault'),
+    ('float', 'conjugate'),
+    ('int', 'conjugate'),
+    ('int', 'is_integer'),
+    ('str', 'removeprefix'),
+    ('str', 'removesuffix'),
+}
 
 def make_param(name: str, default: object = inspect.Parameter.empty) -> inspect.Parameter:
     return inspect.Parameter(name, inspect.Parameter.POSITIONAL_ONLY, default=default)
@@ -1917,6 +1928,30 @@ def translate_python_builtin_impl(func_name: str, pool: ConstantPool) -> tuple[l
     assert not arg_defaults, (func_name, arg_defaults)
     scope_info = visitor.scope_infos[func]
     free_vars = visitor.resolve_free_vars(func.lineno, scope_info, 'builtin function')
+    assert not free_vars, (func_name, free_vars)
+    with visitor.new_function(scope_info, free_vars, func.name):
+        body = visitor.visit_block(func.body)
+        helper_method = emit_python_function_static(visitor, func_name, arg_names, body)
+    assert visitor.n_errors == 0, (func_name, visitor.n_errors)
+    return (list(visitor.functions.values()), helper_method)
+
+def translate_python_method_impl(type_name: str, method_name: str, pool: ConstantPool) -> tuple[list[list[str]], list[str]]:
+    with open('pythonj_methods.py', encoding='utf-8') as f:
+        node = ast.parse(f.read(), 'pythonj_methods.py')
+    func_name = f'{type_name}__{method_name}'
+    funcs = {x.name: x for x in node.body if isinstance(x, ast.FunctionDef)}
+    func = funcs[func_name]
+    analyzer = ScopeAnalyzer()
+    analyzer.visit(node)
+    visitor = PythonjVisitor(f'<method {type_name}.{method_name}>', analyzer.scope_infos, analyzer.scope_infos[node])
+    visitor.pool = pool
+    visitor.allow_intrinsics = True
+
+    assert func.name == func_name, (func.name, func_name)
+    (arg_names, arg_defaults) = visitor.check_args(func.lineno, func.args)
+    assert not arg_defaults, (func_name, arg_defaults)
+    scope_info = visitor.scope_infos[func]
+    free_vars = visitor.resolve_free_vars(func.lineno, scope_info, 'builtin method')
     assert not free_vars, (func_name, free_vars)
     with visitor.new_function(scope_info, free_vars, func.name):
         body = visitor.visit_block(func.body)
@@ -2131,6 +2166,8 @@ def gen_code(spec_path: str, java_path: str) -> None:
         writer = IndentedWriter(f, 0)
         python_builtin_helper_classes: list[list[str]] = []
         python_builtin_helper_methods: list[list[str]] = []
+        python_method_helper_classes: list[list[str]] = []
+        python_method_helper_methods: list[list[str]] = []
         for (name, attrs) in spec.items():
             java_name = get_java_name(name)
             match name:
@@ -2238,6 +2275,13 @@ def gen_code(spec_path: str, java_path: str) -> None:
                         method_target = java_name
                     else:
                         assert False, (name, method_name, kind)
+                    method_impl_target = None
+                    if kind == 'method' and (name, method_name) in PYTHON_METHOD_IMPLS:
+                        helper_name = f'{name.replace(".", "_")}__{method_name}'
+                        method_impl_target = f'PyBuiltinMethodsPythonImpl.pyfunc_{helper_name}'
+                        (helper_classes, helper_method) = translate_python_method_impl(name, method_name, pool)
+                        python_method_helper_classes.extend(helper_classes)
+                        python_method_helper_methods.append(helper_method)
                     writer.write(f'final class {method_class_name} extends PyBuiltinMethod<{self_type}> {{')
                     writer.write(f'{method_class_name}({ctor_arg}) {{ super({super_arg}); }}')
                     writer.write(f'@Override public String methodName() {{ return "{method_name}"; }}')
@@ -2254,10 +2298,26 @@ def gen_code(spec_path: str, java_path: str) -> None:
                         )
                     if kind == 'classmethod':
                         bind_args = ['self'] + bind_args
-                    writer.write(f"return {method_target}.pymethod_{method_name}({', '.join(bind_args)});")
+                    if method_impl_target is not None:
+                        writer.write(f"return {method_impl_target}(self{', ' if bind_args else ''}{', '.join(bind_args)});")
+                    else:
+                        writer.write(f"return {method_target}.pymethod_{method_name}({', '.join(bind_args)});")
                     writer.write('}')
                     writer.write('}')
                 writer.write('')
+
+        if PYTHON_METHOD_IMPLS:
+            for code in python_method_helper_classes:
+                for line in code:
+                    writer.write(line)
+                writer.write('')
+            writer.write('final class PyBuiltinMethodsPythonImpl {')
+            for method in python_method_helper_methods:
+                for line in method:
+                    writer.write(line)
+                writer.write('')
+            writer.write('}')
+            writer.write('')
 
         if PYTHON_BUILTIN_IMPLS:
             for func_name in sorted(PYTHON_BUILTIN_IMPLS):

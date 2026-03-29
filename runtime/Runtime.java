@@ -341,6 +341,9 @@ public final class Runtime {
         obj.delAttr(((PyString)nameObj).value);
         return PyNone.singleton;
     }
+    public static PyObject pythonjDictGet(PyObject obj, PyObject key) {
+        return ((PyDict)obj).items.get(key);
+    }
     public static PyString pythonjFormat(PyObject obj, PyObject formatSpecObj) {
         return new PyString(obj.format(((PyString)formatSpecObj).value));
     }
