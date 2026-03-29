@@ -2,11 +2,28 @@
 // Copyright (c) 2012-2026 Matt Craighead
 // SPDX-License-Identifier: MIT
 
+import java.nio.charset.StandardCharsets;
+
 public final class PyFloat extends PyObject {
     public final double value;
 
     PyFloat(double _value) { value = _value; }
 
+    private static PyFloat parseString(String s, String repr) {
+        String sl = s.toLowerCase();
+        if (sl.equals("inf") || sl.equals("+inf") || sl.equals("infinity") || sl.equals("+infinity")) {
+            return new PyFloat(Double.POSITIVE_INFINITY);
+        } else if (sl.equals("-inf") || sl.equals("-infinity")) {
+            return new PyFloat(Double.NEGATIVE_INFINITY);
+        } else if (sl.equals("nan") || sl.equals("+nan") || sl.equals("-nan")) {
+            return new PyFloat(Double.NaN);
+        }
+        try {
+            return new PyFloat(Double.parseDouble(s));
+        } catch (NumberFormatException e) {
+            throw PyValueError.raise("could not convert string to float: " + repr);
+        }
+    }
     private static double floatLikeValue(PyObject obj) {
         if ((obj instanceof PyFloat) || (obj instanceof PyInt) || (obj instanceof PyBool)) {
             return obj.floatValue();
@@ -48,6 +65,17 @@ public final class PyFloat extends PyObject {
         }
         return new PyFloat(ret);
     }
+    private static String strOf(double value) {
+        if (Double.isNaN(value)) {
+            return "nan";
+        } else if (value == Double.POSITIVE_INFINITY) {
+            return "inf";
+        } else if (value == Double.NEGATIVE_INFINITY) {
+            return "-inf";
+        } else {
+            return Double.toString(value);
+        }
+    }
 
     public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, type.name());
@@ -58,18 +86,19 @@ public final class PyFloat extends PyObject {
         PyObject arg = args[0];
         if (arg instanceof PyFloat argFloat) {
             return argFloat;
-        }
-        if (arg.hasIndex()) {
+        } else if (arg.hasIndex()) {
             return new PyFloat(arg.indexValue());
+        } else if (arg instanceof PyString argStr) {
+            return parseString(argStr.value, PyString.reprOf(argStr.value));
+        } else if (arg instanceof PyBytes argBytes) {
+            String s = new String(argBytes.value, StandardCharsets.ISO_8859_1);
+            return parseString(s, arg.repr());
+        } else if (arg instanceof PyByteArray argByteArray) {
+            String s = new String(argByteArray.value, StandardCharsets.ISO_8859_1);
+            return parseString(s, arg.repr());
+        } else {
+            throw PyTypeError.raise("float() argument must be a string or a real number, not " + PyString.reprOf(arg.type().name()));
         }
-        if (arg instanceof PyString argStr) {
-            try {
-                return new PyFloat(Double.parseDouble(argStr.value));
-            } catch (NumberFormatException e) {
-                throw PyValueError.raise("could not convert string to float: " + PyString.reprOf(argStr.value));
-            }
-        }
-        throw new UnsupportedOperationException("don't know how to handle argument to float()");
     }
 
     @Override public PyFloat pos() { return this; }
@@ -210,16 +239,63 @@ public final class PyFloat extends PyObject {
             return super.lt(rhs);
         }
     }
-    @Override public String repr() { return Double.toString(value); }
-    @Override public String str() { return Double.toString(value); }
+    @Override public String repr() { return strOf(value); }
+    @Override public String str() { return strOf(value); }
     @Override public PyBuiltinType type() { return PyFloatType.singleton; }
 
+    public PyObject pymethod_as_integer_ratio() {
+        if (Double.isNaN(value)) {
+            throw PyValueError.raise("cannot convert NaN to integer ratio");
+        } else if (Double.isInfinite(value)) {
+            throw PyOverflowError.raise("cannot convert Infinity to integer ratio");
+        } else if (value == 0.0) {
+            return new PyTuple(new PyObject[]{PyInt.singleton_0, PyInt.singleton_1});
+        }
+        long bits = Double.doubleToRawLongBits(value);
+        boolean negative = bits < 0;
+        int exponentBits = (int)((bits >>> 52) & 0x7FF);
+        long numerator = bits & ((1L << 52) - 1);
+        int exponent;
+        if (exponentBits == 0) {
+            exponent = -1022 - 52;
+        } else {
+            numerator |= (1L << 52);
+            exponent = exponentBits - 1023 - 52;
+        }
+        while (((numerator & 1) == 0) && (exponent < 0)) {
+            numerator >>= 1;
+            exponent++;
+        }
+        long denominator = 1;
+        if (exponent > 0) {
+            numerator = PyInt.lshift(numerator, exponent);
+        } else if (exponent < 0) {
+            denominator = PyInt.lshift(1, -exponent);
+        }
+        if (negative) {
+            numerator = Math.negateExact(numerator);
+        }
+        return new PyTuple(new PyObject[]{new PyInt(numerator), new PyInt(denominator)});
+    }
+    public PyFloat pymethod_conjugate() {
+        return this;
+    }
     public static PyObject pymethod_from_number(PyType self, PyObject number) {
+        if ((number instanceof PyFloat) || (number instanceof PyInt) || (number instanceof PyBool)) {
+            return new PyFloat(number.floatValue());
+        }
         throw new UnsupportedOperationException();
     }
     public static PyObject pymethod_fromhex(PyType self, PyObject s) {
         throw new UnsupportedOperationException();
     }
-    static PyObject pygetset_real(PyObject obj) { throw new UnsupportedOperationException(); }
-    static PyObject pygetset_imag(PyObject obj) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_hex() {
+        throw new UnsupportedOperationException();
+    }
+    public PyBool pymethod_is_integer() {
+        return PyBool.create(Double.isFinite(value) && (value == Math.rint(value)));
+    }
+
+    static PyObject pygetset_real(PyObject obj) { return obj; }
+    static PyObject pygetset_imag(PyObject obj) { return new PyFloat(0.0); }
 }

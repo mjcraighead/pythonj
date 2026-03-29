@@ -1413,7 +1413,6 @@ UNIMPLEMENTED_METHODS = {
         'rindex', 'rjust', 'rpartition', 'rsplit', 'rstrip', 'split', 'splitlines', 'startswith', 'strip',
         'translate', 'zfill',
     },
-    'float': {'conjugate', 'as_integer_ratio', 'hex', 'is_integer'},
     'str': {
         'center', 'count', 'encode', 'endswith', 'expandtabs', 'format', 'format_map', 'index', 'ljust',
         'lstrip', 'partition', 'removeprefix', 'removesuffix', 'replace', 'rfind', 'rindex', 'rjust',
