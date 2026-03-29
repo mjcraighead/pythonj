@@ -19,6 +19,7 @@ abstract class PyTruthyObject extends PyObject {
 
 abstract class PyIter extends PyTruthyObject {
     @Override public final boolean hasIter() { return true; }
+    @Override public int hashCode() { return defaultHashCode(); }
     @Override public final PyIter iter() { return this; }
 }
 
@@ -45,6 +46,7 @@ abstract class PyType extends PyTruthyObject {
     public PyObject lookupAttr(String name) { return null; }
 
     @Override public boolean contains(PyObject rhs) { return defaultContains(rhs); }
+    @Override public int hashCode() { return defaultHashCode(); }
 
     public abstract String name();
 
@@ -231,6 +233,7 @@ final class PyStaticMethod extends PyTruthyObject {
 }
 
 abstract class PyBuiltinFunctionOrMethod extends PyTruthyObject {
+    @Override public int hashCode() { return defaultHashCode(); }
     @Override public final PyBuiltinType type() { return PyBuiltinFunctionOrMethodType.singleton; }
 
     static PyObject pygetset___doc__(PyObject obj) {
@@ -250,6 +253,7 @@ abstract class PyBuiltinMethod<T extends PyObject> extends PyBuiltinFunctionOrMe
 abstract class PyFunction extends PyTruthyObject {
     private final String funcName;
     protected PyFunction(String name) { funcName = name; }
+    @Override public int hashCode() { return defaultHashCode(); }
     @Override public PyBuiltinType type() { return PyFunctionType.singleton; }
     @Override public String repr() { return "<function " + funcName + ">"; }
 

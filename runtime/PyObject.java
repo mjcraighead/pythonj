@@ -190,6 +190,9 @@ public abstract class PyObject implements Comparable<PyObject> {
     protected final PyRaise raiseMissingAttr(String key) {
         return PyAttributeError.raiseFormat("%s object has no attribute %s", PyString.reprOf(type().name()), PyString.reprOf(key));
     }
+    protected final int defaultHashCode() {
+        return System.identityHashCode(this);
+    }
     protected final boolean defaultContains(PyObject rhs) {
         if (!hasIter()) {
             throw PyTypeError.raise("argument of type " + PyString.reprOf(type().name()) + " is not a container or iterable");
