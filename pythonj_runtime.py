@@ -567,7 +567,7 @@ def pyj_percent_format(fmt, args):
 
         mapping_key = None
         if fmt[i] == '(':
-            if not isinstance(args, dict):
+            if not hasattr(args, 'keys'):
                 raise TypeError('format requires a mapping')
             used_mapping = True
             i += 1

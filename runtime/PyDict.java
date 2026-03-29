@@ -297,6 +297,26 @@ public final class PyDict extends PyObject {
 
     public final LinkedHashMap<PyObject, PyObject> items;
 
+    private static boolean hasKeysMethod(PyObject obj) {
+        try {
+            obj.getAttr("keys");
+            return true;
+        } catch (PyRaise e) {
+            if (e.exc instanceof PyAttributeError) {
+                return false;
+            }
+            throw e;
+        }
+    }
+
+    private void updateFromMapping(PyObject mapping) {
+        var keys = mapping.getAttr("keys").call(new PyObject[] {}, null);
+        var iter = keys.iter();
+        for (var key = iter.next(); key != null; key = iter.next()) {
+            items.put(key, mapping.getItem(key));
+        }
+    }
+
     PyDict(PyObject... args) {
         items = new LinkedHashMap<>();
         for (int i = 0; i < args.length; i += 2) {
@@ -305,6 +325,8 @@ public final class PyDict extends PyObject {
             if (k == null) { // used to encode dictionary unpacking
                 if (v instanceof PyDict dict) {
                     items.putAll(dict.items);
+                } else if (hasKeysMethod(v)) {
+                    updateFromMapping(v);
                 } else {
                     throw new UnsupportedOperationException("dictionary unpacking only implemented for dict");
                 }
@@ -426,8 +448,10 @@ public final class PyDict extends PyObject {
     private void updateImpl(PyObject[] args, PyDict kwargs) {
         if (args.length == 1) {
             var arg = args[0];
-            if (arg instanceof PyDict dict) { // XXX support arbitrary mappings here
+            if (arg instanceof PyDict dict) {
                 items.putAll(dict.items);
+            } else if (hasKeysMethod(arg)) {
+                updateFromMapping(arg);
             } else {
                 var iter = arg.iter();
                 long index = 0;
