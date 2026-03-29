@@ -221,7 +221,7 @@ class JavaAssignExpr(JavaExpr):
 
 @dataclass(slots=True)
 class JavaPyConstant(JavaExpr):
-    value: None | bool | int | float | str | bytes
+    value: object
     def emit_java(self, ctx: EmitContext) -> str:
         if self.value is None:
             return 'PyNone.singleton'
@@ -243,6 +243,8 @@ class JavaPyConstant(JavaExpr):
             return f'str_singleton_{ctx.all_strings[self.value]}'
         elif isinstance(self.value, float):
             return f'new PyFloat({self.value!r})'
+        elif isinstance(self.value, tuple):
+            return JavaCreateObject('PyTuple', [JavaCreateArray('PyObject', [JavaPyConstant(x) for x in self.value])]).emit_java(ctx)
         else:
             assert isinstance(self.value, bytes), self.value
             if self.value not in ctx.all_bytes:
@@ -1167,7 +1169,7 @@ class PythonjVisitor(ast.NodeVisitor):
             self.code.append(JavaAssignStatement(JavaIdentifier('expr_discard'), value))
             self.scope.used_expr_discard = True
 
-    def check_args(self, lineno: int, args: ast.arguments) -> tuple[list[str], list[None | bool | int | float | str | bytes]]:
+    def check_args(self, lineno: int, args: ast.arguments) -> tuple[list[str], list[object]]:
         if args.posonlyargs:
             self.error(lineno, 'position-only arguments are unsupported')
         if args.vararg:
@@ -1178,10 +1180,20 @@ class PythonjVisitor(ast.NodeVisitor):
             self.error(lineno, 'kw-only argument defaults are unsupported')
         if args.kwarg:
             self.error(lineno, '**kwargs are unsupported')
-        defaults: list[None | bool | int | float | str | bytes] = []
+        defaults: list[object] = []
         for default in args.defaults:
-            if isinstance(default, ast.Constant) and isinstance(default.value, (types.NoneType, bool, int, float, str, bytes)):
+            if isinstance(default, ast.Constant) and is_constant_default(default.value):
                 defaults.append(default.value)
+            elif isinstance(default, ast.Tuple):
+                try:
+                    value = ast.literal_eval(default)
+                except (TypeError, ValueError):
+                    self.error(lineno, 'only constant argument defaults are supported')
+                else:
+                    if is_constant_default(value):
+                        defaults.append(value)
+                    else:
+                        self.error(lineno, 'only constant argument defaults are supported')
             else:
                 self.error(lineno, 'only constant argument defaults are supported')
         for arg in args.args:
@@ -1203,17 +1215,23 @@ class PythonjVisitor(ast.NodeVisitor):
     def qualname(self, name: str) -> str:
         return name if self.scope.qualname is None else f'{self.scope.qualname}.<locals>.{name}'
 
-    def add_function(self, py_name: str, java_name: str, arg_names: list[str], arg_defaults: list[None | bool | int | float | str | bytes], body: list[JavaStatement],
+    def add_function(self, py_name: str, java_name: str, arg_names: list[str], arg_defaults: list[object], body: list[JavaStatement],
                      invisible_args: bool = False) -> None:
         n_args = len(arg_names)
         n_required = n_args - len(arg_defaults)
         bind_arg_names = [f'pyarg_{arg}' for arg in arg_names]
         free_var_names = sorted(self.scope.free_vars)
+        default_fields = {}
+        for default in arg_defaults:
+            if (type(default) is str and default != '') or isinstance(default, tuple):
+                if default not in default_fields:
+                    default_fields[default] = f'{java_name}_default_{len(default_fields)}'
         py_name_java = java_string_literal(py_name)
         arg_names_java = ', '.join(java_string_literal(arg) for arg in arg_names)
         required_arg_names_java = ', '.join(java_string_literal(arg) for arg in arg_names[:n_required])
         func_code = [
             f'private static final class {java_name} extends PyFunction {{',
+            *(emit_default_field_decl(default, field_name, self.emit_ctx) for (default, field_name) in default_fields.items()),
             *(f'private final PyCell pycell_{name};' for name in free_var_names),
             (f'{java_name}({", ".join(f"PyCell pycell_{name}" for name in free_var_names)}) {{' if free_var_names else f'{java_name}() {{'),
             f'super({py_name_java});',
@@ -1282,7 +1300,7 @@ class PythonjVisitor(ast.NodeVisitor):
                 func_code.append('}')
         func_code.append('}')
         for (i, name) in enumerate(bind_arg_names[n_required:]):
-            func_code.append(f'if ({name} == null) {{ {name} = {JavaPyConstant(arg_defaults[i]).emit_java(self.emit_ctx)}; }}')
+            func_code.append(f'if ({name} == null) {{ {name} = {emit_default_expr(arg_defaults[i], default_fields, self.emit_ctx)}; }}')
         if self.scope.used_expr_discard:
             func_code.append('PyObject expr_discard;')
         for (arg_name, bind_arg_name) in zip(arg_names, bind_arg_names):
@@ -1568,6 +1586,13 @@ RAW_ARGS_KWARGS_BUILTINS = {'max', 'min', 'print'}
 def make_param(name: str, default: object = inspect.Parameter.empty) -> inspect.Parameter:
     return inspect.Parameter(name, inspect.Parameter.POSITIONAL_ONLY, default=default)
 
+def is_constant_default(default: object) -> bool:
+    if isinstance(default, (types.NoneType, bool, int, float, str, bytes)):
+        return True
+    if isinstance(default, tuple):
+        return all(is_constant_default(x) for x in default)
+    return False
+
 SYNTHETIC_PARAMS = {
     'builtins': {
         'dir': [make_param('object', NULL)],
@@ -1660,11 +1685,13 @@ def analyze_params(params: list[inspect.Parameter]) -> SignatureShape:
         missing_style = None
     return SignatureShape(params, posonly_params, poskw_params, kwonly_params, vararg_param, max_total, max_positional, missing_style)
 
-def collect_default_fields(params: list[inspect.Parameter], field_prefix: str) -> dict[str, str]:
+def collect_default_fields(params: list[inspect.Parameter], field_prefix: str) -> dict[object, str]:
     fields = {}
     for param in params:
         default = param.default
-        if type(default) is str and default != '':
+        if default is inspect.Parameter.empty:
+            continue
+        if (type(default) is str and default != '') or isinstance(default, tuple):
             if default not in fields:
                 fields[default] = f'{field_prefix}_{len(fields)}'
     return fields
@@ -1690,18 +1717,24 @@ def infer_default_expr(default: object) -> Optional[str]:
     else:
         return None
 
-def emit_default_expr(default: object, default_fields: dict[str, str]) -> str:
+def emit_default_expr(default: object, default_fields: dict[object, str], emit_ctx: EmitContext) -> str:
     inferred = infer_default_expr(default)
     if inferred is not None:
         return inferred
-    elif type(default) is str:
+    elif type(default) is str or isinstance(default, tuple):
         return default_fields[default]
     else:
-        assert False, default
+        return JavaPyConstant(default).emit_java(emit_ctx)
+
+def emit_default_field_decl(default: object, field_name: str, emit_ctx: EmitContext) -> str:
+    if type(default) is str:
+        return f'private static final PyString {field_name} = new PyString({java_string_literal(default)});'
+    assert isinstance(default, tuple), default
+    return f'private static final PyTuple {field_name} = {JavaPyConstant(default).emit_java(emit_ctx)};'
 
 def emit_arg_binding(writer: IndentedWriter, shape: SignatureShape, positional_name: str,
-                     kw_name: str, default_fields: dict[str, str], kw_overflow_args_length: str,
-                     noarg_name: str) -> list[str]:
+                     kw_name: str, default_fields: dict[object, str], kw_overflow_args_length: str,
+                     noarg_name: str, emit_ctx: EmitContext) -> list[str]:
     if not shape.posonly_params and not shape.poskw_params and not shape.kwonly_params and shape.vararg_param is not None:
         writer.write('if ((kwargs != null) && kwargs.boolValue()) {')
         writer.write(f'throw Runtime.raiseNoKwArgs("{noarg_name}");')
@@ -1735,7 +1768,7 @@ def emit_arg_binding(writer: IndentedWriter, shape: SignatureShape, positional_n
             for i in range(min_args, max_args):
                 writer.write(
                     f'PyObject arg{i} = (argsLength >= {i+1}) ? args[{i}] : '
-                    f'{emit_default_expr(shape.posonly_params[i].default, default_fields)};'
+                    f'{emit_default_expr(shape.posonly_params[i].default, default_fields, emit_ctx)};'
                 )
                 bind_args.append(f'arg{i}')
         return bind_args
@@ -1852,7 +1885,7 @@ def emit_arg_binding(writer: IndentedWriter, shape: SignatureShape, positional_n
     for param in shape.params:
         if param.default is not inspect.Parameter.empty:
             writer.write(f'if ({param.name} == null) {{')
-            writer.write(f'{param.name} = {emit_default_expr(param.default, default_fields)};')
+            writer.write(f'{param.name} = {emit_default_expr(param.default, default_fields, emit_ctx)};')
             writer.write('}')
         bind_args.append(param.name)
     return bind_args
@@ -1873,6 +1906,7 @@ def gen_code(spec_path: str, java_path: str) -> None:
     with open(spec_path) as f:
         spec = json.load(f)
 
+    emit_ctx = EmitContext()
     with open(java_path, 'w') as f:
         writer = IndentedWriter(f, 0)
         for (name, attrs) in spec.items():
@@ -1987,7 +2021,7 @@ def gen_code(spec_path: str, java_path: str) -> None:
                     if kwarg_params is not None:
                         default_fields = collect_default_fields(kwarg_params.params, f'{method_class_name}_default')
                         for (default, field_name) in default_fields.items():
-                            writer.write(f'private static final PyString {field_name} = new PyString({java_string_literal(default)});')
+                            writer.write(emit_default_field_decl(default, field_name, emit_ctx))
                     writer.write(f'{method_class_name}({ctor_arg}) {{ super({super_arg}); }}')
                     writer.write(f'@Override public String methodName() {{ return "{method_name}"; }}')
                     writer.write('@Override public PyObject call(PyObject[] args, PyDict kwargs) {')
@@ -2000,6 +2034,7 @@ def gen_code(spec_path: str, java_path: str) -> None:
                             default_fields,
                             'argsLength',
                             f'{py_name}.{method_name}',
+                            emit_ctx,
                         )
                     if kind == 'classmethod':
                         bind_args = ['self'] + bind_args
@@ -2019,7 +2054,7 @@ def gen_code(spec_path: str, java_path: str) -> None:
             if kwarg_params is not None:
                 default_fields = collect_default_fields(kwarg_params.params, f'PyBuiltinFunction_{func_name}_default')
                 for (default, field_name) in default_fields.items():
-                    writer.write(f'private static final PyString {field_name} = new PyString({java_string_literal(default)});')
+                    writer.write(emit_default_field_decl(default, field_name, emit_ctx))
             writer.write(f'public static final PyBuiltinFunction_{func_name} singleton = new PyBuiltinFunction_{func_name}();')
             writer.write('')
             writer.write(f'private PyBuiltinFunction_{func_name}() {{ super("{func_name}"); }}')
@@ -2035,6 +2070,7 @@ def gen_code(spec_path: str, java_path: str) -> None:
                     default_fields,
                     kw_overflow_args_length,
                     func_name,
+                    emit_ctx,
                 )
             writer.write(f'return PyBuiltinFunctionsImpl.pyfunc_{func_name}({", ".join(bind_args)});')
             writer.write('}')
