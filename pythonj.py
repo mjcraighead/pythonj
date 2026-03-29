@@ -1461,15 +1461,7 @@ KWARG_BINDER_METHODS = {
 }
 KWARG_BINDER_BUILTINS = {'sorted', 'sum'}
 
-def infer_args(target: object, implicit_name: Optional[str]) -> Optional[list[object | str]]:
-    try:
-        params = list(inspect.signature(target).parameters.values())
-    except (TypeError, ValueError):
-        return None
-    if implicit_name is not None:
-        if not params or params[0].name != implicit_name or params[0].kind is not inspect.Parameter.POSITIONAL_ONLY:
-            return None
-        params = params[1:]
+def infer_args_from_params(params: list[inspect.Parameter]) -> Optional[list[object | str]]:
     args = []
     seen_optional = False
     for param in params:
@@ -1478,17 +1470,12 @@ def infer_args(target: object, implicit_name: Optional[str]) -> Optional[list[ob
                 if seen_optional:
                     return None
                 args.append(REQUIRED)
-            elif param.default is None:
-                seen_optional = True
-                args.append('PyNone.singleton')
-            elif param.default == '':
-                seen_optional = True
-                args.append('PyString.empty_singleton')
-            elif type(param.default) is int and param.default == -1:
-                seen_optional = True
-                args.append('PyInt.singleton_neg1')
             else:
-                return None
+                default_expr = infer_default_expr(param.default)
+                if default_expr is None:
+                    return None
+                seen_optional = True
+                args.append(default_expr)
         elif param.kind is inspect.Parameter.VAR_POSITIONAL:
             if param is not params[-1]:
                 return None
@@ -1497,30 +1484,21 @@ def infer_args(target: object, implicit_name: Optional[str]) -> Optional[list[ob
             return None
     return args
 
+def infer_args(target: object, implicit_name: Optional[str]) -> Optional[list[object | str]]:
+    params = get_signature_params(target, implicit_name)
+    if params is None:
+        return None
+    return infer_args_from_params(params)
+
 def infer_method_args(name: str, method_name: str) -> Optional[list[object | str]]:
     if name in METHOD_ARG_OVERRIDES and method_name in METHOD_ARG_OVERRIDES[name]:
         return METHOD_ARG_OVERRIDES[name][method_name]
-    obj = get_runtime_obj(name)
-    desc = obj.__dict__.get(method_name)
-    if desc is None:
-        return None
-    desc_type = type(desc)
-    if desc_type is types.MethodDescriptorType:
-        return infer_args(desc, 'self')
-    elif desc_type is types.ClassMethodDescriptorType:
-        return infer_args(desc, 'type')
-    elif desc_type is staticmethod:
-        return infer_args(getattr(obj, method_name), None)
-    else:
-        return None
+    return get_method_data(name, method_name, infer_args)
 
 def infer_builtin_function_args(name: str) -> Optional[list[object | str]]:
     if name in BUILTIN_FUNCTION_ARG_OVERRIDES:
         return BUILTIN_FUNCTION_ARG_OVERRIDES[name]
-    desc = builtins.__dict__.get(name)
-    if type(desc) is not types.BuiltinFunctionType:
-        return None
-    return infer_args(desc, None)
+    return get_builtin_function_data(name, infer_args)
 
 def get_signature_params(target: object, implicit_name: Optional[str]) -> Optional[list[inspect.Parameter]]:
     try:
@@ -1533,30 +1511,36 @@ def get_signature_params(target: object, implicit_name: Optional[str]) -> Option
         params = params[1:]
     return params
 
-def get_kwarg_method_params(name: str, method_name: str) -> Optional[list[inspect.Parameter]]:
-    if name not in KWARG_BINDER_METHODS or method_name not in KWARG_BINDER_METHODS[name]:
-        return None
+def get_method_data(name: str, method_name: str, fn) -> Optional[object]:
     obj = get_runtime_obj(name)
     desc = obj.__dict__.get(method_name)
     if desc is None:
         return None
     desc_type = type(desc)
     if desc_type is types.MethodDescriptorType:
-        return get_signature_params(desc, 'self')
+        return fn(desc, 'self')
     elif desc_type is types.ClassMethodDescriptorType:
-        return get_signature_params(desc, 'type')
+        return fn(desc, 'type')
     elif desc_type is staticmethod:
-        return get_signature_params(getattr(obj, method_name), None)
+        return fn(getattr(obj, method_name), None)
     else:
         return None
+
+def get_builtin_function_data(name: str, fn) -> Optional[object]:
+    desc = builtins.__dict__.get(name)
+    if type(desc) is not types.BuiltinFunctionType:
+        return None
+    return fn(desc, None)
+
+def get_kwarg_method_params(name: str, method_name: str) -> Optional[list[inspect.Parameter]]:
+    if name not in KWARG_BINDER_METHODS or method_name not in KWARG_BINDER_METHODS[name]:
+        return None
+    return get_method_data(name, method_name, get_signature_params)
 
 def get_kwarg_builtin_function_params(name: str) -> Optional[list[inspect.Parameter]]:
     if name not in KWARG_BINDER_BUILTINS:
         return None
-    desc = builtins.__dict__.get(name)
-    if type(desc) is not types.BuiltinFunctionType:
-        return None
-    return get_signature_params(desc, None)
+    return get_builtin_function_data(name, get_signature_params)
 
 def collect_default_fields(params: list[inspect.Parameter], field_prefix: str) -> dict[str, str]:
     fields = {}
@@ -1567,10 +1551,8 @@ def collect_default_fields(params: list[inspect.Parameter], field_prefix: str) -
                 fields[default] = f'{field_prefix}_{len(fields)}'
     return fields
 
-def emit_default_expr(default: object, default_fields: dict[str, str]) -> str:
-    if default is inspect.Parameter.empty:
-        return 'null'
-    elif default is None:
+def infer_default_expr(default: object) -> Optional[str]:
+    if default is None:
         return 'PyNone.singleton'
     elif default is False or default is True:
         return f'PyBool.{str(default).lower()}_singleton'
@@ -1582,9 +1564,16 @@ def emit_default_expr(default: object, default_fields: dict[str, str]) -> str:
         elif default == 1:
             return 'PyInt.singleton_1'
         else:
-            assert False, default
+            return None
     elif default == '':
         return 'PyString.empty_singleton'
+    else:
+        return None
+
+def emit_default_expr(default: object, default_fields: dict[str, str]) -> str:
+    inferred = infer_default_expr(default)
+    if inferred is not None:
+        return inferred
     elif type(default) is str:
         return default_fields[default]
     else:
