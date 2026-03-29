@@ -33,6 +33,7 @@ BUILTIN_TYPES = {
     'bytes': 'PyBytes',
     'dict': 'PyDict',
     'enumerate': 'PyEnumerate',
+    'float': 'PyFloat',
     'int': 'PyInt',
     'list': 'PyList',
     'object': 'PyObject',
@@ -60,6 +61,7 @@ RUNTIME_JAVA_FILES = (
     'PyEnumerate.java',
     'PyExceptions.java',
     'PyFile.java',
+    'PyFloat.java',
     'PyInt.java',
     'PyList.java',
     'PyNone.java',
@@ -219,7 +221,7 @@ class JavaAssignExpr(JavaExpr):
 
 @dataclass(slots=True)
 class JavaPyConstant(JavaExpr):
-    value: None | bool | int | str | bytes
+    value: None | bool | int | float | str | bytes
     def emit_java(self, ctx: EmitContext) -> str:
         if self.value is None:
             return 'PyNone.singleton'
@@ -239,6 +241,8 @@ class JavaPyConstant(JavaExpr):
             if self.value not in ctx.all_strings:
                 ctx.all_strings[self.value] = len(ctx.all_strings)
             return f'str_singleton_{ctx.all_strings[self.value]}'
+        elif isinstance(self.value, float):
+            return f'new PyFloat({self.value!r})'
         else:
             assert isinstance(self.value, bytes), self.value
             if self.value not in ctx.all_bytes:
@@ -733,7 +737,7 @@ class PythonjVisitor(ast.NodeVisitor):
         return JavaCondOp(bool_value(self.visit(node.test)), self.visit(node.body), self.visit(node.orelse))
 
     def visit_Constant(self, node) -> JavaExpr:
-        if isinstance(node.value, (types.NoneType, bool, int, str, bytes)):
+        if isinstance(node.value, (types.NoneType, bool, int, float, str, bytes)):
             return JavaPyConstant(node.value)
         else:
             self.error(node.lineno, f'literal {node.value!r} of type {type(node.value).__name__!r} is unsupported')
@@ -1078,9 +1082,9 @@ class PythonjVisitor(ast.NodeVisitor):
             self.error(lineno, 'kw-only argument defaults are unsupported')
         if args.kwarg:
             self.error(lineno, '**kwargs are unsupported')
-        defaults: list[None | bool | int | str | bytes] = []
+        defaults: list[None | bool | int | float | str | bytes] = []
         for default in args.defaults:
-            if isinstance(default, ast.Constant) and isinstance(default.value, (types.NoneType, bool, int, str, bytes)):
+            if isinstance(default, ast.Constant) and isinstance(default.value, (types.NoneType, bool, int, float, str, bytes)):
                 defaults.append(default.value)
             else:
                 self.error(lineno, 'only constant argument defaults are supported')
@@ -1362,7 +1366,7 @@ def get_runtime_obj(name: str) -> object:
 
 def gen_spec(spec_path: str) -> None:
     spec = {}
-    for name in ['bool', 'bytearray', 'bytes', 'dict', 'enumerate', 'int', 'list', 'object', 'range',
+    for name in ['bool', 'bytearray', 'bytes', 'dict', 'enumerate', 'float', 'int', 'list', 'object', 'range',
                  'reversed', 'set', 'slice', 'staticmethod', 'str', 'tuple', 'type', 'zip',
                  'types.BuiltinFunctionType', 'types.ClassMethodDescriptorType',
                  'types.FunctionType', 'types.GetSetDescriptorType', 'types.MemberDescriptorType',
@@ -1409,6 +1413,7 @@ UNIMPLEMENTED_METHODS = {
         'rindex', 'rjust', 'rpartition', 'rsplit', 'rstrip', 'split', 'splitlines', 'startswith', 'strip',
         'translate', 'zfill',
     },
+    'float': {'conjugate', 'as_integer_ratio', 'hex', 'is_integer'},
     'str': {
         'center', 'count', 'encode', 'endswith', 'expandtabs', 'format', 'format_map', 'index', 'ljust',
         'lstrip', 'partition', 'removeprefix', 'removesuffix', 'replace', 'rfind', 'rindex', 'rjust',
