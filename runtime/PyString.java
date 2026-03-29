@@ -366,6 +366,7 @@ public final class PyString extends PyObject {
     public PyObject pymethod_count(PyObject sub, PyObject start, PyObject end) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_encode(PyObject encoding, PyObject errors) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_expandtabs(PyObject tabsize) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_format(PyObject[] args, PyDict kwargs) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_format_map(PyObject mapping) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_index(PyObject sub, PyObject start, PyObject end) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_isalnum() { throw new UnsupportedOperationException(); }

@@ -351,19 +351,40 @@ final class PyBuiltinFunctionsImpl {
         }
         return new PyInt(arg.value.charAt(0));
     }
-    static PyNone pyfunc_print(PyObject[] args, PyDict kwargs) {
-        if ((kwargs != null) && kwargs.boolValue()) {
-            throw new IllegalArgumentException("print() does not accept kwargs");
+    static PyNone pyfunc_print(PyObject[] args, PyObject sep, PyObject end, PyObject file, PyObject flush) {
+        if (file != PyNone.singleton) {
+            throw new UnsupportedOperationException("print() file= is not supported");
+        }
+        if (flush.boolValue()) {
+            throw new UnsupportedOperationException("print() flush= is not supported");
+        }
+        String sepStr = " ";
+        if (sep != PyNone.singleton) {
+            if (!(sep instanceof PyString sepString)) {
+                throw PyTypeError.raise("sep must be None or a string, not " + sep.type().name());
+            }
+            sepStr = sepString.value;
+        }
+        String endStr = "\n";
+        if (end != PyNone.singleton) {
+            if (!(end instanceof PyString endString)) {
+                throw PyTypeError.raise("end must be None or a string, not " + end.type().name());
+            }
+            endStr = endString.value;
         }
         boolean first = true;
         for (var arg: args) {
             if (!first) {
-                System.out.print(" ");
+                System.out.print(sepStr);
             }
             first = false;
             System.out.print(arg.str());
         }
-        System.out.println();
+        if (endStr.equals("\n")) { // XXX hack for Windows mismatches
+            System.out.println();
+        } else {
+            System.out.print(endStr);
+        }
         return PyNone.singleton;
     }
     static PyList pyfunc_sorted(PyObject iterable, PyObject key, PyObject reverse) {

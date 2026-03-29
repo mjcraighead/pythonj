@@ -1733,12 +1733,11 @@ def get_class_functions(node: ast.Module, class_name: str) -> dict[str, ast.Func
     return {x.name: x for x in classes[class_name].body if isinstance(x, ast.FunctionDef)}
 
 UNIMPLEMENTED_METHODS = {
-    'str': {'format'},
     'type': {'mro'},
 }
 
 NULL = object()
-RAW_ARGS_KWARGS_BUILTINS = {'max', 'min', 'print'}
+RAW_ARGS_KWARGS_BUILTINS = {'max', 'min'}
 
 PYTHON_IMPLS = {
     'builtins': {'abs', 'all', 'any', 'bin', 'delattr', 'format', 'getattr', 'hash', 'hasattr', 'isinstance', 'issubclass', 'len', 'next', 'oct', 'repr', 'setattr', 'sum'},
@@ -1823,6 +1822,7 @@ class SignatureShape:
     poskw_params: list[inspect.Parameter]
     kwonly_params: list[inspect.Parameter]
     vararg_param: Optional[inspect.Parameter]
+    varkw_param: Optional[inspect.Parameter]
     max_total: int
     max_positional: int
     missing_style: Optional[str]
@@ -1833,6 +1833,8 @@ def analyze_params(params: list[inspect.Parameter]) -> SignatureShape:
     kwonly_params = [param for param in params if param.kind is inspect.Parameter.KEYWORD_ONLY]
     vararg_params = [param for param in params if param.kind is inspect.Parameter.VAR_POSITIONAL]
     vararg_param = vararg_params[0] if vararg_params else None
+    varkw_params = [param for param in params if param.kind is inspect.Parameter.VAR_KEYWORD]
+    varkw_param = varkw_params[0] if varkw_params else None
     max_total = len(params)
     max_positional = len(posonly_params) + len(poskw_params)
     if poskw_params and poskw_params[0].default is inspect.Parameter.empty:
@@ -1844,7 +1846,7 @@ def analyze_params(params: list[inspect.Parameter]) -> SignatureShape:
             missing_style = 'exact_args'
     else:
         missing_style = None
-    return SignatureShape(params, posonly_params, poskw_params, kwonly_params, vararg_param, max_total, max_positional, missing_style)
+    return SignatureShape(params, posonly_params, poskw_params, kwonly_params, vararg_param, varkw_param, max_total, max_positional, missing_style)
 
 def get_method_params(spec: dict[str, object], name: str, method_name: str) -> Optional[list[inspect.Parameter]]:
     attrs = cast(dict[str, dict[str, object]], cast(dict[str, object], spec[name])['attrs'])
@@ -1952,11 +1954,49 @@ def emit_default_expr(default: object, pool: ConstantPool) -> str:
 def emit_arg_binding(writer: IndentedWriter, shape: SignatureShape, positional_name: str,
                      kw_name: str, kw_overflow_args_length: str,
                      noarg_name: str, pool: ConstantPool) -> list[str]:
+    if not shape.posonly_params and not shape.poskw_params and not shape.kwonly_params and \
+        shape.vararg_param is not None and shape.varkw_param is not None:
+        return ['args', 'kwargs']
     if not shape.posonly_params and not shape.poskw_params and not shape.kwonly_params and shape.vararg_param is not None:
         writer.write('if ((kwargs != null) && kwargs.boolValue()) {')
         writer.write(f'throw Runtime.raiseNoKwArgs("{noarg_name}");')
         writer.write('}')
         return ['args']
+    if not shape.posonly_params and not shape.poskw_params and shape.kwonly_params and \
+        shape.vararg_param is not None and shape.varkw_param is None:
+        writer.write('int argsLength = args.length;')
+        java_param_names = {param.name: java_local_name(param.name) for param in shape.kwonly_params}
+        for param in shape.kwonly_params:
+            writer.write(f'PyObject {java_param_names[param.name]} = null;')
+        writer.write('if ((kwargs != null) && kwargs.boolValue()) {')
+        writer.write('long kwargsLen = kwargs.len();')
+        writer.write(f'if (kwargsLen > {len(shape.kwonly_params)}) {{')
+        writer.write(f'throw Runtime.raiseAtMostKwArgs("{kw_name}", {len(shape.kwonly_params)}, {kw_overflow_args_length}, kwargsLen);')
+        writer.write('}')
+        writer.write('String unknownKw = null;')
+        writer.write('for (var x: kwargs.items.entrySet()) {')
+        writer.write('PyString kw = (PyString)x.getKey(); // PyString validated at call site')
+        for (i, param) in enumerate(shape.kwonly_params):
+            prefix = 'if' if i == 0 else 'else if'
+            writer.write(f'{prefix} (kw.value.equals("{param.name}")) {{')
+            writer.write(f'{java_param_names[param.name]} = x.getValue();')
+            writer.write('}')
+        writer.write('else if (unknownKw == null) {')
+        writer.write('unknownKw = kw.value;')
+        writer.write('}')
+        writer.write('}')
+        writer.write('if (unknownKw != null) {')
+        writer.write(f'throw Runtime.raiseUnexpectedKwArg("{kw_name}", unknownKw);')
+        writer.write('}')
+        writer.write('}')
+        bind_args = ['args']
+        for param in shape.kwonly_params:
+            if param.default is not inspect.Parameter.empty:
+                writer.write(f'if ({java_param_names[param.name]} == null) {{')
+                writer.write(f'{java_param_names[param.name]} = {emit_default_expr(param.default, pool)};')
+                writer.write('}')
+            bind_args.append(java_param_names[param.name])
+        return bind_args
     writer.write('int argsLength = args.length;')
     if shape.params and not shape.poskw_params and not shape.kwonly_params and shape.vararg_param is None:
         writer.write('if ((kwargs != null) && kwargs.boolValue()) {')
