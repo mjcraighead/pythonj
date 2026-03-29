@@ -20,3 +20,11 @@ def hasattr(obj, name):
     except AttributeError:
         return False
     return True
+
+def next(iterator, default):
+    ret = __pythonj_next__(iterator)
+    if ret is __pythonj_null__:
+        if default is not __pythonj_null__:
+            return default
+        raise StopIteration()
+    return ret

@@ -213,16 +213,6 @@ final class PyBuiltinFunctionsImpl {
     static PyObject pyfunc_min(PyObject[] args, PyDict kwargs) {
         return minMaxImpl(args, kwargs, "min", false);
     }
-    static PyObject pyfunc_next(PyObject obj, PyObject default_obj) {
-        PyObject ret = obj.next();
-        if (ret == null) {
-            if (default_obj != null) {
-                return default_obj;
-            }
-            throw new PyRaise(new PyStopIteration());
-        }
-        return ret;
-    }
     static PyObject pyfunc_open(PyObject file, PyObject mode, PyObject buffering, PyObject encoding,
                                 PyObject errors, PyObject newline, PyObject closefd, PyObject opener) {
         if (!(file instanceof PyString fileStr)) {

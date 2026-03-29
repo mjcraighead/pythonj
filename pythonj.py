@@ -1734,7 +1734,7 @@ UNIMPLEMENTED_METHODS = {
 NULL = object()
 RAW_ARGS_KWARGS_BUILTINS = {'max', 'min', 'print'}
 
-PYTHON_BUILTIN_IMPLS = {'all', 'any', 'hasattr'}
+PYTHON_BUILTIN_IMPLS = {'all', 'any', 'hasattr', 'next'}
 
 def make_param(name: str, default: object = inspect.Parameter.empty) -> inspect.Parameter:
     return inspect.Parameter(name, inspect.Parameter.POSITIONAL_ONLY, default=default)
