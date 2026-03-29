@@ -5,7 +5,6 @@
 from abc import ABC, abstractmethod
 import argparse
 import ast
-import builtins
 from contextlib import contextmanager
 from dataclasses import dataclass
 import difflib
@@ -22,41 +21,6 @@ import types
 from typing import Iterator, Optional, TextIO, cast
 
 import extract_spec
-
-BUILTIN_FUNCTIONS = {
-    'abs', 'all', 'any', 'ascii', 'bin', 'chr', 'delattr', 'dir', 'format', 'getattr', 'hasattr', 'hash', 'hex',
-    'isinstance', 'issubclass', 'iter', 'len', 'max', 'min', 'next', 'open', 'ord', 'print', 'repr',
-    'setattr', 'sorted', 'sum', 'oct',
-}
-BUILTIN_MODULES = {
-    '_json': 'PyJsonModule',
-    'math': 'PyMathModule',
-    'zlib': 'PyZlibModule',
-}
-BUILTIN_TYPES = {
-    'bool': 'PyBool',
-    'bytearray': 'PyByteArray',
-    'bytes': 'PyBytes',
-    'dict': 'PyDict',
-    'enumerate': 'PyEnumerate',
-    'float': 'PyFloat',
-    'int': 'PyInt',
-    'list': 'PyList',
-    'object': 'PyObject',
-    'range': 'PyRange',
-    'reversed': 'PyReversed',
-    'set': 'PySet',
-    'slice': 'PySlice',
-    'staticmethod': 'PyStaticMethod',
-    'str': 'PyString',
-    'tuple': 'PyTuple',
-    'type': 'PyType',
-    'zip': 'PyZip',
-}
-EXCEPTION_TYPES = {
-    'ArithmeticError', 'AssertionError', 'AttributeError', 'BaseException', 'Exception', 'IndexError',
-    'KeyError', 'LookupError', 'OverflowError', 'StopIteration', 'TypeError', 'ValueError', 'ZeroDivisionError',
-}
 
 # Keep this explicit and narrow; widen it only for builtin types we have actually
 # exercised and are comfortable lowering directly to JVM instanceof checks.
@@ -739,11 +703,11 @@ class PythonjVisitor(ast.NodeVisitor):
             if self.scope.locals_are_fields:
                 return JavaField(JavaIdentifier('this'), f'pylocal_{name}')
             return JavaIdentifier(f'pylocal_{name}')
-        elif name in BUILTIN_TYPES:
-            return JavaField(JavaIdentifier(f'{BUILTIN_TYPES[name]}Type'), 'singleton')
-        elif name in EXCEPTION_TYPES:
+        elif name in extract_spec.BUILTIN_TYPES:
+            return JavaField(JavaIdentifier(f'{extract_spec.BUILTIN_TYPES[name]}Type'), 'singleton')
+        elif name in extract_spec.EXCEPTION_TYPES:
             return JavaField(JavaIdentifier(f'Py{name}Type'), 'singleton')
-        elif name in BUILTIN_FUNCTIONS:
+        elif name in extract_spec.BUILTIN_FUNCTIONS:
             return JavaField(JavaIdentifier(f'PyBuiltinFunction_{name}'), 'singleton')
         else:
             return JavaIdentifier(f'pyglobal_{name}')
@@ -983,9 +947,9 @@ class PythonjVisitor(ast.NodeVisitor):
                     assert len(node.args) == 2 and not node.keywords, node.args
                     if isinstance(node.args[1], ast.Name) and node.args[1].id in ISINSTANCE_SINGLE_FASTPATH_BUILTIN_TYPES:
                         builtin_type = node.args[1].id
-                        assert builtin_type in BUILTIN_TYPES, builtin_type
+                        assert builtin_type in extract_spec.BUILTIN_TYPES, builtin_type
                         return JavaMethodCall(JavaIdentifier('PyBool'), 'create', [
-                            JavaBinaryOp('instanceof', self.visit(node.args[0]), JavaIdentifier(BUILTIN_TYPES[builtin_type]))
+                            JavaBinaryOp('instanceof', self.visit(node.args[0]), JavaIdentifier(extract_spec.BUILTIN_TYPES[builtin_type]))
                         ])
                     return JavaMethodCall(JavaIdentifier('Runtime'), 'pythonjIsInstanceSingle', [self.visit(node.args[0]), self.visit(node.args[1])])
                 case '__pythonj_issubclass_single__':
@@ -1040,14 +1004,14 @@ class PythonjVisitor(ast.NodeVisitor):
 
     def visit_Import(self, node) -> None:
         for alias in node.names:
-            if alias.name not in BUILTIN_MODULES:
+            if alias.name not in extract_spec.BUILTIN_MODULES:
                 self.error(node.lineno, f"only builtin-module imports are supported (got import {alias.name!r})")
                 continue
             if '.' in alias.name:
                 self.error(node.lineno, f"package imports are unsupported (got import {alias.name!r})")
                 continue
             bind_name = alias.asname if alias.asname is not None else alias.name
-            self.code.extend(self.emit_bind(ast.Name(id=bind_name), JavaField(JavaIdentifier(BUILTIN_MODULES[alias.name]), 'singleton')))
+            self.code.extend(self.emit_bind(ast.Name(id=bind_name), JavaField(JavaIdentifier(extract_spec.BUILTIN_MODULES[alias.name]), 'singleton')))
 
     def visit_ImportFrom(self, node) -> None:
         self.error(node.lineno, 'from ... import ... is unsupported')
@@ -1256,7 +1220,7 @@ class PythonjVisitor(ast.NodeVisitor):
             if handler.type is not None:
                 if not isinstance(handler.type, ast.Name):
                     self.error(node.lineno, "only 'except SomeException [as e]:' with a named built-in exception is supported")
-                elif handler.type.id not in EXCEPTION_TYPES:
+                elif handler.type.id not in extract_spec.EXCEPTION_TYPES:
                     self.error(node.lineno, "only built-in exception names are supported in 'except' clauses")
 
         try_body = self.visit_block(node.body)
@@ -1821,71 +1785,48 @@ def is_constant_default(default: object) -> bool:
         return all(is_constant_default(x) for x in default)
     return False
 
-SYNTHETIC_PARAMS = {
-    'builtins': {
-        'dir': [make_param('object', NULL)],
-        'getattr': [make_param('object'), make_param('name'), make_param('default', NULL)],
-        'iter': [make_param('iterable'), make_param('sentinel', NULL)],
-        'next': [make_param('iterator'), make_param('default', NULL)],
-    },
-    'dict': {
-        'pop': [make_param('key'), make_param('defaultValue', NULL)],
-    },
-    'list': {
-        'index': [make_param('value'), make_param('start', NULL), make_param('stop', NULL)],
-    },
-    'str': {
-        'endswith': [make_param('suffix'), make_param('start', None), make_param('end', None)],
-        'find': [make_param('sub'), make_param('start', None), make_param('end', None)],
-        'maketrans': [make_param('x'), make_param('y', NULL), make_param('z', NULL)],
-        'startswith': [make_param('prefix'), make_param('start', None), make_param('end', None)],
-    },
-    '_io.TextIOWrapper': {
-        'read': [make_param('size', -1)],
-    },
-    'tuple': {
-        'index': [make_param('value'), make_param('start', NULL), make_param('stop', NULL)],
-    },
-}
-
-def get_signature_params(target: object, implicit_name: Optional[str]) -> Optional[list[inspect.Parameter]]:
-    try:
-        params = list(inspect.signature(target).parameters.values())
-    except (TypeError, ValueError):
+def decode_default(spec: dict[str, object]) -> object:
+    kind = spec['kind']
+    if kind == '__pythonj_null__':
+        return NULL
+    if kind == 'none':
         return None
-    if implicit_name is not None:
-        if not params or params[0].name != implicit_name or params[0].kind is not inspect.Parameter.POSITIONAL_ONLY:
-            return None
-        params = params[1:]
+    if kind in {'bool', 'int', 'float', 'str'}:
+        return spec['value']
+    if kind == 'bytes':
+        return cast(str, spec['value']).encode('latin1')
+    if kind == 'tuple':
+        return tuple(decode_default(cast(dict[str, object], x)) for x in cast(list[object], spec['items']))
+    assert False, spec
+
+def decode_param_kind(kind: str) -> inspect._ParameterKind:
+    if kind == 'posonly':
+        return inspect.Parameter.POSITIONAL_ONLY
+    if kind == 'poskw':
+        return inspect.Parameter.POSITIONAL_OR_KEYWORD
+    if kind == 'kwonly':
+        return inspect.Parameter.KEYWORD_ONLY
+    if kind == 'vararg':
+        return inspect.Parameter.VAR_POSITIONAL
+    if kind == 'varkw':
+        return inspect.Parameter.VAR_KEYWORD
+    assert False, kind
+
+def decode_signature(spec: Optional[dict[str, object]]) -> Optional[list[inspect.Parameter]]:
+    if spec is None:
+        return None
+    params = []
+    for raw_param in cast(list[object], spec['params']):
+        param = cast(dict[str, object], raw_param)
+        default = inspect.Parameter.empty
+        if 'default' in param:
+            default = decode_default(cast(dict[str, object], param['default']))
+        params.append(inspect.Parameter(
+            cast(str, param['name']),
+            decode_param_kind(cast(str, param['kind'])),
+            default=default,
+        ))
     return params
-
-def get_method_params(name: str, method_name: str) -> Optional[list[inspect.Parameter]]:
-    synthetic = SYNTHETIC_PARAMS.get(name, {}).get(method_name)
-    if synthetic is not None:
-        return synthetic
-    obj = extract_spec.get_runtime_obj(name)
-    desc = obj.__dict__.get(method_name)
-    if desc is None:
-        return None
-    desc_type = type(desc)
-    if desc_type is types.MethodDescriptorType:
-        params = get_signature_params(desc, 'self')
-    elif desc_type is types.ClassMethodDescriptorType:
-        params = get_signature_params(desc, 'type')
-    elif desc_type is staticmethod:
-        params = get_signature_params(getattr(obj, method_name), None)
-    else:
-        params = None
-    return params
-
-def get_builtin_function_params(name: str) -> Optional[list[inspect.Parameter]]:
-    desc = builtins.__dict__.get(name)
-    if type(desc) is not types.BuiltinFunctionType:
-        return None
-    params = get_signature_params(desc, None)
-    if params is not None:
-        return params
-    return SYNTHETIC_PARAMS['builtins'].get(name)
 
 @dataclass(slots=True)
 class SignatureShape:
@@ -1916,6 +1857,14 @@ def analyze_params(params: list[inspect.Parameter]) -> SignatureShape:
     else:
         missing_style = None
     return SignatureShape(params, posonly_params, poskw_params, kwonly_params, vararg_param, max_total, max_positional, missing_style)
+
+def get_method_params(spec: dict[str, object], name: str, method_name: str) -> Optional[list[inspect.Parameter]]:
+    attrs = cast(dict[str, dict[str, object]], cast(dict[str, object], spec[name])['attrs'])
+    return decode_signature(cast(Optional[dict[str, object]], attrs[method_name].get('signature')))
+
+def get_builtin_function_params(spec: dict[str, object], name: str) -> Optional[list[inspect.Parameter]]:
+    attrs = cast(dict[str, dict[str, object]], cast(dict[str, object], spec['builtins'])['attrs'])
+    return decode_signature(cast(Optional[dict[str, object]], attrs[name].get('signature')))
 
 def emit_python_function_static(visitor: PythonjVisitor, func_name: str, arg_names: list[str], body: list[JavaStatement]) -> list[str]:
     func_code = [
@@ -2173,10 +2122,10 @@ def get_java_name(name: str) -> str:
         return 'PyBuiltinFunctionOrMethod' # weird shared type
     elif name.startswith('types.') and name.endswith('Type'):
         return f"Py{name[:-4].split('.', 1)[1]}" # types.FooType -> PyFoo + PyFooType
-    elif name in EXCEPTION_TYPES:
+    elif name in extract_spec.EXCEPTION_TYPES:
         return f'Py{name}'
     else:
-        return BUILTIN_TYPES[name]
+        return extract_spec.BUILTIN_TYPES[name]
 
 def gen_code(spec_path: str, java_path: str) -> None:
     with open(spec_path) as f:
@@ -2191,7 +2140,10 @@ def gen_code(spec_path: str, java_path: str) -> None:
         python_builtin_helper_methods: list[list[str]] = []
         python_method_helper_classes: list[list[str]] = []
         python_method_helper_methods: list[list[str]] = []
-        for (name, attrs) in spec.items():
+        for (name, obj_spec) in spec.items():
+            if obj_spec['kind'] != 'type':
+                continue
+            attrs = obj_spec['attrs']
             java_name = get_java_name(name)
             match name:
                 case 'types.BuiltinFunctionType': py_name = 'builtin_function_or_method'
@@ -2209,20 +2161,24 @@ def gen_code(spec_path: str, java_path: str) -> None:
                 if v['kind'] == 'string':
                     writer.write(f"private static final PyString pyattr_{k} = new PyString({java_string_literal(v['value'])});")
                 elif v['kind'] == 'member':
-                    doc = 'null' if v['doc'] is None else java_string_literal(v['doc'])
+                    doc_value = v.get('doc')
+                    doc = 'null' if doc_value is None else java_string_literal(doc_value)
                     writer.write(f"private static final PyMemberDescriptor pyattr_{k} = new PyMemberDescriptor(singleton, {java_string_literal(k)}, {java_name}::pymember_{k}, {doc});")
                 elif v['kind'] == 'getset':
-                    doc = 'null' if v['doc'] is None else java_string_literal(v['doc'])
+                    doc_value = v.get('doc')
+                    doc = 'null' if doc_value is None else java_string_literal(doc_value)
                     writer.write(f"private static final PyGetSetDescriptor pyattr_{k} = new PyGetSetDescriptor(singleton, {java_string_literal(k)}, {java_name}::pygetset_{k}, {doc});")
                 elif v['kind'] == 'method':
-                    doc = 'null' if v['doc'] is None else java_string_literal(v['doc'])
+                    doc_value = v.get('doc')
+                    doc = 'null' if doc_value is None else java_string_literal(doc_value)
                     if name in UNIMPLEMENTED_METHODS and k in UNIMPLEMENTED_METHODS[name]:
                         constructor = f'obj -> new {java_name}MethodUnimplemented(obj, {java_string_literal(k)})'
                     else:
                         constructor = f'{java_name}Method_{k}::new'
                     writer.write(f"private static final PyMethodDescriptor pyattr_{k} = new PyMethodDescriptor(singleton, {java_string_literal(k)}, {constructor}, {doc});")
                 elif v['kind'] == 'classmethod':
-                    doc = 'null' if v['doc'] is None else java_string_literal(v['doc'])
+                    doc_value = v.get('doc')
+                    doc = 'null' if doc_value is None else java_string_literal(doc_value)
                     constructor = f'{java_name}ClassMethod_{k}::new'
                     writer.write(f"private static final PyClassMethodDescriptor pyattr_{k} = new PyClassMethodDescriptor(singleton, {java_string_literal(k)}, {constructor}, {doc});")
                 elif v['kind'] == 'staticmethod':
@@ -2265,7 +2221,7 @@ def gen_code(spec_path: str, java_path: str) -> None:
                     continue
                 if name in UNIMPLEMENTED_METHODS and method_name in UNIMPLEMENTED_METHODS[name]:
                     continue
-                params = get_method_params(name, method_name)
+                params = get_method_params(spec, name, method_name)
                 if params is None:
                     gen_methods[method_name] = None
                 else:
@@ -2380,8 +2336,8 @@ def gen_code(spec_path: str, java_path: str) -> None:
             writer.write('}')
             writer.write('')
 
-        for func_name in sorted(BUILTIN_FUNCTIONS):
-            params = get_builtin_function_params(func_name)
+        for func_name in sorted(extract_spec.BUILTIN_FUNCTIONS):
+            params = get_builtin_function_params(spec, func_name)
             if params is None or func_name in RAW_ARGS_KWARGS_BUILTINS:
                 kwarg_params = None
             else:

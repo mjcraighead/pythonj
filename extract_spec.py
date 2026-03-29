@@ -4,11 +4,27 @@
 
 import argparse
 import builtins
+import inspect
 import json
 import os
 import types
 import _io
 
+BUILTIN_FUNCTIONS = {
+    'abs', 'all', 'any', 'ascii', 'bin', 'chr', 'delattr', 'dir', 'format', 'getattr', 'hasattr', 'hash', 'hex',
+    'isinstance', 'issubclass', 'iter', 'len', 'max', 'min', 'next', 'open', 'ord', 'print', 'repr',
+    'setattr', 'sorted', 'sum', 'oct',
+}
+BUILTIN_MODULES = {
+    '_json': 'PyJsonModule',
+    'math': 'PyMathModule',
+    'zlib': 'PyZlibModule',
+}
+BUILTIN_MODULE_ATTRS = {
+    '_json': {'encode_basestring_ascii', 'scanstring'},
+    'math': {'copysign', 'isfinite', 'isinf', 'isnan'},
+    'zlib': {'compress', 'decompress', 'error'},
+}
 BUILTIN_TYPES = {
     'bool': 'PyBool',
     'bytearray': 'PyByteArray',
@@ -35,44 +51,271 @@ EXCEPTION_TYPES = {
     'KeyError', 'LookupError', 'OverflowError', 'StopIteration', 'TypeError', 'ValueError', 'ZeroDivisionError',
 }
 
+NULL = object()
+
+def make_param(name: str, default: object = inspect.Parameter.empty) -> inspect.Parameter:
+    return inspect.Parameter(name, inspect.Parameter.POSITIONAL_ONLY, default=default)
+
+SYNTHETIC_PARAMS = {
+    'builtins': {
+        'dir': [make_param('object', NULL)],
+        'getattr': [make_param('object'), make_param('name'), make_param('default', NULL)],
+        'iter': [make_param('iterable'), make_param('sentinel', NULL)],
+        'next': [make_param('iterator'), make_param('default', NULL)],
+    },
+    'dict': {
+        'pop': [make_param('key'), make_param('defaultValue', NULL)],
+    },
+    'list': {
+        'index': [make_param('value'), make_param('start', NULL), make_param('stop', NULL)],
+    },
+    'str': {
+        'endswith': [make_param('suffix'), make_param('start', None), make_param('end', None)],
+        'find': [make_param('sub'), make_param('start', None), make_param('end', None)],
+        'maketrans': [make_param('x'), make_param('y', NULL), make_param('z', NULL)],
+        'startswith': [make_param('prefix'), make_param('start', None), make_param('end', None)],
+    },
+    '_io.TextIOWrapper': {
+        'read': [make_param('size', -1)],
+    },
+    'tuple': {
+        'index': [make_param('value'), make_param('start', NULL), make_param('stop', NULL)],
+    },
+}
+
 def get_runtime_obj(name: str) -> object:
     if name.startswith('_io.'):
         return getattr(_io, name.split('.', 1)[1])
+    elif name in BUILTIN_MODULES:
+        return __import__(name)
     elif name.startswith('types.'):
         return getattr(types, name.split('.', 1)[1])
     else:
         return getattr(builtins, name)
 
+def get_signature_params(target: object, implicit_name: str | None) -> list[inspect.Parameter] | None:
+    try:
+        params = list(inspect.signature(target).parameters.values())
+    except (TypeError, ValueError):
+        return None
+    if implicit_name is not None:
+        if not params or params[0].name != implicit_name or params[0].kind is not inspect.Parameter.POSITIONAL_ONLY:
+            return None
+        params = params[1:]
+    return params
+
+def is_supported_default(default: object) -> bool:
+    if default is inspect.Parameter.empty:
+        return True
+    if default is NULL:
+        return True
+    if isinstance(default, (types.NoneType, bool, int, float, str, bytes)):
+        return True
+    if isinstance(default, tuple):
+        return all(is_supported_default(x) for x in default)
+    return False
+
+def encode_default(default: object) -> dict[str, object]:
+    if default is NULL:
+        return {'kind': '__pythonj_null__'}
+    if default is None:
+        return {'kind': 'none'}
+    if default is False or default is True:
+        return {'kind': 'bool', 'value': default}
+    if type(default) is int:
+        return {'kind': 'int', 'value': default}
+    if type(default) is float:
+        return {'kind': 'float', 'value': default}
+    if type(default) is str:
+        return {'kind': 'str', 'value': default}
+    if type(default) is bytes:
+        return {'kind': 'bytes', 'value': default.decode('latin1')}
+    if type(default) is tuple:
+        return {'kind': 'tuple', 'items': [encode_default(x) for x in default]}
+    assert False, default
+
+def encode_param_kind(kind: inspect._ParameterKind) -> str:
+    if kind is inspect.Parameter.POSITIONAL_ONLY:
+        return 'posonly'
+    if kind is inspect.Parameter.POSITIONAL_OR_KEYWORD:
+        return 'poskw'
+    if kind is inspect.Parameter.KEYWORD_ONLY:
+        return 'kwonly'
+    if kind is inspect.Parameter.VAR_POSITIONAL:
+        return 'vararg'
+    if kind is inspect.Parameter.VAR_KEYWORD:
+        return 'varkw'
+    assert False, kind
+
+def encode_signature(params: list[inspect.Parameter]) -> dict[str, object] | None:
+    out = []
+    for param in params:
+        if param.kind not in {
+            inspect.Parameter.POSITIONAL_ONLY,
+            inspect.Parameter.POSITIONAL_OR_KEYWORD,
+            inspect.Parameter.KEYWORD_ONLY,
+            inspect.Parameter.VAR_POSITIONAL,
+            inspect.Parameter.VAR_KEYWORD,
+        }:
+            return None
+        if not is_supported_default(param.default):
+            return None
+        encoded = {
+            'name': param.name,
+            'kind': encode_param_kind(param.kind),
+        }
+        if param.default is not inspect.Parameter.empty:
+            encoded['default'] = encode_default(param.default)
+        out.append(encoded)
+    return {'params': out}
+
+def get_method_signature(name: str, method_name: str) -> dict[str, object] | None:
+    synthetic = SYNTHETIC_PARAMS.get(name, {}).get(method_name)
+    if synthetic is not None:
+        return encode_signature(synthetic)
+    obj = get_runtime_obj(name)
+    desc = obj.__dict__.get(method_name)
+    if desc is None:
+        return None
+    desc_type = type(desc)
+    if desc_type is types.MethodDescriptorType:
+        params = get_signature_params(desc, 'self')
+    elif desc_type is types.ClassMethodDescriptorType:
+        params = get_signature_params(desc, 'type')
+    elif desc_type is staticmethod:
+        params = get_signature_params(getattr(obj, method_name), None)
+    else:
+        params = None
+    if params is None:
+        return None
+    return encode_signature(params)
+
+def get_builtin_function_signature(name: str) -> dict[str, object] | None:
+    synthetic = SYNTHETIC_PARAMS['builtins'].get(name)
+    if synthetic is not None:
+        return encode_signature(synthetic)
+    desc = builtins.__dict__.get(name)
+    if type(desc) is not types.BuiltinFunctionType:
+        return None
+    params = get_signature_params(desc, None)
+    if params is None:
+        return None
+    return encode_signature(params)
+
+def encode_attr(kind: str, doc: str | None = None, signature: dict[str, object] | None = None,
+                value: object | None = None, target: str | None = None) -> dict[str, object]:
+    out = {'kind': kind}
+    if doc is not None:
+        out['doc'] = doc
+    if signature is not None:
+        out['signature'] = signature
+    if value is not None:
+        out['value'] = value
+    if target is not None:
+        out['target'] = target
+    return out
+
+def build_type_entry(name: str) -> dict[str, object]:
+    obj = get_runtime_obj(name)
+    attrs = {}
+    for (k, v) in list(obj.__dict__.items()):
+        if k.startswith('__') and k not in {'__doc__'}:
+            continue
+        v_type = type(v)
+        if v_type is str:
+            attrs[k] = encode_attr('string', value=v)
+        elif v_type is types.MemberDescriptorType:
+            attrs[k] = encode_attr('member', doc=v.__doc__)
+        elif v_type is types.GetSetDescriptorType:
+            attrs[k] = encode_attr('getset', doc=v.__doc__)
+        elif v_type is types.MethodDescriptorType:
+            attrs[k] = encode_attr('method', doc=v.__doc__, signature=get_method_signature(name, k))
+        elif v_type is types.ClassMethodDescriptorType:
+            attrs[k] = encode_attr('classmethod', doc=v.__doc__, signature=get_method_signature(name, k))
+        elif v_type is staticmethod:
+            attrs[k] = encode_attr('staticmethod', signature=get_method_signature(name, k))
+        else:
+            assert False, (name, k, v, v_type)
+    return {'kind': 'type', 'attrs': attrs}
+
+def build_builtin_module_entry() -> dict[str, object]:
+    attrs = {}
+    for name in sorted(BUILTIN_FUNCTIONS):
+        desc = builtins.__dict__.get(name)
+        if type(desc) is types.BuiltinFunctionType:
+            attrs[name] = encode_attr('builtin_function', doc=desc.__doc__, signature=get_builtin_function_signature(name))
+    return {'kind': 'module', 'attrs': attrs}
+
+def build_module_entry(name: str) -> dict[str, object]:
+    obj = get_runtime_obj(name)
+    attrs = {}
+    for (k, v) in list(obj.__dict__.items()):
+        if k not in BUILTIN_MODULE_ATTRS[name]:
+            continue
+        if k.startswith('__') and k not in {'__doc__'}:
+            continue
+        if type(v) is types.BuiltinFunctionType:
+            params = get_signature_params(v, None)
+            attrs[k] = encode_attr('builtin_function', doc=v.__doc__, signature=None if params is None else encode_signature(params))
+        elif isinstance(v, type):
+            attrs[k] = encode_attr('type', target=v.__name__)
+    return {'kind': 'module', 'attrs': attrs}
+
+def is_scalar_json_value(value: object) -> bool:
+    return isinstance(value, (types.NoneType, bool, int, float, str))
+
+def is_leaf_json_value(value: object) -> bool:
+    if is_scalar_json_value(value):
+        return True
+    if isinstance(value, list):
+        return all(is_scalar_json_value(x) for x in value)
+    if isinstance(value, dict):
+        return all(isinstance(k, str) and is_scalar_json_value(v) for (k, v) in value.items())
+    return False
+
+def write_pretty_json(f, value: object, indent: int = 0) -> None:
+    if is_leaf_json_value(value):
+        f.write(json.dumps(value, ensure_ascii=True, separators=(', ', ': ')))
+        return
+    if isinstance(value, list):
+        f.write('[\n')
+        for (i, item) in enumerate(value):
+            f.write('  ' * (indent + 1))
+            write_pretty_json(f, item, indent + 1)
+            if i + 1 != len(value):
+                f.write(',')
+            f.write('\n')
+        f.write('  ' * indent)
+        f.write(']')
+        return
+    if isinstance(value, dict):
+        f.write('{\n')
+        items = list(value.items())
+        for (i, (k, v)) in enumerate(items):
+            f.write('  ' * (indent + 1))
+            f.write(json.dumps(k, ensure_ascii=True))
+            f.write(': ')
+            write_pretty_json(f, v, indent + 1)
+            if i + 1 != len(items):
+                f.write(',')
+            f.write('\n')
+        f.write('  ' * indent)
+        f.write('}')
+        return
+    assert False, value
+
 def gen_spec(spec_path: str) -> None:
-    spec = {}
+    spec = {'builtins': build_builtin_module_entry()}
     for name in [*BUILTIN_TYPES, *sorted(EXCEPTION_TYPES),
                  'types.BuiltinFunctionType', 'types.ClassMethodDescriptorType',
                  'types.FunctionType', 'types.GetSetDescriptorType', 'types.MemberDescriptorType',
                  'types.MethodDescriptorType', 'types.NoneType', '_io.BufferedReader', '_io.TextIOWrapper']:
-        obj = get_runtime_obj(name)
-        attrs = {}
-        for (k, v) in obj.__dict__.items():
-            if k.startswith('__') and k not in {'__doc__'}:
-                continue
-            v_type = type(v)
-            if v_type is str:
-                attrs[k] = {'kind': 'string', 'value': v}
-            elif v_type is types.MemberDescriptorType:
-                attrs[k] = {'kind': 'member', 'doc': v.__doc__}
-            elif v_type is types.GetSetDescriptorType:
-                attrs[k] = {'kind': 'getset', 'doc': v.__doc__}
-            elif v_type is types.MethodDescriptorType:
-                attrs[k] = {'kind': 'method', 'doc': v.__doc__}
-            elif v_type is types.ClassMethodDescriptorType:
-                attrs[k] = {'kind': 'classmethod', 'doc': v.__doc__}
-            elif v_type is staticmethod:
-                attrs[k] = {'kind': 'staticmethod'}
-            else:
-                assert False, (name, k, v, v_type)
-        spec[name] = attrs
+        spec[name] = build_type_entry(name)
+    for name in sorted(BUILTIN_MODULES):
+        spec[name] = build_module_entry(name)
 
-    with open(spec_path, 'w') as f:
-        json.dump(spec, f, indent=2)
+    with open(spec_path, 'w', encoding='utf-8') as f:
+        write_pretty_json(f, spec)
         f.write('\n')
 
 def main() -> None:
