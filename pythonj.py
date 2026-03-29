@@ -1772,7 +1772,7 @@ UNIMPLEMENTED_METHODS = {
         'translate', 'zfill',
     },
     'str': {
-        'center', 'count', 'encode', 'endswith', 'expandtabs', 'format', 'format_map', 'index', 'ljust',
+        'center', 'count', 'encode', 'expandtabs', 'format', 'format_map', 'index', 'ljust',
         'lstrip', 'partition', 'replace', 'rfind', 'rindex', 'rjust',
         'rpartition', 'rsplit', 'rstrip', 'splitlines', 'strip', 'translate', 'zfill',
     },
@@ -1835,6 +1835,7 @@ SYNTHETIC_PARAMS = {
         'index': [make_param('value'), make_param('start', NULL), make_param('stop', NULL)],
     },
     'str': {
+        'endswith': [make_param('suffix'), make_param('start', None), make_param('end', None)],
         'find': [make_param('sub'), make_param('start', None), make_param('end', None)],
         'maketrans': [make_param('x'), make_param('y', NULL), make_param('z', NULL)],
         'startswith': [make_param('prefix'), make_param('start', None), make_param('end', None)],

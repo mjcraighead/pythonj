@@ -77,7 +77,7 @@ def pyj_float_parse_spec(spec):
         i += 1
 
     width_start = i
-    while i < n and spec[i].isdigit():
+    while i < n and spec[i].isdecimal():
         i += 1
     width = int(spec[width_start:i]) if i > width_start else None
 
@@ -90,7 +90,7 @@ def pyj_float_parse_spec(spec):
     if i < n and spec[i] == '.':
         i += 1
         precision_start = i
-        while i < n and spec[i].isdigit():
+        while i < n and spec[i].isdecimal():
             i += 1
         if i == precision_start:
             raise ValueError('Format specifier missing precision')
@@ -186,14 +186,6 @@ def _pyj_float_apply_zero_fill(text, grouping, width):
     if grouping is None:
         return sign + ('0' * (width - len(sign) - len(magnitude))) + magnitude
 
-    has_digit = False
-    for c in magnitude:
-        if c.isdigit():
-            has_digit = True
-            break
-    if not has_digit:
-        return sign + ('0' * (width - len(sign) - len(magnitude))) + magnitude
-
     exp_index = magnitude.find('e')
     if exp_index == -1:
         exp_index = magnitude.find('E')
@@ -211,6 +203,9 @@ def _pyj_float_apply_zero_fill(text, grouping, width):
     else:
         integer_digits = mantissa[:dot_index]
         fractional_suffix = mantissa[dot_index:]
+
+    if not integer_digits.isdigit():
+        return sign + ('0' * (width - len(sign) - len(magnitude))) + magnitude
 
     digits_len = len(integer_digits)
     total_len = len(sign) + digits_len + ((digits_len - 1) // 3) + len(fractional_suffix) + len(exp_suffix)
