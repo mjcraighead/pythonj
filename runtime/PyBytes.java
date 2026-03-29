@@ -255,6 +255,27 @@ public final class PyBytes extends PyObject {
     public PyObject pymethod_isspace() { throw new UnsupportedOperationException(); }
     public PyObject pymethod_istitle() { throw new UnsupportedOperationException(); }
     public PyObject pymethod_isupper() { throw new UnsupportedOperationException(); }
+    public PyBytes pymethod_join(PyObject arg) {
+        var out = new ByteArrayOutputStream();
+        if (!arg.hasIter()) {
+            throw PyTypeError.raise("can only join an iterable");
+        }
+        var iter = arg.iter();
+        long index = 0;
+        for (var item = iter.next(); item != null; item = iter.next(), index++) {
+            if (index != 0) {
+                out.writeBytes(value);
+            }
+            if (item instanceof PyBytes itemBytes) {
+                out.writeBytes(itemBytes.value);
+            } else if (item instanceof PyByteArray itemByteArray) {
+                out.writeBytes(itemByteArray.value);
+            } else {
+                throw PyTypeError.raiseFormat("sequence item %d: expected a bytes-like object, %s found", index, item.type().name());
+            }
+        }
+        return new PyBytes(out.toByteArray());
+    }
     public PyObject pymethod_lower() { throw new UnsupportedOperationException(); }
     public static PyObject pymethod_maketrans(PyObject frm, PyObject to) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_swapcase() { throw new UnsupportedOperationException(); }

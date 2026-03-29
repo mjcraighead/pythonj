@@ -1583,7 +1583,7 @@ UNIMPLEMENTED_METHODS = {
         'translate', 'upper', 'zfill',
     },
     'bytes': {
-        'center', 'count', 'decode', 'endswith', 'expandtabs', 'find', 'hex', 'index', 'join',
+        'center', 'count', 'decode', 'endswith', 'expandtabs', 'find', 'hex', 'index',
         'ljust', 'lstrip', 'partition', 'removeprefix', 'removesuffix', 'replace', 'rfind',
         'rindex', 'rjust', 'rpartition', 'rsplit', 'rstrip', 'split', 'splitlines', 'startswith', 'strip',
         'translate', 'zfill',
