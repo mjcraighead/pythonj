@@ -255,33 +255,75 @@ public final class PyString extends PyObject {
     }
     public PyString pymethod_lower() { return new PyString(value.toLowerCase(Locale.ROOT)); }
     public PyList pymethod_split(PyObject sep, PyObject maxsplit) {
-        if (sep == PyNone.singleton) {
-            throw new UnsupportedOperationException("sep=None unsupported");
-        }
         long m = maxsplit.indexValue();
+        if (sep == PyNone.singleton) {
+            return splitWhitespace(m);
+        }
         if (!(sep instanceof PyString sepStr)) {
             throw PyTypeError.raise("must be str or None, not " + sep.type().name());
         }
-        if (sepStr.len() != 1) {
-            throw new UnsupportedOperationException("multi-character split tokens unsupported");
+        if (sepStr.value.isEmpty()) {
+            throw PyValueError.raise("empty separator");
         }
-        if (m != -1) {
-            throw new UnsupportedOperationException("maxsplit=-1 is the only value supported");
-        }
-        char split = sepStr.value.charAt(0);
+        return splitOnString(sepStr.value, m);
+    }
+    private static boolean splitWhitespaceChar(char c) {
+        return (c == '\u0085') || Character.isWhitespace(c) || Character.isSpaceChar(c);
+    }
+    private PyList splitWhitespace(long maxsplit) {
         var ret = new PyList();
-        var s = new StringBuilder();
-        for (int i = 0; i < value.length(); i++) {
-            char c = value.charAt(i);
-            if (c == split) {
-                ret.items.add(new PyString(s.toString()));
-                s = new StringBuilder();
-            } else {
-                s.append(c);
+        int i = 0;
+        int n = value.length();
+        while ((i < n) && splitWhitespaceChar(value.charAt(i))) {
+            i++;
+        }
+        if (i == n) {
+            return ret;
+        }
+        if (maxsplit == 0) {
+            ret.items.add(new PyString(value.substring(i)));
+            return ret;
+        }
+        long remaining = maxsplit;
+        while (i < n) {
+            if (remaining == 0) {
+                ret.items.add(new PyString(value.substring(i)));
+                return ret;
+            }
+            int start = i;
+            while ((i < n) && !splitWhitespaceChar(value.charAt(i))) {
+                i++;
+            }
+            ret.items.add(new PyString(value.substring(start, i)));
+            if (remaining > 0) {
+                remaining--;
+            }
+            while ((i < n) && splitWhitespaceChar(value.charAt(i))) {
+                i++;
             }
         }
-        ret.items.add(new PyString(s.toString()));
         return ret;
+    }
+    private PyList splitOnString(String sep, long maxsplit) {
+        var ret = new PyList();
+        int start = 0;
+        long remaining = maxsplit;
+        while (true) {
+            if (remaining == 0) {
+                ret.items.add(new PyString(value.substring(start)));
+                return ret;
+            }
+            int i = value.indexOf(sep, start);
+            if (i == -1) {
+                ret.items.add(new PyString(value.substring(start)));
+                return ret;
+            }
+            ret.items.add(new PyString(value.substring(start, i)));
+            start = i + sep.length();
+            if (remaining > 0) {
+                remaining--;
+            }
+        }
     }
     public PyBool pymethod_startswith(PyObject prefix, PyObject start, PyObject end) {
         int length = value.length();
