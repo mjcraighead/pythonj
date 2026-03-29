@@ -37,6 +37,9 @@ class PyBaseException extends PyTruthyObject {
 
     static PyObject pygetset_args(PyObject obj) { throw new UnsupportedOperationException(); }
 
+    public PyObject pymethod_add_note(PyObject note) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_with_traceback(PyObject tb) { throw new UnsupportedOperationException(); }
+
     public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, type.name());
         return new PyBaseException(args);

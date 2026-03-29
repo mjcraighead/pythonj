@@ -239,5 +239,46 @@ public final class PyByteArray extends PyObject {
     }
 
     public static PyObject pymethod_fromhex(PyType self, PyObject string) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_append(PyObject item) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_capitalize() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_center(PyObject width, PyObject fillchar) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_clear() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_copy() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_decode(PyObject encoding, PyObject errors) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_expandtabs(PyObject tabsize) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_extend(PyObject iterable_of_ints) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_insert(PyObject index, PyObject item) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_isalnum() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_isalpha() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_isascii() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_isdigit() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_islower() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_isspace() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_istitle() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_isupper() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_join(PyObject iterable_of_bytes) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_ljust(PyObject width, PyObject fillchar) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_lower() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_lstrip(PyObject bytes) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_partition(PyObject sep) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_pop(PyObject index) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_remove(PyObject value) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_replace(PyObject old, PyObject _new, PyObject count) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_removeprefix(PyObject prefix) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_removesuffix(PyObject suffix) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_resize(PyObject size) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_reverse() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_rjust(PyObject width, PyObject fillchar) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_rpartition(PyObject sep) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_rsplit(PyObject sep, PyObject maxsplit) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_rstrip(PyObject bytes) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_split(PyObject sep, PyObject maxsplit) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_splitlines(PyObject keepends) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_strip(PyObject bytes) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_swapcase() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_title() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_translate(PyObject table, PyObject delete) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_upper() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_zfill(PyObject width) { throw new UnsupportedOperationException(); }
     public static PyObject pymethod_maketrans(PyObject frm, PyObject to) { throw new UnsupportedOperationException(); }
 }

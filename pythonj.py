@@ -1732,35 +1732,10 @@ def get_class_functions(node: ast.Module, class_name: str) -> dict[str, ast.Func
     return {x.name: x for x in classes[class_name].body if isinstance(x, ast.FunctionDef)}
 
 UNIMPLEMENTED_METHODS = {
-    'bytearray': {
-        'append', 'capitalize', 'center', 'clear', 'copy', 'count', 'decode', 'endswith', 'expandtabs',
-        'extend', 'find', 'hex', 'index', 'insert', 'isalnum', 'isalpha', 'isascii', 'isdigit', 'islower',
-        'isspace', 'istitle', 'isupper', 'join', 'ljust', 'lower', 'lstrip', 'partition', 'pop', 'remove',
-        'replace', 'removeprefix', 'removesuffix', 'resize', 'reverse', 'rfind', 'rindex', 'rjust',
-        'rpartition', 'rsplit', 'rstrip', 'split', 'splitlines', 'startswith', 'strip', 'swapcase', 'title',
-        'translate', 'upper', 'zfill',
-    },
-    'bytes': {
-        'center', 'count', 'decode', 'endswith', 'expandtabs', 'find', 'hex', 'index',
-        'ljust', 'lstrip', 'partition', 'removeprefix', 'removesuffix', 'replace', 'rfind',
-        'rindex', 'rjust', 'rpartition', 'rsplit', 'rstrip', 'split', 'splitlines', 'startswith', 'strip',
-        'translate', 'zfill',
-    },
-    'str': {
-        'center', 'count', 'encode', 'expandtabs', 'format', 'format_map', 'index', 'ljust',
-        'lstrip', 'partition', 'replace', 'rfind', 'rindex', 'rjust',
-        'rpartition', 'rsplit', 'rstrip', 'splitlines', 'strip', 'translate', 'zfill',
-    },
+    'bytearray': {'count', 'endswith', 'find', 'hex', 'index', 'rfind', 'rindex', 'startswith'},
+    'bytes': {'count', 'endswith', 'find', 'hex', 'index', 'rfind', 'rindex', 'startswith'},
+    'str': {'count', 'format', 'index', 'rfind', 'rindex'},
     'type': {'mro'},
-    '_io.BufferedReader': {
-        '_dealloc_warn', 'detach', 'fileno', 'flush', 'isatty', 'peek', 'read1', 'readable', 'readinto',
-        'readinto1', 'readline', 'seek', 'seekable', 'tell', 'truncate',
-    },
-    '_io.TextIOWrapper': {
-        'detach', 'fileno', 'flush', 'isatty', 'readable', 'reconfigure', 'seek', 'seekable', 'tell',
-        'truncate', 'writable', 'write',
-    },
-    'BaseException': {'add_note', 'with_traceback'},
 }
 
 NULL = object()
@@ -1778,6 +1753,19 @@ PYTHON_IMPLS = {
 
 def make_param(name: str, default: object = inspect.Parameter.empty) -> inspect.Parameter:
     return inspect.Parameter(name, inspect.Parameter.POSITIONAL_ONLY, default=default)
+
+JAVA_RESERVED_WORDS = {
+    'abstract', 'assert', 'boolean', 'break', 'byte', 'case', 'catch', 'char', 'class', 'const', 'continue',
+    'default', 'do', 'double', 'else', 'enum', 'extends', 'final', 'finally', 'float', 'for', 'goto', 'if',
+    'implements', 'import', 'instanceof', 'int', 'interface', 'long', 'native', 'new', 'package', 'private',
+    'protected', 'public', 'return', 'short', 'static', 'strictfp', 'super', 'switch', 'synchronized', 'this',
+    'throw', 'throws', 'transient', 'try', 'void', 'volatile', 'while',
+}
+
+def java_local_name(name: str) -> str:
+    if name in JAVA_RESERVED_WORDS:
+        return f'pyarg_{name}'
+    return name
 
 def is_constant_default(default: object) -> bool:
     if isinstance(default, (types.NoneType, bool, int, float, str, bytes)):
@@ -2022,10 +2010,11 @@ def emit_arg_binding(writer: IndentedWriter, shape: SignatureShape, positional_n
         writer.write('if (argsLength == 0) {')
         writer.write(f'throw PyTypeError.raise("{positional_name}() takes at least 1 positional argument (0 given)");')
         writer.write('}')
+    java_param_names = {param.name: java_local_name(param.name) for param in shape.params}
     for (i, param) in enumerate(posonly_params + poskw_params):
-        writer.write(f'PyObject {param.name} = (argsLength >= {i+1}) ? args[{i}] : null;')
+        writer.write(f'PyObject {java_param_names[param.name]} = (argsLength >= {i+1}) ? args[{i}] : null;')
     for param in kwonly_params:
-        writer.write(f'PyObject {param.name} = null;')
+        writer.write(f'PyObject {java_param_names[param.name]} = null;')
     if kwonly_params and not poskw_params:
         if missing_style != 'exact_args' and (max_positional != 0):
             assert False, (positional_name, shape.params, missing_style)
@@ -2040,7 +2029,7 @@ def emit_arg_binding(writer: IndentedWriter, shape: SignatureShape, positional_n
         for (i, param) in enumerate(kwonly_params):
             prefix = 'if' if i == 0 else 'else if'
             writer.write(f'{prefix} (kw.value.equals("{param.name}")) {{')
-            writer.write(f'{param.name} = x.getValue();')
+            writer.write(f'{java_param_names[param.name]} = x.getValue();')
             writer.write('}')
         writer.write('else if (unknownKw == null) {')
         writer.write('unknownKw = kw.value;')
@@ -2069,15 +2058,15 @@ def emit_arg_binding(writer: IndentedWriter, shape: SignatureShape, positional_n
         for (i, param) in enumerate(poskw_params):
             prefix = 'if' if i == 0 else 'else if'
             writer.write(f'{prefix} (kw.value.equals("{param.name}")) {{')
-            writer.write(f'if ({param.name} != null) {{')
+            writer.write(f'if ({java_param_names[param.name]} != null) {{')
             writer.write(f'throw Runtime.raiseArgGivenByNameAndPosition("{kw_name}", "{param.name}", {kw_index + i + 1});')
             writer.write('}')
-            writer.write(f'{param.name} = x.getValue();')
+            writer.write(f'{java_param_names[param.name]} = x.getValue();')
             writer.write('}')
         for (i, param) in enumerate(kwonly_params):
             prefix = 'if' if (not poskw_params and i == 0) else 'else if'
             writer.write(f'{prefix} (kw.value.equals("{param.name}")) {{')
-            writer.write(f'{param.name} = x.getValue();')
+            writer.write(f'{java_param_names[param.name]} = x.getValue();')
             writer.write('}')
         writer.write('else if (unknownKw == null) {')
         writer.write('unknownKw = kw.value;')
@@ -2086,7 +2075,7 @@ def emit_arg_binding(writer: IndentedWriter, shape: SignatureShape, positional_n
         for (i, param) in enumerate(posonly_params + poskw_params):
             if param.default is inspect.Parameter.empty:
                 if missing_style == 'required_arg':
-                    writer.write(f'if ({param.name} == null) {{')
+                    writer.write(f'if ({java_param_names[param.name]} == null) {{')
                     writer.write(f'throw Runtime.raiseMissingRequiredArg("{positional_name}", "{param.name}", {i + 1});')
                     writer.write('}')
                 elif param.kind is inspect.Parameter.POSITIONAL_ONLY:
@@ -2108,16 +2097,16 @@ def emit_arg_binding(writer: IndentedWriter, shape: SignatureShape, positional_n
         if missing_style == 'required_arg':
             for (i, param) in enumerate(posonly_params + poskw_params):
                 if param.default is inspect.Parameter.empty:
-                    writer.write(f'if ({param.name} == null) {{')
+                    writer.write(f'if ({java_param_names[param.name]} == null) {{')
                     writer.write(f'throw Runtime.raiseMissingRequiredArg("{positional_name}", "{param.name}", {i + 1});')
                     writer.write('}')
     bind_args = []
     for param in shape.params:
         if param.default is not inspect.Parameter.empty:
-            writer.write(f'if ({param.name} == null) {{')
-            writer.write(f'{param.name} = {emit_default_expr(param.default, pool)};')
+            writer.write(f'if ({java_param_names[param.name]} == null) {{')
+            writer.write(f'{java_param_names[param.name]} = {emit_default_expr(param.default, pool)};')
             writer.write('}')
-        bind_args.append(param.name)
+        bind_args.append(java_param_names[param.name])
     return bind_args
 
 def get_java_name(name: str) -> str:

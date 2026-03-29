@@ -99,6 +99,18 @@ final class PyTextIOWrapper extends PyIter {
             throw new UncheckedIOException(e);
         }
     }
+    public PyObject pymethod_detach() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_fileno() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_flush() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_isatty() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_readable() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_reconfigure(PyObject encoding, PyObject errors, PyObject newline, PyObject line_buffering, PyObject write_through) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_seek(PyObject cookie, PyObject whence) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_seekable() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_tell() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_truncate(PyObject pos) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_writable() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_write(PyObject text) { throw new UnsupportedOperationException(); }
 
     static PyObject pymember_encoding(PyObject obj) { throw new UnsupportedOperationException(); }
     static PyObject pymember_buffer(PyObject obj) { throw new UnsupportedOperationException(); }
@@ -155,6 +167,21 @@ final class PyBufferedReader extends PyIter {
             throw new UncheckedIOException(e);
         }
     }
+    public PyObject pymethod__dealloc_warn(PyObject source) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_detach() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_fileno() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_flush() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_isatty() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_peek(PyObject size) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_read1(PyObject size) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_readable() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_readinto(PyObject buffer) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_readinto1(PyObject buffer) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_readline(PyObject size) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_seek(PyObject target, PyObject whence) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_seekable() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_tell() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_truncate(PyObject pos) { throw new UnsupportedOperationException(); }
 
     static PyObject pymember_raw(PyObject obj) { throw new UnsupportedOperationException(); }
     static PyObject pymember__finalizing(PyObject obj) { throw new UnsupportedOperationException(); }
