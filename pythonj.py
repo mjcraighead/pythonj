@@ -481,114 +481,139 @@ class IndentedWriter:
         if line.endswith('{'):
             self.indent += 1
 
-class SymbolTableVisitor(ast.NodeVisitor):
-    __slots__ = ('reads', 'writes', 'globals', 'nonlocals')
-    reads: set[str]
-    writes: set[str]
-    globals: set[str]
-    nonlocals: set[str]
-
-    def __init__(self):
-        self.reads = set()
-        self.writes = set()
-        self.globals = set()
-        self.nonlocals = set()
-
-    def visit_Name(self, node):
-        if isinstance(node.ctx, (ast.Store, ast.Del)):
-            self.writes.add(node.id)
-        else:
-            self.reads.add(node.id)
-
-    def visit_ExceptHandler(self, node):
-        if node.type is not None:
-            self.visit(node.type)
-        if node.name is not None:
-            self.writes.add(node.name)
-        for statement in node.body:
-            self.visit(statement)
-
-    def visit_Global(self, node) -> None:
-        for name in node.names:
-            self.globals.add(name)
-
-    def visit_Nonlocal(self, node) -> None:
-        for name in node.names:
-            self.nonlocals.add(name)
-
-    # Do not descend into nested scopes; only record function or class name as a write
-    def visit_FunctionDef(self, node):
-        self.writes.add(node.name)
-    def visit_AsyncFunctionDef(self, node):
-        self.writes.add(node.name)
-    def visit_Lambda(self, node):
-        pass
-    def visit_ClassDef(self, node):
-        self.writes.add(node.name)
-
-    # For comprehensions, only descend into generators[0].iter; the rest is evaluated inside the lambda
-    def _visit_comp(self, node):
-        self.visit(node.generators[0].iter)
-    def visit_ListComp(self, node):
-        self._visit_comp(node)
-    def visit_SetComp(self, node):
-        self._visit_comp(node)
-    def visit_DictComp(self, node):
-        self._visit_comp(node)
-    def visit_GeneratorExp(self, node):
-        self._visit_comp(node)
-
-class DirectNestedScopeVisitor(ast.NodeVisitor):
-    __slots__ = ('children',)
-    children: list[ast.AST]
-
-    def __init__(self):
-        self.children = []
-
-    def visit_FunctionDef(self, node):
-        self.children.append(node)
-    def visit_AsyncFunctionDef(self, node):
-        self.children.append(node)
-    def visit_Lambda(self, node):
-        self.children.append(node)
-    def visit_ListComp(self, node):
-        self.children.append(node)
-    def visit_SetComp(self, node):
-        self.children.append(node)
-    def visit_DictComp(self, node):
-        self.children.append(node)
-    def visit_GeneratorExp(self, node):
-        self.children.append(node)
+class ScopeKind(Enum):
+    MODULE = 1
+    FUNCTION = 2
 
 @dataclass
 class ScopeInfo:
+    kind: ScopeKind
     locals: set[str]
     explicit_globals: set[str]
     nonlocals: set[str]
     cell_vars: set[str]
     needs_from_outer: set[str]
 
-class ScopeKind(Enum):
-    MODULE = 1
-    FUNCTION = 2
+class ScopeAnalyzer(ast.NodeVisitor):
+    __slots__ = ('scope_infos',)
+    scope_infos: dict[ast.AST, ScopeInfo]
+
+    def __init__(self):
+        self.scope_infos = {}
+
+    def _walk_local(self, node: ast.AST, reads: set[str], writes: set[str], explicit_globals: set[str],
+                    nonlocals: set[str], children: list[ast.AST]) -> None:
+        if isinstance(node, ast.Name):
+            if isinstance(node.ctx, (ast.Store, ast.Del)):
+                writes.add(node.id)
+            else:
+                reads.add(node.id)
+            return
+        if isinstance(node, ast.ExceptHandler):
+            if node.type is not None:
+                self._walk_local(node.type, reads, writes, explicit_globals, nonlocals, children)
+            if node.name is not None:
+                writes.add(node.name)
+            for statement in node.body:
+                self._walk_local(statement, reads, writes, explicit_globals, nonlocals, children)
+            return
+        if isinstance(node, ast.Global):
+            explicit_globals.update(node.names)
+            return
+        if isinstance(node, ast.Nonlocal):
+            nonlocals.update(node.names)
+            return
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            writes.add(node.name)
+            children.append(node)
+            return
+        if isinstance(node, ast.Lambda):
+            children.append(node)
+            return
+        if isinstance(node, ast.ClassDef):
+            writes.add(node.name)
+            return
+        if isinstance(node, (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)):
+            self._walk_local(node.generators[0].iter, reads, writes, explicit_globals, nonlocals, children)
+            children.append(node)
+            return
+        for child in ast.iter_child_nodes(node):
+            self._walk_local(child, reads, writes, explicit_globals, nonlocals, children)
+
+    def _param_names(self, args: ast.arguments) -> set[str]:
+        out = {arg.arg for arg in args.posonlyargs}
+        out.update(arg.arg for arg in args.args)
+        out.update(arg.arg for arg in args.kwonlyargs)
+        if args.vararg is not None:
+            out.add(args.vararg.arg)
+        if args.kwarg is not None:
+            out.add(args.kwarg.arg)
+        return out
+
+    def _analyze_scope_node(self, node: ast.AST) -> ScopeInfo:
+        if node in self.scope_infos:
+            return self.scope_infos[node]
+
+        reads: set[str] = set()
+        writes: set[str] = set()
+        explicit_globals: set[str] = set()
+        nonlocals: set[str] = set()
+        children: list[ast.AST] = []
+
+        if isinstance(node, ast.Module):
+            for statement in node.body:
+                self._walk_local(statement, reads, writes, explicit_globals, nonlocals, children)
+        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            writes.update(self._param_names(node.args))
+            for statement in node.body:
+                self._walk_local(statement, reads, writes, explicit_globals, nonlocals, children)
+        elif isinstance(node, ast.Lambda):
+            writes.update(self._param_names(node.args))
+            self._walk_local(node.body, reads, writes, explicit_globals, nonlocals, children)
+        else:
+            assert isinstance(node, (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)), node
+            generators = node.generators
+            elts: list[ast.expr] = [node.elt] if not isinstance(node, ast.DictComp) else [node.key, node.value]
+            for (i, generator) in enumerate(generators):
+                if i != 0:
+                    self._walk_local(generator.iter, reads, writes, explicit_globals, nonlocals, children)
+                self._walk_local(generator.target, reads, writes, explicit_globals, nonlocals, children)
+                for _if in generator.ifs:
+                    self._walk_local(_if, reads, writes, explicit_globals, nonlocals, children)
+            for elt in elts:
+                self._walk_local(elt, reads, writes, explicit_globals, nonlocals, children)
+
+        locals = writes - explicit_globals - nonlocals
+        needs_from_outer = (reads | nonlocals) - locals - explicit_globals
+        cell_vars = set()
+        for child in children:
+            child_info = self._analyze_scope_node(child)
+            for name in child_info.needs_from_outer:
+                if name in locals:
+                    cell_vars.add(name)
+                elif name not in explicit_globals:
+                    needs_from_outer.add(name)
+        kind = ScopeKind.MODULE if isinstance(node, ast.Module) else ScopeKind.FUNCTION
+        scope_info = ScopeInfo(kind, locals, explicit_globals, nonlocals, cell_vars, needs_from_outer)
+        self.scope_infos[node] = scope_info
+        return scope_info
+
+    def visit_Module(self, node) -> None:
+        self._analyze_scope_node(node)
 
 class Scope:
-    __slots__ = ('parent', 'kind', 'locals', 'explicit_globals', 'cell_vars', 'free_vars', 'n_temps', 'used_expr_discard')
+    __slots__ = ('parent', 'info', 'qualname', 'free_vars', 'n_temps', 'used_expr_discard')
     parent: Optional['Scope']
-    kind: ScopeKind
-    locals: set[str]
-    explicit_globals: set[str]
-    cell_vars: set[str]
+    info: ScopeInfo
+    qualname: Optional[str]
     free_vars: set[str]
     n_temps: int
     used_expr_discard: bool
 
-    def __init__(self, parent: Optional['Scope'], kind: ScopeKind):
+    def __init__(self, parent: Optional['Scope'], info: ScopeInfo, qualname: Optional[str] = None):
         self.parent = parent
-        self.kind = kind
-        self.locals = set()
-        self.explicit_globals = set()
-        self.cell_vars = set()
+        self.info = info
+        self.qualname = qualname
         self.free_vars = set()
         self.n_temps = 0
         self.used_expr_discard = False
@@ -605,14 +630,13 @@ class Scope:
 # will compile into.  Partial mitigations are likely to be easier than a total fix.
 # XXX "invokedynamic" might help us a lot, but there is no way to access it from Java source
 class PythonjVisitor(ast.NodeVisitor):
-    __slots__ = ('path', 'n_errors', 'n_functions', 'n_lambdas', 'qualname_stack', 'scope', 'global_code', 'code',
+    __slots__ = ('path', 'n_errors', 'n_functions', 'n_lambdas', 'scope', 'global_code', 'code',
                  'scope_infos',
                  'emit_ctx', 'break_name', 'functions', 'allow_intrinsics')
     path: str
     n_errors: int
     n_functions: int
     n_lambdas: int
-    qualname_stack: list[str]
     scope: Scope
     global_code: list[JavaStatement]
     code: list[JavaStatement]
@@ -622,16 +646,15 @@ class PythonjVisitor(ast.NodeVisitor):
     functions: dict[str, list[str]]
     allow_intrinsics: bool # enables special internal-only codegen features for builtins
 
-    def __init__(self, path: str):
+    def __init__(self, path: str, scope_infos: dict[ast.AST, ScopeInfo], module_info: ScopeInfo):
         self.path = path
         self.n_errors = 0
         self.n_functions = 0
         self.n_lambdas = 0
-        self.qualname_stack = []
-        self.scope = Scope(None, ScopeKind.MODULE)
+        self.scope = Scope(None, module_info)
         self.global_code = [JavaVariableDecl('PyObject', 'expr_discard', None)] # XXX remove this variable if not needed
         self.code = self.global_code
-        self.scope_infos = {}
+        self.scope_infos = scope_infos
         self.emit_ctx = EmitContext()
         self.break_name = None
         self.functions = {}
@@ -648,9 +671,9 @@ class PythonjVisitor(ast.NodeVisitor):
     def ident_expr(self, name: str) -> JavaExpr:
         if self.allow_intrinsics and name == '__pythonj_null__':
             return JavaIdentifier('null')
-        elif self.scope.kind == ScopeKind.FUNCTION and (name in self.scope.cell_vars or name in self.scope.free_vars):
+        elif self.scope.info.kind == ScopeKind.FUNCTION and (name in self.scope.info.cell_vars or name in self.scope.free_vars):
             return JavaField(JavaIdentifier(f'pycell_{name}'), 'obj')
-        elif self.scope.kind == ScopeKind.FUNCTION and name in self.scope.locals:
+        elif self.scope.info.kind == ScopeKind.FUNCTION and name in self.scope.info.locals:
             return JavaIdentifier(f'pylocal_{name}')
         elif name in BUILTIN_TYPES:
             return JavaField(JavaIdentifier(f'{BUILTIN_TYPES[name]}Type'), 'singleton')
@@ -667,9 +690,9 @@ class PythonjVisitor(ast.NodeVisitor):
             parent_scope = self.scope
             found = False
             while parent_scope:
-                if name in parent_scope.explicit_globals:
+                if name in parent_scope.info.explicit_globals:
                     break
-                if parent_scope.kind == ScopeKind.FUNCTION and name in (parent_scope.locals | parent_scope.cell_vars | parent_scope.free_vars):
+                if parent_scope.info.kind == ScopeKind.FUNCTION and name in (parent_scope.info.locals | parent_scope.info.cell_vars | parent_scope.free_vars):
                     free_vars.add(name)
                     found = True
                     break
@@ -677,52 +700,6 @@ class PythonjVisitor(ast.NodeVisitor):
             if name in scope_info.nonlocals and not found:
                 self.error(lineno, f"no binding for nonlocal {name!r} found")
         return free_vars
-
-    def get_scope_info(self, node: ast.AST) -> ScopeInfo:
-        if node in self.scope_infos:
-            return self.scope_infos[node]
-
-        symbol_table = SymbolTableVisitor()
-        child_visitor = DirectNestedScopeVisitor()
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            symbol_table.writes.update(arg.arg for arg in node.args.args)
-            for statement in node.body:
-                symbol_table.visit(statement)
-                child_visitor.visit(statement)
-        elif isinstance(node, ast.Lambda):
-            symbol_table.writes.update(arg.arg for arg in node.args.args)
-            symbol_table.visit(node.body)
-            child_visitor.visit(node.body)
-        else:
-            assert isinstance(node, (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)), node
-            generators = node.generators
-            elts: list[ast.expr] = [node.elt] if not isinstance(node, ast.DictComp) else [node.key, node.value]
-            for (i, generator) in enumerate(generators):
-                if i != 0:
-                    symbol_table.visit(generator.iter)
-                    child_visitor.visit(generator.iter)
-                symbol_table.visit(generator.target)
-                child_visitor.visit(generator.target)
-                for _if in generator.ifs:
-                    symbol_table.visit(_if)
-                    child_visitor.visit(_if)
-            for elt in elts:
-                symbol_table.visit(elt)
-                child_visitor.visit(elt)
-
-        locals = symbol_table.writes - symbol_table.globals - symbol_table.nonlocals
-        needs_from_outer = (symbol_table.reads | symbol_table.nonlocals) - locals - symbol_table.globals
-        cell_vars = set()
-        for child in child_visitor.children:
-            child_info = self.get_scope_info(child)
-            for name in child_info.needs_from_outer:
-                if name in locals:
-                    cell_vars.add(name)
-                elif name not in symbol_table.globals:
-                    needs_from_outer.add(name)
-        scope_info = ScopeInfo(locals, symbol_table.globals.copy(), symbol_table.nonlocals.copy(), cell_vars, needs_from_outer)
-        self.scope_infos[node] = scope_info
-        return scope_info
 
     def generic_visit(self, node):
         """Print an error for all unknown constructs in translation."""
@@ -1045,7 +1022,7 @@ class PythonjVisitor(ast.NodeVisitor):
             self.code.append(code)
 
     def visit_Return(self, node) -> None:
-        assert self.scope.kind == ScopeKind.FUNCTION, node
+        assert self.scope.info.kind == ScopeKind.FUNCTION, node
         value = self.visit(node.value) if node.value else JavaPyConstant(None)
         self.code.append(JavaReturnStatement(value))
 
@@ -1201,20 +1178,15 @@ class PythonjVisitor(ast.NodeVisitor):
     @contextmanager
     def new_function(self, scope_info: ScopeInfo, free_vars: set[str], qualname: str) -> Iterator[None]:
         saved_scope = self.scope
-        self.scope = Scope(self.scope, ScopeKind.FUNCTION)
-        self.scope.locals = scope_info.locals.copy()
-        self.scope.explicit_globals = scope_info.explicit_globals.copy()
-        self.scope.cell_vars = scope_info.cell_vars.copy()
+        self.scope = Scope(self.scope, scope_info, qualname)
         self.scope.free_vars = free_vars.copy()
-        self.qualname_stack.append(qualname)
         try:
             yield
         finally:
-            self.qualname_stack.pop()
             self.scope = saved_scope
 
     def qualname(self, name: str) -> str:
-        return name if not self.qualname_stack else f'{self.qualname_stack[-1]}.<locals>.{name}'
+        return name if self.scope.qualname is None else f'{self.scope.qualname}.<locals>.{name}'
 
     def add_function(self, py_name: str, java_name: str, arg_names: list[str], arg_defaults: list[None | bool | int | float | str | bytes], body: list[JavaStatement],
                      invisible_args: bool = False) -> None:
@@ -1300,14 +1272,14 @@ class PythonjVisitor(ast.NodeVisitor):
         if self.scope.used_expr_discard:
             func_code.append('PyObject expr_discard;')
         for (arg_name, bind_arg_name) in zip(arg_names, bind_arg_names):
-            if arg_name in self.scope.cell_vars:
+            if arg_name in self.scope.info.cell_vars:
                 func_code.append(f'PyCell pycell_{arg_name} = new PyCell({bind_arg_name});')
             else:
                 local_arg_name = arg_name if invisible_args else f'pylocal_{arg_name}'
                 func_code.append(f'PyObject {local_arg_name} = {bind_arg_name};')
-        for name in sorted(self.scope.cell_vars - set(arg_names)):
+        for name in sorted(self.scope.info.cell_vars - set(arg_names)):
             func_code.append(f'PyCell pycell_{name} = new PyCell({JavaPyConstant(None).emit_java(self.emit_ctx)});')
-        for name in sorted(self.scope.locals - self.scope.cell_vars - set(arg_names)):
+        for name in sorted(self.scope.info.locals - self.scope.info.cell_vars - set(arg_names)):
             if invisible_args or name not in arg_names:
                 func_code.append(f'PyObject pylocal_{name};')
         func_code.extend(block_emit_java(block_simplify([*body, JavaReturnStatement(JavaPyConstant(None))]), self.emit_ctx))
@@ -1331,7 +1303,7 @@ class PythonjVisitor(ast.NodeVisitor):
         qualname = self.qualname(node.name)
         java_name = f'pyfunc_{node.name}_{self.n_functions}'
         self.n_functions += 1
-        scope_info = self.get_scope_info(node)
+        scope_info = self.scope_infos[node]
         free_vars = self.resolve_free_vars(node.lineno, scope_info, 'nested function')
         self.code.append(JavaAssignStatement(self.ident_expr(node.name), JavaCreateObject(java_name, [JavaIdentifier(f'pycell_{name}') for name in sorted(free_vars)])))
 
@@ -1345,7 +1317,7 @@ class PythonjVisitor(ast.NodeVisitor):
         java_name = f'pylambda{self.n_lambdas}'
         self.n_lambdas += 1
 
-        scope_info = self.get_scope_info(node)
+        scope_info = self.scope_infos[node]
         assert not scope_info.explicit_globals, scope_info.explicit_globals # should not be possible in a lambda
         assert not scope_info.nonlocals, scope_info.nonlocals # should not be possible in a lambda
         free_vars = self.resolve_free_vars(node.lineno, scope_info, 'lambda')
@@ -1383,7 +1355,7 @@ class PythonjVisitor(ast.NodeVisitor):
         self.n_lambdas += 1
 
         qualname = self.qualname(py_name)
-        scope_info = self.get_scope_info(node)
+        scope_info = self.scope_infos[node]
         assert not scope_info.explicit_globals, scope_info.explicit_globals # should not be possible in a comprehension
         assert not scope_info.nonlocals, scope_info.nonlocals # should not be possible in a comprehension
         free_vars = self.resolve_free_vars(lineno, scope_info, 'comprehension')
@@ -1415,11 +1387,6 @@ class PythonjVisitor(ast.NodeVisitor):
         return self._lower_comp(node, '<dictcomp>', 'PyDict', 'setItem', node.lineno, node.generators, [node.key, node.value])
 
     def visit_Module(self, node) -> None:
-        symbol_table = SymbolTableVisitor()
-        for statement in node.body:
-            symbol_table.visit(statement)
-        self.scope.locals.update(symbol_table.writes)
-
         for statement in node.body:
             self.visit(statement)
 
@@ -1432,7 +1399,7 @@ class PythonjVisitor(ast.NodeVisitor):
             writer.write('')
 
         # XXX Initializing all globals to None is weird, but we don't have a better option yet
-        for name in sorted(self.scope.locals):
+        for name in sorted(self.scope.info.locals):
             writer.write(f'private static PyObject pyglobal_{name} = {JavaPyConstant(None).emit_java(self.emit_ctx)};')
         writer.write('')
 
@@ -2030,7 +1997,9 @@ def main() -> None:
         py_path = f'tests/{py_name}.py'
         with open(py_path, encoding='utf-8') as f:
             node = ast.parse(f.read())
-        visitor = PythonjVisitor(py_path)
+        analyzer = ScopeAnalyzer()
+        analyzer.visit(node)
+        visitor = PythonjVisitor(py_path, analyzer.scope_infos, analyzer.scope_infos[node])
         visitor.visit(node)
         if visitor.n_errors:
             print(f'Translation failed: {visitor.n_errors} errors')
