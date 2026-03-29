@@ -359,6 +359,23 @@ public final class Runtime {
     public static PyInt pythonjHash(PyObject obj) {
         return new PyInt(obj.hashCode());
     }
+    public static PyBool pythonjIsInstanceSingle(PyObject obj, PyObject type) {
+        if (type instanceof PyConcreteType typeClass) {
+            return PyBool.create(typeClass.instanceClass.isInstance(obj));
+        } else if (type instanceof PyType) {
+            throw new UnsupportedOperationException("isinstance() is unimplemented for type " + type.repr());
+        } else {
+            throw PyTypeError.raise("isinstance() arg 2 must be a type, a tuple of types, or a union");
+        }
+    }
+    public static PyBool pythonjIsSubclassSingle(PyObject obj, PyObject type) {
+        if (obj instanceof PyConcreteType objClass &&
+            type instanceof PyConcreteType typeClass) {
+            return PyBool.create(typeClass.instanceClass.isAssignableFrom(objClass.instanceClass));
+        } else {
+            throw new UnsupportedOperationException(String.format("issubclass() is unimplemented for types %s and %s", obj.repr(), type.repr()));
+        }
+    }
     public static PyString pythonjRepr(PyObject obj) {
         return new PyString(obj.repr());
     }

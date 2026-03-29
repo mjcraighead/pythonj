@@ -943,6 +943,12 @@ class PythonjVisitor(ast.NodeVisitor):
                 case '__pythonj_hash__':
                     assert len(node.args) == 1 and not node.keywords, node.args
                     return JavaMethodCall(JavaIdentifier('Runtime'), 'pythonjHash', [self.visit(node.args[0])])
+                case '__pythonj_isinstance_single__':
+                    assert len(node.args) == 2 and not node.keywords, node.args
+                    return JavaMethodCall(JavaIdentifier('Runtime'), 'pythonjIsInstanceSingle', [self.visit(node.args[0]), self.visit(node.args[1])])
+                case '__pythonj_issubclass_single__':
+                    assert len(node.args) == 2 and not node.keywords, node.args
+                    return JavaMethodCall(JavaIdentifier('Runtime'), 'pythonjIsSubclassSingle', [self.visit(node.args[0]), self.visit(node.args[1])])
                 case '__pythonj_iter__':
                     assert len(node.args) == 1 and not node.keywords, node.args
                     return JavaMethodCall(self.visit(node.args[0]), 'iter', [])
@@ -1759,7 +1765,7 @@ UNIMPLEMENTED_METHODS = {
 NULL = object()
 RAW_ARGS_KWARGS_BUILTINS = {'max', 'min', 'print'}
 
-PYTHON_BUILTIN_IMPLS = {'abs', 'all', 'any', 'delattr', 'getattr', 'hash', 'hasattr', 'len', 'next', 'repr', 'setattr', 'sum'}
+PYTHON_BUILTIN_IMPLS = {'abs', 'all', 'any', 'delattr', 'getattr', 'hash', 'hasattr', 'isinstance', 'issubclass', 'len', 'next', 'repr', 'setattr', 'sum'}
 
 def make_param(name: str, default: object = inspect.Parameter.empty) -> inspect.Parameter:
     return inspect.Parameter(name, inspect.Parameter.POSITIONAL_ONLY, default=default)

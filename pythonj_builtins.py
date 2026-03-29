@@ -38,6 +38,22 @@ def hasattr(obj, name):
         return False
     return True
 
+def isinstance(obj, class_or_tuple):
+    if __pythonj_isinstance_single__(class_or_tuple, tuple):
+        for x in class_or_tuple:
+            if isinstance(obj, x):
+                return True
+        return False
+    return __pythonj_isinstance_single__(obj, class_or_tuple)
+
+def issubclass(obj, class_or_tuple):
+    if __pythonj_isinstance_single__(class_or_tuple, tuple):
+        for x in class_or_tuple:
+            if issubclass(obj, x):
+                return True
+        return False
+    return __pythonj_issubclass_single__(obj, class_or_tuple)
+
 def len(arg):
     return __pythonj_len__(arg)
 

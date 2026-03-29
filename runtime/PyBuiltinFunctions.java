@@ -70,39 +70,6 @@ final class PyBuiltinFunctionsImpl {
             return new PyString(String.format("0x%x", index));
         }
     }
-    private static boolean isInstanceImpl(PyObject obj, PyObject type) {
-        if (type instanceof PyTuple type_tuple) {
-            for (var x: type_tuple.items) {
-                if (isInstanceImpl(obj, x)) {
-                    return true;
-                }
-            }
-            return false;
-        } else if (type instanceof PyConcreteType type_class) {
-            return type_class.instanceClass.isInstance(obj);
-        } else if (type instanceof PyType) {
-            throw new UnsupportedOperationException("isinstance() is unimplemented for type " + type.repr());
-        } else {
-            throw PyTypeError.raise("isinstance() arg 2 must be a type, a tuple of types, or a union");
-        }
-    }
-    static PyBool pyfunc_isinstance(PyObject obj, PyObject type) { return PyBool.create(isInstanceImpl(obj, type)); }
-    private static boolean isSubclassImpl(PyObject obj, PyObject type) {
-        if (type instanceof PyTuple type_tuple) {
-            for (var x: type_tuple.items) {
-                if (isSubclassImpl(obj, x)) {
-                    return true;
-                }
-            }
-            return false;
-        } else if (obj instanceof PyConcreteType obj_class &&
-                    type instanceof PyConcreteType type_class) {
-            return type_class.instanceClass.isAssignableFrom(obj_class.instanceClass);
-        } else {
-            throw new UnsupportedOperationException(String.format("issubclass() is unimplemented for types %s and %s", obj.repr(), type.repr()));
-        }
-    }
-    static PyBool pyfunc_issubclass(PyObject obj, PyObject type) { return PyBool.create(isSubclassImpl(obj, type)); }
     static PyIter pyfunc_iter(PyObject obj, PyObject sentinel) {
         if (sentinel != null) {
             throw new UnsupportedOperationException("iter() with callable+sentinel is not implemented");
