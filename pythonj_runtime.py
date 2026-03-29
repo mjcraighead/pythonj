@@ -188,6 +188,9 @@ def pyj_float_parse_spec(spec):
     return (fill, align, sign, z, alt, width, grouping, precision, type_char)
 
 def pyj_int_parse_spec(spec):
+    return _pyj_int_like_parse_spec(spec, 'int')
+
+def _pyj_int_like_parse_spec(spec, type_name):
     fill, align, sign, z, alt, zero, width, grouping, precision, type_char, i, n = _pyj_format_parse_common(spec)
 
     if z:
@@ -197,11 +200,11 @@ def pyj_int_parse_spec(spec):
 
     if type_char and type_char not in 'boxXdn':
         if i != n:
-            _pyj_raise_invalid_format_spec(spec, 'int')
-        _pyj_raise_unknown_format_code(type_char, 'int')
+            _pyj_raise_invalid_format_spec(spec, type_name)
+        _pyj_raise_unknown_format_code(type_char, type_name)
 
     if i != n:
-        _pyj_raise_invalid_format_spec(spec, 'int')
+        _pyj_raise_invalid_format_spec(spec, type_name)
 
     if zero and align is None:
         fill = '0'
@@ -385,6 +388,12 @@ def pyj_int_format(value, spec):
 
     text = sign_prefix + prefix + grouped_digits
     return _pyj_format_apply_width(text, fill, align, width, '>')
+
+def pyj_bool_format(value, spec):
+    if spec == '':
+        return 'True' if value else 'False'
+    _pyj_int_like_parse_spec(spec, 'bool')
+    return pyj_int_format(1 if value else 0, spec)
 
 def pyj_str_format(value, spec):
     fill, align, width, precision = pyj_str_parse_spec(spec)

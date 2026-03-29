@@ -149,7 +149,7 @@ public abstract class PyObject implements Comparable<PyObject> {
     public double floatValue() { throw unimplementedMethod("floatValue"); }
     public String format(String formatSpec) {
         if (!formatSpec.isEmpty()) {
-            throw new UnsupportedOperationException(String.format("formatSpec=%s unimplemented on %s", PyString.reprOf(formatSpec), PyString.reprOf(type().name())));
+            throw PyTypeError.raiseFormat("unsupported format string passed to %s.__format__", type().name());
         }
         return str();
     }
