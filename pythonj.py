@@ -1782,7 +1782,18 @@ NULL = object()
 RAW_ARGS_KWARGS_BUILTINS = {'max', 'min', 'print'}
 
 PYTHON_IMPLS = {
-    '_runtime': {'max_iterable', 'min_iterable'},
+    '_runtime': {
+        'max_iterable',
+        'min_iterable',
+        'pyj_float_apply_percent',
+        'pyj_float_apply_width',
+        'pyj_float_apply_zero_fill',
+        'pyj_float_core_grouping',
+        'pyj_float_core_type_char',
+        'pyj_float_parse_spec',
+        'pyj_float_sign_prefix',
+        'pyj_float_special_text',
+    },
     'builtins': {'abs', 'all', 'any', 'delattr', 'format', 'getattr', 'hash', 'hasattr', 'isinstance', 'issubclass', 'len', 'next', 'repr', 'setattr', 'sum'},
     'dict': {'setdefault'},
     'float': {'conjugate'},

@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: MIT
 
 import java.nio.charset.StandardCharsets;
+import java.util.Locale;
 
 public final class PyFloat extends PyObject {
     public final double value;
@@ -102,6 +103,52 @@ public final class PyFloat extends PyObject {
         } else {
             return Double.toString(value);
         }
+    }
+    private static String formatFiniteCore(double value, boolean alt, String grouping, Long precision, String typeChar) {
+        assert Double.isFinite(value) && (value >= 0.0) : value;
+        boolean postprocessAlt = false;
+        if (typeChar.isEmpty()) {
+            if ((precision == null) && (grouping == null) && !alt) {
+                return strOf(value);
+            }
+            typeChar = "g";
+        } else if (typeChar.equals("n")) {
+            typeChar = "g";
+        } else if (typeChar.equals("F")) {
+            typeChar = "f";
+        }
+        String javaType = typeChar;
+        if (alt && (javaType.equals("g") || javaType.equals("G"))) {
+            postprocessAlt = true;
+            alt = false;
+        }
+        StringBuilder fmt = new StringBuilder("%");
+        if (grouping != null) {
+            fmt.append(",");
+        }
+        if (alt) {
+            fmt.append("#");
+        }
+        if (precision != null) {
+            fmt.append(".").append(precision);
+        }
+        fmt.append(javaType);
+        String ret = String.format(Locale.ROOT, fmt.toString(), value);
+        if ((grouping != null) && grouping.equals("_")) {
+            ret = ret.replace(',', '_');
+        }
+        if (postprocessAlt && (ret.indexOf('.') == -1)) {
+            int expIndex = ret.indexOf('e');
+            if (expIndex == -1) {
+                expIndex = ret.indexOf('E');
+            }
+            if (expIndex == -1) {
+                ret += ".";
+            } else {
+                ret = ret.substring(0, expIndex) + "." + ret.substring(expIndex);
+            }
+        }
+        return ret;
     }
 
     public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
@@ -279,6 +326,51 @@ public final class PyFloat extends PyObject {
     @Override public String repr() { return strOf(value); }
     @Override public String str() { return strOf(value); }
     @Override public PyConcreteType type() { return PyFloatType.singleton; }
+    @Override public String format(String formatSpec) {
+        PyTuple parsed = (PyTuple)PyRuntimePythonImpl.pyfunc_pyj_float_parse_spec(new PyString(formatSpec));
+        String fill = ((PyString)parsed.items[0]).value;
+        PyObject alignObj = parsed.items[1];
+        String sign = ((PyString)parsed.items[2]).value;
+        boolean z = parsed.items[3].boolValue();
+        boolean alt = parsed.items[4].boolValue();
+        PyObject widthObj = parsed.items[5];
+        PyObject groupingObj = parsed.items[6];
+        PyObject precisionObj = parsed.items[7];
+        String typeChar = ((PyString)parsed.items[8]).value;
+        boolean isNan = Double.isNaN(value);
+        boolean isNegative = (value < 0.0) || (Double.doubleToRawLongBits(value) == Double.doubleToRawLongBits(-0.0));
+        String magnitudeText;
+        if (isNan || Double.isInfinite(value)) {
+            magnitudeText = ((PyString)PyRuntimePythonImpl.pyfunc_pyj_float_special_text(PyBool.create(isNan), new PyString(typeChar))).value;
+        } else {
+            double coreValue = Math.abs(value);
+            if (typeChar.equals("%")) {
+                coreValue *= 100.0;
+            }
+            PyObject coreGroupingObj = PyRuntimePythonImpl.pyfunc_pyj_float_core_grouping(
+                new PyString(fill),
+                alignObj,
+                widthObj,
+                groupingObj
+            );
+            String coreTypeChar = ((PyString)PyRuntimePythonImpl.pyfunc_pyj_float_core_type_char(new PyString(typeChar))).value;
+            String grouping = (coreGroupingObj == PyNone.singleton) ? null : ((PyString)coreGroupingObj).value;
+            Long precision = (precisionObj == PyNone.singleton) ? null : precisionObj.indexValue();
+            magnitudeText = formatFiniteCore(coreValue, alt, grouping, precision, coreTypeChar);
+            magnitudeText = ((PyString)PyRuntimePythonImpl.pyfunc_pyj_float_apply_percent(new PyString(magnitudeText), new PyString(typeChar))).value;
+        }
+        String text = ((PyString)PyRuntimePythonImpl.pyfunc_pyj_float_sign_prefix(
+            PyBool.create(isNan),
+            PyBool.create(isNegative),
+            new PyString(sign),
+            PyBool.create(z),
+            new PyString(magnitudeText)
+        )).value + magnitudeText;
+        if ((widthObj != PyNone.singleton) && (alignObj instanceof PyString alignStr) && alignStr.value.equals("=") && fill.equals("0")) {
+            return ((PyString)PyRuntimePythonImpl.pyfunc_pyj_float_apply_zero_fill(new PyString(text), groupingObj, widthObj)).value;
+        }
+        return ((PyString)PyRuntimePythonImpl.pyfunc_pyj_float_apply_width(new PyString(text), new PyString(fill), alignObj, widthObj)).value;
+    }
 
     public PyObject pymethod_as_integer_ratio() {
         if (Double.isNaN(value)) {
