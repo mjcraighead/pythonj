@@ -196,6 +196,9 @@ public final class PyString extends PyObject {
     }
     @Override public int hashCode() { return value.hashCode(); }
     @Override public long len() { return value.length(); }
+    @Override public String format(String formatSpec) {
+        return ((PyString)PyRuntimePythonImpl.pyfunc_pyj_str_format(this, new PyString(formatSpec))).value;
+    }
     @Override public String str() { return value; }
     public static String reprOf(String value) {
         boolean use_double_quotes = (value.indexOf('\'') >= 0) && (value.indexOf('"') < 0);

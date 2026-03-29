@@ -315,17 +315,7 @@ public final class PyInt extends PyObject {
     }
     @Override public double floatValue() { return value; }
     @Override public String format(String formatSpec) {
-        if (formatSpec.isEmpty()) {
-            return String.valueOf(value);
-        } else if (formatSpec.equals("x")) {
-            if (value < 0) {
-                return String.format("-%x", Math.negateExact(value));
-            } else {
-                return String.format("%x", value);
-            }
-        } else {
-            throw new UnsupportedOperationException(String.format("formatSpec=%s unimplemented", PyString.reprOf(formatSpec)));
-        }
+        return ((PyString)PyRuntimePythonImpl.pyfunc_pyj_int_format(this, new PyString(formatSpec))).value;
     }
     @Override public int hashCode() { return Runtime.hashRational(value, 1); }
     @Override public boolean hasIndex() { return true; }
