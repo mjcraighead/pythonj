@@ -18,11 +18,13 @@ BUILTIN_FUNCTIONS = {
 BUILTIN_MODULES = {
     '_json': 'PyJsonModule',
     'math': 'PyMathModule',
+    'types': 'PyTypesModule',
     'zlib': 'PyZlibModule',
 }
 BUILTIN_MODULE_ATTRS = {
     '_json': {'encode_basestring_ascii', 'scanstring'},
     'math': {'copysign', 'isfinite', 'isinf', 'isnan'},
+    'types': {'BuiltinFunctionType', 'ClassMethodDescriptorType', 'FunctionType', 'GetSetDescriptorType', 'MemberDescriptorType', 'MethodDescriptorType', 'NoneType'},
     'zlib': {'compress', 'decompress', 'error'},
 }
 BUILTIN_TYPES = {

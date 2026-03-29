@@ -132,6 +132,25 @@ final class PyMathModule extends PyModule {
     }
 }
 
+final class PyTypesModule extends PyModule {
+    public static final PyTypesModule singleton = new PyTypesModule();
+
+    private PyTypesModule() { super("types"); }
+
+    @Override public PyObject getAttr(String key) {
+        switch (key) {
+            case "BuiltinFunctionType": return PyBuiltinFunctionOrMethodType.singleton;
+            case "ClassMethodDescriptorType": return PyClassMethodDescriptorType.singleton;
+            case "FunctionType": return PyFunctionType.singleton;
+            case "GetSetDescriptorType": return PyGetSetDescriptorType.singleton;
+            case "MemberDescriptorType": return PyMemberDescriptorType.singleton;
+            case "MethodDescriptorType": return PyMethodDescriptorType.singleton;
+            case "NoneType": return PyNoneType.singleton;
+            default: return super.getAttr(key);
+        }
+    }
+}
+
 final class PyZlibModule extends PyModule {
     public static final PyZlibModule singleton = new PyZlibModule();
 
