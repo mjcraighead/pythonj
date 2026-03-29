@@ -290,14 +290,14 @@ public final class PyList extends PyObject {
         Collections.reverse(items);
         return PyNone.singleton;
     }
-    public PyNone sortImpl(PyObject keyFunc, PyObject reverseObj) {
-        boolean reverse = reverseObj.boolValue();
-        if (keyFunc == PyNone.singleton) {
+    public PyNone pymethod_sort(PyObject key, PyObject reverse) {
+        boolean reverseBool = reverse.boolValue();
+        if (key == PyNone.singleton) {
             Collections.sort(items);
         } else {
             var keyedItems = new ArrayList<SortKeyedItem>(items.size());
             for (var item: items) {
-                keyedItems.add(new SortKeyedItem(item, keyFunc.call(new PyObject[] {item}, null)));
+                keyedItems.add(new SortKeyedItem(item, key.call(new PyObject[] {item}, null)));
             }
             Collections.sort(keyedItems);
             items.clear();
@@ -305,36 +305,9 @@ public final class PyList extends PyObject {
                 items.add(keyedItem.item);
             }
         }
-        if (reverse) {
+        if (reverseBool) {
             Collections.reverse(items);
         }
         return PyNone.singleton;
-    }
-    public PyNone pymethod_sort(PyObject[] args, PyDict kwargs) {
-        int argsLength = args.length;
-        PyObject key = PyNone.singleton;
-        PyObject reverse = PyBool.false_singleton;
-        if ((kwargs != null) && kwargs.boolValue()) { // XXX Handle more cases correctly here
-            long kwargsLen = kwargs.len();
-            if (kwargsLen > 2) {
-                throw Runtime.raiseAtMostKwArgs("sort", 2, argsLength, kwargsLen);
-            }
-            for (var x: kwargs.items.entrySet()) {
-                PyString kw = (PyString)x.getKey(); // PyString validated at call site
-                if (kw.value.equals("key")) {
-                    key = x.getValue();
-                } else if (kw.value.equals("reverse")) {
-                    reverse = x.getValue();
-                } else {
-                    throw Runtime.raiseUnexpectedKwArg("sort", kw.value);
-                }
-            }
-        }
-        if (argsLength > 2) {
-            throw Runtime.raiseAtMostArgs("sort", 2, argsLength);
-        } else if (argsLength != 0) {
-            throw PyTypeError.raise("sort() takes no positional arguments");
-        }
-        return sortImpl(key, reverse);
     }
 }

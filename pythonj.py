@@ -1454,6 +1454,13 @@ BUILTIN_FUNCTION_ARG_OVERRIDES = {
     'sum': [VARARGS, KWARGS],
 }
 
+KWARG_BINDER_METHODS = {
+    'int': {'from_bytes', 'to_bytes'},
+    'list': {'sort'},
+    'str': {'split'},
+}
+KWARG_BINDER_BUILTINS = {'sorted', 'sum'}
+
 def infer_args(target: object, implicit_name: Optional[str]) -> Optional[list[object | str]]:
     try:
         params = list(inspect.signature(target).parameters.values())
@@ -1514,6 +1521,198 @@ def infer_builtin_function_args(name: str) -> Optional[list[object | str]]:
     if type(desc) is not types.BuiltinFunctionType:
         return None
     return infer_args(desc, None)
+
+def get_signature_params(target: object, implicit_name: Optional[str]) -> Optional[list[inspect.Parameter]]:
+    try:
+        params = list(inspect.signature(target).parameters.values())
+    except (TypeError, ValueError):
+        return None
+    if implicit_name is not None:
+        if not params or params[0].name != implicit_name or params[0].kind is not inspect.Parameter.POSITIONAL_ONLY:
+            return None
+        params = params[1:]
+    return params
+
+def get_kwarg_method_params(name: str, method_name: str) -> Optional[list[inspect.Parameter]]:
+    if name not in KWARG_BINDER_METHODS or method_name not in KWARG_BINDER_METHODS[name]:
+        return None
+    obj = get_runtime_obj(name)
+    desc = obj.__dict__.get(method_name)
+    if desc is None:
+        return None
+    desc_type = type(desc)
+    if desc_type is types.MethodDescriptorType:
+        return get_signature_params(desc, 'self')
+    elif desc_type is types.ClassMethodDescriptorType:
+        return get_signature_params(desc, 'type')
+    elif desc_type is staticmethod:
+        return get_signature_params(getattr(obj, method_name), None)
+    else:
+        return None
+
+def get_kwarg_builtin_function_params(name: str) -> Optional[list[inspect.Parameter]]:
+    if name not in KWARG_BINDER_BUILTINS:
+        return None
+    desc = builtins.__dict__.get(name)
+    if type(desc) is not types.BuiltinFunctionType:
+        return None
+    return get_signature_params(desc, None)
+
+def collect_default_fields(params: list[inspect.Parameter], field_prefix: str) -> dict[str, str]:
+    fields = {}
+    for param in params:
+        default = param.default
+        if type(default) is str and default != '':
+            if default not in fields:
+                fields[default] = f'{field_prefix}_{len(fields)}'
+    return fields
+
+def emit_default_expr(default: object, default_fields: dict[str, str]) -> str:
+    if default is inspect.Parameter.empty:
+        return 'null'
+    elif default is None:
+        return 'PyNone.singleton'
+    elif default is False or default is True:
+        return f'PyBool.{str(default).lower()}_singleton'
+    elif type(default) is int:
+        if default == -1:
+            return 'PyInt.singleton_neg1'
+        elif default == 0:
+            return 'PyInt.singleton_0'
+        elif default == 1:
+            return 'PyInt.singleton_1'
+        else:
+            assert False, default
+    elif default == '':
+        return 'PyString.empty_singleton'
+    elif type(default) is str:
+        return default_fields[default]
+    else:
+        assert False, default
+
+def emit_kwarg_binding(writer: IndentedWriter, params: list[inspect.Parameter], positional_name: str,
+                       kw_name: str, default_fields: dict[str, str], kw_overflow_args_length: str) -> list[str]:
+    posonly_params = [param for param in params if param.kind is inspect.Parameter.POSITIONAL_ONLY]
+    poskw_params = [param for param in params if param.kind is inspect.Parameter.POSITIONAL_OR_KEYWORD]
+    kwonly_params = [param for param in params if param.kind is inspect.Parameter.KEYWORD_ONLY]
+    max_total = len(params)
+    max_positional = len(posonly_params) + len(poskw_params)
+    no_positional = (max_positional == 0)
+    if poskw_params and poskw_params[0].default is inspect.Parameter.empty:
+        missing_style = 'required_arg'
+    elif posonly_params and posonly_params[0].default is inspect.Parameter.empty:
+        if poskw_params:
+            missing_style = 'min_positional'
+        else:
+            missing_style = 'exact_args'
+    else:
+        missing_style = None
+    writer.write('int argsLength = args.length;')
+    if missing_style == 'exact_args':
+        writer.write(f'if (argsLength != 1) {{ throw Runtime.raiseExactArgs(args, 1, "{positional_name}"); }}')
+    elif missing_style == 'one_arg':
+        writer.write(f'if (argsLength != 1) {{ throw Runtime.raiseOneArg(args, "{positional_name}"); }}')
+    elif missing_style == 'min_positional':
+        writer.write('if (argsLength == 0) {')
+        writer.write(f'throw PyTypeError.raise("{positional_name}() takes at least 1 positional argument (0 given)");')
+        writer.write('}')
+    for (i, param) in enumerate(posonly_params + poskw_params):
+        writer.write(f'PyObject {param.name} = (argsLength >= {i+1}) ? args[{i}] : null;')
+    for param in kwonly_params:
+        writer.write(f'PyObject {param.name} = null;')
+    if kwonly_params and not poskw_params:
+        if (missing_style not in {'one_arg', 'exact_args'}) and (not no_positional):
+            assert False, (positional_name, params, missing_style)
+        writer.write('if ((kwargs != null) && kwargs.boolValue()) {')
+        writer.write('long kwargsLen = kwargs.len();')
+        writer.write(f'if (kwargsLen > {max_total}) {{')
+        writer.write(f'throw Runtime.raiseAtMostKwArgs("{kw_name}", {max_total}, {kw_overflow_args_length}, kwargsLen);')
+        writer.write('}')
+        writer.write('String unknownKw = null;')
+        writer.write('for (var x: kwargs.items.entrySet()) {')
+        writer.write('PyString kw = (PyString)x.getKey(); // PyString validated at call site')
+        for (i, param) in enumerate(kwonly_params):
+            prefix = 'if' if i == 0 else 'else if'
+            writer.write(f'{prefix} (kw.value.equals("{param.name}")) {{')
+            writer.write(f'{param.name} = x.getValue();')
+            writer.write('}')
+        writer.write('else if (unknownKw == null) {')
+        writer.write('unknownKw = kw.value;')
+        writer.write('}')
+        writer.write('}')
+        writer.write('if (unknownKw != null) {')
+        writer.write(f'throw Runtime.raiseUnexpectedKwArg("{kw_name}", unknownKw);')
+        writer.write('}')
+        writer.write('}')
+        if no_positional:
+            writer.write(f'if (argsLength > {max_total}) {{')
+            writer.write(f'throw Runtime.raiseAtMostArgs("{positional_name}", {max_total}, argsLength);')
+            writer.write('} else if (argsLength != 0) {')
+            writer.write(f'throw PyTypeError.raise("{positional_name}() takes no positional arguments");')
+            writer.write('}')
+    else:
+        writer.write('if ((kwargs != null) && kwargs.boolValue()) {')
+        writer.write('long kwargsLen = kwargs.len();')
+        writer.write(f'if (argsLength + kwargsLen > {max_total}) {{')
+        writer.write(f'throw Runtime.raiseAtMostKwArgs("{kw_name}", {max_total}, argsLength, kwargsLen);')
+        writer.write('}')
+        writer.write('String unknownKw = null;')
+        writer.write('for (var x: kwargs.items.entrySet()) {')
+        writer.write('PyString kw = (PyString)x.getKey(); // PyString validated at call site')
+        kw_index = len(posonly_params)
+        for (i, param) in enumerate(poskw_params):
+            prefix = 'if' if i == 0 else 'else if'
+            writer.write(f'{prefix} (kw.value.equals("{param.name}")) {{')
+            writer.write(f'if ({param.name} != null) {{')
+            writer.write(f'throw Runtime.raiseArgGivenByNameAndPosition("{kw_name}", "{param.name}", {kw_index + i + 1});')
+            writer.write('}')
+            writer.write(f'{param.name} = x.getValue();')
+            writer.write('}')
+        for (i, param) in enumerate(kwonly_params):
+            prefix = 'if' if (not poskw_params and i == 0) else 'else if'
+            writer.write(f'{prefix} (kw.value.equals("{param.name}")) {{')
+            writer.write(f'{param.name} = x.getValue();')
+            writer.write('}')
+        writer.write('else if (unknownKw == null) {')
+        writer.write('unknownKw = kw.value;')
+        writer.write('}')
+        writer.write('}')
+        for (i, param) in enumerate(posonly_params + poskw_params):
+            if param.default is inspect.Parameter.empty:
+                if missing_style == 'required_arg':
+                    writer.write(f'if ({param.name} == null) {{')
+                    writer.write(f'throw Runtime.raiseMissingRequiredArg("{positional_name}", "{param.name}", {i + 1});')
+                    writer.write('}')
+                elif param.kind is inspect.Parameter.POSITIONAL_ONLY:
+                    assert missing_style in {'one_arg', 'min_positional'}, (positional_name, param)
+        writer.write('if (unknownKw != null) {')
+        writer.write(f'throw Runtime.raiseUnexpectedKwArg("{kw_name}", unknownKw);')
+        writer.write('}')
+        writer.write('}')
+        if max_positional < max_total:
+            writer.write(f'if (argsLength > {max_total}) {{')
+            writer.write(f'throw Runtime.raiseAtMostArgs("{positional_name}", {max_total}, argsLength);')
+            writer.write(f'}} else if (argsLength > {max_positional}) {{')
+            writer.write(f'throw Runtime.raiseAtMostPosArgs("{positional_name}", {max_positional}, argsLength);')
+            writer.write('}')
+        else:
+            writer.write(f'if (argsLength > {max_total}) {{')
+            writer.write(f'throw Runtime.raiseAtMostArgs("{positional_name}", {max_total}, argsLength);')
+            writer.write('}')
+        if missing_style == 'required_arg':
+            for (i, param) in enumerate(posonly_params + poskw_params):
+                if param.default is inspect.Parameter.empty:
+                    writer.write(f'if ({param.name} == null) {{')
+                    writer.write(f'throw Runtime.raiseMissingRequiredArg("{positional_name}", "{param.name}", {i + 1});')
+                    writer.write('}')
+    bind_args = []
+    for param in params:
+        if param.default is not inspect.Parameter.empty:
+            writer.write(f'if ({param.name} == null) {{')
+            writer.write(f'{param.name} = {emit_default_expr(param.default, default_fields)};')
+            writer.write('}')
+        bind_args.append(param.name)
+    return bind_args
 
 def emit_arg_binding(writer: IndentedWriter, args: list[object | str], full_name: str, short_name: str) -> list[str]:
     if args == [VARARGS, KWARGS]:
@@ -1639,21 +1838,29 @@ def gen_code(spec_path: str, java_path: str) -> None:
                 writer.write('')
 
             gen_methods = {}
+            kwarg_methods = {}
             for (method_name, v) in attrs.items():
                 if v['kind'] not in {'method', 'classmethod', 'staticmethod'}:
                     continue
                 if name in UNIMPLEMENTED_METHODS and method_name in UNIMPLEMENTED_METHODS[name]:
                     continue
+                kwarg_params = get_kwarg_method_params(name, method_name)
+                if kwarg_params is not None:
+                    kwarg_methods[method_name] = kwarg_params
+                    continue
                 inferred_args = infer_method_args(name, method_name)
                 if inferred_args is not None:
                     gen_methods[method_name] = inferred_args
 
-            if gen_methods:
+            if gen_methods or kwarg_methods:
                 if '.' in name:
                     py_name = name.rsplit('.')[1]
                 else:
                     py_name = name
-                for (method_name, args) in gen_methods.items():
+                for (method_name, args, kwarg_params) in itertools.chain(
+                    ((method_name, args, None) for (method_name, args) in gen_methods.items()),
+                    ((method_name, None, params) for (method_name, params) in kwarg_methods.items()),
+                ):
                     kind = attrs[method_name]['kind']
                     if kind == 'method':
                         method_class_name = f'{java_name}Method_{method_name}'
@@ -1676,10 +1883,22 @@ def gen_code(spec_path: str, java_path: str) -> None:
                     else:
                         assert False, (name, method_name, kind)
                     writer.write(f'final class {method_class_name} extends PyBuiltinMethod<{self_type}> {{')
+                    if kwarg_params is not None:
+                        default_fields = collect_default_fields(kwarg_params, f'{method_class_name}_default')
+                        for (default, field_name) in default_fields.items():
+                            writer.write(f'private static final PyString {field_name} = new PyString({java_string_literal(default)});')
                     writer.write(f'{method_class_name}({ctor_arg}) {{ super({super_arg}); }}')
                     writer.write(f'@Override public String methodName() {{ return "{method_name}"; }}')
                     writer.write('@Override public PyObject call(PyObject[] args, PyDict kwargs) {')
-                    bind_args = emit_arg_binding(writer, args, f'{py_name}.{method_name}', method_name)
+                    if kwarg_params is None:
+                        bind_args = emit_arg_binding(writer, args, f'{py_name}.{method_name}', method_name)
+                    else:
+                        bind_args = emit_kwarg_binding(
+                            writer, kwarg_params, method_name,
+                            method_name,
+                            default_fields,
+                            'argsLength',
+                        )
                     if kind == 'classmethod':
                         bind_args = ['self'] + bind_args
                     writer.write(f"return {method_target}.pymethod_{method_name}({', '.join(bind_args)});")
@@ -1688,14 +1907,32 @@ def gen_code(spec_path: str, java_path: str) -> None:
                 writer.write('')
 
         for func_name in sorted(BUILTIN_FUNCTIONS):
-            args = infer_builtin_function_args(func_name)
-            assert args is not None, func_name
+            kwarg_params = get_kwarg_builtin_function_params(func_name)
+            if kwarg_params is None:
+                args = infer_builtin_function_args(func_name)
+                assert args is not None, func_name
+            else:
+                args = None
             writer.write(f'final class PyBuiltinFunction_{func_name} extends PyBuiltinFunction {{')
+            if kwarg_params is not None:
+                default_fields = collect_default_fields(kwarg_params, f'PyBuiltinFunction_{func_name}_default')
+                for (default, field_name) in default_fields.items():
+                    writer.write(f'private static final PyString {field_name} = new PyString({java_string_literal(default)});')
             writer.write(f'public static final PyBuiltinFunction_{func_name} singleton = new PyBuiltinFunction_{func_name}();')
             writer.write('')
             writer.write(f'private PyBuiltinFunction_{func_name}() {{ super("{func_name}"); }}')
             writer.write('@Override public PyObject call(PyObject[] args, PyDict kwargs) {')
-            bind_args = emit_arg_binding(writer, args, func_name, func_name)
+            if kwarg_params is None:
+                bind_args = emit_arg_binding(writer, args, func_name, func_name)
+            else:
+                kw_name = 'sort' if func_name == 'sorted' else func_name
+                kw_overflow_args_length = '0' if func_name == 'sorted' else 'argsLength'
+                bind_args = emit_kwarg_binding(
+                    writer, kwarg_params, func_name,
+                    kw_name,
+                    default_fields,
+                    kw_overflow_args_length,
+                )
             writer.write(f'return PyBuiltinFunctionsImpl.pyfunc_{func_name}({", ".join(bind_args)});')
             writer.write('}')
             writer.write('}')

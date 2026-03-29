@@ -349,7 +349,7 @@ public final class PyInt extends PyObject {
     public PyBool pymethod_is_integer() {
         return PyBool.true_singleton;
     }
-    public PyBytes toBytesImpl(PyObject length, PyObject byteorder, PyObject signedObj) {
+    public PyBytes pymethod_to_bytes(PyObject length, PyObject byteorder, PyObject signedObj) {
         int len = Math.toIntExact(length.indexValue());
         boolean littleEndian = false;
         boolean signed = signedObj.boolValue();
@@ -402,46 +402,7 @@ public final class PyInt extends PyObject {
         }
         return new PyBytes(out);
     }
-    public PyBytes pymethod_to_bytes(PyObject[] args, PyDict kwargs) {
-        int argsLength = args.length;
-        PyObject length = (argsLength >= 1) ? args[0] : PyInt.singleton_1;
-        PyObject byteorder = (argsLength >= 2) ? args[1] : null;
-        PyObject signed = PyBool.false_singleton;
-        if ((kwargs != null) && kwargs.boolValue()) {
-            long kwargsLen = kwargs.len();
-            if (argsLength + kwargsLen > 3) {
-                throw Runtime.raiseAtMostKwArgs("to_bytes", 3, argsLength, kwargsLen);
-            }
-            String unknownKw = null;
-            for (var x: kwargs.items.entrySet()) {
-                PyString kw = (PyString)x.getKey(); // PyString validated at call site
-                if (kw.value.equals("length")) {
-                    if (argsLength >= 1) {
-                        throw Runtime.raiseArgGivenByNameAndPosition("to_bytes", "length", 1);
-                    }
-                    length = x.getValue();
-                } else if (kw.value.equals("byteorder")) {
-                    if (argsLength >= 2) {
-                        throw Runtime.raiseArgGivenByNameAndPosition("to_bytes", "byteorder", 2);
-                    }
-                    byteorder = x.getValue();
-                } else if (kw.value.equals("signed")) {
-                    signed = x.getValue();
-                } else if (unknownKw == null) {
-                    unknownKw = kw.value;
-                }
-            }
-            if (unknownKw != null) {
-                throw Runtime.raiseUnexpectedKwArg("to_bytes", unknownKw);
-            }
-        } else if (argsLength > 3) {
-            throw Runtime.raiseAtMostArgs("to_bytes", 3, argsLength);
-        } else if (argsLength > 2) {
-            throw Runtime.raiseAtMostPosArgs("to_bytes", 2, argsLength);
-        }
-        return toBytesImpl(length, byteorder, signed);
-    }
-    public static PyInt fromBytesImpl(PyObject bytes, PyObject byteorder, PyObject signedObj) {
+    public static PyInt pymethod_from_bytes(PyType self, PyObject bytes, PyObject byteorder, PyObject signedObj) {
         boolean signed = signedObj.boolValue();
         boolean littleEndian = false;
         if (byteorder != null) {
@@ -528,49 +489,5 @@ public final class PyInt extends PyObject {
             result = (result << 8) | (bigEndianData[i] & 0xFF);
         }
         return new PyInt(result);
-    }
-    public static PyObject pymethod_from_bytes(PyType self, PyObject[] args, PyDict kwargs) {
-        int argsLength = args.length;
-        PyObject bytes = (argsLength >= 1) ? args[0] : null;
-        PyObject byteorder = (argsLength >= 2) ? args[1] : null;
-        PyObject signedObj = PyBool.false_singleton;
-        if ((kwargs != null) && kwargs.boolValue()) {
-            long kwargsLen = kwargs.len();
-            if (argsLength + kwargsLen > 3) {
-                throw Runtime.raiseAtMostKwArgs("from_bytes", 3, argsLength, kwargsLen);
-            }
-            String unknownKw = null;
-            for (var x: kwargs.items.entrySet()) {
-                PyString kw = (PyString)x.getKey(); // PyString validated at call site
-                if (kw.value.equals("bytes")) {
-                    if (bytes != null) {
-                        throw Runtime.raiseArgGivenByNameAndPosition("from_bytes", "bytes", 1);
-                    }
-                    bytes = x.getValue();
-                } else if (kw.value.equals("byteorder")) {
-                    if (byteorder != null) {
-                        throw Runtime.raiseArgGivenByNameAndPosition("from_bytes", "byteorder", 2);
-                    }
-                    byteorder = x.getValue();
-                } else if (kw.value.equals("signed")) {
-                    signedObj = x.getValue();
-                } else if (unknownKw == null) {
-                    unknownKw = kw.value;
-                }
-            }
-            if (bytes == null) {
-                throw Runtime.raiseMissingRequiredArg("from_bytes", "bytes", 1);
-            }
-            if (unknownKw != null) {
-                throw Runtime.raiseUnexpectedKwArg("from_bytes", unknownKw);
-            }
-        } else if (argsLength > 3) {
-            throw Runtime.raiseAtMostArgs("from_bytes", 3, argsLength);
-        } else if (argsLength > 2) {
-            throw Runtime.raiseAtMostPosArgs("from_bytes", 2, argsLength);
-        } else if (argsLength < 1) {
-            throw Runtime.raiseMissingRequiredArg("from_bytes", "bytes", 1);
-        }
-        return fromBytesImpl(bytes, byteorder, signedObj);
     }
 }

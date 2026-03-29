@@ -254,7 +254,7 @@ public final class PyString extends PyObject {
         return new PyString(s.toString());
     }
     public PyString pymethod_lower() { return new PyString(value.toLowerCase(Locale.ROOT)); }
-    public PyList splitImpl(PyObject sep, PyObject maxsplit) {
+    public PyList pymethod_split(PyObject sep, PyObject maxsplit) {
         if (sep == PyNone.singleton) {
             throw new UnsupportedOperationException("sep=None unsupported");
         }
@@ -282,39 +282,6 @@ public final class PyString extends PyObject {
         }
         ret.items.add(new PyString(s.toString()));
         return ret;
-    }
-    public PyList pymethod_split(PyObject[] args, PyDict kwargs) {
-        int argsLength = args.length;
-        PyObject sep = (argsLength >= 1) ? args[0] : null;
-        PyObject maxsplit = (argsLength >= 2) ? args[1] : null;
-        if ((kwargs != null) && kwargs.boolValue()) {
-            long kwargsLen = kwargs.len();
-            if (argsLength + kwargsLen > 2) {
-                throw Runtime.raiseAtMostKwArgs("split", 2, argsLength, kwargsLen);
-            }
-            for (var x: kwargs.items.entrySet()) {
-                PyString kw = (PyString)x.getKey(); // PyString validated at call site
-                if (kw.value.equals("sep")) {
-                    if (sep != null) {
-                        throw Runtime.raiseArgGivenByNameAndPosition("split", "sep", 1);
-                    }
-                    sep = x.getValue();
-                } else if (kw.value.equals("maxsplit")) {
-                    maxsplit = x.getValue();
-                } else {
-                    throw Runtime.raiseUnexpectedKwArg("split", kw.value);
-                }
-            }
-        } else if (argsLength > 2) {
-            throw Runtime.raiseAtMostArgs("split", 2, argsLength);
-        }
-        if (sep == null) {
-            sep = PyNone.singleton;
-        }
-        if (maxsplit == null) {
-            maxsplit = PyInt.singleton_neg1;
-        }
-        return splitImpl(sep, maxsplit);
     }
     public PyBool pymethod_startswith(PyObject prefix, PyObject start, PyObject end) {
         int length = value.length();

@@ -306,16 +306,13 @@ final class PyBuiltinFunctionsImpl {
             throw PyTypeError.raiseFormat("attribute name must be string, not %s", PyString.reprOf(name_obj.type().name()));
         }
     }
-    static PyList pyfunc_sorted(PyObject[] args, PyDict kwargs) {
-        if (args.length != 1) {
-            throw Runtime.raiseExactArgs(args, 1, "sorted");
-        }
+    static PyList pyfunc_sorted(PyObject iterable, PyObject key, PyObject reverse) {
         var ret = new PyList();
-        Runtime.addIterableToCollection(ret.items, args[0]);
-        ret.pymethod_sort(new PyObject[] {}, kwargs);
+        Runtime.addIterableToCollection(ret.items, iterable);
+        ret.pymethod_sort(key, reverse);
         return ret;
     }
-    static PyInt sumImpl(PyObject iterable, PyObject start) {
+    static PyInt pyfunc_sum(PyObject iterable, PyObject start) {
         var iter = iterable.iter();
         long sum = start.indexValue();
         for (var item = iter.next(); item != null; item = iter.next()) {
@@ -326,30 +323,5 @@ final class PyBuiltinFunctionsImpl {
             }
         }
         return new PyInt(sum);
-    }
-    static PyInt pyfunc_sum(PyObject[] args, PyDict kwargs) {
-        int argsLength = args.length;
-        if (argsLength == 0) {
-            throw PyTypeError.raise("sum() takes at least 1 positional argument (0 given)");
-        }
-        PyObject iterable = args[0];
-        PyObject start = (argsLength >= 2) ? args[1] : PyInt.singleton_0;
-        if ((kwargs != null) && kwargs.boolValue()) {
-            long kwargsLen = kwargs.len();
-            if (argsLength + kwargsLen > 2) {
-                throw Runtime.raiseAtMostArgs("sum", 2, argsLength + kwargsLen);
-            }
-            for (var x: kwargs.items.entrySet()) {
-                PyString kw = (PyString)x.getKey(); // PyString validated at call site
-                if (kw.value.equals("start")) {
-                    start = x.getValue();
-                } else {
-                    throw Runtime.raiseUnexpectedKwArg("sum", kw.value);
-                }
-            }
-        } else if (argsLength > 2) {
-            throw Runtime.raiseAtMostArgs("sum", 2, argsLength);
-        }
-        return sumImpl(iterable, start);
     }
 }
