@@ -377,3 +377,118 @@ def pyj_str_format(value, spec):
     fill, align, width, precision = pyj_str_parse_spec(spec)
     text = value if precision is None else value[:precision]
     return _pyj_format_apply_width(text, fill, align, width, '<')
+
+def _pyj_percent_arg_seq(args):
+    if isinstance(args, tuple):
+        return args
+    return (args,)
+
+def _pyj_percent_int_arg(arg, conv):
+    try:
+        return int(arg)
+    except BaseException:
+        if conv == 'd':
+            raise TypeError(f'%d format: a real number is required, not {type(arg).__name__}')
+        raise TypeError(f'%{conv} format: an integer is required, not {type(arg).__name__}')
+
+def _pyj_percent_item_text(conv, flags, width, arg):
+    if conv == 's':
+        text = str(arg)
+    elif conv == 'r':
+        text = repr(arg)
+    elif conv == 'd':
+        spec = '+' if '+' in flags else (' ' if ' ' in flags else '')
+        if ('0' in flags) and ('-' not in flags) and (width is not None):
+            spec += '0' + str(width)
+            width = None
+        spec += 'd'
+        text = pyj_int_format(_pyj_percent_int_arg(arg, conv), spec)
+    elif conv == 'x':
+        spec = '+' if '+' in flags else (' ' if ' ' in flags else '')
+        if '#' in flags:
+            spec += '#'
+        if ('0' in flags) and ('-' not in flags) and (width is not None):
+            spec += '0' + str(width)
+            width = None
+        spec += 'x'
+        text = pyj_int_format(_pyj_percent_int_arg(arg, conv), spec)
+    elif conv == 'X':
+        spec = '+' if '+' in flags else (' ' if ' ' in flags else '')
+        if '#' in flags:
+            spec += '#'
+        if ('0' in flags) and ('-' not in flags) and (width is not None):
+            spec += '0' + str(width)
+            width = None
+        spec += 'X'
+        text = pyj_int_format(_pyj_percent_int_arg(arg, conv), spec)
+    else:
+        raise ValueError(conv)
+
+    if width is not None:
+        align = '<' if '-' in flags else '>'
+        text = _pyj_format_apply_width(text, ' ', align, width, '>')
+    return text
+
+def pyj_percent_format(fmt, args):
+    arg_seq = _pyj_percent_arg_seq(args)
+    arg_index = 0
+    used_mapping = False
+    out = []
+    i = 0
+    n = len(fmt)
+    while i < n:
+        c = fmt[i]
+        if c != '%':
+            out.append(c)
+            i += 1
+            continue
+        i += 1
+        if i == n:
+            raise ValueError('incomplete format')
+        if fmt[i] == '%':
+            out.append('%')
+            i += 1
+            continue
+
+        mapping_key = None
+        if fmt[i] == '(':
+            if not isinstance(args, dict):
+                raise TypeError('format requires a mapping')
+            used_mapping = True
+            i += 1
+            key_start = i
+            while i < n and fmt[i] != ')':
+                i += 1
+            if i == n:
+                raise ValueError('incomplete format key')
+            mapping_key = fmt[key_start:i]
+            i += 1
+
+        flags = ''
+        while i < n and fmt[i] in '-+ 0#':
+            if fmt[i] not in flags:
+                flags += fmt[i]
+            i += 1
+
+        width_start = i
+        while i < n and fmt[i].isdecimal():
+            i += 1
+        width = int(fmt[width_start:i]) if i > width_start else None
+
+        if i == n:
+            raise ValueError('incomplete format')
+        conv = fmt[i]
+        i += 1
+
+        if mapping_key is None:
+            if arg_index >= len(arg_seq):
+                raise TypeError('not enough arguments for format string')
+            arg = arg_seq[arg_index]
+            arg_index += 1
+        else:
+            arg = args[mapping_key]
+        out.append(_pyj_percent_item_text(conv, flags, width, arg))
+
+    if (not used_mapping) and (arg_index != len(arg_seq)):
+        raise TypeError('not all arguments converted during string formatting')
+    return ''.join(out)

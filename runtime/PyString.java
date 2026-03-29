@@ -63,52 +63,7 @@ public final class PyString extends PyObject {
         return new PyString(s.toString());
     }
     @Override public PyString mod(PyObject rhs) {
-        var s = new StringBuilder();
-        PyObject[] rhsArray;
-        if (rhs instanceof PyTuple rhsTuple) {
-            rhsArray = rhsTuple.items;
-        } else {
-            rhsArray = new PyObject[] {rhs};
-        }
-        int argIndex = 0;
-        for (int i = 0; i < value.length(); i++) {
-            char c = value.charAt(i);
-            if (c == '%') {
-                c = value.charAt(++i);
-                boolean hasLeadingZero = false;
-                while (c == '0') {
-                    hasLeadingZero = true;
-                    c = value.charAt(++i);
-                }
-                int width = 0;
-                if ((c >= '1') && (c <= '9')) {
-                    // XXX We only allow 1 width character right now
-                    width = c - '0';
-                    c = value.charAt(++i);
-                }
-                PyObject arg = rhsArray[argIndex++];
-                if (c == 's') {
-                    if (hasLeadingZero || (width != 0)) {
-                        throw new UnsupportedOperationException("width for %s is unimplemented");
-                    }
-                    s.append(arg.str());
-                } else if (c == 'r') {
-                    if (hasLeadingZero || (width != 0)) {
-                        throw new UnsupportedOperationException("width for %r is unimplemented");
-                    }
-                    s.append(arg.repr());
-                } else if ((c == 'd') || (c == 'x') || (c == 'X')) {
-                    // XXX Negative hex values are being printed wrong
-                    String fmt = "%" + (hasLeadingZero ? "0" : "") + ((width != 0) ? width : "") + c;
-                    s.append(String.format(fmt, ((PyInt)arg).value));
-                } else {
-                    throw new UnsupportedOperationException("don't know how to implement format specifier");
-                }
-            } else {
-                s.append(c);
-            }
-        }
-        return new PyString(s.toString());
+        return (PyString)PyRuntimePythonImpl.pyfunc_pyj_percent_format(this, rhs);
     }
     @Override public PyString rmul(PyObject rhs) { return mul(rhs); }
 
