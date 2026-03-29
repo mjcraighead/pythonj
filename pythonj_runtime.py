@@ -271,7 +271,7 @@ def _pyj_float_is_zero_result(magnitude_text):
         return False
     return True
 
-def _pyj_float_sign_prefix(value, is_negative, sign, z, magnitude_text):
+def _pyj_float_sign_prefix(value, sign, z, magnitude_text):
     import math
     is_nan = math.isnan(value)
     if is_nan:
@@ -280,9 +280,9 @@ def _pyj_float_sign_prefix(value, is_negative, sign, z, magnitude_text):
         if sign == ' ':
             return ' '
         return ''
-    if is_negative:
-        if z and _pyj_float_is_zero_result(magnitude_text):
-            is_negative = False
+    is_negative = math.copysign(1.0, value) < 0.0
+    if is_negative and z and _pyj_float_is_zero_result(magnitude_text):
+        is_negative = False
     if is_negative:
         return '-'
     if sign == '+':
@@ -319,8 +319,8 @@ def _pyj_float_apply_zero_fill(text, grouping, width):
 
     return _pyj_format_zero_fill_grouped(sign, '', integer_digits, grouping, 3, fractional_suffix + exp_suffix, width)
 
-def pyj_float_finish_text(fill, align, sign, z, width, grouping, value, is_negative, magnitude_text):
-    text = _pyj_float_sign_prefix(value, is_negative, sign, z, magnitude_text) + magnitude_text
+def pyj_float_finish_text(fill, align, sign, z, width, grouping, value, magnitude_text):
+    text = _pyj_float_sign_prefix(value, sign, z, magnitude_text) + magnitude_text
     if align == '=' and fill == '0' and width is not None:
         return _pyj_float_apply_zero_fill(text, grouping, width)
     return _pyj_format_apply_width(text, fill, align, width, '>')

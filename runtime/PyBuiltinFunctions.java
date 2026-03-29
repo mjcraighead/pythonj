@@ -11,6 +11,22 @@ abstract class PyBuiltinFunction extends PyBuiltinFunctionOrMethod {
     @Override public final String repr() { return "<built-in function " + funcName + ">"; }
 }
 
+final class PyMathFunction_copysign extends PyBuiltinFunction {
+    public static final PyMathFunction_copysign singleton = new PyMathFunction_copysign();
+
+    private PyMathFunction_copysign() { super("copysign"); }
+
+    @Override public PyObject call(PyObject[] args, PyDict kwargs) {
+        if ((kwargs != null) && kwargs.boolValue()) {
+            throw Runtime.raiseNoKwArgs("math.copysign");
+        }
+        if (args.length != 2) {
+            throw Runtime.raiseExactArgs(args, 2, "math.copysign");
+        }
+        return PyBuiltinFunctionsImpl.pyfunc_math_copysign(args[0], args[1]);
+    }
+}
+
 final class PyMathFunction_isinf extends PyBuiltinFunction {
     public static final PyMathFunction_isinf singleton = new PyMathFunction_isinf();
 
@@ -44,17 +60,20 @@ final class PyMathFunction_isnan extends PyBuiltinFunction {
 }
 
 final class PyBuiltinFunctionsImpl {
-    static PyBool pyfunc_math_isinf(PyObject arg) {
+    private static double requireMathReal(PyObject arg) {
         if ((arg instanceof PyFloat) || (arg instanceof PyInt) || (arg instanceof PyBool)) {
-            return PyBool.create(Double.isInfinite(arg.floatValue()));
+            return arg.floatValue();
         }
         throw PyTypeError.raise("must be real number, not " + arg.type().name());
     }
+    static PyFloat pyfunc_math_copysign(PyObject x, PyObject y) {
+        return new PyFloat(Math.copySign(requireMathReal(x), requireMathReal(y)));
+    }
+    static PyBool pyfunc_math_isinf(PyObject arg) {
+        return PyBool.create(Double.isInfinite(requireMathReal(arg)));
+    }
     static PyBool pyfunc_math_isnan(PyObject arg) {
-        if ((arg instanceof PyFloat) || (arg instanceof PyInt) || (arg instanceof PyBool)) {
-            return PyBool.create(Double.isNaN(arg.floatValue()));
-        }
-        throw PyTypeError.raise("must be real number, not " + arg.type().name());
+        return PyBool.create(Double.isNaN(requireMathReal(arg)));
     }
     static PyString pyfunc_ascii(PyObject arg) {
         String r = arg.repr();

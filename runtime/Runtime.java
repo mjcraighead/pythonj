@@ -109,6 +109,7 @@ final class PyMathModule extends PyModule {
 
     @Override public PyObject getAttr(String key) {
         switch (key) {
+            case "copysign": return PyMathFunction_copysign.singleton;
             case "isnan": return PyMathFunction_isnan.singleton;
             case "isinf": return PyMathFunction_isinf.singleton;
             default: return super.getAttr(key);
