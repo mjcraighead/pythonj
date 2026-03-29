@@ -54,9 +54,9 @@ public final class PyDict extends PyObject {
     static final class PyDictItems extends PyObject {
         private static final PyConcreteType type_singleton = new PyConcreteType("dict_items", PyDictItems.class);
 
-        private final LinkedHashMap<PyObject, PyObject> items;
+        private final Map<PyObject, PyObject> items;
 
-        PyDictItems(LinkedHashMap<PyObject, PyObject> _items) { items = _items; }
+        PyDictItems(Map<PyObject, PyObject> _items) { items = _items; }
 
         private HashSet<PyObject> materializeSet() {
             var ret = new HashSet<PyObject>();
@@ -173,9 +173,9 @@ public final class PyDict extends PyObject {
     static final class PyDictKeys extends PyObject {
         private static final PyConcreteType type_singleton = new PyConcreteType("dict_keys", PyDictKeys.class);
 
-        private final LinkedHashMap<PyObject, PyObject> items;
+        private final Map<PyObject, PyObject> items;
 
-        PyDictKeys(LinkedHashMap<PyObject, PyObject> _items) { items = _items; }
+        PyDictKeys(Map<PyObject, PyObject> _items) { items = _items; }
 
         @Override public PySet and(PyObject rhs) {
             var rhsSet = rhs.asSetOrNull();
@@ -272,9 +272,9 @@ public final class PyDict extends PyObject {
     static final class PyDictValues extends PyObject {
         private static final PyConcreteType type_singleton = new PyConcreteType("dict_values", PyDictValues.class);
 
-        private final LinkedHashMap<PyObject, PyObject> items;
+        private final Map<PyObject, PyObject> items;
 
-        PyDictValues(LinkedHashMap<PyObject, PyObject> _items) { items = _items; }
+        PyDictValues(Map<PyObject, PyObject> _items) { items = _items; }
 
         @Override public boolean boolValue() { return !items.isEmpty(); }
         @Override public final boolean hasIter() { return true; }

@@ -143,6 +143,7 @@ final class PyTypesModule extends PyModule {
             case "ClassMethodDescriptorType": return PyClassMethodDescriptorType.singleton;
             case "FunctionType": return PyFunctionType.singleton;
             case "GetSetDescriptorType": return PyGetSetDescriptorType.singleton;
+            case "MappingProxyType": return PyMappingProxyType.singleton;
             case "MemberDescriptorType": return PyMemberDescriptorType.singleton;
             case "MethodDescriptorType": return PyMethodDescriptorType.singleton;
             case "NoneType": return PyNoneType.singleton;
@@ -225,9 +226,7 @@ class PyConcreteType extends PyType {
                 if (attrs == null) {
                     throw new UnsupportedOperationException(name() + ".__dict__ is not implemented");
                 }
-                PyDict ret = new PyDict(); // XXX This should return a mappingproxy singleton, not a PyDict snapshot
-                ret.items.putAll(attrs);
-                return ret;
+                return new PyMappingProxy(attrs);
             }
             case "__name__": return new PyString(typeName);
             default: return super.getAttr(key);

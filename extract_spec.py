@@ -24,7 +24,7 @@ BUILTIN_MODULES = {
 BUILTIN_MODULE_ATTRS = {
     '_json': {'encode_basestring_ascii', 'scanstring'},
     'math': {'copysign', 'isfinite', 'isinf', 'isnan'},
-    'types': {'BuiltinFunctionType', 'ClassMethodDescriptorType', 'FunctionType', 'GetSetDescriptorType', 'MemberDescriptorType', 'MethodDescriptorType', 'NoneType'},
+    'types': {'BuiltinFunctionType', 'ClassMethodDescriptorType', 'FunctionType', 'GetSetDescriptorType', 'MappingProxyType', 'MemberDescriptorType', 'MethodDescriptorType', 'NoneType'},
     'zlib': {'compress', 'decompress', 'error'},
 }
 BUILTIN_TYPES = {
@@ -347,7 +347,7 @@ def gen_spec(spec_path: str) -> None:
     spec = {'builtins': build_builtin_module_entry()}
     for name in [*BUILTIN_TYPES, *sorted(EXCEPTION_TYPES),
                  'types.BuiltinFunctionType', 'types.ClassMethodDescriptorType',
-                 'types.FunctionType', 'types.GetSetDescriptorType', 'types.MemberDescriptorType',
+                 'types.FunctionType', 'types.GetSetDescriptorType', 'types.MappingProxyType', 'types.MemberDescriptorType',
                  'types.MethodDescriptorType', 'types.NoneType', '_io.BufferedReader', '_io.TextIOWrapper']:
         spec[name] = build_type_entry(name)
     for name in sorted(BUILTIN_MODULES):

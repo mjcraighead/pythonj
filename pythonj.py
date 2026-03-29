@@ -38,6 +38,7 @@ RUNTIME_JAVA_FILES = (
     'PyFloat.java',
     'PyInt.java',
     'PyList.java',
+    'PyMappingProxy.java',
     'PyNone.java',
     'PyObject.java',
     'PyRange.java',
@@ -2142,6 +2143,7 @@ def gen_code(spec_path: str, java_path: str) -> None:
                 case 'types.ClassMethodDescriptorType': py_name = 'classmethod_descriptor'
                 case 'types.FunctionType': py_name = 'function'
                 case 'types.GetSetDescriptorType': py_name = 'getset_descriptor'
+                case 'types.MappingProxyType': py_name = 'mappingproxy'
                 case 'types.MemberDescriptorType': py_name = 'member_descriptor'
                 case 'types.MethodDescriptorType': py_name = 'method_descriptor'
                 case 'types.NoneType': py_name = 'NoneType'
