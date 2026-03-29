@@ -13,24 +13,6 @@ abstract class PyBuiltinFunction extends PyBuiltinFunctionOrMethod {
 
 final class PyBuiltinFunctionsImpl {
     static PyObject pyfunc_abs(PyObject arg) { return arg.abs(); }
-    static PyBool pyfunc_all(PyObject arg) {
-        var iter = arg.iter();
-        for (var item = iter.next(); item != null; item = iter.next()) {
-            if (!item.boolValue()) {
-                return PyBool.false_singleton;
-            }
-        }
-        return PyBool.true_singleton;
-    }
-    static PyBool pyfunc_any(PyObject arg) {
-        var iter = arg.iter();
-        for (var item = iter.next(); item != null; item = iter.next()) {
-            if (item.boolValue()) {
-                return PyBool.true_singleton;
-            }
-        }
-        return PyBool.false_singleton;
-    }
     static PyString pyfunc_ascii(PyObject arg) {
         String r = arg.repr();
         var s = new StringBuilder();
@@ -99,21 +81,6 @@ final class PyBuiltinFunctionsImpl {
                 }
                 throw r;
             }
-        } else {
-            throw PyTypeError.raiseFormat("attribute name must be string, not %s", PyString.reprOf(name_obj.type().name()));
-        }
-    }
-    static PyBool pyfunc_hasattr(PyObject obj, PyObject name_obj) {
-        if (name_obj instanceof PyString name) {
-            try {
-                obj.getAttr(name.value);
-            } catch (PyRaise r) {
-                if (r.exc instanceof PyAttributeError) {
-                    return PyBool.false_singleton;
-                }
-                throw r;
-            }
-            return PyBool.true_singleton;
         } else {
             throw PyTypeError.raiseFormat("attribute name must be string, not %s", PyString.reprOf(name_obj.type().name()));
         }

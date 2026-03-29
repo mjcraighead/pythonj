@@ -1734,6 +1734,8 @@ UNIMPLEMENTED_METHODS = {
 NULL = object()
 RAW_ARGS_KWARGS_BUILTINS = {'max', 'min', 'print'}
 
+PYTHON_BUILTIN_IMPLS = {'all', 'any', 'hasattr'}
+
 def make_param(name: str, default: object = inspect.Parameter.empty) -> inspect.Parameter:
     return inspect.Parameter(name, inspect.Parameter.POSITIONAL_ONLY, default=default)
 
@@ -1835,6 +1837,48 @@ def analyze_params(params: list[inspect.Parameter]) -> SignatureShape:
     else:
         missing_style = None
     return SignatureShape(params, posonly_params, poskw_params, kwonly_params, vararg_param, max_total, max_positional, missing_style)
+
+def emit_python_function_static(visitor: PythonjVisitor, func_name: str, arg_names: list[str], body: list[JavaStatement]) -> list[str]:
+    func_code = [
+        f'static PyObject pyfunc_{func_name}({", ".join(f"PyObject pyarg_{arg}" for arg in arg_names)}) {{',
+    ]
+    if visitor.scope.used_expr_discard:
+        func_code.append('PyObject expr_discard;')
+    for arg_name in arg_names:
+        if arg_name in visitor.scope.info.cell_vars:
+            func_code.append(f'PyCell pycell_{arg_name} = new PyCell(pyarg_{arg_name});')
+        else:
+            func_code.append(f'PyObject pylocal_{arg_name} = pyarg_{arg_name};')
+    for name in sorted(visitor.scope.info.cell_vars - set(arg_names)):
+        func_code.append(f'PyCell pycell_{name} = new PyCell({JavaPyConstant(None).emit_java(visitor.pool)});')
+    for name in sorted(visitor.scope.info.locals - visitor.scope.info.cell_vars - set(arg_names)):
+        func_code.append(f'PyObject pylocal_{name};')
+    func_code.extend(block_emit_java(block_simplify([*body, JavaReturnStatement(JavaPyConstant(None))]), visitor.pool))
+    func_code.append('}')
+    return func_code
+
+def translate_python_builtin_impl(func_name: str, pool: ConstantPool) -> tuple[list[list[str]], list[str]]:
+    with open('pythonj_builtins.py', encoding='utf-8') as f:
+        node = ast.parse(f.read(), 'pythonj_builtins.py')
+    funcs = {x.name: x for x in node.body if isinstance(x, ast.FunctionDef)}
+    func = funcs[func_name]
+    analyzer = ScopeAnalyzer()
+    analyzer.visit(node)
+    visitor = PythonjVisitor(f'<builtin {func_name}>', analyzer.scope_infos, analyzer.scope_infos[node])
+    visitor.pool = pool
+    visitor.allow_intrinsics = True
+
+    assert func.name == func_name, (func.name, func_name)
+    (arg_names, arg_defaults) = visitor.check_args(func.lineno, func.args)
+    assert not arg_defaults, (func_name, arg_defaults)
+    scope_info = visitor.scope_infos[func]
+    free_vars = visitor.resolve_free_vars(func.lineno, scope_info, 'builtin function')
+    assert not free_vars, (func_name, free_vars)
+    with visitor.new_function(scope_info, free_vars, func.name):
+        body = visitor.visit_block(func.body)
+        helper_method = emit_python_function_static(visitor, func_name, arg_names, body)
+    assert visitor.n_errors == 0, (func_name, visitor.n_errors)
+    return (list(visitor.functions.values()), helper_method)
 
 def infer_default_expr(default: object) -> Optional[str]:
     if default is None:
@@ -2041,6 +2085,8 @@ def gen_code(spec_path: str, java_path: str) -> None:
     pool = ConstantPool('PyGeneratedConstants')
     with open(java_path, 'w') as f:
         writer = IndentedWriter(f, 0)
+        python_builtin_helper_classes: list[list[str]] = []
+        python_builtin_helper_methods: list[list[str]] = []
         for (name, attrs) in spec.items():
             java_name = get_java_name(name)
             match name:
@@ -2169,6 +2215,23 @@ def gen_code(spec_path: str, java_path: str) -> None:
                     writer.write('}')
                 writer.write('')
 
+        if PYTHON_BUILTIN_IMPLS:
+            for func_name in sorted(PYTHON_BUILTIN_IMPLS):
+                (helper_classes, helper_method) = translate_python_builtin_impl(func_name, pool)
+                python_builtin_helper_classes.extend(helper_classes)
+                python_builtin_helper_methods.append(helper_method)
+            for code in python_builtin_helper_classes:
+                for line in code:
+                    writer.write(line)
+                writer.write('')
+            writer.write('final class PyBuiltinFunctionsPythonImpl {')
+            for method in python_builtin_helper_methods:
+                for line in method:
+                    writer.write(line)
+                writer.write('')
+            writer.write('}')
+            writer.write('')
+
         for func_name in sorted(BUILTIN_FUNCTIONS):
             params = get_builtin_function_params(func_name)
             if params is None or func_name in RAW_ARGS_KWARGS_BUILTINS:
@@ -2192,7 +2255,10 @@ def gen_code(spec_path: str, java_path: str) -> None:
                     func_name,
                     pool,
                 )
-            writer.write(f'return PyBuiltinFunctionsImpl.pyfunc_{func_name}({", ".join(bind_args)});')
+            if func_name in PYTHON_BUILTIN_IMPLS:
+                writer.write(f'return PyBuiltinFunctionsPythonImpl.pyfunc_{func_name}({", ".join(bind_args)});')
+            else:
+                writer.write(f'return PyBuiltinFunctionsImpl.pyfunc_{func_name}({", ".join(bind_args)});')
             writer.write('}')
             writer.write('}')
             writer.write('')
