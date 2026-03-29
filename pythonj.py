@@ -108,35 +108,45 @@ def java_string_literal(s: str) -> str:
     return ''.join(out)
 
 class ConstantPool:
-    __slots__ = ('all_ints', 'all_strings', 'all_floats', 'all_tuples', 'all_bytes')
+    __slots__ = ('all_ints', 'all_strings', 'all_floats', 'all_tuples', 'all_bytes', 'holder_name')
     all_ints: set[int]
     all_strings: dict[str, int]
     all_floats: dict[float, int]
     all_tuples: dict[tuple[object, ...], int]
     all_bytes: dict[bytes, int]
+    holder_name: Optional[str]
 
-    def __init__(self):
+    def __init__(self, holder_name: Optional[str] = None):
         self.all_ints = set()
         self.all_strings = {}
         self.all_floats = {}
         self.all_tuples = {}
         self.all_bytes = {}
+        self.holder_name = holder_name
+
+    def qualify(self, name: str) -> str:
+        return name if self.holder_name is None else f'{self.holder_name}.{name}'
 
     def emit_java(self) -> Iterator[str]:
+        if self.holder_name is not None:
+            yield f'final class {self.holder_name} {{'
+        field_prefix = 'private static final' if self.holder_name is None else 'static final'
         for i in sorted(self.all_ints):
             value = JavaCreateObject('PyInt', [JavaIntLiteral(i, 'L')])
-            yield f'private static final PyInt {int_name(i)} = {value.emit_java(self)};'
+            yield f'{field_prefix} PyInt {int_name(i)} = {value.emit_java(self)};'
         for (k, v) in sorted(self.all_strings.items()):
             value = JavaCreateObject('PyString', [JavaStrLiteral(k)])
-            yield f'private static final PyString str_singleton_{v} = {value.emit_java(self)};'
+            yield f'{field_prefix} PyString str_singleton_{v} = {value.emit_java(self)};'
         for (k, v) in sorted(self.all_floats.items()):
-            yield f'private static final PyFloat float_singleton_{v} = new PyFloat({k!r});'
+            yield f'{field_prefix} PyFloat float_singleton_{v} = new PyFloat({k!r});'
         for (k, v) in sorted(self.all_tuples.items(), key=lambda x: x[1]):
             value = JavaCreateObject('PyTuple', [JavaCreateArray('PyObject', [JavaPyConstant(x) for x in k])])
-            yield f'private static final PyTuple tuple_singleton_{v} = {value.emit_java(self)};'
+            yield f'{field_prefix} PyTuple tuple_singleton_{v} = {value.emit_java(self)};'
         for (k, v) in sorted(self.all_bytes.items()):
             value = JavaCreateObject('PyBytes', [JavaCreateArray('byte', [JavaIntLiteral(((x + 0x80) & 0xFF) - 0x80, '') for x in k])])
-            yield f'private static final PyBytes bytes_singleton_{v} = {value.emit_java(self)};'
+            yield f'{field_prefix} PyBytes bytes_singleton_{v} = {value.emit_java(self)};'
+        if self.holder_name is not None:
+            yield '}'
 
 class JavaExpr(ABC):
     @abstractmethod
@@ -243,28 +253,28 @@ class JavaPyConstant(JavaExpr):
                 else:
                     return f'PyInt.singleton_{self.value}'
             ctx.all_ints.add(self.value)
-            return int_name(self.value)
+            return ctx.qualify(int_name(self.value))
         elif isinstance(self.value, str):
             if not self.value:
                 return 'PyString.empty_singleton'
             if self.value not in ctx.all_strings:
                 ctx.all_strings[self.value] = len(ctx.all_strings)
-            return f'str_singleton_{ctx.all_strings[self.value]}'
+            return ctx.qualify(f'str_singleton_{ctx.all_strings[self.value]}')
         elif isinstance(self.value, float):
             if self.value not in ctx.all_floats:
                 ctx.all_floats[self.value] = len(ctx.all_floats)
-            return f'float_singleton_{ctx.all_floats[self.value]}'
+            return ctx.qualify(f'float_singleton_{ctx.all_floats[self.value]}')
         elif isinstance(self.value, tuple):
             if self.value not in ctx.all_tuples:
                 for x in self.value:
                     JavaPyConstant(x).emit_java(ctx)
                 ctx.all_tuples[self.value] = len(ctx.all_tuples)
-            return f'tuple_singleton_{ctx.all_tuples[self.value]}'
+            return ctx.qualify(f'tuple_singleton_{ctx.all_tuples[self.value]}')
         else:
             assert isinstance(self.value, bytes), self.value
             if self.value not in ctx.all_bytes:
                 ctx.all_bytes[self.value] = len(ctx.all_bytes)
-            return f'bytes_singleton_{ctx.all_bytes[self.value]}'
+            return ctx.qualify(f'bytes_singleton_{ctx.all_bytes[self.value]}')
 
 class JavaStatement(ABC):
     def ends_control_flow(self) -> bool:
@@ -1236,17 +1246,11 @@ class PythonjVisitor(ast.NodeVisitor):
         n_required = n_args - len(arg_defaults)
         bind_arg_names = [f'pyarg_{arg}' for arg in arg_names]
         free_var_names = sorted(self.scope.free_vars)
-        default_fields = {}
-        for default in arg_defaults:
-            if type(default) is str and default != '':
-                if default not in default_fields:
-                    default_fields[default] = f'{java_name}_default_{len(default_fields)}'
         py_name_java = java_string_literal(py_name)
         arg_names_java = ', '.join(java_string_literal(arg) for arg in arg_names)
         required_arg_names_java = ', '.join(java_string_literal(arg) for arg in arg_names[:n_required])
         func_code = [
             f'private static final class {java_name} extends PyFunction {{',
-            *(emit_default_field_decl(default, field_name, self.emit_ctx) for (default, field_name) in default_fields.items()),
             *(f'private final PyCell pycell_{name};' for name in free_var_names),
             (f'{java_name}({", ".join(f"PyCell pycell_{name}" for name in free_var_names)}) {{' if free_var_names else f'{java_name}() {{'),
             f'super({py_name_java});',
@@ -1315,7 +1319,7 @@ class PythonjVisitor(ast.NodeVisitor):
                 func_code.append('}')
         func_code.append('}')
         for (i, name) in enumerate(bind_arg_names[n_required:]):
-            func_code.append(f'if ({name} == null) {{ {name} = {emit_default_expr(arg_defaults[i], default_fields, self.emit_ctx)}; }}')
+            func_code.append(f'if ({name} == null) {{ {name} = {emit_default_expr(arg_defaults[i], self.emit_ctx)}; }}')
         if self.scope.used_expr_discard:
             func_code.append('PyObject expr_discard;')
         for (arg_name, bind_arg_name) in zip(arg_names, bind_arg_names):
@@ -1700,17 +1704,6 @@ def analyze_params(params: list[inspect.Parameter]) -> SignatureShape:
         missing_style = None
     return SignatureShape(params, posonly_params, poskw_params, kwonly_params, vararg_param, max_total, max_positional, missing_style)
 
-def collect_default_fields(params: list[inspect.Parameter], field_prefix: str) -> dict[object, str]:
-    fields = {}
-    for param in params:
-        default = param.default
-        if default is inspect.Parameter.empty:
-            continue
-        if type(default) is str and default != '':
-            if default not in fields:
-                fields[default] = f'{field_prefix}_{len(fields)}'
-    return fields
-
 def infer_default_expr(default: object) -> Optional[str]:
     if default is None:
         return 'PyNone.singleton'
@@ -1732,21 +1725,15 @@ def infer_default_expr(default: object) -> Optional[str]:
     else:
         return None
 
-def emit_default_expr(default: object, default_fields: dict[object, str], emit_ctx: ConstantPool) -> str:
+def emit_default_expr(default: object, emit_ctx: ConstantPool) -> str:
     inferred = infer_default_expr(default)
     if inferred is not None:
         return inferred
-    elif type(default) is str:
-        return default_fields[default]
     else:
         return JavaPyConstant(default).emit_java(emit_ctx)
 
-def emit_default_field_decl(default: object, field_name: str, emit_ctx: ConstantPool) -> str:
-    assert type(default) is str, default
-    return f'private static final PyString {field_name} = new PyString({java_string_literal(default)});'
-
 def emit_arg_binding(writer: IndentedWriter, shape: SignatureShape, positional_name: str,
-                     kw_name: str, default_fields: dict[object, str], kw_overflow_args_length: str,
+                     kw_name: str, kw_overflow_args_length: str,
                      noarg_name: str, emit_ctx: ConstantPool) -> list[str]:
     if not shape.posonly_params and not shape.poskw_params and not shape.kwonly_params and shape.vararg_param is not None:
         writer.write('if ((kwargs != null) && kwargs.boolValue()) {')
@@ -1781,7 +1768,7 @@ def emit_arg_binding(writer: IndentedWriter, shape: SignatureShape, positional_n
             for i in range(min_args, max_args):
                 writer.write(
                     f'PyObject arg{i} = (argsLength >= {i+1}) ? args[{i}] : '
-                    f'{emit_default_expr(shape.posonly_params[i].default, default_fields, emit_ctx)};'
+                    f'{emit_default_expr(shape.posonly_params[i].default, emit_ctx)};'
                 )
                 bind_args.append(f'arg{i}')
         return bind_args
@@ -1898,7 +1885,7 @@ def emit_arg_binding(writer: IndentedWriter, shape: SignatureShape, positional_n
     for param in shape.params:
         if param.default is not inspect.Parameter.empty:
             writer.write(f'if ({param.name} == null) {{')
-            writer.write(f'{param.name} = {emit_default_expr(param.default, default_fields, emit_ctx)};')
+            writer.write(f'{param.name} = {emit_default_expr(param.default, emit_ctx)};')
             writer.write('}')
         bind_args.append(param.name)
     return bind_args
@@ -1919,7 +1906,7 @@ def gen_code(spec_path: str, java_path: str) -> None:
     with open(spec_path) as f:
         spec = json.load(f)
 
-    emit_ctx = ConstantPool()
+    emit_ctx = ConstantPool('PyGeneratedConstants')
     with open(java_path, 'w') as f:
         writer = IndentedWriter(f, 0)
         for (name, attrs) in spec.items():
@@ -2030,11 +2017,6 @@ def gen_code(spec_path: str, java_path: str) -> None:
                     else:
                         assert False, (name, method_name, kind)
                     writer.write(f'final class {method_class_name} extends PyBuiltinMethod<{self_type}> {{')
-                    default_fields = {}
-                    if kwarg_params is not None:
-                        default_fields = collect_default_fields(kwarg_params.params, f'{method_class_name}_default')
-                        for (default, field_name) in default_fields.items():
-                            writer.write(emit_default_field_decl(default, field_name, emit_ctx))
                     writer.write(f'{method_class_name}({ctor_arg}) {{ super({super_arg}); }}')
                     writer.write(f'@Override public String methodName() {{ return "{method_name}"; }}')
                     writer.write('@Override public PyObject call(PyObject[] args, PyDict kwargs) {')
@@ -2044,7 +2026,6 @@ def gen_code(spec_path: str, java_path: str) -> None:
                         bind_args = emit_arg_binding(
                             writer, kwarg_params, method_name,
                             method_name,
-                            default_fields,
                             'argsLength',
                             f'{py_name}.{method_name}',
                             emit_ctx,
@@ -2063,11 +2044,6 @@ def gen_code(spec_path: str, java_path: str) -> None:
             else:
                 kwarg_params = analyze_params(params)
             writer.write(f'final class PyBuiltinFunction_{func_name} extends PyBuiltinFunction {{')
-            default_fields = {}
-            if kwarg_params is not None:
-                default_fields = collect_default_fields(kwarg_params.params, f'PyBuiltinFunction_{func_name}_default')
-                for (default, field_name) in default_fields.items():
-                    writer.write(emit_default_field_decl(default, field_name, emit_ctx))
             writer.write(f'public static final PyBuiltinFunction_{func_name} singleton = new PyBuiltinFunction_{func_name}();')
             writer.write('')
             writer.write(f'private PyBuiltinFunction_{func_name}() {{ super("{func_name}"); }}')
@@ -2080,7 +2056,6 @@ def gen_code(spec_path: str, java_path: str) -> None:
                 bind_args = emit_arg_binding(
                     writer, kwarg_params, func_name,
                     kw_name,
-                    default_fields,
                     kw_overflow_args_length,
                     func_name,
                     emit_ctx,
@@ -2089,6 +2064,9 @@ def gen_code(spec_path: str, java_path: str) -> None:
             writer.write('}')
             writer.write('}')
             writer.write('')
+
+        for line in emit_ctx.emit_java():
+            writer.write(line)
 
 def main() -> None:
     parser = argparse.ArgumentParser()
