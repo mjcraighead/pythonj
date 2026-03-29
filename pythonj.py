@@ -575,6 +575,7 @@ class ScopeAnalyzer(ast.NodeVisitor):
             return
         if isinstance(node, ast.ClassDef):
             writes.add(node.name)
+            children.append(node)
             return
         if isinstance(node, ast.Import):
             for alias in node.names:
@@ -616,6 +617,9 @@ class ScopeAnalyzer(ast.NodeVisitor):
                 self._walk_local(statement, reads, writes, explicit_globals, nonlocals, children)
         elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             writes.update(self._param_names(node.args))
+            for statement in node.body:
+                self._walk_local(statement, reads, writes, explicit_globals, nonlocals, children)
+        elif isinstance(node, ast.ClassDef):
             for statement in node.body:
                 self._walk_local(statement, reads, writes, explicit_globals, nonlocals, children)
         elif isinstance(node, ast.Lambda):
@@ -1988,11 +1992,51 @@ def translate_python_impl(path: str, func_name: str, display_name: str, role: st
     return (list(visitor.functions.values()), helper_method)
 
 def translate_python_builtin_impl(func_name: str, pool: ConstantPool) -> tuple[list[list[str]], list[str]]:
-    return translate_python_impl('pythonj_builtins.py', func_name, f'<builtin {func_name}>', 'builtin function', pool)
+    with open('pythonj_builtins.py', encoding='utf-8') as f:
+        node = ast.parse(f.read(), 'pythonj_builtins.py')
+    funcs = {x.name: x for x in node.body if isinstance(x, ast.FunctionDef)}
+    func = funcs[func_name]
+    analyzer = ScopeAnalyzer()
+    analyzer.visit(node)
+    visitor = PythonjVisitor(f'<builtin {func_name}>', analyzer.scope_infos, analyzer.scope_infos[node])
+    visitor.pool = pool
+    visitor.allow_intrinsics = True
+
+    (arg_names, arg_defaults) = visitor.check_args(func.lineno, func.args)
+    assert not arg_defaults, (func_name, arg_defaults)
+    scope_info = visitor.scope_infos[func]
+    free_vars = visitor.resolve_free_vars(func.lineno, scope_info, 'builtin function')
+    assert not free_vars, (func_name, free_vars)
+    with visitor.new_function(scope_info, free_vars, func.name):
+        body = visitor.visit_block(func.body)
+        helper_method = emit_python_function_static(visitor, func_name, arg_names, body)
+    assert visitor.n_errors == 0, (func_name, visitor.n_errors)
+    return (list(visitor.functions.values()), helper_method)
 
 def translate_python_method_impl(type_name: str, method_name: str, pool: ConstantPool) -> tuple[list[list[str]], list[str]]:
     func_name = f'{type_name}__{method_name}'
-    return translate_python_impl('pythonj_methods.py', func_name, f'<method {type_name}.{method_name}>', 'builtin method', pool)
+    with open('pythonj_builtins.py', encoding='utf-8') as f:
+        node = ast.parse(f.read(), 'pythonj_builtins.py')
+    classes = {x.name: x for x in node.body if isinstance(x, ast.ClassDef)}
+    methods = {x.name: x for x in classes[type_name].body if isinstance(x, ast.FunctionDef)}
+    func = methods[method_name]
+    analyzer = ScopeAnalyzer()
+    analyzer.visit(node)
+    visitor = PythonjVisitor(f'<method {type_name}.{method_name}>', analyzer.scope_infos, analyzer.scope_infos[node])
+    visitor.pool = pool
+    visitor.allow_intrinsics = True
+
+    assert func.name == method_name, (func.name, method_name)
+    (arg_names, arg_defaults) = visitor.check_args(func.lineno, func.args)
+    assert not arg_defaults, (func_name, arg_defaults)
+    scope_info = visitor.scope_infos[func]
+    free_vars = visitor.resolve_free_vars(func.lineno, scope_info, 'builtin method')
+    assert not free_vars, (func_name, free_vars)
+    with visitor.new_function(scope_info, free_vars, func.name):
+        body = visitor.visit_block(func.body)
+        helper_method = emit_python_function_static(visitor, func_name, arg_names, body)
+    assert visitor.n_errors == 0, (func_name, visitor.n_errors)
+    return (list(visitor.functions.values()), helper_method)
 
 def translate_python_runtime_impl(func_name: str, pool: ConstantPool) -> tuple[list[list[str]], list[str]]:
     return translate_python_impl('pythonj_runtime.py', func_name, f'<runtime {func_name}>', 'runtime helper', pool)
