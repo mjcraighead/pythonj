@@ -1455,9 +1455,26 @@ BUILTIN_FUNCTION_ARG_OVERRIDES = {
 }
 
 KWARG_BINDER_METHODS = {
-    'int': {'from_bytes', 'to_bytes'},
-    'list': {'sort'},
-    'str': {'split'},
+    '_io.BufferedReader': {'close', 'detach', 'fileno', 'flush', 'isatty', 'readable', 'seekable', 'tell'},
+    '_io.TextIOWrapper': {'close', 'detach', 'fileno', 'flush', 'isatty', 'readable', 'seekable', 'tell', 'writable'},
+    'bytearray': {
+        'capitalize', 'clear', 'copy', 'isalnum', 'isalpha', 'isascii', 'isdigit', 'islower', 'isspace',
+        'istitle', 'isupper', 'lower', 'reverse', 'swapcase', 'title', 'upper',
+    },
+    'bytes': {
+        'capitalize', 'isalnum', 'isalpha', 'isascii', 'isdigit', 'islower', 'isspace',
+        'istitle', 'isupper', 'lower', 'swapcase', 'title', 'upper',
+    },
+    'dict': {'clear', 'copy', 'items', 'keys', 'popitem', 'values'},
+    'int': {'as_integer_ratio', 'bit_count', 'bit_length', 'conjugate', 'from_bytes', 'is_integer', 'to_bytes'},
+    'list': {'clear', 'copy', 'reverse', 'sort'},
+    'set': {'clear', 'copy', 'pop'},
+    'str': {
+        'capitalize', 'casefold', 'isalnum', 'isalpha', 'isascii', 'isdecimal', 'isdigit', 'isidentifier',
+        'islower', 'isnumeric', 'isprintable', 'isspace', 'istitle', 'isupper', 'lower', 'split',
+        'swapcase', 'title', 'upper',
+    },
+    'type': {'mro'},
 }
 KWARG_BINDER_BUILTINS = {'sorted', 'sum'}
 
@@ -1559,7 +1576,7 @@ def classify_binding_shape(shape: SignatureShape, allow_kwargs: bool) -> Binding
                 else:
                     inferred_args = None
             args = inferred_args
-    if args is not None and not (allow_kwargs and (shape.poskw_params or shape.kwonly_params)):
+    if args is not None and not (allow_kwargs and (shape.poskw_params or shape.kwonly_params or not shape.params)):
         return BindingShape(args, None)
     elif allow_kwargs:
         return BindingShape(None, shape)
@@ -1604,7 +1621,17 @@ def emit_default_expr(default: object, default_fields: dict[str, str]) -> str:
         assert False, default
 
 def emit_kwarg_binding(writer: IndentedWriter, shape: SignatureShape, positional_name: str,
-                       kw_name: str, default_fields: dict[str, str], kw_overflow_args_length: str) -> list[str]:
+                       kw_name: str, default_fields: dict[str, str], kw_overflow_args_length: str,
+                       noarg_name: str) -> list[str]:
+    writer.write('int argsLength = args.length;')
+    if not shape.params:
+        writer.write('if ((kwargs != null) && kwargs.boolValue()) {')
+        writer.write(f'throw Runtime.raiseNoKwArgs("{noarg_name}");')
+        writer.write('}')
+        writer.write('if (argsLength != 0) {')
+        writer.write(f'throw Runtime.raiseNoArgs(args, "{noarg_name}");')
+        writer.write('}')
+        return []
     posonly_params = shape.posonly_params
     poskw_params = shape.poskw_params
     kwonly_params = shape.kwonly_params
@@ -1612,7 +1639,6 @@ def emit_kwarg_binding(writer: IndentedWriter, shape: SignatureShape, positional
     max_positional = shape.max_positional
     no_positional = shape.no_positional
     missing_style = shape.missing_style
-    writer.write('int argsLength = args.length;')
     if missing_style == 'exact_args':
         writer.write(f'if (argsLength != 1) {{ throw Runtime.raiseExactArgs(args, 1, "{positional_name}"); }}')
     elif missing_style == 'one_arg':
@@ -1907,6 +1933,7 @@ def gen_code(spec_path: str, java_path: str) -> None:
                             method_name,
                             default_fields,
                             'argsLength',
+                            f'{py_name}.{method_name}',
                         )
                     if kind == 'classmethod':
                         bind_args = ['self'] + bind_args
@@ -1945,6 +1972,7 @@ def gen_code(spec_path: str, java_path: str) -> None:
                     kw_name,
                     default_fields,
                     kw_overflow_args_length,
+                    func_name,
                 )
             writer.write(f'return PyBuiltinFunctionsImpl.pyfunc_{func_name}({", ".join(bind_args)});')
             writer.write('}')
