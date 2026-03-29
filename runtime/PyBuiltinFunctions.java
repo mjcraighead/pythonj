@@ -135,7 +135,7 @@ final class PyBuiltinFunctionsImpl {
                 }
             }
             return false;
-        } else if (type instanceof PyBuiltinType type_class) {
+        } else if (type instanceof PyConcreteType type_class) {
             return type_class.instanceClass.isInstance(obj);
         } else if (type instanceof PyType) {
             throw new UnsupportedOperationException("isinstance() is unimplemented for type " + type.repr());
@@ -152,8 +152,8 @@ final class PyBuiltinFunctionsImpl {
                 }
             }
             return false;
-        } else if (obj instanceof PyBuiltinType obj_class &&
-                    type instanceof PyBuiltinType type_class) {
+        } else if (obj instanceof PyConcreteType obj_class &&
+                    type instanceof PyConcreteType type_class) {
             return type_class.instanceClass.isAssignableFrom(obj_class.instanceClass);
         } else {
             throw new UnsupportedOperationException(String.format("issubclass() is unimplemented for types %s and %s", obj.repr(), type.repr()));

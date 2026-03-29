@@ -11,7 +11,7 @@ public final class PySlice extends PyTruthyObject {
         step = _step;
     }
 
-    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+    public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, type.name());
         Runtime.requireMinArgs(args, 1, type.name());
         Runtime.requireMaxArgs(args, 3, type.name());
@@ -30,7 +30,7 @@ public final class PySlice extends PyTruthyObject {
         return new PySlice(start, stop, step);
     }
 
-    @Override public PyBuiltinType type() { return PySliceType.singleton; }
+    @Override public PyConcreteType type() { return PySliceType.singleton; }
 
     @Override public boolean ge(PyObject rhs) { throw unimplementedMethod("ge"); }
     @Override public boolean gt(PyObject rhs) { throw unimplementedMethod("gt"); }

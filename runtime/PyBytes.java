@@ -9,7 +9,7 @@ public final class PyBytes extends PyObject {
     public static final PyBytes empty_singleton = new PyBytes(new byte[0]);
 
     static final class PyBytesIter extends PyIter {
-        private static final PyBuiltinType type_singleton = new PyBuiltinType("bytes_iterator", PyBytesIter.class);
+        private static final PyConcreteType type_singleton = new PyConcreteType("bytes_iterator", PyBytesIter.class);
 
         private final byte[] b;
         private int index = 0;
@@ -23,14 +23,14 @@ public final class PyBytes extends PyObject {
             return new PyInt(b[index++] & 0xFF);
         }
         @Override public String repr() { return defaultRepr(); }
-        @Override public PyBuiltinType type() { return type_singleton; }
+        @Override public PyConcreteType type() { return type_singleton; }
     };
 
     public final byte[] value;
 
     PyBytes(byte[] _value) { value = _value; }
 
-    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+    public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
         if (args.length > 1) {
             throw new IllegalArgumentException("bytes() takes 0 or 1 arguments");
         }
@@ -190,7 +190,7 @@ public final class PyBytes extends PyObject {
 
     @Override public final boolean hasIter() { return true; }
     @Override public PyBytesIter iter() { return new PyBytesIter(this); }
-    @Override public PyBuiltinType type() { return PyBytesType.singleton; }
+    @Override public PyConcreteType type() { return PyBytesType.singleton; }
 
     @Override public boolean boolValue() { return value.length != 0; }
     @Override public boolean contains(PyObject rhs) {

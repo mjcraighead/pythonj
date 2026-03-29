@@ -9,7 +9,7 @@ public final class PyTuple extends PyObject {
     public static final PyTuple empty_singleton = new PyTuple();
 
     static final class PyTupleIter extends PyIter {
-        private static final PyBuiltinType type_singleton = new PyBuiltinType("tuple_iterator", PyTupleIter.class);
+        private static final PyConcreteType type_singleton = new PyConcreteType("tuple_iterator", PyTupleIter.class);
 
         private final PyObject[] items;
         private int index = 0;
@@ -23,7 +23,7 @@ public final class PyTuple extends PyObject {
             return items[index++];
         }
         @Override public String repr() { return defaultRepr(); }
-        @Override public PyBuiltinType type() { return type_singleton; }
+        @Override public PyConcreteType type() { return type_singleton; }
     };
 
     public final PyObject[] items;
@@ -32,7 +32,7 @@ public final class PyTuple extends PyObject {
     PyTuple(PyObject[] args) { items = args; } // WARNING: takes ownership of args from caller, does not copy
     PyTuple(ArrayList<PyObject> list) { items = Runtime.arrayListToArray(list); }
 
-    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+    public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, type.name());
         Runtime.requireMaxArgs(args, 1, type.name());
         if (args.length == 0) {
@@ -136,7 +136,7 @@ public final class PyTuple extends PyObject {
     @Override public final boolean hasIter() { return true; }
     @Override public PyTupleIter iter() { return new PyTupleIter(this); }
     @Override public PyReversed reversed() { return new PyReversed(this); }
-    @Override public PyBuiltinType type() { return PyTupleType.singleton; }
+    @Override public PyConcreteType type() { return PyTupleType.singleton; }
 
     @Override public boolean boolValue() { return items.length != 0; }
     @Override public boolean contains(PyObject rhs) {

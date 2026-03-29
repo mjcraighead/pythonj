@@ -14,7 +14,7 @@ public final class PyInt extends PyObject {
 
     PyInt(long _value) { value = _value; }
 
-    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+    public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
         Runtime.requireMaxArgs(args, 2, type.name());
         if ((kwargs != null) && kwargs.boolValue()) {
             throw new IllegalArgumentException("int() does not accept kwargs");
@@ -298,7 +298,7 @@ public final class PyInt extends PyObject {
         }
     }
 
-    @Override public PyBuiltinType type() { return PyIntType.singleton; }
+    @Override public PyConcreteType type() { return PyIntType.singleton; }
 
     @Override public boolean boolValue() { return value != 0; }
     @Override public boolean contains(PyObject rhs) { return defaultContains(rhs); }

@@ -7,7 +7,7 @@ public final class PyNone extends PyObject {
 
     private PyNone() {}
 
-    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+    public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
         if ((kwargs != null) && kwargs.boolValue()) {
             throw PyTypeError.raise("NoneType takes no arguments");
         }
@@ -25,7 +25,7 @@ public final class PyNone extends PyObject {
         }
     }
 
-    @Override public PyBuiltinType type() { return PyNoneType.singleton; }
+    @Override public PyConcreteType type() { return PyNoneType.singleton; }
 
     @Override public boolean boolValue() { return false; }
     @Override public boolean contains(PyObject rhs) { return defaultContains(rhs); }

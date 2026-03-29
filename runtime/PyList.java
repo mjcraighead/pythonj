@@ -15,7 +15,7 @@ public final class PyList extends PyObject {
     }
 
     static final class PyListIter extends PyIter {
-        private static final PyBuiltinType type_singleton = new PyBuiltinType("list_iterator", PyListIter.class);
+        private static final PyConcreteType type_singleton = new PyConcreteType("list_iterator", PyListIter.class);
 
         private final Iterator<PyObject> it;
 
@@ -23,7 +23,7 @@ public final class PyList extends PyObject {
 
         @Override public PyObject next() { return it.hasNext() ? it.next() : null; }
         @Override public String repr() { return defaultRepr(); }
-        @Override public PyBuiltinType type() { return type_singleton; }
+        @Override public PyConcreteType type() { return type_singleton; }
     };
 
     public final ArrayList<PyObject> items;
@@ -38,7 +38,7 @@ public final class PyList extends PyObject {
         items = _items; // WARNING: takes ownership of _items from caller, does not copy
     }
 
-    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+    public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, type.name());
         Runtime.requireMaxArgs(args, 1, type.name());
         var ret = new PyList();
@@ -190,7 +190,7 @@ public final class PyList extends PyObject {
     @Override public final boolean hasIter() { return true; }
     @Override public PyListIter iter() { return new PyListIter(items.iterator()); }
     @Override public PyReversed reversed() { return new PyReversed(this); }
-    @Override public PyBuiltinType type() { return PyListType.singleton; }
+    @Override public PyConcreteType type() { return PyListType.singleton; }
 
     @Override public boolean boolValue() { return !items.isEmpty(); }
     @Override public boolean contains(PyObject rhs) { return items.contains(rhs); }

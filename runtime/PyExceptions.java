@@ -5,7 +5,7 @@
 class PyBaseException extends PyTruthyObject {
     protected final PyObject[] args;
     PyBaseException(PyObject[] _args) { args = _args; }
-    @Override public PyBuiltinType type() { return PyBaseExceptionType.singleton; }
+    @Override public PyConcreteType type() { return PyBaseExceptionType.singleton; }
 
     @Override public boolean contains(PyObject rhs) { return defaultContains(rhs); }
     @Override public String str() {
@@ -37,7 +37,7 @@ class PyBaseException extends PyTruthyObject {
 
     static PyObject pygetset_args(PyObject obj) { throw new UnsupportedOperationException(); }
 
-    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+    public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, type.name());
         return new PyBaseException(args);
     }
@@ -45,9 +45,9 @@ class PyBaseException extends PyTruthyObject {
 
 class PyException extends PyBaseException {
     PyException(PyObject[] _args) { super(_args); }
-    @Override public PyBuiltinType type() { return PyExceptionType.singleton; }
+    @Override public PyConcreteType type() { return PyExceptionType.singleton; }
 
-    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+    public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, type.name());
         return new PyException(args);
     }
@@ -55,13 +55,13 @@ class PyException extends PyBaseException {
 
 final class PyAssertionError extends PyException {
     PyAssertionError(PyObject... _args) { super(_args); }
-    @Override public PyBuiltinType type() { return PyAssertionErrorType.singleton; }
+    @Override public PyConcreteType type() { return PyAssertionErrorType.singleton; }
 
     static PyRaise raise(String msg) {
         return new PyRaise(new PyAssertionError(new PyString(msg)));
     }
 
-    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+    public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, type.name());
         return new PyAssertionError(args);
     }
@@ -69,7 +69,7 @@ final class PyAssertionError extends PyException {
 
 final class PyAttributeError extends PyException {
     PyAttributeError(PyObject... _args) { super(_args); }
-    @Override public PyBuiltinType type() { return PyAttributeErrorType.singleton; }
+    @Override public PyConcreteType type() { return PyAttributeErrorType.singleton; }
 
     static PyRaise raise(String msg) {
         return new PyRaise(new PyAttributeError(new PyString(msg)));
@@ -81,7 +81,7 @@ final class PyAttributeError extends PyException {
     static PyObject pymember_name(PyObject obj) { throw new UnsupportedOperationException(); }
     static PyObject pymember_obj(PyObject obj) { throw new UnsupportedOperationException(); }
 
-    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+    public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
         if ((kwargs != null) && kwargs.boolValue()) {
             throw new IllegalArgumentException("AttributeError() does not accept kwargs");
         }
@@ -91,35 +91,35 @@ final class PyAttributeError extends PyException {
 
 class PyArithmeticError extends PyException {
     PyArithmeticError(PyObject... _args) { super(_args); }
-    @Override public PyBuiltinType type() { return PyArithmeticErrorType.singleton; }
+    @Override public PyConcreteType type() { return PyArithmeticErrorType.singleton; }
 
-    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+    public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, type.name());
         return new PyArithmeticError(args);
     }
 }
 final class PyOverflowError extends PyArithmeticError {
     PyOverflowError(PyObject... _args) { super(_args); }
-    @Override public PyBuiltinType type() { return PyOverflowErrorType.singleton; }
+    @Override public PyConcreteType type() { return PyOverflowErrorType.singleton; }
 
     static PyRaise raise(String msg) {
         return new PyRaise(new PyOverflowError(new PyString(msg)));
     }
 
-    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+    public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, type.name());
         return new PyOverflowError(args);
     }
 }
 final class PyZeroDivisionError extends PyArithmeticError {
     PyZeroDivisionError(PyObject... _args) { super(_args); }
-    @Override public PyBuiltinType type() { return PyZeroDivisionErrorType.singleton; }
+    @Override public PyConcreteType type() { return PyZeroDivisionErrorType.singleton; }
 
     static PyRaise raise(String msg) {
         return new PyRaise(new PyZeroDivisionError(new PyString(msg)));
     }
 
-    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+    public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, type.name());
         return new PyZeroDivisionError(args);
     }
@@ -127,29 +127,29 @@ final class PyZeroDivisionError extends PyArithmeticError {
 
 class PyLookupError extends PyException {
     PyLookupError(PyObject... _args) { super(_args); }
-    @Override public PyBuiltinType type() { return PyLookupErrorType.singleton; }
+    @Override public PyConcreteType type() { return PyLookupErrorType.singleton; }
 
-    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+    public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, type.name());
         return new PyLookupError(args);
     }
 }
 final class PyIndexError extends PyLookupError {
     PyIndexError(PyObject... _args) { super(_args); }
-    @Override public PyBuiltinType type() { return PyIndexErrorType.singleton; }
+    @Override public PyConcreteType type() { return PyIndexErrorType.singleton; }
 
     static PyRaise raise(String msg) {
         return new PyRaise(new PyIndexError(new PyString(msg)));
     }
 
-    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+    public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, type.name());
         return new PyIndexError(args);
     }
 }
 final class PyKeyError extends PyLookupError {
     PyKeyError(PyObject... _args) { super(_args); }
-    @Override public PyBuiltinType type() { return PyKeyErrorType.singleton; }
+    @Override public PyConcreteType type() { return PyKeyErrorType.singleton; }
     @Override public String str() { // special case for KeyError
         if (args.length == 1) {
             return args[0].repr();
@@ -162,7 +162,7 @@ final class PyKeyError extends PyLookupError {
         return new PyRaise(new PyKeyError(new PyString(msg)));
     }
 
-    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+    public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, type.name());
         return new PyKeyError(args);
     }
@@ -170,9 +170,9 @@ final class PyKeyError extends PyLookupError {
 
 final class PyStopIteration extends PyException {
     PyStopIteration(PyObject... _args) { super(_args); }
-    @Override public PyBuiltinType type() { return PyStopIterationType.singleton; }
+    @Override public PyConcreteType type() { return PyStopIterationType.singleton; }
 
-    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+    public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, type.name());
         return new PyStopIteration(args);
     }
@@ -182,7 +182,7 @@ final class PyStopIteration extends PyException {
 
 final class PyTypeError extends PyException {
     PyTypeError(PyObject... _args) { super(_args); }
-    @Override public PyBuiltinType type() { return PyTypeErrorType.singleton; }
+    @Override public PyConcreteType type() { return PyTypeErrorType.singleton; }
 
     static PyRaise raise(String msg) {
         return new PyRaise(new PyTypeError(new PyString(msg)));
@@ -191,7 +191,7 @@ final class PyTypeError extends PyException {
         return new PyRaise(new PyTypeError(new PyString(String.format(fmt, args))));
     }
 
-    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+    public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, type.name());
         return new PyTypeError(args);
     }
@@ -199,7 +199,7 @@ final class PyTypeError extends PyException {
 
 final class PyValueError extends PyException {
     PyValueError(PyObject... _args) { super(_args); }
-    @Override public PyBuiltinType type() { return PyValueErrorType.singleton; }
+    @Override public PyConcreteType type() { return PyValueErrorType.singleton; }
 
     static PyRaise raise(String msg) {
         return new PyRaise(new PyValueError(new PyString(msg)));
@@ -208,7 +208,7 @@ final class PyValueError extends PyException {
         return new PyRaise(new PyValueError(new PyString(String.format(fmt, args))));
     }
 
-    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+    public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, type.name());
         return new PyValueError(args);
     }

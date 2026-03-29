@@ -104,7 +104,7 @@ public final class PyFloat extends PyObject {
         }
     }
 
-    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+    public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, type.name());
         Runtime.requireMaxArgs(args, 1, type.name());
         if (args.length == 0) {
@@ -278,7 +278,7 @@ public final class PyFloat extends PyObject {
     }
     @Override public String repr() { return strOf(value); }
     @Override public String str() { return strOf(value); }
-    @Override public PyBuiltinType type() { return PyFloatType.singleton; }
+    @Override public PyConcreteType type() { return PyFloatType.singleton; }
 
     public PyObject pymethod_as_integer_ratio() {
         if (Double.isNaN(value)) {

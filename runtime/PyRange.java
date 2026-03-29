@@ -4,7 +4,7 @@
 
 public final class PyRange extends PyObject {
     static final class PyRangeIter extends PyIter {
-        private static final PyBuiltinType type_singleton = new PyBuiltinType("range_iterator", PyRangeIter.class);
+        private static final PyConcreteType type_singleton = new PyConcreteType("range_iterator", PyRangeIter.class);
 
         private long start;
         private final long stop, step;
@@ -30,7 +30,7 @@ public final class PyRange extends PyObject {
             return ret;
         }
         @Override public String repr() { return defaultRepr(); }
-        @Override public PyBuiltinType type() { return type_singleton; }
+        @Override public PyConcreteType type() { return type_singleton; }
     };
 
     protected final long start, stop, step;
@@ -44,7 +44,7 @@ public final class PyRange extends PyObject {
         step = _step;
     }
 
-    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+    public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, type.name());
         Runtime.requireMinArgs(args, 1, type.name());
         Runtime.requireMaxArgs(args, 3, type.name());
@@ -68,7 +68,7 @@ public final class PyRange extends PyObject {
 
     @Override public final boolean hasIter() { return true; }
     @Override public PyRangeIter iter() { return new PyRangeIter(this); }
-    @Override public PyBuiltinType type() { return PyRangeType.singleton; }
+    @Override public PyConcreteType type() { return PyRangeType.singleton; }
 
     @Override public boolean boolValue() {
         return len() != 0;

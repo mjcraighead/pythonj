@@ -84,7 +84,7 @@ abstract class PySlottedObject extends PyTruthyObject {
 }
 
 abstract class PyType extends PyTruthyObject {
-    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+    public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
         if (args.length != 1) {
             throw new IllegalArgumentException("type() takes 1 argument");
         }
@@ -115,18 +115,18 @@ abstract class PyType extends PyTruthyObject {
     }
 }
 
-class PyBuiltinType extends PyType {
+class PyConcreteType extends PyType {
     protected final String typeName;
     protected final Class<? extends PyObject> instanceClass;
-    protected final TriFunction<PyBuiltinType, PyObject[], PyDict, PyObject> newObj;
+    protected final TriFunction<PyConcreteType, PyObject[], PyDict, PyObject> newObj;
 
-    protected PyBuiltinType(String name, Class<? extends PyObject> _instanceClass) {
+    protected PyConcreteType(String name, Class<? extends PyObject> _instanceClass) {
         typeName = name;
         instanceClass = _instanceClass;
         newObj = null;
     }
-    protected PyBuiltinType(String name, Class<? extends PyObject> _instanceClass,
-                            TriFunction<PyBuiltinType, PyObject[], PyDict, PyObject> _newObj) {
+    protected PyConcreteType(String name, Class<? extends PyObject> _instanceClass,
+                            TriFunction<PyConcreteType, PyObject[], PyDict, PyObject> _newObj) {
         typeName = name;
         instanceClass = _instanceClass;
         newObj = _newObj;
@@ -182,7 +182,7 @@ abstract class PyGettableDescriptor extends PyTruthyObject {
         doc = _doc;
     }
 
-    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+    public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
         throw PyTypeError.raise("cannot create " + PyString.reprOf(type.name()) + " instances");
     }
 
@@ -214,7 +214,7 @@ final class PyMemberDescriptor extends PyGettableDescriptor {
     }
 
     @Override public final String repr() { return "<member " + PyString.reprOf(name) + " of " + PyString.reprOf(owner.name()) + " objects>"; }
-    @Override public final PyBuiltinType type() { return PyMemberDescriptorType.singleton; }
+    @Override public final PyConcreteType type() { return PyMemberDescriptorType.singleton; }
 }
 
 final class PyGetSetDescriptor extends PyGettableDescriptor {
@@ -231,7 +231,7 @@ final class PyGetSetDescriptor extends PyGettableDescriptor {
     }
 
     @Override public final String repr() { return "<attribute " + PyString.reprOf(name) + " of " + PyString.reprOf(owner.name()) + " objects>"; }
-    @Override public final PyBuiltinType type() { return PyGetSetDescriptorType.singleton; }
+    @Override public final PyConcreteType type() { return PyGetSetDescriptorType.singleton; }
 }
 
 final class PyMethodDescriptor extends PyGettableDescriptor {
@@ -240,7 +240,7 @@ final class PyMethodDescriptor extends PyGettableDescriptor {
     }
 
     @Override public final String repr() { return "<method " + PyString.reprOf(name) + " of " + PyString.reprOf(owner.name()) + " objects>"; }
-    @Override public final PyBuiltinType type() { return PyMethodDescriptorType.singleton; }
+    @Override public final PyConcreteType type() { return PyMethodDescriptorType.singleton; }
 }
 
 final class PyClassMethodDescriptor extends PyTruthyObject {
@@ -256,7 +256,7 @@ final class PyClassMethodDescriptor extends PyTruthyObject {
         doc = _doc;
     }
 
-    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+    public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
         throw PyTypeError.raise("cannot create " + PyString.reprOf(type.name()) + " instances");
     }
 
@@ -265,7 +265,7 @@ final class PyClassMethodDescriptor extends PyTruthyObject {
     }
 
     @Override public final String repr() { return "<method " + PyString.reprOf(name) + " of " + PyString.reprOf(owner.name()) + " objects>"; }
-    @Override public final PyBuiltinType type() { return PyClassMethodDescriptorType.singleton; }
+    @Override public final PyConcreteType type() { return PyClassMethodDescriptorType.singleton; }
 
     static PyObject pygetset___doc__(PyObject obj) {
         String doc = ((PyClassMethodDescriptor)obj).doc;
@@ -289,12 +289,12 @@ final class PyStaticMethod extends PyTruthyObject {
     }
 
     @Override public final String repr() { return "<staticmethod(" + func.repr() + ")>"; }
-    @Override public final PyBuiltinType type() { return PyStaticMethodType.singleton; }
+    @Override public final PyConcreteType type() { return PyStaticMethodType.singleton; }
 }
 
 abstract class PyBuiltinFunctionOrMethod extends PyTruthyObject {
     @Override public int hashCode() { return defaultHashCode(); }
-    @Override public final PyBuiltinType type() { return PyBuiltinFunctionOrMethodType.singleton; }
+    @Override public final PyConcreteType type() { return PyBuiltinFunctionOrMethodType.singleton; }
 
     static PyObject pygetset___doc__(PyObject obj) {
         throw new UnsupportedOperationException("builtin_function_or_method.__doc__ unimplemented");
@@ -314,7 +314,7 @@ abstract class PyFunction extends PyTruthyObject {
     private final String funcName;
     protected PyFunction(String name) { funcName = name; }
     @Override public int hashCode() { return defaultHashCode(); }
-    @Override public PyBuiltinType type() { return PyFunctionType.singleton; }
+    @Override public PyConcreteType type() { return PyFunctionType.singleton; }
     @Override public String repr() { return "<function " + funcName + ">"; }
 
     static PyObject pymember___doc__(PyObject obj) {

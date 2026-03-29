@@ -10,7 +10,7 @@ import java.util.Set;
 
 public final class PyDict extends PyObject {
     static final class PyDictIter extends PyIter {
-        private static final PyBuiltinType type_singleton = new PyBuiltinType("dict_keyiterator", PyDictIter.class);
+        private static final PyConcreteType type_singleton = new PyConcreteType("dict_keyiterator", PyDictIter.class);
 
         private final Iterator<PyObject> it;
 
@@ -18,11 +18,11 @@ public final class PyDict extends PyObject {
 
         @Override public PyObject next() { return it.hasNext() ? it.next() : null; }
         @Override public String repr() { return defaultRepr(); }
-        @Override public PyBuiltinType type() { return type_singleton; }
+        @Override public PyConcreteType type() { return type_singleton; }
     };
 
     static final class PyDictItemIter extends PyIter {
-        private static final PyBuiltinType type_singleton = new PyBuiltinType("dict_itemiterator", PyDictItemIter.class);
+        private static final PyConcreteType type_singleton = new PyConcreteType("dict_itemiterator", PyDictItemIter.class);
 
         private final Iterator<Map.Entry<PyObject, PyObject>> it;
 
@@ -36,11 +36,11 @@ public final class PyDict extends PyObject {
             return new PyTuple(new PyObject[] {entry.getKey(), entry.getValue()});
         }
         @Override public String repr() { return defaultRepr(); }
-        @Override public PyBuiltinType type() { return type_singleton; }
+        @Override public PyConcreteType type() { return type_singleton; }
     };
 
     static final class PyDictValueIter extends PyIter {
-        private static final PyBuiltinType type_singleton = new PyBuiltinType("dict_valueiterator", PyDictValueIter.class);
+        private static final PyConcreteType type_singleton = new PyConcreteType("dict_valueiterator", PyDictValueIter.class);
 
         private final Iterator<Map.Entry<PyObject, PyObject>> it;
 
@@ -48,11 +48,11 @@ public final class PyDict extends PyObject {
 
         @Override public PyObject next() { return it.hasNext() ? it.next().getValue() : null; }
         @Override public String repr() { return defaultRepr(); }
-        @Override public PyBuiltinType type() { return type_singleton; }
+        @Override public PyConcreteType type() { return type_singleton; }
     };
 
     static final class PyDictItems extends PyObject {
-        private static final PyBuiltinType type_singleton = new PyBuiltinType("dict_items", PyDictItems.class);
+        private static final PyConcreteType type_singleton = new PyConcreteType("dict_items", PyDictItems.class);
 
         private final LinkedHashMap<PyObject, PyObject> items;
 
@@ -167,11 +167,11 @@ public final class PyDict extends PyObject {
             }
             return s + "])";
         }
-        @Override public PyBuiltinType type() { return type_singleton; }
+        @Override public PyConcreteType type() { return type_singleton; }
     };
 
     static final class PyDictKeys extends PyObject {
-        private static final PyBuiltinType type_singleton = new PyBuiltinType("dict_keys", PyDictKeys.class);
+        private static final PyConcreteType type_singleton = new PyConcreteType("dict_keys", PyDictKeys.class);
 
         private final LinkedHashMap<PyObject, PyObject> items;
 
@@ -266,11 +266,11 @@ public final class PyDict extends PyObject {
             }
             return s + "])";
         }
-        @Override public PyBuiltinType type() { return type_singleton; }
+        @Override public PyConcreteType type() { return type_singleton; }
     };
 
     static final class PyDictValues extends PyObject {
-        private static final PyBuiltinType type_singleton = new PyBuiltinType("dict_values", PyDictValues.class);
+        private static final PyConcreteType type_singleton = new PyConcreteType("dict_values", PyDictValues.class);
 
         private final LinkedHashMap<PyObject, PyObject> items;
 
@@ -292,7 +292,7 @@ public final class PyDict extends PyObject {
             }
             return s + "])";
         }
-        @Override public PyBuiltinType type() { return type_singleton; }
+        @Override public PyConcreteType type() { return type_singleton; }
     };
 
     public final LinkedHashMap<PyObject, PyObject> items;
@@ -314,7 +314,7 @@ public final class PyDict extends PyObject {
         }
     }
 
-    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+    public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
         if (args.length > 1) {
             throw new IllegalArgumentException("dict() takes 0 or 1 arguments");
         }
@@ -359,7 +359,7 @@ public final class PyDict extends PyObject {
 
     @Override public final boolean hasIter() { return true; }
     @Override public PyDictIter iter() { return new PyDictIter(items.keySet().iterator()); }
-    @Override public PyBuiltinType type() { return PyDictType.singleton; }
+    @Override public PyConcreteType type() { return PyDictType.singleton; }
 
     @Override public boolean boolValue() { return !items.isEmpty(); }
     @Override public boolean contains(PyObject rhs) { return items.containsKey(rhs); }

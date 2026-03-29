@@ -11,7 +11,7 @@ public final class PyZip extends PyIter {
         iters = _iters; // WARNING: takes ownership of _iters from caller, does not copy
     }
 
-    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+    public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
         if ((kwargs != null) && kwargs.boolValue()) {
             throw new IllegalArgumentException("zip() does not accept kwargs");
         }
@@ -39,5 +39,5 @@ public final class PyZip extends PyIter {
 
     @Override public boolean contains(PyObject rhs) { return defaultContains(rhs); }
     @Override public String repr() { return defaultRepr(); }
-    @Override public PyBuiltinType type() { return PyZipType.singleton; }
+    @Override public PyConcreteType type() { return PyZipType.singleton; }
 }

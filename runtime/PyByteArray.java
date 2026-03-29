@@ -7,7 +7,7 @@ import java.util.Arrays;
 
 public final class PyByteArray extends PyObject {
     static final class PyByteArrayIter extends PyIter {
-        private static final PyBuiltinType type_singleton = new PyBuiltinType("bytearray_iterator", PyByteArrayIter.class);
+        private static final PyConcreteType type_singleton = new PyConcreteType("bytearray_iterator", PyByteArrayIter.class);
 
         private byte[] b;
         private int index = 0;
@@ -21,14 +21,14 @@ public final class PyByteArray extends PyObject {
             return new PyInt(b[index++] & 0xFF);
         }
         @Override public String repr() { return defaultRepr(); }
-        @Override public PyBuiltinType type() { return type_singleton; }
+        @Override public PyConcreteType type() { return type_singleton; }
     };
 
     protected byte[] value;
 
     PyByteArray(byte[] _value) { value = _value; }
 
-    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+    public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
         if (args.length > 1) {
             throw new IllegalArgumentException("bytearray() takes 0 or 1 arguments");
         }
@@ -183,7 +183,7 @@ public final class PyByteArray extends PyObject {
 
     @Override public final boolean hasIter() { return true; }
     @Override public PyByteArrayIter iter() { return new PyByteArrayIter(this); }
-    @Override public PyBuiltinType type() { return PyByteArrayType.singleton; }
+    @Override public PyConcreteType type() { return PyByteArrayType.singleton; }
 
     @Override public boolean boolValue() { return value.length != 0; }
     @Override public boolean contains(PyObject rhs) {

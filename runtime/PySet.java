@@ -9,7 +9,7 @@ import java.util.Set;
 
 public final class PySet extends PyObject {
     static final class PySetIter extends PyIter {
-        private static final PyBuiltinType type_singleton = new PyBuiltinType("set_iterator", PySetIter.class);
+        private static final PyConcreteType type_singleton = new PyConcreteType("set_iterator", PySetIter.class);
 
         private final Iterator<PyObject> it;
 
@@ -17,7 +17,7 @@ public final class PySet extends PyObject {
 
         @Override public PyObject next() { return it.hasNext() ? it.next() : null; }
         @Override public String repr() { return defaultRepr(); }
-        @Override public PyBuiltinType type() { return type_singleton; }
+        @Override public PyConcreteType type() { return type_singleton; }
     };
 
     public final HashSet<PyObject> items;
@@ -38,7 +38,7 @@ public final class PySet extends PyObject {
         items = _items; // WARNING: takes ownership of _items from caller, does not copy
     }
 
-    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+    public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, type.name());
         Runtime.requireMaxArgs(args, 1, type.name());
         var ret = new PySet();
@@ -227,7 +227,7 @@ public final class PySet extends PyObject {
 
     @Override public final boolean hasIter() { return true; }
     @Override public PySetIter iter() { return new PySetIter(items.iterator()); }
-    @Override public PyBuiltinType type() { return PySetType.singleton; }
+    @Override public PyConcreteType type() { return PySetType.singleton; }
 
     @Override public Set<PyObject> asSetOrNull() { return items; }
     @Override public boolean boolValue() { return !items.isEmpty(); }

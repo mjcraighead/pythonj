@@ -23,7 +23,7 @@ final class PyTextIOWrapper extends PyIter {
         }
     }
 
-    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+    public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
         throw new UnsupportedOperationException(type.name() + ".__new__() unimplemented");
     }
 
@@ -104,7 +104,7 @@ final class PyBufferedReader extends PyIter {
         }
     }
 
-    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+    public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
         throw new UnsupportedOperationException(type.name() + ".__new__() unimplemented");
     }
 

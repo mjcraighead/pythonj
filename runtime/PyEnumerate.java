@@ -11,7 +11,7 @@ public final class PyEnumerate extends PyIter {
         i = start;
     }
 
-    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+    public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
         // This is quirky, but is intended to match corner cases in CPython enumerate()
         long totalArgs = args.length;
         if (kwargs != null) {
@@ -56,5 +56,5 @@ public final class PyEnumerate extends PyIter {
 
     @Override public boolean contains(PyObject rhs) { return defaultContains(rhs); }
     @Override public String repr() { return defaultRepr(); }
-    @Override public PyBuiltinType type() { return PyEnumerateType.singleton; }
+    @Override public PyConcreteType type() { return PyEnumerateType.singleton; }
 }

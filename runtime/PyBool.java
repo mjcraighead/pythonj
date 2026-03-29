@@ -16,7 +16,7 @@ public final class PyBool extends PyObject {
         return value ? true_singleton : false_singleton;
     }
 
-    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+    public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, type.name());
         Runtime.requireMaxArgs(args, 1, type.name());
         if (args.length == 1) {

@@ -5,7 +5,7 @@
 import java.util.Set;
 
 public abstract class PyObject implements Comparable<PyObject> {
-    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+    public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
         throw new UnsupportedOperationException(type.name() + ".__new__() unimplemented");
     }
 

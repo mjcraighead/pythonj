@@ -8,7 +8,7 @@ public final class PyString extends PyObject {
     public static final PyString empty_singleton = new PyString("");
 
     static final class PyStringIter extends PyIter {
-        private static final PyBuiltinType type_singleton = new PyBuiltinType("str_iterator", PyStringIter.class);
+        private static final PyConcreteType type_singleton = new PyConcreteType("str_iterator", PyStringIter.class);
 
         private final String s;
         private int index = 0;
@@ -24,14 +24,14 @@ public final class PyString extends PyObject {
             return ret;
         }
         @Override public String repr() { return defaultRepr(); }
-        @Override public PyBuiltinType type() { return type_singleton; }
+        @Override public PyConcreteType type() { return type_singleton; }
     };
 
     public final String value;
 
     PyString(String _value) { value = _value; }
 
-    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+    public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
         if (args.length > 1) {
             throw new IllegalArgumentException("str() takes 0 or 1 arguments");
         }
@@ -178,7 +178,7 @@ public final class PyString extends PyObject {
 
     @Override public final boolean hasIter() { return true; }
     @Override public PyStringIter iter() { return new PyStringIter(this); }
-    @Override public PyBuiltinType type() { return PyStringType.singleton; }
+    @Override public PyConcreteType type() { return PyStringType.singleton; }
 
     @Override public boolean boolValue() { return !value.isEmpty(); }
     @Override public boolean contains(PyObject rhs) {

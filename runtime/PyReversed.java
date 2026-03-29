@@ -12,7 +12,7 @@ public final class PyReversed extends PyIter {
         len = _obj.len();
     }
 
-    public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {
+    public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, type.name());
         Runtime.requireExactArgs(args, 1, type.name());
         return args[0].reversed();
@@ -26,5 +26,5 @@ public final class PyReversed extends PyIter {
         return obj.getItem(new PyInt(len - 1 - cur));
     }
     @Override public String repr() { return defaultRepr(); }
-    @Override public PyBuiltinType type() { return PyReversedType.singleton; }
+    @Override public PyConcreteType type() { return PyReversedType.singleton; }
 }

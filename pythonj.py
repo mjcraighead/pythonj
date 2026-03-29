@@ -1414,7 +1414,7 @@ class PythonjVisitor(ast.NodeVisitor):
             class_code.extend([
                 f'private static final class {java_name} extends PyBagObject {{',
                 f'{java_name}() {{ super({type_class_name}.singleton); }}',
-                f'public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {{',
+                f'public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {{',
                 f'Runtime.requireNoKwArgs(kwargs, type.name());',
                 f'if (args.length != 0) {{',
                 f'throw PyTypeError.raise(type.name() + "() takes no arguments");',
@@ -1475,7 +1475,7 @@ class PythonjVisitor(ast.NodeVisitor):
                 'default: super.delAttr(key);',
                 '}',
                 '}',
-                f'public static PyObject newObj(PyBuiltinType type, PyObject[] args, PyDict kwargs) {{',
+                f'public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {{',
                 f'Runtime.requireNoKwArgs(kwargs, type.name());',
                 f'if (args.length != 0) {{',
                 f'throw PyTypeError.raise(type.name() + "() takes no arguments");',
@@ -1485,7 +1485,7 @@ class PythonjVisitor(ast.NodeVisitor):
                 '}',
             ])
         class_code.extend([
-            f'private static final class {type_class_name} extends PyBuiltinType {{',
+            f'private static final class {type_class_name} extends PyConcreteType {{',
             f'private static final {type_class_name} singleton = new {type_class_name}();',
             f'private {type_class_name}() {{ super({java_string_literal(node.name)}, {java_name}.class, {java_name}::newObj); }}',
             '}',
@@ -1598,7 +1598,7 @@ class PythonjVisitor(ast.NodeVisitor):
             free_var_names = sorted(self.scope.free_vars)
             func_code = [
                 f'private static final class {java_name} extends PyIter {{',
-                f'private static final PyBuiltinType type_singleton = new PyBuiltinType("generator", {java_name}.class);',
+                f'private static final PyConcreteType type_singleton = new PyConcreteType("generator", {java_name}.class);',
                 *(f'private final PyCell pycell_{name};' for name in free_var_names),
                 'private final PyIter pyiter_iterable;',
                 *(f'private final PyCell pycell_{name} = new PyCell({JavaPyConstant(None).emit_java(self.pool)});' for name in sorted(self.scope.info.cell_vars)),
@@ -1611,7 +1611,7 @@ class PythonjVisitor(ast.NodeVisitor):
                 *block_emit_java(block_simplify(next_body), self.pool),
                 '}',
                 f'@Override public String repr() {{ return "<generator object {qualname}>"; }}',
-                '@Override public PyBuiltinType type() { return type_singleton; }',
+                '@Override public PyConcreteType type() { return type_singleton; }',
                 '}',
             ]
             assert java_name not in self.functions
@@ -2053,7 +2053,7 @@ def gen_code(spec_path: str, java_path: str) -> None:
                 case 'types.NoneType': py_name = 'NoneType'
                 case _: py_name = name
 
-            writer.write(f'final class {java_name}Type extends PyBuiltinType {{')
+            writer.write(f'final class {java_name}Type extends PyConcreteType {{')
             writer.write(f'public static final {java_name}Type singleton = new {java_name}Type();')
             for (k, v) in attrs.items():
                 if v['kind'] == 'string':
