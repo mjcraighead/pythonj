@@ -256,23 +256,24 @@ final class PyBuiltinFunctionsImpl {
         }
         return ret;
     }
-    static PyObject pyfunc_open(PyObject[] args, PyDict kwargs) {
-        if ((kwargs != null) && kwargs.boolValue()) {
-            throw new IllegalArgumentException("open() does not accept kwargs");
+    static PyObject pyfunc_open(PyObject file, PyObject mode, PyObject buffering, PyObject encoding,
+                                PyObject errors, PyObject newline, PyObject closefd, PyObject opener) {
+        if (!(file instanceof PyString fileStr)) {
+            throw PyTypeError.raise("open() argument 'file' must be str, not " + file.type().name());
         }
-        if (args.length == 1) {
-            return new PyTextIOWrapper((PyString)args[0]);
-        } else if (args.length == 2) {
-            if (args[1] instanceof PyString arg1_str) {
-                if (!arg1_str.value.equals("rb")) {
-                    throw new IllegalArgumentException("open() second argument must be 'rb'");
-                }
-                return new PyBufferedReader((PyString)args[0]);
-            } else {
-                throw new IllegalArgumentException("open() second argument must be a string");
-            }
+        if (!(mode instanceof PyString modeStr)) {
+            throw PyTypeError.raise("open() argument 'mode' must be str, not " + mode.type().name());
+        }
+        if ((buffering.indexValue() != -1) || (encoding != PyNone.singleton) || (errors != PyNone.singleton) ||
+            (newline != PyNone.singleton) || !closefd.boolValue() || (opener != PyNone.singleton)) {
+            throw new UnsupportedOperationException("open() arguments beyond file/mode are not supported");
+        }
+        if (modeStr.value.equals("r")) {
+            return new PyTextIOWrapper(fileStr);
+        } else if (modeStr.value.equals("rb")) {
+            return new PyBufferedReader(fileStr);
         } else {
-            throw new IllegalArgumentException("open() takes 1 or 2 arguments");
+            throw new UnsupportedOperationException("open() only supports mode='r' and mode='rb'");
         }
     }
     static PyInt pyfunc_ord(PyObject arg_obj) {
