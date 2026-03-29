@@ -28,6 +28,7 @@ BUILTIN_FUNCTIONS = {
     'setattr', 'sorted', 'sum', 'oct',
 }
 BUILTIN_MODULES = {
+    '_json': 'PyJsonModule',
     'math': 'PyMathModule',
 }
 BUILTIN_TYPES = {

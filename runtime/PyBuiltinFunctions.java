@@ -11,6 +11,22 @@ abstract class PyBuiltinFunction extends PyBuiltinFunctionOrMethod {
     @Override public final String repr() { return "<built-in function " + funcName + ">"; }
 }
 
+final class PyJsonFunction_encode_basestring_ascii extends PyBuiltinFunction {
+    public static final PyJsonFunction_encode_basestring_ascii singleton = new PyJsonFunction_encode_basestring_ascii();
+
+    private PyJsonFunction_encode_basestring_ascii() { super("encode_basestring_ascii"); }
+
+    @Override public PyObject call(PyObject[] args, PyDict kwargs) {
+        if ((kwargs != null) && kwargs.boolValue()) {
+            throw Runtime.raiseNoKwArgs("_json.encode_basestring_ascii");
+        }
+        if (args.length != 1) {
+            throw Runtime.raiseOneArg(args, "_json.encode_basestring_ascii");
+        }
+        return PyBuiltinFunctionsImpl.pyfunc_json_encode_basestring_ascii(args[0]);
+    }
+}
+
 final class PyMathFunction_copysign extends PyBuiltinFunction {
     public static final PyMathFunction_copysign singleton = new PyMathFunction_copysign();
 
@@ -60,6 +76,36 @@ final class PyMathFunction_isnan extends PyBuiltinFunction {
 }
 
 final class PyBuiltinFunctionsImpl {
+    static PyString pyfunc_json_encode_basestring_ascii(PyObject arg) {
+        if (!(arg instanceof PyString argStr)) {
+            throw PyTypeError.raise("first argument must be a string, not " + arg.type().name());
+        }
+        String s = argStr.value;
+        var out = new StringBuilder();
+        out.append('"');
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            switch (c) {
+                case '"': out.append("\\\""); break;
+                case '\\': out.append("\\\\"); break;
+                case '\b': out.append("\\b"); break;
+                case '\f': out.append("\\f"); break;
+                case '\n': out.append("\\n"); break;
+                case '\r': out.append("\\r"); break;
+                case '\t': out.append("\\t"); break;
+                default:
+                    if ((c >= 0x20) && (c <= 0x7E)) {
+                        out.append(c);
+                    } else {
+                        out.append("\\u");
+                        out.append(String.format("%04x", (int)c));
+                    }
+                    break;
+            }
+        }
+        out.append('"');
+        return new PyString(out.toString());
+    }
     private static double requireMathReal(PyObject arg) {
         if ((arg instanceof PyFloat) || (arg instanceof PyInt) || (arg instanceof PyBool)) {
             return arg.floatValue();

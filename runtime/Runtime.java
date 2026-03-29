@@ -102,6 +102,19 @@ abstract class PyModule extends PyTruthyObject {
     @Override public PyType type() { return PyModuleType.singleton; }
 }
 
+final class PyJsonModule extends PyModule {
+    public static final PyJsonModule singleton = new PyJsonModule();
+
+    private PyJsonModule() { super("_json"); }
+
+    @Override public PyObject getAttr(String key) {
+        switch (key) {
+            case "encode_basestring_ascii": return PyJsonFunction_encode_basestring_ascii.singleton;
+            default: return super.getAttr(key);
+        }
+    }
+}
+
 final class PyMathModule extends PyModule {
     public static final PyMathModule singleton = new PyMathModule();
 
