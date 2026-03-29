@@ -63,6 +63,9 @@ SYNTHETIC_PARAMS = {
         'iter': [make_param('iterable'), make_param('sentinel', NULL)],
         'next': [make_param('iterator'), make_param('default', NULL)],
     },
+    '_json': {
+        'scanstring': [make_param('string'), make_param('end')],
+    },
     'dict': {
         'pop': [make_param('key'), make_param('defaultValue', NULL)],
     },
@@ -202,6 +205,17 @@ def get_builtin_function_signature(name: str) -> dict[str, object] | None:
         return None
     return encode_signature(params)
 
+def get_module_function_signature(module_name: str, func_name: str) -> dict[str, object] | None:
+    synthetic = SYNTHETIC_PARAMS.get(module_name, {}).get(func_name)
+    if synthetic is not None:
+        return encode_signature(synthetic)
+    module = get_runtime_obj(module_name)
+    func = getattr(module, func_name)
+    params = get_signature_params(func, None)
+    if params is None:
+        return None
+    return encode_signature(params)
+
 def encode_attr(kind: str, doc: str | None = None, signature: dict[str, object] | None = None,
                 value: object | None = None, target: str | None = None) -> dict[str, object]:
     out = {'kind': kind}
@@ -255,8 +269,7 @@ def build_module_entry(name: str) -> dict[str, object]:
         if k.startswith('__') and k not in {'__doc__'}:
             continue
         if type(v) is types.BuiltinFunctionType:
-            params = get_signature_params(v, None)
-            attrs[k] = encode_attr('builtin_function', doc=v.__doc__, signature=None if params is None else encode_signature(params))
+            attrs[k] = encode_attr('builtin_function', doc=v.__doc__, signature=get_module_function_signature(name, k))
         elif isinstance(v, type):
             attrs[k] = encode_attr('type', target=v.__name__)
     return {'kind': 'module', 'attrs': attrs}

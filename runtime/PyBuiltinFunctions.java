@@ -16,134 +16,6 @@ abstract class PyBuiltinFunction extends PyBuiltinFunctionOrMethod {
     @Override public final String repr() { return "<built-in function " + funcName + ">"; }
 }
 
-final class PyJsonFunction_encode_basestring_ascii extends PyBuiltinFunction {
-    public static final PyJsonFunction_encode_basestring_ascii singleton = new PyJsonFunction_encode_basestring_ascii();
-
-    private PyJsonFunction_encode_basestring_ascii() { super("encode_basestring_ascii"); }
-
-    @Override public PyObject call(PyObject[] args, PyDict kwargs) {
-        if ((kwargs != null) && kwargs.boolValue()) {
-            throw Runtime.raiseNoKwArgs("_json.encode_basestring_ascii");
-        }
-        if (args.length != 1) {
-            throw Runtime.raiseOneArg(args, "_json.encode_basestring_ascii");
-        }
-        return PyBuiltinFunctionsImpl.pyfunc_json_encode_basestring_ascii(args[0]);
-    }
-}
-
-final class PyJsonFunction_scanstring extends PyBuiltinFunction {
-    public static final PyJsonFunction_scanstring singleton = new PyJsonFunction_scanstring();
-
-    private PyJsonFunction_scanstring() { super("scanstring"); }
-
-    @Override public PyObject call(PyObject[] args, PyDict kwargs) {
-        if ((kwargs != null) && kwargs.boolValue()) {
-            throw Runtime.raiseNoKwArgs("_json.scanstring");
-        }
-        if (args.length != 2) {
-            throw Runtime.raiseExactArgs(args, 2, "_json.scanstring");
-        }
-        return PyBuiltinFunctionsImpl.pyfunc_json_scanstring(args[0], args[1]);
-    }
-}
-
-final class PyMathFunction_copysign extends PyBuiltinFunction {
-    public static final PyMathFunction_copysign singleton = new PyMathFunction_copysign();
-
-    private PyMathFunction_copysign() { super("copysign"); }
-
-    @Override public PyObject call(PyObject[] args, PyDict kwargs) {
-        if ((kwargs != null) && kwargs.boolValue()) {
-            throw Runtime.raiseNoKwArgs("math.copysign");
-        }
-        if (args.length != 2) {
-            throw Runtime.raiseExactArgs(args, 2, "math.copysign");
-        }
-        return PyBuiltinFunctionsImpl.pyfunc_math_copysign(args[0], args[1]);
-    }
-}
-
-final class PyMathFunction_isfinite extends PyBuiltinFunction {
-    public static final PyMathFunction_isfinite singleton = new PyMathFunction_isfinite();
-
-    private PyMathFunction_isfinite() { super("isfinite"); }
-
-    @Override public PyObject call(PyObject[] args, PyDict kwargs) {
-        if ((kwargs != null) && kwargs.boolValue()) {
-            throw Runtime.raiseNoKwArgs("math.isfinite");
-        }
-        if (args.length != 1) {
-            throw Runtime.raiseOneArg(args, "math.isfinite");
-        }
-        return PyBuiltinFunctionsImpl.pyfunc_math_isfinite(args[0]);
-    }
-}
-
-final class PyMathFunction_isinf extends PyBuiltinFunction {
-    public static final PyMathFunction_isinf singleton = new PyMathFunction_isinf();
-
-    private PyMathFunction_isinf() { super("isinf"); }
-
-    @Override public PyObject call(PyObject[] args, PyDict kwargs) {
-        if ((kwargs != null) && kwargs.boolValue()) {
-            throw Runtime.raiseNoKwArgs("math.isinf");
-        }
-        if (args.length != 1) {
-            throw Runtime.raiseOneArg(args, "math.isinf");
-        }
-        return PyBuiltinFunctionsImpl.pyfunc_math_isinf(args[0]);
-    }
-}
-
-final class PyMathFunction_isnan extends PyBuiltinFunction {
-    public static final PyMathFunction_isnan singleton = new PyMathFunction_isnan();
-
-    private PyMathFunction_isnan() { super("isnan"); }
-
-    @Override public PyObject call(PyObject[] args, PyDict kwargs) {
-        if ((kwargs != null) && kwargs.boolValue()) {
-            throw Runtime.raiseNoKwArgs("math.isnan");
-        }
-        if (args.length != 1) {
-            throw Runtime.raiseOneArg(args, "math.isnan");
-        }
-        return PyBuiltinFunctionsImpl.pyfunc_math_isnan(args[0]);
-    }
-}
-
-final class PyZlibFunction_compress extends PyBuiltinFunction {
-    public static final PyZlibFunction_compress singleton = new PyZlibFunction_compress();
-
-    private PyZlibFunction_compress() { super("compress"); }
-
-    @Override public PyObject call(PyObject[] args, PyDict kwargs) {
-        if ((kwargs != null) && kwargs.boolValue()) {
-            throw Runtime.raiseNoKwArgs("zlib.compress");
-        }
-        if (args.length != 1) {
-            throw Runtime.raiseOneArg(args, "zlib.compress");
-        }
-        return PyBuiltinFunctionsImpl.pyfunc_zlib_compress(args[0]);
-    }
-}
-
-final class PyZlibFunction_decompress extends PyBuiltinFunction {
-    public static final PyZlibFunction_decompress singleton = new PyZlibFunction_decompress();
-
-    private PyZlibFunction_decompress() { super("decompress"); }
-
-    @Override public PyObject call(PyObject[] args, PyDict kwargs) {
-        if ((kwargs != null) && kwargs.boolValue()) {
-            throw Runtime.raiseNoKwArgs("zlib.decompress");
-        }
-        if (args.length != 1) {
-            throw Runtime.raiseOneArg(args, "zlib.decompress");
-        }
-        return PyBuiltinFunctionsImpl.pyfunc_zlib_decompress(args[0]);
-    }
-}
-
 final class PyBuiltinFunctionsImpl {
     static PyString pyfunc_json_encode_basestring_ascii(PyObject arg) {
         if (!(arg instanceof PyString argStr)) {
@@ -272,8 +144,11 @@ final class PyBuiltinFunctionsImpl {
         }
         throw PyTypeError.raise("a bytes-like object is required, not " + PyString.reprOf(arg.type().name()));
     }
-    static PyBytes pyfunc_zlib_compress(PyObject arg) {
+    static PyBytes pyfunc_zlib_compress(PyObject arg, PyObject level, PyObject wbits) {
         byte[] in = requireBytesLikeBuffer(arg, "zlib.compress");
+        if ((level.indexValue() != -1) || (wbits.indexValue() != 15)) {
+            throw new UnsupportedOperationException("zlib.compress() arguments beyond data are unsupported");
+        }
         Deflater deflater = new Deflater();
         deflater.setInput(in);
         deflater.finish();
@@ -291,8 +166,11 @@ final class PyBuiltinFunctionsImpl {
         }
         return new PyBytes(out.toByteArray());
     }
-    static PyBytes pyfunc_zlib_decompress(PyObject arg) {
+    static PyBytes pyfunc_zlib_decompress(PyObject arg, PyObject wbits, PyObject bufsize) {
         byte[] in = requireBytesLikeBuffer(arg, "zlib.decompress");
+        if ((wbits.indexValue() != 15) || (bufsize.indexValue() != 16384)) {
+            throw new UnsupportedOperationException("zlib.decompress() arguments beyond data are unsupported");
+        }
         Inflater inflater = new Inflater();
         inflater.setInput(in);
         ByteArrayOutputStream out = new ByteArrayOutputStream(Math.max(64, in.length * 2));

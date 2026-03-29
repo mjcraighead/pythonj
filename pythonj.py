@@ -1866,6 +1866,10 @@ def get_builtin_function_params(spec: dict[str, object], name: str) -> Optional[
     attrs = cast(dict[str, dict[str, object]], cast(dict[str, object], spec['builtins'])['attrs'])
     return decode_signature(cast(Optional[dict[str, object]], attrs[name].get('signature')))
 
+def get_module_function_params(spec: dict[str, object], module_name: str, func_name: str) -> Optional[list[inspect.Parameter]]:
+    attrs = cast(dict[str, dict[str, object]], cast(dict[str, object], spec[module_name])['attrs'])
+    return decode_signature(cast(Optional[dict[str, object]], attrs[func_name].get('signature')))
+
 def emit_python_function_static(visitor: PythonjVisitor, func_name: str, arg_names: list[str], body: list[JavaStatement]) -> list[str]:
     func_code = [
         f'static PyObject pyfunc_{func_name}({", ".join(f"PyObject pyarg_{arg}" for arg in arg_names)}) {{',
@@ -2335,6 +2339,40 @@ def gen_code(spec_path: str, java_path: str) -> None:
                 writer.write('')
             writer.write('}')
             writer.write('')
+
+        for module_name in sorted(extract_spec.BUILTIN_MODULES):
+            module_spec = cast(dict[str, object], spec[module_name])
+            attrs = cast(dict[str, dict[str, object]], module_spec['attrs'])
+            module_java_name = extract_spec.BUILTIN_MODULES[module_name]
+            module_func_prefix = module_java_name.removesuffix('Module')
+            for func_name in sorted(attrs):
+                if attrs[func_name]['kind'] != 'builtin_function':
+                    continue
+                params = get_module_function_params(spec, module_name, func_name)
+                if params is None:
+                    kwarg_params = None
+                else:
+                    kwarg_params = analyze_params(params)
+                writer.write(f'final class {module_func_prefix}Function_{func_name} extends PyBuiltinFunction {{')
+                writer.write(f'public static final {module_func_prefix}Function_{func_name} singleton = new {module_func_prefix}Function_{func_name}();')
+                writer.write('')
+                writer.write(f'private {module_func_prefix}Function_{func_name}() {{ super("{func_name}"); }}')
+                writer.write('@Override public PyObject call(PyObject[] args, PyDict kwargs) {')
+                full_name = f'{module_name}.{func_name}'
+                if kwarg_params is None:
+                    bind_args = ['args', 'kwargs']
+                else:
+                    bind_args = emit_arg_binding(
+                        writer, kwarg_params, func_name,
+                        full_name,
+                        'argsLength',
+                        full_name,
+                        pool,
+                    )
+                writer.write(f'return PyBuiltinFunctionsImpl.pyfunc_{module_name.removeprefix("_")}_{func_name}({", ".join(bind_args)});')
+                writer.write('}')
+                writer.write('}')
+                writer.write('')
 
         for func_name in sorted(extract_spec.BUILTIN_FUNCTIONS):
             params = get_builtin_function_params(spec, func_name)
