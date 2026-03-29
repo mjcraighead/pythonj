@@ -6,6 +6,8 @@ import java.io.ByteArrayOutputStream;
 import java.util.Arrays;
 
 public final class PyBytes extends PyObject {
+    public static final PyBytes empty_singleton = new PyBytes(new byte[0]);
+
     static final class PyBytesIter extends PyIter {
         private static final PyBuiltinType type_singleton = new PyBuiltinType("bytes_iterator", PyBytesIter.class);
 
@@ -36,7 +38,7 @@ public final class PyBytes extends PyObject {
             throw new IllegalArgumentException("bytes() does not accept kwargs");
         }
         if (args.length == 0) {
-            return new PyBytes(new byte[0]);
+            return empty_singleton;
         }
         PyObject arg = args[0];
         if (arg.hasIndex()) {

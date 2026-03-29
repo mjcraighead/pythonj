@@ -6,6 +6,8 @@ import java.util.Arrays;
 import java.util.ArrayList;
 
 public final class PyTuple extends PyObject {
+    public static final PyTuple empty_singleton = new PyTuple();
+
     static final class PyTupleIter extends PyIter {
         private static final PyBuiltinType type_singleton = new PyBuiltinType("tuple_iterator", PyTupleIter.class);
 
@@ -34,7 +36,7 @@ public final class PyTuple extends PyObject {
         Runtime.requireNoKwArgs(kwargs, type.name());
         Runtime.requireMaxArgs(args, 1, type.name());
         if (args.length == 0) {
-            return new PyTuple();
+            return empty_singleton;
         }
         var list = new ArrayList<PyObject>();
         Runtime.addIterableToCollection(list, args[0]);

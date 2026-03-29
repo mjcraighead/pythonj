@@ -151,6 +151,8 @@ class ConstantPool:
                 self.all_floats[value] = len(self.all_floats)
             return self.qualify(f'float_singleton_{self.all_floats[value]}')
         elif isinstance(value, tuple):
+            if not value:
+                return 'PyTuple.empty_singleton'
             if value not in self.all_tuples:
                 for x in value:
                     self.emit_constant(x)
@@ -158,6 +160,8 @@ class ConstantPool:
             return self.qualify(f'tuple_singleton_{self.all_tuples[value]}')
         else:
             assert isinstance(value, bytes), value
+            if not value:
+                return 'PyBytes.empty_singleton'
             if value not in self.all_bytes:
                 self.all_bytes[value] = len(self.all_bytes)
             return self.qualify(f'bytes_singleton_{self.all_bytes[value]}')
