@@ -1461,45 +1461,6 @@ KWARG_BINDER_METHODS = {
 }
 KWARG_BINDER_BUILTINS = {'sorted', 'sum'}
 
-def infer_args_from_params(params: list[inspect.Parameter]) -> Optional[list[object | str]]:
-    args = []
-    seen_optional = False
-    for param in params:
-        if param.kind is inspect.Parameter.POSITIONAL_ONLY:
-            if param.default is inspect.Parameter.empty:
-                if seen_optional:
-                    return None
-                args.append(REQUIRED)
-            else:
-                default_expr = infer_default_expr(param.default)
-                if default_expr is None:
-                    return None
-                seen_optional = True
-                args.append(default_expr)
-        elif param.kind is inspect.Parameter.VAR_POSITIONAL:
-            if param is not params[-1]:
-                return None
-            args.append(VARARGS)
-        else:
-            return None
-    return args
-
-def infer_args(target: object, implicit_name: Optional[str]) -> Optional[list[object | str]]:
-    params = get_signature_params(target, implicit_name)
-    if params is None:
-        return None
-    return infer_args_from_params(params)
-
-def infer_method_args(name: str, method_name: str) -> Optional[list[object | str]]:
-    if name in METHOD_ARG_OVERRIDES and method_name in METHOD_ARG_OVERRIDES[name]:
-        return METHOD_ARG_OVERRIDES[name][method_name]
-    return get_method_data(name, method_name, infer_args)
-
-def infer_builtin_function_args(name: str) -> Optional[list[object | str]]:
-    if name in BUILTIN_FUNCTION_ARG_OVERRIDES:
-        return BUILTIN_FUNCTION_ARG_OVERRIDES[name]
-    return get_builtin_function_data(name, infer_args)
-
 def get_signature_params(target: object, implicit_name: Optional[str]) -> Optional[list[inspect.Parameter]]:
     try:
         params = list(inspect.signature(target).parameters.values())
@@ -1511,36 +1472,99 @@ def get_signature_params(target: object, implicit_name: Optional[str]) -> Option
         params = params[1:]
     return params
 
-def get_method_data(name: str, method_name: str, fn) -> Optional[object]:
+def get_method_params(name: str, method_name: str) -> Optional[list[inspect.Parameter]]:
     obj = get_runtime_obj(name)
     desc = obj.__dict__.get(method_name)
     if desc is None:
         return None
     desc_type = type(desc)
     if desc_type is types.MethodDescriptorType:
-        return fn(desc, 'self')
+        return get_signature_params(desc, 'self')
     elif desc_type is types.ClassMethodDescriptorType:
-        return fn(desc, 'type')
+        return get_signature_params(desc, 'type')
     elif desc_type is staticmethod:
-        return fn(getattr(obj, method_name), None)
+        return get_signature_params(getattr(obj, method_name), None)
     else:
         return None
 
-def get_builtin_function_data(name: str, fn) -> Optional[object]:
+def get_builtin_function_params(name: str) -> Optional[list[inspect.Parameter]]:
     desc = builtins.__dict__.get(name)
     if type(desc) is not types.BuiltinFunctionType:
         return None
-    return fn(desc, None)
+    return get_signature_params(desc, None)
 
-def get_kwarg_method_params(name: str, method_name: str) -> Optional[list[inspect.Parameter]]:
-    if name not in KWARG_BINDER_METHODS or method_name not in KWARG_BINDER_METHODS[name]:
-        return None
-    return get_method_data(name, method_name, get_signature_params)
+@dataclass(slots=True)
+class BindingShape:
+    args: Optional[list[object | str]]
+    kwarg_shape: Optional['SignatureShape']
 
-def get_kwarg_builtin_function_params(name: str) -> Optional[list[inspect.Parameter]]:
-    if name not in KWARG_BINDER_BUILTINS:
-        return None
-    return get_builtin_function_data(name, get_signature_params)
+@dataclass(slots=True)
+class SignatureShape:
+    params: list[inspect.Parameter]
+    posonly_params: list[inspect.Parameter]
+    poskw_params: list[inspect.Parameter]
+    kwonly_params: list[inspect.Parameter]
+    vararg_param: Optional[inspect.Parameter]
+    max_total: int
+    max_positional: int
+    no_positional: bool
+    missing_style: Optional[str]
+
+def analyze_params(params: list[inspect.Parameter]) -> SignatureShape:
+    posonly_params = [param for param in params if param.kind is inspect.Parameter.POSITIONAL_ONLY]
+    poskw_params = [param for param in params if param.kind is inspect.Parameter.POSITIONAL_OR_KEYWORD]
+    kwonly_params = [param for param in params if param.kind is inspect.Parameter.KEYWORD_ONLY]
+    vararg_params = [param for param in params if param.kind is inspect.Parameter.VAR_POSITIONAL]
+    vararg_param = vararg_params[0] if vararg_params else None
+    max_total = len(params)
+    max_positional = len(posonly_params) + len(poskw_params)
+    no_positional = (max_positional == 0)
+    if poskw_params and poskw_params[0].default is inspect.Parameter.empty:
+        missing_style = 'required_arg'
+    elif posonly_params and posonly_params[0].default is inspect.Parameter.empty:
+        if poskw_params:
+            missing_style = 'min_positional'
+        else:
+            missing_style = 'exact_args'
+    else:
+        missing_style = None
+    return SignatureShape(params, posonly_params, poskw_params, kwonly_params, vararg_param, max_total, max_positional, no_positional, missing_style)
+
+def classify_binding_shape(shape: SignatureShape, allow_kwargs: bool) -> BindingShape:
+    args = None
+    if not shape.kwonly_params:
+        inferred_args = []
+        seen_optional = False
+        for param in shape.posonly_params + shape.poskw_params:
+            if param.kind is inspect.Parameter.POSITIONAL_ONLY:
+                if param.default is inspect.Parameter.empty:
+                    if seen_optional:
+                        inferred_args = None
+                        break
+                    inferred_args.append(REQUIRED)
+                else:
+                    default_expr = infer_default_expr(param.default)
+                    if default_expr is None:
+                        inferred_args = None
+                        break
+                    seen_optional = True
+                    inferred_args.append(default_expr)
+            else:
+                inferred_args = None
+                break
+        if inferred_args is not None:
+            if shape.vararg_param is not None:
+                if shape.vararg_param is shape.params[-1]:
+                    inferred_args.append(VARARGS)
+                else:
+                    inferred_args = None
+            args = inferred_args
+    if args is not None and not (allow_kwargs and (shape.poskw_params or shape.kwonly_params)):
+        return BindingShape(args, None)
+    elif allow_kwargs:
+        return BindingShape(None, shape)
+    else:
+        return BindingShape(None, None)
 
 def collect_default_fields(params: list[inspect.Parameter], field_prefix: str) -> dict[str, str]:
     fields = {}
@@ -1579,23 +1603,15 @@ def emit_default_expr(default: object, default_fields: dict[str, str]) -> str:
     else:
         assert False, default
 
-def emit_kwarg_binding(writer: IndentedWriter, params: list[inspect.Parameter], positional_name: str,
+def emit_kwarg_binding(writer: IndentedWriter, shape: SignatureShape, positional_name: str,
                        kw_name: str, default_fields: dict[str, str], kw_overflow_args_length: str) -> list[str]:
-    posonly_params = [param for param in params if param.kind is inspect.Parameter.POSITIONAL_ONLY]
-    poskw_params = [param for param in params if param.kind is inspect.Parameter.POSITIONAL_OR_KEYWORD]
-    kwonly_params = [param for param in params if param.kind is inspect.Parameter.KEYWORD_ONLY]
-    max_total = len(params)
-    max_positional = len(posonly_params) + len(poskw_params)
-    no_positional = (max_positional == 0)
-    if poskw_params and poskw_params[0].default is inspect.Parameter.empty:
-        missing_style = 'required_arg'
-    elif posonly_params and posonly_params[0].default is inspect.Parameter.empty:
-        if poskw_params:
-            missing_style = 'min_positional'
-        else:
-            missing_style = 'exact_args'
-    else:
-        missing_style = None
+    posonly_params = shape.posonly_params
+    poskw_params = shape.poskw_params
+    kwonly_params = shape.kwonly_params
+    max_total = shape.max_total
+    max_positional = shape.max_positional
+    no_positional = shape.no_positional
+    missing_style = shape.missing_style
     writer.write('int argsLength = args.length;')
     if missing_style == 'exact_args':
         writer.write(f'if (argsLength != 1) {{ throw Runtime.raiseExactArgs(args, 1, "{positional_name}"); }}')
@@ -1611,7 +1627,7 @@ def emit_kwarg_binding(writer: IndentedWriter, params: list[inspect.Parameter], 
         writer.write(f'PyObject {param.name} = null;')
     if kwonly_params and not poskw_params:
         if (missing_style not in {'one_arg', 'exact_args'}) and (not no_positional):
-            assert False, (positional_name, params, missing_style)
+            assert False, (positional_name, shape.params, missing_style)
         writer.write('if ((kwargs != null) && kwargs.boolValue()) {')
         writer.write('long kwargsLen = kwargs.len();')
         writer.write(f'if (kwargsLen > {max_total}) {{')
@@ -1695,7 +1711,7 @@ def emit_kwarg_binding(writer: IndentedWriter, params: list[inspect.Parameter], 
                     writer.write(f'throw Runtime.raiseMissingRequiredArg("{positional_name}", "{param.name}", {i + 1});')
                     writer.write('}')
     bind_args = []
-    for param in params:
+    for param in shape.params:
         if param.default is not inspect.Parameter.empty:
             writer.write(f'if ({param.name} == null) {{')
             writer.write(f'{param.name} = {emit_default_expr(param.default, default_fields)};')
@@ -1827,29 +1843,33 @@ def gen_code(spec_path: str, java_path: str) -> None:
                 writer.write('')
 
             gen_methods = {}
-            kwarg_methods = {}
             for (method_name, v) in attrs.items():
                 if v['kind'] not in {'method', 'classmethod', 'staticmethod'}:
                     continue
                 if name in UNIMPLEMENTED_METHODS and method_name in UNIMPLEMENTED_METHODS[name]:
                     continue
-                kwarg_params = get_kwarg_method_params(name, method_name)
-                if kwarg_params is not None:
-                    kwarg_methods[method_name] = kwarg_params
-                    continue
-                inferred_args = infer_method_args(name, method_name)
-                if inferred_args is not None:
-                    gen_methods[method_name] = inferred_args
+                if (
+                    name in METHOD_ARG_OVERRIDES and method_name in METHOD_ARG_OVERRIDES[name] and
+                    not (name in KWARG_BINDER_METHODS and method_name in KWARG_BINDER_METHODS[name])
+                ):
+                    binding_shape = BindingShape(METHOD_ARG_OVERRIDES[name][method_name], None)
+                else:
+                    params = get_method_params(name, method_name)
+                    if params is None:
+                        continue
+                    binding_shape = classify_binding_shape(analyze_params(params), name in KWARG_BINDER_METHODS and method_name in KWARG_BINDER_METHODS[name])
+                    if binding_shape.args is None and binding_shape.kwarg_shape is None:
+                        continue
+                gen_methods[method_name] = binding_shape
 
-            if gen_methods or kwarg_methods:
+            if gen_methods:
                 if '.' in name:
                     py_name = name.rsplit('.')[1]
                 else:
                     py_name = name
-                for (method_name, args, kwarg_params) in itertools.chain(
-                    ((method_name, args, None) for (method_name, args) in gen_methods.items()),
-                    ((method_name, None, params) for (method_name, params) in kwarg_methods.items()),
-                ):
+                for (method_name, binding_shape) in gen_methods.items():
+                    args = binding_shape.args
+                    kwarg_params = binding_shape.kwarg_shape
                     kind = attrs[method_name]['kind']
                     if kind == 'method':
                         method_class_name = f'{java_name}Method_{method_name}'
@@ -1873,7 +1893,7 @@ def gen_code(spec_path: str, java_path: str) -> None:
                         assert False, (name, method_name, kind)
                     writer.write(f'final class {method_class_name} extends PyBuiltinMethod<{self_type}> {{')
                     if kwarg_params is not None:
-                        default_fields = collect_default_fields(kwarg_params, f'{method_class_name}_default')
+                        default_fields = collect_default_fields(kwarg_params.params, f'{method_class_name}_default')
                         for (default, field_name) in default_fields.items():
                             writer.write(f'private static final PyString {field_name} = new PyString({java_string_literal(default)});')
                     writer.write(f'{method_class_name}({ctor_arg}) {{ super({super_arg}); }}')
@@ -1896,15 +1916,19 @@ def gen_code(spec_path: str, java_path: str) -> None:
                 writer.write('')
 
         for func_name in sorted(BUILTIN_FUNCTIONS):
-            kwarg_params = get_kwarg_builtin_function_params(func_name)
-            if kwarg_params is None:
-                args = infer_builtin_function_args(func_name)
-                assert args is not None, func_name
+            if func_name in BUILTIN_FUNCTION_ARG_OVERRIDES and func_name not in KWARG_BINDER_BUILTINS:
+                args = BUILTIN_FUNCTION_ARG_OVERRIDES[func_name]
+                kwarg_params = None
             else:
-                args = None
+                params = get_builtin_function_params(func_name)
+                assert params is not None, func_name
+                binding_shape = classify_binding_shape(analyze_params(params), func_name in KWARG_BINDER_BUILTINS)
+                args = binding_shape.args
+                kwarg_params = binding_shape.kwarg_shape
+                assert args is not None or kwarg_params is not None, func_name
             writer.write(f'final class PyBuiltinFunction_{func_name} extends PyBuiltinFunction {{')
             if kwarg_params is not None:
-                default_fields = collect_default_fields(kwarg_params, f'PyBuiltinFunction_{func_name}_default')
+                default_fields = collect_default_fields(kwarg_params.params, f'PyBuiltinFunction_{func_name}_default')
                 for (default, field_name) in default_fields.items():
                     writer.write(f'private static final PyString {field_name} = new PyString({java_string_literal(default)});')
             writer.write(f'public static final PyBuiltinFunction_{func_name} singleton = new PyBuiltinFunction_{func_name}();')
