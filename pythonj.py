@@ -1426,79 +1426,35 @@ UNIMPLEMENTED_METHODS = {
     'BaseException': {'add_note', 'with_traceback'},
 }
 
-VARARGS = object()
-KWARGS = object()
-OMITTED = object()
-METHOD_ARG_OVERRIDES = {
-    'dict': {'update': [VARARGS, KWARGS]},
-}
-
-BUILTIN_FUNCTION_ARG_OVERRIDES = {
-    'max': [VARARGS, KWARGS],
-    'min': [VARARGS, KWARGS],
-    'open': [VARARGS, KWARGS],
-    'print': [VARARGS, KWARGS],
+NULL = object()
+HANDCODED_BIND_FUNCTIONS = {
+    'builtins': {'max', 'min', 'open', 'print'},
+    'dict': {'update'},
 }
 
 def make_param(name: str, default: object = inspect.Parameter.empty) -> inspect.Parameter:
     return inspect.Parameter(name, inspect.Parameter.POSITIONAL_ONLY, default=default)
 
-SYNTHETIC_BUILTIN_FUNCTION_PARAMS = {
-    'dir': [
-        make_param('object', OMITTED),
-    ],
-    'getattr': [
-        make_param('object'),
-        make_param('name'),
-        make_param('default', OMITTED),
-    ],
-    'iter': [
-        make_param('iterable'),
-        make_param('sentinel', OMITTED),
-    ],
-    'next': [
-        make_param('iterator'),
-        make_param('default', OMITTED),
-    ],
-}
-
-SYNTHETIC_METHOD_PARAMS = {
+SYNTHETIC_PARAMS = {
+    'builtins': {
+        'dir': [make_param('object', NULL)],
+        'getattr': [make_param('object'), make_param('name'), make_param('default', NULL)],
+        'iter': [make_param('iterable'), make_param('sentinel', NULL)],
+        'next': [make_param('iterator'), make_param('default', NULL)],
+    },
     'dict': {
-        'pop': [
-            make_param('key'),
-            make_param('defaultValue', OMITTED),
-        ],
+        'pop': [make_param('key'), make_param('defaultValue', NULL)],
     },
     'list': {
-        'index': [
-            make_param('value'),
-            make_param('start', OMITTED),
-            make_param('stop', OMITTED),
-        ],
+        'index': [make_param('value'), make_param('start', NULL), make_param('stop', NULL)],
     },
     'str': {
-        'find': [
-            make_param('sub'),
-            make_param('start', None),
-            make_param('end', None),
-        ],
-        'maketrans': [
-            make_param('x'),
-            make_param('y', OMITTED),
-            make_param('z', OMITTED),
-        ],
-        'startswith': [
-            make_param('prefix'),
-            make_param('start', None),
-            make_param('end', None),
-        ],
+        'find': [make_param('sub'), make_param('start', None), make_param('end', None)],
+        'maketrans': [make_param('x'), make_param('y', NULL), make_param('z', NULL)],
+        'startswith': [make_param('prefix'), make_param('start', None), make_param('end', None)],
     },
     'tuple': {
-        'index': [
-            make_param('value'),
-            make_param('start', OMITTED),
-            make_param('stop', OMITTED),
-        ],
+        'index': [make_param('value'), make_param('start', NULL), make_param('stop', NULL)],
     },
 }
 
@@ -1514,7 +1470,7 @@ def get_signature_params(target: object, implicit_name: Optional[str]) -> Option
     return params
 
 def get_method_params(name: str, method_name: str) -> Optional[list[inspect.Parameter]]:
-    synthetic = SYNTHETIC_METHOD_PARAMS.get(name, {}).get(method_name)
+    synthetic = SYNTHETIC_PARAMS.get(name, {}).get(method_name)
     if synthetic is not None:
         return synthetic
     obj = get_runtime_obj(name)
@@ -1539,7 +1495,7 @@ def get_builtin_function_params(name: str) -> Optional[list[inspect.Parameter]]:
     params = get_signature_params(desc, None)
     if params is not None:
         return params
-    return SYNTHETIC_BUILTIN_FUNCTION_PARAMS.get(name)
+    return SYNTHETIC_PARAMS['builtins'].get(name)
 
 @dataclass(slots=True)
 class SignatureShape:
@@ -1585,7 +1541,7 @@ def collect_default_fields(params: list[inspect.Parameter], field_prefix: str) -
 def infer_default_expr(default: object) -> Optional[str]:
     if default is None:
         return 'PyNone.singleton'
-    elif default is OMITTED:
+    elif default is NULL:
         return 'null'
     elif default is False or default is True:
         return f'PyBool.{str(default).lower()}_singleton'
@@ -1774,10 +1730,6 @@ def emit_kwarg_binding(writer: IndentedWriter, shape: SignatureShape, positional
         bind_args.append(param.name)
     return bind_args
 
-def emit_arg_binding(writer: IndentedWriter, args: list[object | str], full_name: str, short_name: str) -> list[str]:
-    assert args == [VARARGS, KWARGS], args
-    return ['args', 'kwargs']
-
 def get_java_name(name: str) -> str:
     if name.startswith('_io.'):
         return f"Py{name.split('.', 1)[1]}" # _io.Foo -> PyFoo + PyFooType
@@ -1870,20 +1822,20 @@ def gen_code(spec_path: str, java_path: str) -> None:
                     continue
                 if name in UNIMPLEMENTED_METHODS and method_name in UNIMPLEMENTED_METHODS[name]:
                     continue
-                if name in METHOD_ARG_OVERRIDES and method_name in METHOD_ARG_OVERRIDES[name]:
-                    gen_methods[method_name] = (METHOD_ARG_OVERRIDES[name][method_name], None)
+                if name in HANDCODED_BIND_FUNCTIONS and method_name in HANDCODED_BIND_FUNCTIONS[name]:
+                    gen_methods[method_name] = (True, None)
                 else:
                     params = get_method_params(name, method_name)
                     if params is None:
                         continue
-                    gen_methods[method_name] = (None, analyze_params(params))
+                    gen_methods[method_name] = (False, analyze_params(params))
 
             if gen_methods:
                 if '.' in name:
                     py_name = name.rsplit('.')[1]
                 else:
                     py_name = name
-                for (method_name, (args, kwarg_params)) in gen_methods.items():
+                for (method_name, (is_raw_varargs_kwargs, kwarg_params)) in gen_methods.items():
                     kind = attrs[method_name]['kind']
                     if kind == 'method':
                         method_class_name = f'{java_name}Method_{method_name}'
@@ -1915,7 +1867,8 @@ def gen_code(spec_path: str, java_path: str) -> None:
                     writer.write(f'@Override public String methodName() {{ return "{method_name}"; }}')
                     writer.write('@Override public PyObject call(PyObject[] args, PyDict kwargs) {')
                     if kwarg_params is None:
-                        bind_args = emit_arg_binding(writer, args, f'{py_name}.{method_name}', method_name)
+                        assert is_raw_varargs_kwargs
+                        bind_args = ['args', 'kwargs']
                     else:
                         bind_args = emit_kwarg_binding(
                             writer, kwarg_params, method_name,
@@ -1932,13 +1885,13 @@ def gen_code(spec_path: str, java_path: str) -> None:
                 writer.write('')
 
         for func_name in sorted(BUILTIN_FUNCTIONS):
-            if func_name in BUILTIN_FUNCTION_ARG_OVERRIDES:
-                args = BUILTIN_FUNCTION_ARG_OVERRIDES[func_name]
+            if func_name in HANDCODED_BIND_FUNCTIONS['builtins']:
+                is_raw_varargs_kwargs = True
                 kwarg_params = None
             else:
                 params = get_builtin_function_params(func_name)
                 assert params is not None, func_name
-                args = None
+                is_raw_varargs_kwargs = False
                 kwarg_params = analyze_params(params)
             writer.write(f'final class PyBuiltinFunction_{func_name} extends PyBuiltinFunction {{')
             default_fields = {}
@@ -1951,7 +1904,8 @@ def gen_code(spec_path: str, java_path: str) -> None:
             writer.write(f'private PyBuiltinFunction_{func_name}() {{ super("{func_name}"); }}')
             writer.write('@Override public PyObject call(PyObject[] args, PyDict kwargs) {')
             if kwarg_params is None:
-                bind_args = emit_arg_binding(writer, args, func_name, func_name)
+                assert is_raw_varargs_kwargs
+                bind_args = ['args', 'kwargs']
             else:
                 kw_name = 'sort' if func_name == 'sorted' else func_name
                 kw_overflow_args_length = '0' if func_name == 'sorted' else 'argsLength'
