@@ -12,7 +12,6 @@ abstract class PyBuiltinFunction extends PyBuiltinFunctionOrMethod {
 }
 
 final class PyBuiltinFunctionsImpl {
-    static PyObject pyfunc_abs(PyObject arg) { return arg.abs(); }
     static PyString pyfunc_ascii(PyObject arg) {
         String r = arg.repr();
         var s = new StringBuilder();
@@ -37,14 +36,6 @@ final class PyBuiltinFunctionsImpl {
             throw new IllegalArgumentException("chr() argument out of range");
         }
         return new PyString(String.valueOf((char)index));
-    }
-    static PyNone pyfunc_delattr(PyObject obj, PyObject name_obj) {
-        if (name_obj instanceof PyString name) {
-            obj.delAttr(name.value);
-            return PyNone.singleton;
-        } else {
-            throw PyTypeError.raiseFormat("attribute name must be string, not %s", PyString.reprOf(name_obj.type().name()));
-        }
     }
     static PyList pyfunc_dir(PyObject object) {
         if (object == null) {
@@ -71,21 +62,6 @@ final class PyBuiltinFunctionsImpl {
             throw PyTypeError.raiseFormat("format() argument 2 must be str, not %s", format_spec_obj.type().name());
         }
     }
-    static PyObject pyfunc_getattr(PyObject obj, PyObject name_obj, PyObject default_obj) {
-        if (name_obj instanceof PyString name) {
-            try {
-                return obj.getAttr(name.value);
-            } catch (PyRaise r) {
-                if ((default_obj != null) && (r.exc instanceof PyAttributeError)) {
-                    return default_obj;
-                }
-                throw r;
-            }
-        } else {
-            throw PyTypeError.raiseFormat("attribute name must be string, not %s", PyString.reprOf(name_obj.type().name()));
-        }
-    }
-    static PyInt pyfunc_hash(PyObject arg) { return new PyInt(arg.hashCode()); }
     static PyString pyfunc_hex(PyObject arg) {
         long index = arg.indexValue();
         if (index < 0) {
@@ -133,7 +109,6 @@ final class PyBuiltinFunctionsImpl {
         }
         return obj.iter();
     }
-    static PyInt pyfunc_len(PyObject arg) { return new PyInt(arg.len()); }
     static PyObject minMaxImpl(PyObject[] args, PyDict kwargs, String name, boolean isMax) {
         int argsLength = args.length;
         Runtime.requireMinArgs(args, 1, name);
@@ -254,15 +229,6 @@ final class PyBuiltinFunctionsImpl {
         }
         System.out.println();
         return PyNone.singleton;
-    }
-    static PyString pyfunc_repr(PyObject arg) { return new PyString(arg.repr()); }
-    static PyNone pyfunc_setattr(PyObject obj, PyObject name_obj, PyObject value) {
-        if (name_obj instanceof PyString name) {
-            obj.setAttr(name.value, value);
-            return PyNone.singleton;
-        } else {
-            throw PyTypeError.raiseFormat("attribute name must be string, not %s", PyString.reprOf(name_obj.type().name()));
-        }
     }
     static PyList pyfunc_sorted(PyObject iterable, PyObject key, PyObject reverse) {
         var ret = new PyList();

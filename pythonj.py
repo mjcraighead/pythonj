@@ -930,9 +930,34 @@ class PythonjVisitor(ast.NodeVisitor):
 
     def visit_Call(self, node) -> JavaExpr:
         if self.allow_intrinsics and isinstance(node.func, ast.Name):
-            if node.func.id == '__pythonj_next__':
-                assert len(node.args) == 1 and not node.keywords, node.args
-                return JavaMethodCall(self.visit(node.args[0]), 'next', [])
+            match node.func.id:
+                case '__pythonj_abs__':
+                    assert len(node.args) == 1 and not node.keywords, node.args
+                    return JavaMethodCall(self.visit(node.args[0]), 'abs', [])
+                case '__pythonj_delattr__':
+                    assert len(node.args) == 2 and not node.keywords, node.args
+                    return JavaMethodCall(JavaIdentifier('Runtime'), 'pythonjDelAttr', [self.visit(node.args[0]), self.visit(node.args[1])])
+                case '__pythonj_getattr__':
+                    assert len(node.args) == 2 and not node.keywords, node.args
+                    return JavaMethodCall(JavaIdentifier('Runtime'), 'pythonjGetAttr', [self.visit(node.args[0]), self.visit(node.args[1])])
+                case '__pythonj_hash__':
+                    assert len(node.args) == 1 and not node.keywords, node.args
+                    return JavaMethodCall(JavaIdentifier('Runtime'), 'pythonjHash', [self.visit(node.args[0])])
+                case '__pythonj_iter__':
+                    assert len(node.args) == 1 and not node.keywords, node.args
+                    return JavaMethodCall(self.visit(node.args[0]), 'iter', [])
+                case '__pythonj_len__':
+                    assert len(node.args) == 1 and not node.keywords, node.args
+                    return JavaMethodCall(JavaIdentifier('Runtime'), 'pythonjLen', [self.visit(node.args[0])])
+                case '__pythonj_next__':
+                    assert len(node.args) == 1 and not node.keywords, node.args
+                    return JavaMethodCall(self.visit(node.args[0]), 'next', [])
+                case '__pythonj_repr__':
+                    assert len(node.args) == 1 and not node.keywords, node.args
+                    return JavaMethodCall(JavaIdentifier('Runtime'), 'pythonjRepr', [self.visit(node.args[0])])
+                case '__pythonj_setattr__':
+                    assert len(node.args) == 3 and not node.keywords, node.args
+                    return JavaMethodCall(JavaIdentifier('Runtime'), 'pythonjSetAttr', [self.visit(node.args[0]), self.visit(node.args[1]), self.visit(node.args[2])])
 
         func = self.visit(node.func)
         args = self.emit_star_expanded(node.args)
@@ -1734,7 +1759,7 @@ UNIMPLEMENTED_METHODS = {
 NULL = object()
 RAW_ARGS_KWARGS_BUILTINS = {'max', 'min', 'print'}
 
-PYTHON_BUILTIN_IMPLS = {'all', 'any', 'hasattr', 'next'}
+PYTHON_BUILTIN_IMPLS = {'abs', 'all', 'any', 'delattr', 'getattr', 'hash', 'hasattr', 'len', 'next', 'repr', 'setattr'}
 
 def make_param(name: str, default: object = inspect.Parameter.empty) -> inspect.Parameter:
     return inspect.Parameter(name, inspect.Parameter.POSITIONAL_ONLY, default=default)

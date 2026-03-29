@@ -330,6 +330,38 @@ public final class Runtime {
         }
         return 31 * Long.hashCode(numerator) + Long.hashCode(denominator);
     }
+    public static PyObject pythonjGetAttr(PyObject obj, PyObject nameObj) {
+        if (nameObj instanceof PyString name) {
+            return obj.getAttr(name.value);
+        } else {
+            throw PyTypeError.raiseFormat("attribute name must be string, not %s", PyString.reprOf(nameObj.type().name()));
+        }
+    }
+    public static PyNone pythonjSetAttr(PyObject obj, PyObject nameObj, PyObject value) {
+        if (nameObj instanceof PyString name) {
+            obj.setAttr(name.value, value);
+            return PyNone.singleton;
+        } else {
+            throw PyTypeError.raiseFormat("attribute name must be string, not %s", PyString.reprOf(nameObj.type().name()));
+        }
+    }
+    public static PyNone pythonjDelAttr(PyObject obj, PyObject nameObj) {
+        if (nameObj instanceof PyString name) {
+            obj.delAttr(name.value);
+            return PyNone.singleton;
+        } else {
+            throw PyTypeError.raiseFormat("attribute name must be string, not %s", PyString.reprOf(nameObj.type().name()));
+        }
+    }
+    public static PyInt pythonjLen(PyObject obj) {
+        return new PyInt(obj.len());
+    }
+    public static PyInt pythonjHash(PyObject obj) {
+        return new PyInt(obj.hashCode());
+    }
+    public static PyString pythonjRepr(PyObject obj) {
+        return new PyString(obj.repr());
+    }
     public static PyRaise raiseNoKwArgs(String name) {
         return PyTypeError.raise(name + "() takes no keyword arguments");
     }
