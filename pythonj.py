@@ -127,6 +127,41 @@ class ConstantPool:
     def qualify(self, name: str) -> str:
         return name if self.holder_name is None else f'{self.holder_name}.{name}'
 
+    def emit_constant(self, value: object) -> str:
+        if value is None:
+            return 'PyNone.singleton'
+        elif value is False or value is True:
+            return f'PyBool.{str(value).lower()}_singleton'
+        elif isinstance(value, int):
+            if -1 <= value <= 1:
+                if value < 0:
+                    return f'PyInt.singleton_neg{-value}'
+                else:
+                    return f'PyInt.singleton_{value}'
+            self.all_ints.add(value)
+            return self.qualify(int_name(value))
+        elif isinstance(value, str):
+            if not value:
+                return 'PyString.empty_singleton'
+            if value not in self.all_strings:
+                self.all_strings[value] = len(self.all_strings)
+            return self.qualify(f'str_singleton_{self.all_strings[value]}')
+        elif isinstance(value, float):
+            if value not in self.all_floats:
+                self.all_floats[value] = len(self.all_floats)
+            return self.qualify(f'float_singleton_{self.all_floats[value]}')
+        elif isinstance(value, tuple):
+            if value not in self.all_tuples:
+                for x in value:
+                    self.emit_constant(x)
+                self.all_tuples[value] = len(self.all_tuples)
+            return self.qualify(f'tuple_singleton_{self.all_tuples[value]}')
+        else:
+            assert isinstance(value, bytes), value
+            if value not in self.all_bytes:
+                self.all_bytes[value] = len(self.all_bytes)
+            return self.qualify(f'bytes_singleton_{self.all_bytes[value]}')
+
     def emit_java(self) -> Iterator[str]:
         if self.holder_name is not None:
             yield f'final class {self.holder_name} {{'
@@ -242,39 +277,7 @@ class JavaAssignExpr(JavaExpr):
 class JavaPyConstant(JavaExpr):
     value: object
     def emit_java(self, ctx: ConstantPool) -> str:
-        if self.value is None:
-            return 'PyNone.singleton'
-        elif self.value is False or self.value is True:
-            return f'PyBool.{str(self.value).lower()}_singleton'
-        elif isinstance(self.value, int):
-            if -1 <= self.value <= 1:
-                if self.value < 0:
-                    return f'PyInt.singleton_neg{-self.value}'
-                else:
-                    return f'PyInt.singleton_{self.value}'
-            ctx.all_ints.add(self.value)
-            return ctx.qualify(int_name(self.value))
-        elif isinstance(self.value, str):
-            if not self.value:
-                return 'PyString.empty_singleton'
-            if self.value not in ctx.all_strings:
-                ctx.all_strings[self.value] = len(ctx.all_strings)
-            return ctx.qualify(f'str_singleton_{ctx.all_strings[self.value]}')
-        elif isinstance(self.value, float):
-            if self.value not in ctx.all_floats:
-                ctx.all_floats[self.value] = len(ctx.all_floats)
-            return ctx.qualify(f'float_singleton_{ctx.all_floats[self.value]}')
-        elif isinstance(self.value, tuple):
-            if self.value not in ctx.all_tuples:
-                for x in self.value:
-                    JavaPyConstant(x).emit_java(ctx)
-                ctx.all_tuples[self.value] = len(ctx.all_tuples)
-            return ctx.qualify(f'tuple_singleton_{ctx.all_tuples[self.value]}')
-        else:
-            assert isinstance(self.value, bytes), self.value
-            if self.value not in ctx.all_bytes:
-                ctx.all_bytes[self.value] = len(ctx.all_bytes)
-            return ctx.qualify(f'bytes_singleton_{ctx.all_bytes[self.value]}')
+        return ctx.emit_constant(self.value)
 
 class JavaStatement(ABC):
     def ends_control_flow(self) -> bool:
