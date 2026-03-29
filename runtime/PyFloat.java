@@ -347,29 +347,30 @@ public final class PyFloat extends PyObject {
             if (typeChar.equals("%")) {
                 coreValue *= 100.0;
             }
-            PyObject coreGroupingObj = PyRuntimePythonImpl.pyfunc_pyj_float_core_grouping(
-                new PyString(fill),
-                alignObj,
-                widthObj,
-                groupingObj
-            );
-            String coreTypeChar = ((PyString)PyRuntimePythonImpl.pyfunc_pyj_float_core_type_char(new PyString(typeChar))).value;
+            String coreTypeChar = typeChar.equals("%") ? "f" : typeChar;
+            PyObject coreGroupingObj = groupingObj;
+            if ((widthObj != PyNone.singleton) && (groupingObj != PyNone.singleton) &&
+                (alignObj instanceof PyString alignStr) && alignStr.value.equals("=") && fill.equals("0")) {
+                coreGroupingObj = PyNone.singleton;
+            }
             String grouping = (coreGroupingObj == PyNone.singleton) ? null : ((PyString)coreGroupingObj).value;
             Long precision = (precisionObj == PyNone.singleton) ? null : precisionObj.indexValue();
             magnitudeText = formatFiniteCore(coreValue, alt, grouping, precision, coreTypeChar);
-            magnitudeText = ((PyString)PyRuntimePythonImpl.pyfunc_pyj_float_apply_percent(new PyString(magnitudeText), new PyString(typeChar))).value;
+            if (typeChar.equals("%")) {
+                magnitudeText += "%";
+            }
         }
-        String text = ((PyString)PyRuntimePythonImpl.pyfunc_pyj_float_sign_prefix(
-            PyBool.create(isNan),
-            PyBool.create(isNegative),
+        return ((PyString)PyRuntimePythonImpl.pyfunc_pyj_float_finish_text(
+            new PyString(fill),
+            alignObj,
             new PyString(sign),
             PyBool.create(z),
+            widthObj,
+            groupingObj,
+            PyBool.create(isNan),
+            PyBool.create(isNegative),
             new PyString(magnitudeText)
-        )).value + magnitudeText;
-        if ((widthObj != PyNone.singleton) && (alignObj instanceof PyString alignStr) && alignStr.value.equals("=") && fill.equals("0")) {
-            return ((PyString)PyRuntimePythonImpl.pyfunc_pyj_float_apply_zero_fill(new PyString(text), groupingObj, widthObj)).value;
-        }
-        return ((PyString)PyRuntimePythonImpl.pyfunc_pyj_float_apply_width(new PyString(text), new PyString(fill), alignObj, widthObj)).value;
+        )).value;
     }
 
     public PyObject pymethod_as_integer_ratio() {

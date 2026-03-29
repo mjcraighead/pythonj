@@ -114,16 +114,6 @@ def pyj_float_parse_spec(spec):
 
     return (fill, align, sign, z, alt, width, grouping, precision, type_char)
 
-def pyj_float_core_type_char(type_char):
-    if type_char == '%':
-        return 'f'
-    return type_char
-
-def pyj_float_core_grouping(fill, align, width, grouping):
-    if align == '=' and fill == '0' and width is not None and grouping is not None:
-        return None
-    return grouping
-
 def pyj_float_special_text(is_nan, type_char):
     if is_nan:
         text = 'nan'
@@ -135,12 +125,18 @@ def pyj_float_special_text(is_nan, type_char):
         text += '%'
     return text
 
-def pyj_float_apply_percent(text, type_char):
-    if type_char == '%':
-        return text + '%'
-    return text
+def _pyj_float_is_zero_result(magnitude_text):
+    for c in magnitude_text:
+        if c in '0.,_%':
+            continue
+        if c in 'eE':
+            continue
+        if c in '+-':
+            continue
+        return False
+    return True
 
-def pyj_float_sign_prefix(is_nan, is_negative, sign, z, magnitude_text):
+def _pyj_float_sign_prefix(is_nan, is_negative, sign, z, magnitude_text):
     if is_nan:
         if sign == '+':
             return '+'
@@ -148,20 +144,7 @@ def pyj_float_sign_prefix(is_nan, is_negative, sign, z, magnitude_text):
             return ' '
         return ''
     if is_negative:
-        is_zero_result = True
-        for c in magnitude_text:
-            if c in '0.,_%':
-                continue
-            if c in 'eE':
-                continue
-            if c in '+-':
-                continue
-            if c in 'infINFnanNAN':
-                is_zero_result = False
-                break
-            is_zero_result = False
-            break
-        if z and is_zero_result:
+        if z and _pyj_float_is_zero_result(magnitude_text):
             is_negative = False
     if is_negative:
         return '-'
@@ -171,7 +154,12 @@ def pyj_float_sign_prefix(is_nan, is_negative, sign, z, magnitude_text):
         return ' '
     return ''
 
-def pyj_float_apply_width(text, fill, align, width):
+def _pyj_float_split_sign(text):
+    if text and text[0] in '+- ':
+        return (text[0], text[1:])
+    return ('', text)
+
+def _pyj_float_apply_width(text, fill, align, width):
     if width is None or len(text) >= width:
         return text
 
@@ -189,22 +177,12 @@ def pyj_float_apply_width(text, fill, align, width):
         right = pad_count - left
         return (fill * left) + text + (fill * right)
     if align == '=':
-        if text and text[0] in '+- ':
-            sign = text[0]
-            rest = text[1:]
-        else:
-            sign = ''
-            rest = text
+        sign, rest = _pyj_float_split_sign(text)
         return sign + pad + rest
     assert False, align
 
-def pyj_float_apply_zero_fill(text, grouping, width):
-    if text and text[0] in '+- ':
-        sign = text[0]
-        magnitude = text[1:]
-    else:
-        sign = ''
-        magnitude = text
+def _pyj_float_apply_zero_fill(text, grouping, width):
+    sign, magnitude = _pyj_float_split_sign(text)
     if grouping is None:
         return sign + ('0' * (width - len(sign) - len(magnitude))) + magnitude
 
@@ -250,3 +228,9 @@ def pyj_float_apply_zero_fill(text, grouping, width):
     parts.append(integer_digits[:i])
     parts.reverse()
     return sign + grouping.join(parts) + fractional_suffix + exp_suffix
+
+def pyj_float_finish_text(fill, align, sign, z, width, grouping, is_nan, is_negative, magnitude_text):
+    text = _pyj_float_sign_prefix(is_nan, is_negative, sign, z, magnitude_text) + magnitude_text
+    if align == '=' and fill == '0' and width is not None:
+        return _pyj_float_apply_zero_fill(text, grouping, width)
+    return _pyj_float_apply_width(text, fill, align, width)

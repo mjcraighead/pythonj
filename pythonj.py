@@ -671,7 +671,8 @@ class Scope:
 # XXX "invokedynamic" might help us a lot, but there is no way to access it from Java source
 class PythonjVisitor(ast.NodeVisitor):
     __slots__ = ('path', 'n_errors', 'n_functions', 'n_lambdas', 'scope', 'global_code', 'code',
-                 'scope_infos', 'pool', 'break_name', 'functions', 'allow_intrinsics')
+                 'scope_infos', 'pool', 'break_name', 'functions', 'allow_intrinsics',
+                 'python_helper_names', 'python_helper_class')
     path: str
     n_errors: int
     n_functions: int
@@ -684,6 +685,8 @@ class PythonjVisitor(ast.NodeVisitor):
     break_name: Optional[str]
     functions: dict[str, list[str]]
     allow_intrinsics: bool # enables special internal-only codegen features for builtins
+    python_helper_names: set[str]
+    python_helper_class: Optional[str]
 
     def __init__(self, path: str, scope_infos: dict[ast.AST, ScopeInfo], module_info: ScopeInfo):
         self.path = path
@@ -698,6 +701,8 @@ class PythonjVisitor(ast.NodeVisitor):
         self.break_name = None
         self.functions = {}
         self.allow_intrinsics = False
+        self.python_helper_names = set()
+        self.python_helper_class = None
 
     # Note: if n_errors > 0, the generated Java code is not expected to be valid or executable.
     def error(self, lineno: Optional[int], msg: str) -> None:
@@ -980,6 +985,11 @@ class PythonjVisitor(ast.NodeVisitor):
                 case '__pythonj_setattr__':
                     assert len(node.args) == 3 and not node.keywords, node.args
                     return JavaMethodCall(JavaIdentifier('Runtime'), 'pythonjSetAttr', [self.visit(node.args[0]), self.visit(node.args[1]), self.visit(node.args[2])])
+        if isinstance(node.func, ast.Name) and node.func.id in self.python_helper_names:
+            if node.keywords or any(isinstance(arg, ast.Starred) for arg in node.args):
+                self.error(node.lineno, 'same-file helper calls only support plain positional args')
+            assert self.python_helper_class is not None, node.func.id
+            return JavaMethodCall(JavaIdentifier(self.python_helper_class), f'pyfunc_{node.func.id}', [self.visit(arg) for arg in node.args])
 
         func = self.visit(node.func)
         args = self.emit_star_expanded(node.args)
@@ -1783,15 +1793,15 @@ RAW_ARGS_KWARGS_BUILTINS = {'max', 'min', 'print'}
 
 PYTHON_IMPLS = {
     '_runtime': {
+        '_pyj_float_apply_width',
+        '_pyj_float_apply_zero_fill',
+        '_pyj_float_is_zero_result',
+        '_pyj_float_sign_prefix',
+        '_pyj_float_split_sign',
         'max_iterable',
         'min_iterable',
-        'pyj_float_apply_percent',
-        'pyj_float_apply_width',
-        'pyj_float_apply_zero_fill',
-        'pyj_float_core_grouping',
-        'pyj_float_core_type_char',
+        'pyj_float_finish_text',
         'pyj_float_parse_spec',
-        'pyj_float_sign_prefix',
         'pyj_float_special_text',
     },
     'builtins': {'abs', 'all', 'any', 'delattr', 'format', 'getattr', 'hash', 'hasattr', 'isinstance', 'issubclass', 'len', 'next', 'repr', 'setattr', 'sum'},
@@ -1933,6 +1943,9 @@ def translate_python_impl(path: str, func_name: str, display_name: str, role: st
     visitor = PythonjVisitor(display_name, analyzer.scope_infos, analyzer.scope_infos[node])
     visitor.pool = pool
     visitor.allow_intrinsics = True
+    if role == 'runtime helper':
+        visitor.python_helper_names = set(funcs)
+        visitor.python_helper_class = 'PyRuntimePythonImpl'
 
     assert func.name == func_name, (func.name, func_name)
     (arg_names, arg_defaults) = visitor.check_args(func.lineno, func.args)
