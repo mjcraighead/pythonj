@@ -108,14 +108,18 @@ def java_string_literal(s: str) -> str:
     return ''.join(out)
 
 class EmitContext:
-    __slots__ = ('all_ints', 'all_strings', 'all_bytes')
+    __slots__ = ('all_ints', 'all_strings', 'all_floats', 'all_tuples', 'all_bytes')
     all_ints: set[int]
     all_strings: dict[str, int]
+    all_floats: dict[float, int]
+    all_tuples: dict[tuple[object, ...], int]
     all_bytes: dict[bytes, int]
 
     def __init__(self):
         self.all_ints = set()
         self.all_strings = {}
+        self.all_floats = {}
+        self.all_tuples = {}
         self.all_bytes = {}
 
     def emit_java(self) -> Iterator[str]:
@@ -125,6 +129,11 @@ class EmitContext:
         for (k, v) in sorted(self.all_strings.items()):
             value = JavaCreateObject('PyString', [JavaStrLiteral(k)])
             yield f'private static final PyString str_singleton_{v} = {value.emit_java(self)};'
+        for (k, v) in sorted(self.all_floats.items()):
+            yield f'private static final PyFloat float_singleton_{v} = new PyFloat({k!r});'
+        for (k, v) in sorted(self.all_tuples.items(), key=lambda x: x[1]):
+            value = JavaCreateObject('PyTuple', [JavaCreateArray('PyObject', [JavaPyConstant(x) for x in k])])
+            yield f'private static final PyTuple tuple_singleton_{v} = {value.emit_java(self)};'
         for (k, v) in sorted(self.all_bytes.items()):
             value = JavaCreateObject('PyBytes', [JavaCreateArray('byte', [JavaIntLiteral(((x + 0x80) & 0xFF) - 0x80, '') for x in k])])
             yield f'private static final PyBytes bytes_singleton_{v} = {value.emit_java(self)};'
@@ -242,9 +251,15 @@ class JavaPyConstant(JavaExpr):
                 ctx.all_strings[self.value] = len(ctx.all_strings)
             return f'str_singleton_{ctx.all_strings[self.value]}'
         elif isinstance(self.value, float):
-            return f'new PyFloat({self.value!r})'
+            if self.value not in ctx.all_floats:
+                ctx.all_floats[self.value] = len(ctx.all_floats)
+            return f'float_singleton_{ctx.all_floats[self.value]}'
         elif isinstance(self.value, tuple):
-            return JavaCreateObject('PyTuple', [JavaCreateArray('PyObject', [JavaPyConstant(x) for x in self.value])]).emit_java(ctx)
+            if self.value not in ctx.all_tuples:
+                for x in self.value:
+                    JavaPyConstant(x).emit_java(ctx)
+                ctx.all_tuples[self.value] = len(ctx.all_tuples)
+            return f'tuple_singleton_{ctx.all_tuples[self.value]}'
         else:
             assert isinstance(self.value, bytes), self.value
             if self.value not in ctx.all_bytes:
@@ -1223,7 +1238,7 @@ class PythonjVisitor(ast.NodeVisitor):
         free_var_names = sorted(self.scope.free_vars)
         default_fields = {}
         for default in arg_defaults:
-            if (type(default) is str and default != '') or isinstance(default, tuple):
+            if type(default) is str and default != '':
                 if default not in default_fields:
                     default_fields[default] = f'{java_name}_default_{len(default_fields)}'
         py_name_java = java_string_literal(py_name)
@@ -1691,7 +1706,7 @@ def collect_default_fields(params: list[inspect.Parameter], field_prefix: str) -
         default = param.default
         if default is inspect.Parameter.empty:
             continue
-        if (type(default) is str and default != '') or isinstance(default, tuple):
+        if type(default) is str and default != '':
             if default not in fields:
                 fields[default] = f'{field_prefix}_{len(fields)}'
     return fields
@@ -1721,16 +1736,14 @@ def emit_default_expr(default: object, default_fields: dict[object, str], emit_c
     inferred = infer_default_expr(default)
     if inferred is not None:
         return inferred
-    elif type(default) is str or isinstance(default, tuple):
+    elif type(default) is str:
         return default_fields[default]
     else:
         return JavaPyConstant(default).emit_java(emit_ctx)
 
 def emit_default_field_decl(default: object, field_name: str, emit_ctx: EmitContext) -> str:
-    if type(default) is str:
-        return f'private static final PyString {field_name} = new PyString({java_string_literal(default)});'
-    assert isinstance(default, tuple), default
-    return f'private static final PyTuple {field_name} = {JavaPyConstant(default).emit_java(emit_ctx)};'
+    assert type(default) is str, default
+    return f'private static final PyString {field_name} = new PyString({java_string_literal(default)});'
 
 def emit_arg_binding(writer: IndentedWriter, shape: SignatureShape, positional_name: str,
                      kw_name: str, default_fields: dict[object, str], kw_overflow_args_length: str,
