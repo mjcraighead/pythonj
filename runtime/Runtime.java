@@ -260,6 +260,12 @@ abstract class PyFunction extends PyTruthyObject {
 
 // Helper functions used by the builtins and code generator
 public final class Runtime {
+    public static int hashRational(long numerator, long denominator) {
+        if (denominator <= 0) {
+            throw new IllegalArgumentException("denominator must be positive");
+        }
+        return 31 * Long.hashCode(numerator) + Long.hashCode(denominator);
+    }
     public static PyRaise raiseNoKwArgs(String name) {
         return PyTypeError.raise(name + "() takes no keyword arguments");
     }

@@ -9,6 +9,33 @@ public final class PyFloat extends PyObject {
 
     PyFloat(double _value) { value = _value; }
 
+    private static long[] finiteIntegerRatio(double value) {
+        long bits = Double.doubleToRawLongBits(value);
+        boolean negative = bits < 0;
+        int exponentBits = (int)((bits >>> 52) & 0x7FF);
+        long numerator = bits & ((1L << 52) - 1);
+        int exponent;
+        if (exponentBits == 0) {
+            exponent = -1022 - 52;
+        } else {
+            numerator |= (1L << 52);
+            exponent = exponentBits - 1023 - 52;
+        }
+        while (((numerator & 1) == 0) && (exponent < 0)) {
+            numerator >>= 1;
+            exponent++;
+        }
+        long denominator = 1;
+        if (exponent > 0) {
+            numerator = PyInt.lshift(numerator, exponent);
+        } else if (exponent < 0) {
+            denominator = PyInt.lshift(1, -exponent);
+        }
+        if (negative) {
+            numerator = Math.negateExact(numerator);
+        }
+        return new long[]{numerator, denominator};
+    }
     private static PyFloat parseString(String s, String repr) {
         String sl = s.toLowerCase();
         if (sl.equals("inf") || sl.equals("+inf") || sl.equals("infinity") || sl.equals("+infinity")) {
@@ -210,7 +237,17 @@ public final class PyFloat extends PyObject {
         return false;
     }
     @Override public double floatValue() { return value; }
-    @Override public int hashCode() { throw new UnsupportedOperationException(); }
+    @Override public int hashCode() {
+        if (Double.isNaN(value)) {
+            throw new UnsupportedOperationException();
+        } else if (value == Double.POSITIVE_INFINITY) {
+            return 314159;
+        } else if (value == Double.NEGATIVE_INFINITY) {
+            return -314159;
+        }
+        long[] ratio = finiteIntegerRatio(value);
+        return Runtime.hashRational(ratio[0], ratio[1]);
+    }
     @Override public boolean ge(PyObject rhs) {
         if ((rhs instanceof PyFloat) || (rhs instanceof PyInt) || (rhs instanceof PyBool)) {
             return value >= floatLikeValue(rhs);
@@ -248,34 +285,9 @@ public final class PyFloat extends PyObject {
             throw PyValueError.raise("cannot convert NaN to integer ratio");
         } else if (Double.isInfinite(value)) {
             throw PyOverflowError.raise("cannot convert Infinity to integer ratio");
-        } else if (value == 0.0) {
-            return new PyTuple(new PyObject[]{PyInt.singleton_0, PyInt.singleton_1});
         }
-        long bits = Double.doubleToRawLongBits(value);
-        boolean negative = bits < 0;
-        int exponentBits = (int)((bits >>> 52) & 0x7FF);
-        long numerator = bits & ((1L << 52) - 1);
-        int exponent;
-        if (exponentBits == 0) {
-            exponent = -1022 - 52;
-        } else {
-            numerator |= (1L << 52);
-            exponent = exponentBits - 1023 - 52;
-        }
-        while (((numerator & 1) == 0) && (exponent < 0)) {
-            numerator >>= 1;
-            exponent++;
-        }
-        long denominator = 1;
-        if (exponent > 0) {
-            numerator = PyInt.lshift(numerator, exponent);
-        } else if (exponent < 0) {
-            denominator = PyInt.lshift(1, -exponent);
-        }
-        if (negative) {
-            numerator = Math.negateExact(numerator);
-        }
-        return new PyTuple(new PyObject[]{new PyInt(numerator), new PyInt(denominator)});
+        long[] ratio = finiteIntegerRatio(value);
+        return new PyTuple(new PyObject[]{new PyInt(ratio[0]), new PyInt(ratio[1])});
     }
     public PyFloat pymethod_conjugate() {
         return this;

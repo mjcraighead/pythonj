@@ -200,7 +200,7 @@ public final class PyBool extends PyObject {
         }
     }
     @Override public double floatValue() { return asInt(); }
-    @Override public int hashCode() { return value ? 1 : 0; }
+    @Override public int hashCode() { return Runtime.hashRational(asInt(), 1); }
     @Override public boolean hasIndex() { return true; }
     @Override public long indexValue() { return asInt(); }
     @Override public long intValue() { return asInt(); }

@@ -327,7 +327,7 @@ public final class PyInt extends PyObject {
             throw new UnsupportedOperationException(String.format("formatSpec=%s unimplemented", PyString.reprOf(formatSpec)));
         }
     }
-    @Override public int hashCode() { return (int)(value ^ (value >>> 32)); }
+    @Override public int hashCode() { return Runtime.hashRational(value, 1); }
     @Override public boolean hasIndex() { return true; }
     @Override public long indexValue() { return value; }
     @Override public long intValue() { return value; }
