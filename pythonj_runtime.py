@@ -248,12 +248,12 @@ def pyj_str_parse_spec(spec):
 
 def pyj_float_special_text(value, type_char):
     import math
+    if math.isfinite(value):
+        return None
     if math.isnan(value):
         text = 'nan'
-    elif math.isinf(value):
-        text = 'inf'
     else:
-        return None
+        text = 'inf'
     if type_char in ('E', 'F', 'G'):
         text = text.upper()
     if type_char == '%':
@@ -273,13 +273,21 @@ def _pyj_float_is_zero_result(magnitude_text):
 
 def _pyj_float_sign_prefix(value, sign, z, magnitude_text):
     import math
-    is_nan = math.isnan(value)
-    if is_nan:
+    if not math.isfinite(value):
+        if not math.isinf(value):
+            if sign == '+':
+                return '+'
+            if sign == ' ':
+                return ' '
+            return ''
+        if math.copysign(1.0, value) < 0.0:
+            return '-'
         if sign == '+':
             return '+'
         if sign == ' ':
             return ' '
         return ''
+
     is_negative = math.copysign(1.0, value) < 0.0
     if is_negative and z and _pyj_float_is_zero_result(magnitude_text):
         is_negative = False

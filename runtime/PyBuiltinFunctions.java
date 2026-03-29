@@ -64,6 +64,22 @@ final class PyMathFunction_copysign extends PyBuiltinFunction {
     }
 }
 
+final class PyMathFunction_isfinite extends PyBuiltinFunction {
+    public static final PyMathFunction_isfinite singleton = new PyMathFunction_isfinite();
+
+    private PyMathFunction_isfinite() { super("isfinite"); }
+
+    @Override public PyObject call(PyObject[] args, PyDict kwargs) {
+        if ((kwargs != null) && kwargs.boolValue()) {
+            throw Runtime.raiseNoKwArgs("math.isfinite");
+        }
+        if (args.length != 1) {
+            throw Runtime.raiseOneArg(args, "math.isfinite");
+        }
+        return PyBuiltinFunctionsImpl.pyfunc_math_isfinite(args[0]);
+    }
+}
+
 final class PyMathFunction_isinf extends PyBuiltinFunction {
     public static final PyMathFunction_isinf singleton = new PyMathFunction_isinf();
 
@@ -237,6 +253,9 @@ final class PyBuiltinFunctionsImpl {
     }
     static PyFloat pyfunc_math_copysign(PyObject x, PyObject y) {
         return new PyFloat(Math.copySign(requireMathReal(x), requireMathReal(y)));
+    }
+    static PyBool pyfunc_math_isfinite(PyObject arg) {
+        return PyBool.create(Double.isFinite(requireMathReal(arg)));
     }
     static PyBool pyfunc_math_isinf(PyObject arg) {
         return PyBool.create(Double.isInfinite(requireMathReal(arg)));
