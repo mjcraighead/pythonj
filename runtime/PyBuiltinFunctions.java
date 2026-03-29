@@ -236,16 +236,4 @@ final class PyBuiltinFunctionsImpl {
         ret.pymethod_sort(key, reverse);
         return ret;
     }
-    static PyInt pyfunc_sum(PyObject iterable, PyObject start) {
-        var iter = iterable.iter();
-        long sum = start.indexValue();
-        for (var item = iter.next(); item != null; item = iter.next()) {
-            if (item.hasIndex()) {
-                sum = Math.addExact(sum, item.indexValue());
-            } else {
-                throw new IllegalArgumentException("item must be an int or bool");
-            }
-        }
-        return new PyInt(sum);
-    }
 }
