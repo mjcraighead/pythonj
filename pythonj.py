@@ -219,8 +219,8 @@ class LoweringVisitor(ast.NodeVisitor):
     n_functions: int
     n_lambdas: int
     scope: Scope
-    global_code: list[ir.JavaStatement]
-    code: list[ir.JavaStatement]
+    global_code: list[ir.Statement]
+    code: list[ir.Statement]
     scope_infos: dict[ast.AST, ScopeInfo]
     pool: ir.ConstantPool
     break_name: Optional[str]
@@ -235,7 +235,7 @@ class LoweringVisitor(ast.NodeVisitor):
         self.n_functions = 0
         self.n_lambdas = 0
         self.scope = Scope(None, module_info)
-        self.global_code = [ir.JavaVariableDecl('PyObject', 'expr_discard', None)] # XXX remove this variable if not needed
+        self.global_code = [ir.VariableDecl('PyObject', 'expr_discard', None)] # XXX remove this variable if not needed
         self.code = self.global_code
         self.scope_infos = scope_infos
         self.pool = ir.ConstantPool()
@@ -253,23 +253,23 @@ class LoweringVisitor(ast.NodeVisitor):
             print(f'ERROR: {self.path}:{lineno}: {msg}')
         self.n_errors += 1
 
-    def ident_expr(self, name: str) -> ir.JavaExpr:
+    def ident_expr(self, name: str) -> ir.Expr:
         if self.allow_intrinsics and name == '__pythonj_null__':
-            return ir.JavaIdentifier('null')
+            return ir.Identifier('null')
         elif self.scope.info.kind == ScopeKind.FUNCTION and (name in self.scope.info.cell_vars or name in self.scope.free_vars):
-            return ir.JavaField(ir.JavaIdentifier(f'pycell_{name}'), 'obj')
+            return ir.Field(ir.Identifier(f'pycell_{name}'), 'obj')
         elif self.scope.info.kind == ScopeKind.FUNCTION and name in self.scope.info.locals:
             if self.scope.locals_are_fields:
-                return ir.JavaField(ir.JavaIdentifier('this'), f'pylocal_{name}')
-            return ir.JavaIdentifier(f'pylocal_{name}')
+                return ir.Field(ir.Identifier('this'), f'pylocal_{name}')
+            return ir.Identifier(f'pylocal_{name}')
         elif name in extract_spec.BUILTIN_TYPES:
-            return ir.JavaField(ir.JavaIdentifier(f'{extract_spec.BUILTIN_TYPES[name]}Type'), 'singleton')
+            return ir.Field(ir.Identifier(f'{extract_spec.BUILTIN_TYPES[name]}Type'), 'singleton')
         elif name in extract_spec.EXCEPTION_TYPES:
-            return ir.JavaField(ir.JavaIdentifier(f'Py{name}Type'), 'singleton')
+            return ir.Field(ir.Identifier(f'Py{name}Type'), 'singleton')
         elif name in extract_spec.BUILTIN_FUNCTIONS:
-            return ir.JavaField(ir.JavaIdentifier(f'PyBuiltinFunction_{name}'), 'singleton')
+            return ir.Field(ir.Identifier(f'PyBuiltinFunction_{name}'), 'singleton')
         else:
-            return ir.JavaIdentifier(f'pyglobal_{name}')
+            return ir.Identifier(f'pyglobal_{name}')
 
     def resolve_free_vars(self, lineno: int, scope_info: ScopeInfo, func_type: str) -> set[str]:
         free_vars = set()
@@ -292,21 +292,21 @@ class LoweringVisitor(ast.NodeVisitor):
         """Print an error for all unknown constructs in translation."""
         self.error(getattr(node, 'lineno', None), f'unsupported Python construct: {type(node).__name__}')
         if isinstance(node, ast.expr):
-            return ir.JavaIdentifier('__cannot_translate_expr__') # return placeholder JavaExpr IR node
+            return ir.Identifier('__cannot_translate_expr__') # return placeholder ir.Expr
 
     def visit_Invert(self, node): return 'invert'
     def visit_UAdd(self, node): return 'pos'
     def visit_USub(self, node): return 'neg'
-    def visit_UnaryOp(self, node) -> ir.JavaExpr:
+    def visit_UnaryOp(self, node) -> ir.Expr:
         if isinstance(node.op, ast.Not):
-            return ir.JavaMethodCall(ir.JavaIdentifier('PyBool'), 'create', [ir.unary_op('!', ir.bool_value(self.visit(node.operand)))])
+            return ir.MethodCall(ir.Identifier('PyBool'), 'create', [ir.unary_op('!', ir.bool_value(self.visit(node.operand)))])
         op = self.visit(node.op)
         operand = self.visit(node.operand)
-        if isinstance(operand, ir.JavaPyConstant) and isinstance(operand.value, int):
+        if isinstance(operand, ir.PyConstant) and isinstance(operand.value, int):
             match op:
-                case 'pos': return ir.JavaPyConstant(+operand.value)
-                case 'neg': return ir.JavaPyConstant(-operand.value)
-        return ir.JavaMethodCall(operand, op, [])
+                case 'pos': return ir.PyConstant(+operand.value)
+                case 'neg': return ir.PyConstant(-operand.value)
+        return ir.MethodCall(operand, op, [])
 
     def visit_Add(self, node): return 'add'
     def visit_BitAnd(self, node): return 'and'
@@ -321,104 +321,104 @@ class LoweringVisitor(ast.NodeVisitor):
     def visit_Pow(self, node): return 'pow'
     def visit_RShift(self, node): return 'rshift'
     def visit_Sub(self, node): return 'sub'
-    def visit_BinOp(self, node) -> ir.JavaExpr:
+    def visit_BinOp(self, node) -> ir.Expr:
         op = self.visit(node.op)
         lhs = self.visit(node.left)
         rhs = self.visit(node.right)
-        if (isinstance(lhs, ir.JavaPyConstant) and isinstance(lhs.value, int) and
-            isinstance(rhs, ir.JavaPyConstant) and isinstance(rhs.value, int)):
+        if (isinstance(lhs, ir.PyConstant) and isinstance(lhs.value, int) and
+            isinstance(rhs, ir.PyConstant) and isinstance(rhs.value, int)):
             match op: # be careful to not raise an exception here or do anything platform-dependent
                 case 'add':
-                    return ir.JavaPyConstant(lhs.value + rhs.value)
+                    return ir.PyConstant(lhs.value + rhs.value)
                 case 'and':
-                    return ir.JavaPyConstant(lhs.value & rhs.value)
+                    return ir.PyConstant(lhs.value & rhs.value)
                 case 'or':
-                    return ir.JavaPyConstant(lhs.value | rhs.value)
+                    return ir.PyConstant(lhs.value | rhs.value)
                 case 'xor':
-                    return ir.JavaPyConstant(lhs.value ^ rhs.value)
+                    return ir.PyConstant(lhs.value ^ rhs.value)
                 case 'lshift' if rhs.value >= 0:
-                    return ir.JavaPyConstant(lhs.value << rhs.value)
+                    return ir.PyConstant(lhs.value << rhs.value)
                 case 'mul':
-                    return ir.JavaPyConstant(lhs.value * rhs.value)
+                    return ir.PyConstant(lhs.value * rhs.value)
                 case 'rshift' if rhs.value >= 0:
-                    return ir.JavaPyConstant(lhs.value >> rhs.value)
+                    return ir.PyConstant(lhs.value >> rhs.value)
                 case 'sub':
-                    return ir.JavaPyConstant(lhs.value - rhs.value)
-        return ir.JavaMethodCall(lhs, op, [rhs])
+                    return ir.PyConstant(lhs.value - rhs.value)
+        return ir.MethodCall(lhs, op, [rhs])
 
     def visit_Lt(self, node): return 'lt'
     def visit_LtE(self, node): return 'le'
     def visit_Gt(self, node): return 'gt'
     def visit_GtE(self, node): return 'ge'
-    def visit_Compare(self, node) -> ir.JavaExpr:
+    def visit_Compare(self, node) -> ir.Expr:
         n_compares = len(node.comparators)
         assert n_compares == len(node.ops), node # should have consistent number of these
         assert n_compares >= 1, node # should always have at least one
 
         lhs = self.visit(node.left)
-        exprs: list[ir.JavaExpr] = []
+        exprs: list[ir.Expr] = []
         for (i, (op, comparator)) in enumerate(zip(node.ops, node.comparators)):
             rhs = self.visit(comparator)
             if i < n_compares - 1:
                 temp_name = self.scope.make_temp()
-                self.code.append(ir.JavaVariableDecl('PyObject', temp_name, None))
-                rhs = ir.JavaAssignExpr(ir.JavaIdentifier(temp_name), rhs)
+                self.code.append(ir.VariableDecl('PyObject', temp_name, None))
+                rhs = ir.AssignExpr(ir.Identifier(temp_name), rhs)
             else:
                 temp_name = '__unused__'
             if isinstance(op, ast.Is):
-                term = ir.JavaBinaryOp('==', lhs, rhs)
+                term = ir.BinaryOp('==', lhs, rhs)
             elif isinstance(op, ast.IsNot):
-                term = ir.JavaBinaryOp('!=', lhs, rhs)
+                term = ir.BinaryOp('!=', lhs, rhs)
             elif isinstance(op, ast.In):
-                term = ir.JavaMethodCall(lhs, 'in', [rhs])
+                term = ir.MethodCall(lhs, 'in', [rhs])
             elif isinstance(op, ast.NotIn):
-                term = ir.unary_op('!', ir.JavaMethodCall(lhs, 'in', [rhs]))
+                term = ir.unary_op('!', ir.MethodCall(lhs, 'in', [rhs]))
             elif isinstance(op, ast.Eq):
-                term = ir.JavaMethodCall(lhs, 'equals', [rhs])
+                term = ir.MethodCall(lhs, 'equals', [rhs])
             elif isinstance(op, ast.NotEq):
-                term = ir.unary_op('!', ir.JavaMethodCall(lhs, 'equals', [rhs]))
+                term = ir.unary_op('!', ir.MethodCall(lhs, 'equals', [rhs]))
             else:
-                term = ir.JavaMethodCall(lhs, self.visit(op), [rhs])
+                term = ir.MethodCall(lhs, self.visit(op), [rhs])
             exprs.append(term)
             if i < n_compares - 1:
-                lhs = ir.JavaIdentifier(temp_name)
-        return ir.JavaMethodCall(ir.JavaIdentifier('PyBool'), 'create', [ir.chained_binary_op('&&', exprs)])
+                lhs = ir.Identifier(temp_name)
+        return ir.MethodCall(ir.Identifier('PyBool'), 'create', [ir.chained_binary_op('&&', exprs)])
 
-    def emit_bool_op(self, op: ast.boolop, values: list[ast.expr]) -> ir.JavaExpr:
+    def emit_bool_op(self, op: ast.boolop, values: list[ast.expr]) -> ir.Expr:
         if len(values) == 1:
             return self.visit(values[0])
         temp_name = self.scope.make_temp()
-        self.code.append(ir.JavaVariableDecl('PyObject', temp_name, None))
+        self.code.append(ir.VariableDecl('PyObject', temp_name, None))
         lhs = self.visit(values[0])
         rhs = self.emit_bool_op(op, values[1:])
         if isinstance(op, ast.And):
-            return ir.JavaCondOp(ir.bool_value(ir.JavaAssignExpr(ir.JavaIdentifier(temp_name), lhs)), rhs, ir.JavaIdentifier(temp_name))
+            return ir.CondOp(ir.bool_value(ir.AssignExpr(ir.Identifier(temp_name), lhs)), rhs, ir.Identifier(temp_name))
         else:
             assert isinstance(op, ast.Or), op
-            return ir.JavaCondOp(ir.bool_value(ir.JavaAssignExpr(ir.JavaIdentifier(temp_name), lhs)), ir.JavaIdentifier(temp_name), rhs)
+            return ir.CondOp(ir.bool_value(ir.AssignExpr(ir.Identifier(temp_name), lhs)), ir.Identifier(temp_name), rhs)
 
-    def visit_BoolOp(self, node) -> ir.JavaExpr:
+    def visit_BoolOp(self, node) -> ir.Expr:
         assert len(node.values) >= 2, node
         return self.emit_bool_op(node.op, node.values)
 
-    def visit_IfExp(self, node) -> ir.JavaExpr:
-        return ir.JavaCondOp(ir.bool_value(self.visit(node.test)), self.visit(node.body), self.visit(node.orelse))
+    def visit_IfExp(self, node) -> ir.Expr:
+        return ir.CondOp(ir.bool_value(self.visit(node.test)), self.visit(node.body), self.visit(node.orelse))
 
-    def visit_Constant(self, node) -> ir.JavaExpr:
+    def visit_Constant(self, node) -> ir.Expr:
         if isinstance(node.value, (types.NoneType, bool, int, float, str, bytes)):
-            return ir.JavaPyConstant(node.value)
+            return ir.PyConstant(node.value)
         else:
             self.error(node.lineno, f'literal {node.value!r} of type {type(node.value).__name__!r} is unsupported')
-            return ir.JavaIdentifier('__cannot_translate_constant__')
+            return ir.Identifier('__cannot_translate_constant__')
 
-    def visit_JoinedStr(self, node) -> ir.JavaExpr:
+    def visit_JoinedStr(self, node) -> ir.Expr:
         if not node.values:
-            return ir.JavaPyConstant('')
-        vals: list[ir.JavaExpr] = []
+            return ir.PyConstant('')
+        vals: list[ir.Expr] = []
         for val in node.values:
             if isinstance(val, ast.Constant):
                 assert isinstance(val.value, str), val
-                vals.append(ir.JavaStrLiteral(val.value))
+                vals.append(ir.StrLiteral(val.value))
             else:
                 assert isinstance(val, ast.FormattedValue), val
                 # XXX Need to double check evaluation order here
@@ -426,140 +426,140 @@ class LoweringVisitor(ast.NodeVisitor):
                     # Need to extract the String back out of the PyString
                     assert isinstance(val.format_spec, ast.JoinedStr), val.format_spec
                     expr = self.visit(val.format_spec)
-                    if isinstance(expr, ir.JavaPyConstant) and isinstance(expr.value, str):
-                        format_spec = ir.JavaStrLiteral(expr.value)
+                    if isinstance(expr, ir.PyConstant) and isinstance(expr.value, str):
+                        format_spec = ir.StrLiteral(expr.value)
                     else:
-                        format_spec = ir.JavaField(expr, 'value')
+                        format_spec = ir.Field(expr, 'value')
                 else:
-                    format_spec = ir.JavaStrLiteral("")
+                    format_spec = ir.StrLiteral("")
                 expr = self.visit(val.value)
                 if val.conversion == ord('s'):
-                    expr = ir.JavaCreateObject('PyString', [ir.JavaMethodCall(expr, 'str', [])])
+                    expr = ir.CreateObject('PyString', [ir.MethodCall(expr, 'str', [])])
                 elif val.conversion == ord('r'):
-                    expr = ir.JavaCreateObject('PyString', [ir.JavaMethodCall(expr, 'repr', [])])
+                    expr = ir.CreateObject('PyString', [ir.MethodCall(expr, 'repr', [])])
                 elif val.conversion == ord('a'):
-                    expr = ir.JavaMethodCall(ir.JavaIdentifier('PyBuiltinFunctionsImpl'), 'pyfunc_ascii', [expr])
+                    expr = ir.MethodCall(ir.Identifier('PyBuiltinFunctionsImpl'), 'pyfunc_ascii', [expr])
                 elif val.conversion != -1:
                     self.error(val.lineno, f'unsupported f string conversion type {val.conversion}')
-                vals.append(ir.JavaMethodCall(expr, 'format', [format_spec]))
+                vals.append(ir.MethodCall(expr, 'format', [format_spec]))
         expr = ir.chained_binary_op('+', vals)
-        if isinstance(expr, ir.JavaStrLiteral):
-            return ir.JavaPyConstant(expr.s)
-        return ir.JavaCreateObject('PyString', [expr])
+        if isinstance(expr, ir.StrLiteral):
+            return ir.PyConstant(expr.s)
+        return ir.CreateObject('PyString', [expr])
 
-    def emit_star_expanded(self, nodes: list, *, array_list_allowed: bool = False) -> ir.JavaExpr:
+    def emit_star_expanded(self, nodes: list, *, array_list_allowed: bool = False) -> ir.Expr:
         if any(isinstance(arg, ast.Starred) for arg in nodes):
-            args = ir.JavaCreateObject('java.util.ArrayList<PyObject>', [])
+            args = ir.CreateObject('java.util.ArrayList<PyObject>', [])
             for arg in nodes:
                 if isinstance(arg, ast.Starred):
-                    args = ir.JavaMethodCall(ir.JavaIdentifier('Runtime'), 'addStarToArrayList', [args, self.visit(arg.value)])
+                    args = ir.MethodCall(ir.Identifier('Runtime'), 'addStarToArrayList', [args, self.visit(arg.value)])
                 else:
-                    args = ir.JavaMethodCall(ir.JavaIdentifier('Runtime'), 'addPyObjectToArrayList', [args, self.visit(arg)])
+                    args = ir.MethodCall(ir.Identifier('Runtime'), 'addPyObjectToArrayList', [args, self.visit(arg)])
             if not array_list_allowed:
-                args = ir.JavaMethodCall(ir.JavaIdentifier('Runtime'), 'arrayListToArray', [args])
+                args = ir.MethodCall(ir.Identifier('Runtime'), 'arrayListToArray', [args])
             return args
         else:
-            return ir.JavaCreateArray('PyObject', [self.visit(x) for x in nodes])
+            return ir.CreateArray('PyObject', [self.visit(x) for x in nodes])
 
-    def visit_List(self, node) -> ir.JavaExpr:
+    def visit_List(self, node) -> ir.Expr:
         args = self.emit_star_expanded(node.elts, array_list_allowed=True)
-        return ir.JavaCreateObject('PyList', [args])
+        return ir.CreateObject('PyList', [args])
 
-    def visit_Tuple(self, node) -> ir.JavaExpr:
+    def visit_Tuple(self, node) -> ir.Expr:
         args = self.emit_star_expanded(node.elts, array_list_allowed=True)
-        return ir.JavaCreateObject('PyTuple', [args])
+        return ir.CreateObject('PyTuple', [args])
 
-    def visit_Set(self, node) -> ir.JavaExpr:
+    def visit_Set(self, node) -> ir.Expr:
         args = self.emit_star_expanded(node.elts, array_list_allowed=True)
-        return ir.JavaCreateObject('PySet', [args])
+        return ir.CreateObject('PySet', [args])
 
-    def visit_Dict(self, node) -> ir.JavaExpr:
+    def visit_Dict(self, node) -> ir.Expr:
         assert len(node.keys) == len(node.values), node
         kv_iter = itertools.chain.from_iterable(zip(node.keys, node.values))
-        return ir.JavaCreateObject('PyDict', [ir.JavaIdentifier('null') if x is None else self.visit(x) for x in kv_iter])
+        return ir.CreateObject('PyDict', [ir.Identifier('null') if x is None else self.visit(x) for x in kv_iter])
 
-    def visit_Call(self, node) -> ir.JavaExpr:
+    def visit_Call(self, node) -> ir.Expr:
         if self.allow_intrinsics and isinstance(node.func, ast.Name):
             match node.func.id:
                 case '__pythonj_abs__':
                     assert len(node.args) == 1 and not node.keywords, node.args
-                    return ir.JavaMethodCall(self.visit(node.args[0]), 'abs', [])
+                    return ir.MethodCall(self.visit(node.args[0]), 'abs', [])
                 case '__pythonj_delattr__':
                     assert len(node.args) == 2 and not node.keywords, node.args
-                    return ir.JavaMethodCall(ir.JavaIdentifier('Runtime'), 'pythonjDelAttr', [self.visit(node.args[0]), self.visit(node.args[1])])
+                    return ir.MethodCall(ir.Identifier('Runtime'), 'pythonjDelAttr', [self.visit(node.args[0]), self.visit(node.args[1])])
                 case '__pythonj_dict_get__':
                     assert len(node.args) == 2 and not node.keywords, node.args
-                    return ir.JavaMethodCall(ir.JavaIdentifier('Runtime'), 'pythonjDictGet', [self.visit(node.args[0]), self.visit(node.args[1])])
+                    return ir.MethodCall(ir.Identifier('Runtime'), 'pythonjDictGet', [self.visit(node.args[0]), self.visit(node.args[1])])
                 case '__pythonj_format__':
                     assert len(node.args) == 2 and not node.keywords, node.args
-                    return ir.JavaMethodCall(ir.JavaIdentifier('Runtime'), 'pythonjFormat', [self.visit(node.args[0]), self.visit(node.args[1])])
+                    return ir.MethodCall(ir.Identifier('Runtime'), 'pythonjFormat', [self.visit(node.args[0]), self.visit(node.args[1])])
                 case '__pythonj_getattr__':
                     assert len(node.args) == 2 and not node.keywords, node.args
-                    return ir.JavaMethodCall(ir.JavaIdentifier('Runtime'), 'pythonjGetAttr', [self.visit(node.args[0]), self.visit(node.args[1])])
+                    return ir.MethodCall(ir.Identifier('Runtime'), 'pythonjGetAttr', [self.visit(node.args[0]), self.visit(node.args[1])])
                 case '__pythonj_hash__':
                     assert len(node.args) == 1 and not node.keywords, node.args
-                    return ir.JavaMethodCall(ir.JavaIdentifier('Runtime'), 'pythonjHash', [self.visit(node.args[0])])
+                    return ir.MethodCall(ir.Identifier('Runtime'), 'pythonjHash', [self.visit(node.args[0])])
                 case '__pythonj_index__':
                     assert len(node.args) == 1 and not node.keywords, node.args
-                    return ir.JavaMethodCall(ir.JavaIdentifier('Runtime'), 'pythonjIndex', [self.visit(node.args[0])])
+                    return ir.MethodCall(ir.Identifier('Runtime'), 'pythonjIndex', [self.visit(node.args[0])])
                 case '__pythonj_isinstance__':
                     assert len(node.args) == 2 and not node.keywords, node.args
                     if isinstance(node.args[1], ast.Name) and node.args[1].id in ISINSTANCE_SINGLE_FASTPATH_BUILTIN_TYPES:
                         builtin_type = node.args[1].id
                         assert builtin_type in extract_spec.BUILTIN_TYPES, builtin_type
-                        return ir.JavaMethodCall(ir.JavaIdentifier('PyBool'), 'create', [
-                            ir.JavaBinaryOp('instanceof', self.visit(node.args[0]), ir.JavaIdentifier(extract_spec.BUILTIN_TYPES[builtin_type]))
+                        return ir.MethodCall(ir.Identifier('PyBool'), 'create', [
+                            ir.BinaryOp('instanceof', self.visit(node.args[0]), ir.Identifier(extract_spec.BUILTIN_TYPES[builtin_type]))
                         ])
-                    return ir.JavaMethodCall(ir.JavaIdentifier('Runtime'), 'pythonjIsInstance', [self.visit(node.args[0]), self.visit(node.args[1])])
+                    return ir.MethodCall(ir.Identifier('Runtime'), 'pythonjIsInstance', [self.visit(node.args[0]), self.visit(node.args[1])])
                 case '__pythonj_issubclass__':
                     assert len(node.args) == 2 and not node.keywords, node.args
-                    return ir.JavaMethodCall(ir.JavaIdentifier('Runtime'), 'pythonjIsSubclass', [self.visit(node.args[0]), self.visit(node.args[1])])
+                    return ir.MethodCall(ir.Identifier('Runtime'), 'pythonjIsSubclass', [self.visit(node.args[0]), self.visit(node.args[1])])
                 case '__pythonj_iter__':
                     assert len(node.args) == 1 and not node.keywords, node.args
-                    return ir.JavaMethodCall(self.visit(node.args[0]), 'iter', [])
+                    return ir.MethodCall(self.visit(node.args[0]), 'iter', [])
                 case '__pythonj_len__':
                     assert len(node.args) == 1 and not node.keywords, node.args
-                    return ir.JavaMethodCall(ir.JavaIdentifier('Runtime'), 'pythonjLen', [self.visit(node.args[0])])
+                    return ir.MethodCall(ir.Identifier('Runtime'), 'pythonjLen', [self.visit(node.args[0])])
                 case '__pythonj_next__':
                     assert len(node.args) == 1 and not node.keywords, node.args
-                    return ir.JavaMethodCall(self.visit(node.args[0]), 'next', [])
+                    return ir.MethodCall(self.visit(node.args[0]), 'next', [])
                 case '__pythonj_repr__':
                     assert len(node.args) == 1 and not node.keywords, node.args
-                    return ir.JavaMethodCall(ir.JavaIdentifier('Runtime'), 'pythonjRepr', [self.visit(node.args[0])])
+                    return ir.MethodCall(ir.Identifier('Runtime'), 'pythonjRepr', [self.visit(node.args[0])])
                 case '__pythonj_setattr__':
                     assert len(node.args) == 3 and not node.keywords, node.args
-                    return ir.JavaMethodCall(ir.JavaIdentifier('Runtime'), 'pythonjSetAttr', [self.visit(node.args[0]), self.visit(node.args[1]), self.visit(node.args[2])])
+                    return ir.MethodCall(ir.Identifier('Runtime'), 'pythonjSetAttr', [self.visit(node.args[0]), self.visit(node.args[1]), self.visit(node.args[2])])
         if isinstance(node.func, ast.Name) and node.func.id in self.python_helper_names:
             if node.keywords or any(isinstance(arg, ast.Starred) for arg in node.args):
                 self.error(node.lineno, 'same-file helper calls only support plain positional args')
             assert self.python_helper_class is not None, node.func.id
-            return ir.JavaMethodCall(ir.JavaIdentifier(self.python_helper_class), f'pyfunc_{node.func.id}', [self.visit(arg) for arg in node.args])
+            return ir.MethodCall(ir.Identifier(self.python_helper_class), f'pyfunc_{node.func.id}', [self.visit(arg) for arg in node.args])
 
         func = self.visit(node.func)
         args = self.emit_star_expanded(node.args)
         if node.keywords:
-            kv_list: list[ir.JavaExpr] = []
+            kv_list: list[ir.Expr] = []
             for kwarg in node.keywords:
                 if kwarg.arg is None: # **kwargs
-                    kv_list.append(ir.JavaIdentifier('null'))
+                    kv_list.append(ir.Identifier('null'))
                     kv_list.append(self.visit(kwarg.value))
                 else:
                     assert isinstance(kwarg.arg, str), kwarg.arg
-                    kv_list.append(ir.JavaPyConstant(kwarg.arg))
+                    kv_list.append(ir.PyConstant(kwarg.arg))
                     kv_list.append(self.visit(kwarg.value))
-            kwargs = ir.JavaMethodCall(ir.JavaIdentifier('Runtime'), 'requireKwStrings', [ir.JavaCreateObject('PyDict', kv_list)])
+            kwargs = ir.MethodCall(ir.Identifier('Runtime'), 'requireKwStrings', [ir.CreateObject('PyDict', kv_list)])
         else:
-            kwargs = ir.JavaIdentifier('null')
-        return ir.JavaMethodCall(func, 'call', [args, kwargs])
+            kwargs = ir.Identifier('null')
+        return ir.MethodCall(func, 'call', [args, kwargs])
 
-    def visit_Name(self, node) -> ir.JavaExpr:
+    def visit_Name(self, node) -> ir.Expr:
         return self.ident_expr(node.id)
 
-    def visit_Subscript(self, node) -> ir.JavaExpr:
-        return ir.JavaMethodCall(self.visit(node.value), 'getItem', [self.visit(node.slice)])
+    def visit_Subscript(self, node) -> ir.Expr:
+        return ir.MethodCall(self.visit(node.value), 'getItem', [self.visit(node.slice)])
 
-    def visit_Attribute(self, node) -> ir.JavaExpr:
-        return ir.JavaMethodCall(self.visit(node.value), 'getAttr', [ir.JavaStrLiteral(node.attr)])
+    def visit_Attribute(self, node) -> ir.Expr:
+        return ir.MethodCall(self.visit(node.value), 'getAttr', [ir.StrLiteral(node.attr)])
 
     def visit_Import(self, node) -> None:
         for alias in node.names:
@@ -570,18 +570,18 @@ class LoweringVisitor(ast.NodeVisitor):
                 self.error(node.lineno, f"package imports are unsupported (got import {alias.name!r})")
                 continue
             bind_name = alias.asname if alias.asname is not None else alias.name
-            self.code.extend(self.emit_bind(ast.Name(id=bind_name), ir.JavaField(ir.JavaIdentifier(extract_spec.BUILTIN_MODULES[alias.name]), 'singleton')))
+            self.code.extend(self.emit_bind(ast.Name(id=bind_name), ir.Field(ir.Identifier(extract_spec.BUILTIN_MODULES[alias.name]), 'singleton')))
 
     def visit_ImportFrom(self, node) -> None:
         self.error(node.lineno, 'from ... import ... is unsupported')
 
-    def visit_Slice(self, node) -> ir.JavaExpr:
-        lower = self.visit(node.lower) if node.lower else ir.JavaPyConstant(None)
-        upper = self.visit(node.upper) if node.upper else ir.JavaPyConstant(None)
-        step = self.visit(node.step) if node.step else ir.JavaPyConstant(None)
-        return ir.JavaCreateObject('PySlice', [lower, upper, step])
+    def visit_Slice(self, node) -> ir.Expr:
+        lower = self.visit(node.lower) if node.lower else ir.PyConstant(None)
+        upper = self.visit(node.upper) if node.upper else ir.PyConstant(None)
+        step = self.visit(node.step) if node.step else ir.PyConstant(None)
+        return ir.CreateObject('PySlice', [lower, upper, step])
 
-    # XXX Change all statements to -> Iterator[ir.JavaStatement] and yield statements?
+    # XXX Change all statements to -> Iterator[ir.Statement] and yield statements?
     def visit_Pass(self, node) -> None:
         pass
 
@@ -591,24 +591,24 @@ class LoweringVisitor(ast.NodeVisitor):
     def visit_Nonlocal(self, node) -> None:
         pass # handled by SymbolTableVisitor
 
-    def emit_bind(self, target: ast.expr, value: ir.JavaExpr) -> Iterator[ir.JavaStatement]:
+    def emit_bind(self, target: ast.expr, value: ir.Expr) -> Iterator[ir.Statement]:
         if isinstance(target, ast.Name):
-            yield ir.JavaAssignStatement(self.visit(target), value)
+            yield ir.AssignStatement(self.visit(target), value)
         elif isinstance(target, ast.Attribute):
             temp_name = self.scope.make_temp()
-            yield ir.JavaVariableDecl('var', temp_name, value)
-            yield ir.JavaExprStatement(ir.JavaMethodCall(self.visit(target.value), 'setAttr', [ir.JavaStrLiteral(target.attr), ir.JavaIdentifier(temp_name)]))
+            yield ir.VariableDecl('var', temp_name, value)
+            yield ir.ExprStatement(ir.MethodCall(self.visit(target.value), 'setAttr', [ir.StrLiteral(target.attr), ir.Identifier(temp_name)]))
         elif isinstance(target, ast.Subscript):
             temp_name = self.scope.make_temp()
-            yield ir.JavaVariableDecl('var', temp_name, value)
-            yield ir.JavaExprStatement(ir.JavaMethodCall(self.visit(target.value), 'setItem', [self.visit(target.slice), ir.JavaIdentifier(temp_name)]))
+            yield ir.VariableDecl('var', temp_name, value)
+            yield ir.ExprStatement(ir.MethodCall(self.visit(target.value), 'setItem', [self.visit(target.slice), ir.Identifier(temp_name)]))
         elif isinstance(target, (ast.Tuple, ast.List)):
             temp_name = self.scope.make_temp()
-            yield ir.JavaVariableDecl('var', temp_name, ir.JavaMethodCall(value, 'iter', []))
+            yield ir.VariableDecl('var', temp_name, ir.MethodCall(value, 'iter', []))
             # XXX This is not atomic if an exception is thrown; a subset of LHS's will be left assigned
             for subtarget in target.elts:
-                yield from self.emit_bind(subtarget, ir.JavaMethodCall(ir.JavaIdentifier('Runtime'), 'nextRequireNonNull', [ir.JavaIdentifier(temp_name)]))
-            yield ir.JavaExprStatement(ir.JavaMethodCall(ir.JavaIdentifier('Runtime'), 'nextRequireNull', [ir.JavaIdentifier(temp_name)]))
+                yield from self.emit_bind(subtarget, ir.MethodCall(ir.Identifier('Runtime'), 'nextRequireNonNull', [ir.Identifier(temp_name)]))
+            yield ir.ExprStatement(ir.MethodCall(ir.Identifier('Runtime'), 'nextRequireNull', [ir.Identifier(temp_name)]))
         else:
             self.error(target.lineno, f'binding to {type(target).__name__} is unsupported')
 
@@ -622,14 +622,14 @@ class LoweringVisitor(ast.NodeVisitor):
         op = f'{self.visit(node.op)}InPlace'
 
         if isinstance(node.target, ast.Name):
-            code = ir.JavaAssignStatement(self.visit(node.target), ir.JavaMethodCall(self.visit(node.target), op, [self.visit(node.value)]))
+            code = ir.AssignStatement(self.visit(node.target), ir.MethodCall(self.visit(node.target), op, [self.visit(node.value)]))
         elif isinstance(node.target, ast.Attribute):
             temp_name = self.scope.make_temp()
-            self.code.append(ir.JavaVariableDecl('var', temp_name, self.visit(node.target.value)))
-            code = ir.JavaExprStatement(ir.JavaMethodCall(ir.JavaIdentifier(temp_name), 'setAttr', [
-                ir.JavaStrLiteral(node.target.attr),
-                ir.JavaMethodCall(
-                    ir.JavaMethodCall(ir.JavaIdentifier(temp_name), 'getAttr', [ir.JavaStrLiteral(node.target.attr)]),
+            self.code.append(ir.VariableDecl('var', temp_name, self.visit(node.target.value)))
+            code = ir.ExprStatement(ir.MethodCall(ir.Identifier(temp_name), 'setAttr', [
+                ir.StrLiteral(node.target.attr),
+                ir.MethodCall(
+                    ir.MethodCall(ir.Identifier(temp_name), 'getAttr', [ir.StrLiteral(node.target.attr)]),
                     op,
                     [self.visit(node.value)]
                 )
@@ -637,12 +637,12 @@ class LoweringVisitor(ast.NodeVisitor):
         elif isinstance(node.target, ast.Subscript):
             temp_name0 = self.scope.make_temp()
             temp_name1 = self.scope.make_temp()
-            self.code.append(ir.JavaVariableDecl('var', temp_name0, self.visit(node.target.value)))
-            self.code.append(ir.JavaVariableDecl('var', temp_name1, self.visit(node.target.slice)))
-            code = ir.JavaExprStatement(ir.JavaMethodCall(ir.JavaIdentifier(temp_name0), 'setItem', [
-                ir.JavaIdentifier(temp_name1),
-                ir.JavaMethodCall(
-                    ir.JavaMethodCall(ir.JavaIdentifier(temp_name0), 'getItem', [ir.JavaIdentifier(temp_name1)]),
+            self.code.append(ir.VariableDecl('var', temp_name0, self.visit(node.target.value)))
+            self.code.append(ir.VariableDecl('var', temp_name1, self.visit(node.target.slice)))
+            code = ir.ExprStatement(ir.MethodCall(ir.Identifier(temp_name0), 'setItem', [
+                ir.Identifier(temp_name1),
+                ir.MethodCall(
+                    ir.MethodCall(ir.Identifier(temp_name0), 'getItem', [ir.Identifier(temp_name1)]),
                     op,
                     [self.visit(node.value)]
                 )
@@ -655,19 +655,19 @@ class LoweringVisitor(ast.NodeVisitor):
 
     def visit_Assert(self, node) -> None:
         cond = ir.unary_op('!', ir.bool_value(self.visit(node.test)))
-        msg = ir.JavaStrLiteral(self.path + f':{node.lineno}: assertion failure')
+        msg = ir.StrLiteral(self.path + f':{node.lineno}: assertion failure')
         if node.msg:
             msg.s += ': '
-            msg = ir.JavaBinaryOp('+', msg, ir.JavaMethodCall(self.visit(node.msg), 'repr', []))
-        exception = ir.JavaMethodCall(ir.JavaIdentifier('PyAssertionError'), 'raise', [msg])
-        self.code.extend(ir.if_statement(cond, [ir.JavaThrowStatement(exception)], []))
+            msg = ir.BinaryOp('+', msg, ir.MethodCall(self.visit(node.msg), 'repr', []))
+        exception = ir.MethodCall(ir.Identifier('PyAssertionError'), 'raise', [msg])
+        self.code.extend(ir.if_statement(cond, [ir.ThrowStatement(exception)], []))
 
     def visit_Delete(self, node) -> None:
         for target in node.targets:
             if isinstance(target, ast.Attribute):
-                code = ir.JavaExprStatement(ir.JavaMethodCall(self.visit(target.value), 'delAttr', [ir.JavaStrLiteral(target.attr)]))
+                code = ir.ExprStatement(ir.MethodCall(self.visit(target.value), 'delAttr', [ir.StrLiteral(target.attr)]))
             elif isinstance(target, ast.Subscript):
-                code = ir.JavaExprStatement(ir.JavaMethodCall(self.visit(target.value), 'delItem', [self.visit(target.slice)]))
+                code = ir.ExprStatement(ir.MethodCall(self.visit(target.value), 'delItem', [self.visit(target.slice)]))
             else:
                 self.error(node.lineno, f"'del' of {type(target).__name__} is unsupported")
                 continue
@@ -677,10 +677,10 @@ class LoweringVisitor(ast.NodeVisitor):
         assert self.scope.info.kind == ScopeKind.FUNCTION, node
         if self.scope.expected_return_java_type == 'NoReturn':
             self.error(node.lineno, 'NoReturn helper functions may not contain return statements')
-        value = self.visit(node.value) if node.value else ir.JavaPyConstant(None)
+        value = self.visit(node.value) if node.value else ir.PyConstant(None)
         if self.scope.expected_return_java_type is not None and self.scope.expected_return_java_type not in {'PyObject', 'NoReturn'}:
-            value = ir.JavaCastExpr(self.scope.expected_return_java_type, value)
-        self.code.append(ir.JavaReturnStatement(value))
+            value = ir.CastExpr(self.scope.expected_return_java_type, value)
+        self.code.append(ir.ReturnStatement(value))
 
     def visit_Raise(self, node) -> None:
         if node.exc is None:
@@ -691,10 +691,10 @@ class LoweringVisitor(ast.NodeVisitor):
             self.visit(node.exc)
             self.visit(node.cause)
             return
-        self.code.append(ir.JavaThrowStatement(ir.JavaMethodCall(ir.JavaIdentifier('Runtime'), 'raiseExpr', [self.visit(node.exc)])))
+        self.code.append(ir.ThrowStatement(ir.MethodCall(ir.Identifier('Runtime'), 'raiseExpr', [self.visit(node.exc)])))
 
     @contextmanager
-    def new_block(self) -> Iterator[list[ir.JavaStatement]]:
+    def new_block(self) -> Iterator[list[ir.Statement]]:
         saved = self.code
         self.code = []
         yield self.code
@@ -707,7 +707,7 @@ class LoweringVisitor(ast.NodeVisitor):
         yield
         self.break_name = saved
 
-    def visit_block(self, statements: list[ast.stmt]) -> list[ir.JavaStatement]:
+    def visit_block(self, statements: list[ast.stmt]) -> list[ir.Statement]:
         with self.new_block() as body:
             for statement in statements:
                 self.visit(statement)
@@ -730,29 +730,29 @@ class LoweringVisitor(ast.NodeVisitor):
         if node.orelse:
             orelse = self.visit_block(node.orelse)
             assert block_name is not None
-            loop = [ir.JavaLabeledBlock(block_name, [*loop, *orelse])]
+            loop = [ir.LabeledBlock(block_name, [*loop, *orelse])]
         self.code.extend(loop)
 
     def visit_For(self, node) -> None:
         block_name = self.scope.make_temp() if node.orelse else None
         temp_name0 = self.scope.make_temp()
         temp_name1 = self.scope.make_temp()
-        self.code.append(ir.JavaVariableDecl('var', temp_name0, ir.JavaMethodCall(self.visit(node.iter), 'iter', [])))
+        self.code.append(ir.VariableDecl('var', temp_name0, ir.MethodCall(self.visit(node.iter), 'iter', [])))
 
         with self.push_break_name(block_name):
-            loop = ir.JavaForStatement(
-                'var', temp_name1, ir.JavaMethodCall(ir.JavaIdentifier(temp_name0), 'next', []),
-                ir.JavaBinaryOp('!=', ir.JavaIdentifier(temp_name1), ir.JavaIdentifier('null')),
-                temp_name1, ir.JavaMethodCall(ir.JavaIdentifier(temp_name0), 'next', []),
+            loop = ir.ForStatement(
+                'var', temp_name1, ir.MethodCall(ir.Identifier(temp_name0), 'next', []),
+                ir.BinaryOp('!=', ir.Identifier(temp_name1), ir.Identifier('null')),
+                temp_name1, ir.MethodCall(ir.Identifier(temp_name0), 'next', []),
                 [
-                    *self.emit_bind(node.target, ir.JavaIdentifier(temp_name1)),
+                    *self.emit_bind(node.target, ir.Identifier(temp_name1)),
                     *self.visit_block(node.body),
                 ]
             )
         if node.orelse:
             orelse = self.visit_block(node.orelse)
             assert block_name is not None
-            loop = ir.JavaLabeledBlock(block_name, [loop, *orelse])
+            loop = ir.LabeledBlock(block_name, [loop, *orelse])
         self.code.append(loop)
 
     def visit_With(self, node) -> None:
@@ -762,16 +762,16 @@ class LoweringVisitor(ast.NodeVisitor):
         item = node.items[0]
 
         temp_name = self.scope.make_temp()
-        self.code.append(ir.JavaVariableDecl('var', temp_name, self.visit(item.context_expr)))
+        self.code.append(ir.VariableDecl('var', temp_name, self.visit(item.context_expr)))
         if item.optional_vars is None:
-            self.code.append(ir.JavaExprStatement(ir.JavaMethodCall(ir.JavaIdentifier(temp_name), 'enter', [])))
+            self.code.append(ir.ExprStatement(ir.MethodCall(ir.Identifier(temp_name), 'enter', [])))
         else:
-            self.code.extend(self.emit_bind(item.optional_vars, ir.JavaMethodCall(ir.JavaIdentifier(temp_name), 'enter', [])))
+            self.code.extend(self.emit_bind(item.optional_vars, ir.MethodCall(ir.Identifier(temp_name), 'enter', [])))
 
         body = self.visit_block(node.body)
 
-        self.code.append(ir.JavaTryStatement(body, None, None, [], [
-            ir.JavaExprStatement(ir.JavaMethodCall(ir.JavaIdentifier(temp_name), 'exit', [])),
+        self.code.append(ir.TryStatement(body, None, None, [], [
+            ir.ExprStatement(ir.MethodCall(ir.Identifier(temp_name), 'exit', [])),
         ]))
 
     def visit_Try(self, node) -> None:
@@ -797,37 +797,37 @@ class LoweringVisitor(ast.NodeVisitor):
             handler = node.handlers[0]
             with self.new_block() as catch_body:
                 if handler.type is not None:
-                    caught_exc = ir.JavaField(ir.JavaIdentifier(exc_name), 'exc')
-                    expected_exc = ir.JavaIdentifier(f'Py{cast(ast.Name, handler.type).id}')
+                    caught_exc = ir.Field(ir.Identifier(exc_name), 'exc')
+                    expected_exc = ir.Identifier(f'Py{cast(ast.Name, handler.type).id}')
                     catch_body.extend(ir.if_statement(
-                        ir.unary_op('!', ir.JavaBinaryOp('instanceof', caught_exc, expected_exc)),
-                        [ir.JavaThrowStatement(ir.JavaIdentifier(exc_name))],
+                        ir.unary_op('!', ir.BinaryOp('instanceof', caught_exc, expected_exc)),
+                        [ir.ThrowStatement(ir.Identifier(exc_name))],
                         [],
                     ))
                 if handler.name is not None:
-                    catch_body.append(ir.JavaAssignStatement(self.ident_expr(handler.name), ir.JavaField(ir.JavaIdentifier(exc_name), 'exc')))
+                    catch_body.append(ir.AssignStatement(self.ident_expr(handler.name), ir.Field(ir.Identifier(exc_name), 'exc')))
                 for statement in handler.body:
                     self.visit(statement)
 
         finally_body = self.visit_block(node.finalbody)
 
-        self.code.append(ir.JavaTryStatement(try_body, exc_type, exc_name, catch_body, finally_body))
+        self.code.append(ir.TryStatement(try_body, exc_type, exc_name, catch_body, finally_body))
 
     def visit_Break(self, node) -> None:
-        self.code.append(ir.JavaBreakStatement(self.break_name))
+        self.code.append(ir.BreakStatement(self.break_name))
 
     def visit_Continue(self, node) -> None:
-        self.code.append(ir.JavaContinueStatement())
+        self.code.append(ir.ContinueStatement())
 
     def visit_Expr(self, node) -> None:
         value = self.visit(node.value)
-        if isinstance(value, (ir.JavaMethodCall, ir.JavaCreateObject)): # allowed by Java grammar as statements
-            self.code.append(ir.JavaExprStatement(value))
+        if isinstance(value, (ir.MethodCall, ir.CreateObject)): # allowed by Java grammar as statements
+            self.code.append(ir.ExprStatement(value))
         else:
             # Avoid "not a statement" javac errors by assigning otherwise-unused values to a temp.
             # Cannot remove these statements because we rely on javac here to catch some portion of
             # Python usage errors.
-            self.code.append(ir.JavaAssignStatement(ir.JavaIdentifier('expr_discard'), value))
+            self.code.append(ir.AssignStatement(ir.Identifier('expr_discard'), value))
             self.scope.used_expr_discard = True
 
     def check_args(self, lineno: int, args: ast.arguments) -> tuple[list[str], list[object]]:
@@ -877,7 +877,7 @@ class LoweringVisitor(ast.NodeVisitor):
     def qualname(self, name: str) -> str:
         return name if self.scope.qualname is None else f'{self.scope.qualname}.<locals>.{name}'
 
-    def add_function(self, py_name: str, java_name: str, arg_names: list[str], arg_defaults: list[object], body: list[ir.JavaStatement],
+    def add_function(self, py_name: str, java_name: str, arg_names: list[str], arg_defaults: list[object], body: list[ir.Statement],
                      invisible_args: bool = False) -> None:
         n_args = len(arg_names)
         n_required = n_args - len(arg_defaults)
@@ -966,11 +966,11 @@ class LoweringVisitor(ast.NodeVisitor):
                 local_arg_name = arg_name if invisible_args else f'pylocal_{arg_name}'
                 func_code.append(f'PyObject {local_arg_name} = {bind_arg_name};')
         for name in sorted(self.scope.info.cell_vars - set(arg_names)):
-            func_code.append(f'PyCell pycell_{name} = new PyCell({ir.JavaPyConstant(None).emit_java(self.pool)});')
+            func_code.append(f'PyCell pycell_{name} = new PyCell({ir.PyConstant(None).emit_java(self.pool)});')
         for name in sorted(self.scope.info.locals - self.scope.info.cell_vars - set(arg_names)):
             if invisible_args or name not in arg_names:
                 func_code.append(f'PyObject pylocal_{name};')
-        func_code.extend(ir.block_emit_java(ir.block_simplify([*body, ir.JavaReturnStatement(ir.JavaPyConstant(None))]), self.pool))
+        func_code.extend(ir.block_emit_java(ir.block_simplify([*body, ir.ReturnStatement(ir.PyConstant(None))]), self.pool))
         func_code.extend([
             '}',
             '}',
@@ -993,7 +993,7 @@ class LoweringVisitor(ast.NodeVisitor):
         self.n_functions += 1
         scope_info = self.scope_infos[node]
         free_vars = self.resolve_free_vars(node.lineno, scope_info, 'nested function')
-        self.code.append(ir.JavaAssignStatement(self.ident_expr(node.name), ir.JavaCreateObject(java_name, [ir.JavaIdentifier(f'pycell_{name}') for name in sorted(free_vars)])))
+        self.code.append(ir.AssignStatement(self.ident_expr(node.name), ir.CreateObject(java_name, [ir.Identifier(f'pycell_{name}') for name in sorted(free_vars)])))
 
         with self.new_function(scope_info, free_vars, qualname):
             body = self.visit_block(node.body)
@@ -1114,9 +1114,9 @@ class LoweringVisitor(ast.NodeVisitor):
         ])
         assert java_name not in self.functions
         self.functions[java_name] = class_code
-        self.code.append(ir.JavaAssignStatement(self.ident_expr(node.name), ir.JavaIdentifier(f'{type_class_name}.singleton')))
+        self.code.append(ir.AssignStatement(self.ident_expr(node.name), ir.Identifier(f'{type_class_name}.singleton')))
 
-    def visit_Lambda(self, node) -> ir.JavaExpr:
+    def visit_Lambda(self, node) -> ir.Expr:
         (arg_names, arg_defaults) = self.check_args(node.lineno, node.args)
         qualname = self.qualname('<lambda>')
         java_name = f'pylambda{self.n_lambdas}'
@@ -1129,32 +1129,32 @@ class LoweringVisitor(ast.NodeVisitor):
 
         with self.new_function(scope_info, free_vars, qualname):
             with self.new_block() as body:
-                body.append(ir.JavaReturnStatement(self.visit(node.body)))
+                body.append(ir.ReturnStatement(self.visit(node.body)))
             self.add_function(qualname, java_name, arg_names, arg_defaults, body)
 
-        return ir.JavaCreateObject(java_name, [ir.JavaIdentifier(f'pycell_{name}') for name in sorted(free_vars)])
+        return ir.CreateObject(java_name, [ir.Identifier(f'pycell_{name}') for name in sorted(free_vars)])
 
-    def _lower_comp_generator(self, generator: ast.comprehension, iterable: ir.JavaExpr, statements: list[ir.JavaStatement]) -> list[ir.JavaStatement]:
+    def _lower_comp_generator(self, generator: ast.comprehension, iterable: ir.Expr, statements: list[ir.Statement]) -> list[ir.Statement]:
         for _if in reversed(generator.ifs):
             statements = list(ir.if_statement(ir.bool_value(self.visit(_if)), statements, []))
 
         temp_iter = self.scope.make_temp()
         temp_element = self.scope.make_temp()
         return [
-            ir.JavaVariableDecl('var', temp_iter, ir.JavaMethodCall(iterable, 'iter', [])),
-            ir.JavaForStatement(
-                'var', temp_element, ir.JavaMethodCall(ir.JavaIdentifier(temp_iter), 'next', []),
-                ir.JavaBinaryOp('!=', ir.JavaIdentifier(temp_element), ir.JavaIdentifier('null')),
-                temp_element, ir.JavaMethodCall(ir.JavaIdentifier(temp_iter), 'next', []),
+            ir.VariableDecl('var', temp_iter, ir.MethodCall(iterable, 'iter', [])),
+            ir.ForStatement(
+                'var', temp_element, ir.MethodCall(ir.Identifier(temp_iter), 'next', []),
+                ir.BinaryOp('!=', ir.Identifier(temp_element), ir.Identifier('null')),
+                temp_element, ir.MethodCall(ir.Identifier(temp_iter), 'next', []),
                 [
-                    *self.emit_bind(generator.target, ir.JavaIdentifier(temp_element)),
+                    *self.emit_bind(generator.target, ir.Identifier(temp_element)),
                     *statements,
                 ]
             )
         ]
 
     def _lower_comp(self, node: ast.expr, py_name: str, type_name: str, method_name: str, lineno: int,
-                    generators: list[ast.comprehension], elts: list[ast.expr]) -> ir.JavaExpr:
+                    generators: list[ast.comprehension], elts: list[ast.expr]) -> ir.Expr:
         arg_name = 'iterable'
         java_name = f'pylambda{self.n_lambdas}'
         self.n_lambdas += 1
@@ -1167,29 +1167,29 @@ class LoweringVisitor(ast.NodeVisitor):
         with self.new_function(scope_info, free_vars, qualname):
             with self.new_block() as body:
                 temp_result = self.scope.make_temp()
-                statements: list[ir.JavaStatement] = [
-                    ir.JavaExprStatement(ir.JavaMethodCall(ir.JavaIdentifier(temp_result), method_name, [self.visit(elt) for elt in elts]))
+                statements: list[ir.Statement] = [
+                    ir.ExprStatement(ir.MethodCall(ir.Identifier(temp_result), method_name, [self.visit(elt) for elt in elts]))
                 ]
                 for (i, generator) in enumerate(reversed(generators)):
-                    iterable = ir.JavaIdentifier(arg_name) if i == len(generators)-1 else self.visit(generator.iter)
+                    iterable = ir.Identifier(arg_name) if i == len(generators)-1 else self.visit(generator.iter)
                     statements = self._lower_comp_generator(generator, iterable, statements)
                 body += [
-                    ir.JavaVariableDecl('var', temp_result, ir.JavaCreateObject(type_name, [])),
+                    ir.VariableDecl('var', temp_result, ir.CreateObject(type_name, [])),
                     *statements,
-                    ir.JavaReturnStatement(ir.JavaIdentifier(temp_result)),
+                    ir.ReturnStatement(ir.Identifier(temp_result)),
                 ]
             self.add_function(qualname, java_name, [arg_name], [], body, invisible_args=True)
 
-        return ir.JavaMethodCall(ir.JavaCreateObject(java_name, [ir.JavaIdentifier(f'pycell_{name}') for name in sorted(free_vars)]), 'call', [ir.JavaCreateArray('PyObject', [self.visit(generators[0].iter)]), ir.JavaIdentifier('null')])
+        return ir.MethodCall(ir.CreateObject(java_name, [ir.Identifier(f'pycell_{name}') for name in sorted(free_vars)]), 'call', [ir.CreateArray('PyObject', [self.visit(generators[0].iter)]), ir.Identifier('null')])
 
-    def _lower_genexpr(self, node: ast.GeneratorExp) -> ir.JavaExpr:
+    def _lower_genexpr(self, node: ast.GeneratorExp) -> ir.Expr:
         if len(node.generators) != 1:
             self.error(node.lineno, 'generator expressions with multiple for clauses are unsupported')
-            return ir.JavaMethodCall(ir.JavaCreateObject('PyTuple', []), 'iter', [])
+            return ir.MethodCall(ir.CreateObject('PyTuple', []), 'iter', [])
         generator = node.generators[0]
         if generator.is_async:
             self.error(node.lineno, 'async generator expressions are unsupported')
-            return ir.JavaMethodCall(ir.JavaCreateObject('PyTuple', []), 'iter', [])
+            return ir.MethodCall(ir.CreateObject('PyTuple', []), 'iter', [])
 
         qualname = self.qualname('<genexpr>')
         java_name = f'pylambda{self.n_lambdas}'
@@ -1204,18 +1204,18 @@ class LoweringVisitor(ast.NodeVisitor):
             self.scope.locals_are_fields = True
             with self.new_block() as next_body:
                 temp_item = self.scope.make_temp()
-                temp_item_expr = ir.JavaIdentifier(temp_item)
-                next_body.append(ir.JavaVariableDecl('PyObject', temp_item, None))
-                body: list[ir.JavaStatement] = [ir.JavaReturnStatement(self.visit(node.elt))]
+                temp_item_expr = ir.Identifier(temp_item)
+                next_body.append(ir.VariableDecl('PyObject', temp_item, None))
+                body: list[ir.Statement] = [ir.ReturnStatement(self.visit(node.elt))]
                 for _if in reversed(generator.ifs):
-                    body = list(ir.if_statement(ir.bool_value(self.visit(_if)), body, [ir.JavaContinueStatement()]))
+                    body = list(ir.if_statement(ir.bool_value(self.visit(_if)), body, [ir.ContinueStatement()]))
                 body = [
-                    ir.JavaAssignStatement(temp_item_expr, ir.JavaMethodCall(ir.JavaIdentifier('pyiter_iterable'), 'next', [])),
-                    *ir.if_statement(ir.JavaBinaryOp('==', temp_item_expr, ir.JavaIdentifier('null')), [ir.JavaReturnStatement(ir.JavaIdentifier('null'))], []),
+                    ir.AssignStatement(temp_item_expr, ir.MethodCall(ir.Identifier('pyiter_iterable'), 'next', [])),
+                    *ir.if_statement(ir.BinaryOp('==', temp_item_expr, ir.Identifier('null')), [ir.ReturnStatement(ir.Identifier('null'))], []),
                     *self.emit_bind(generator.target, temp_item_expr),
                     *body,
                 ]
-                next_body.append(ir.JavaWhileStatement(ir.JavaIdentifier('true'), body))
+                next_body.append(ir.WhileStatement(ir.Identifier('true'), body))
 
             free_var_names = sorted(self.scope.free_vars)
             func_code = [
@@ -1223,8 +1223,8 @@ class LoweringVisitor(ast.NodeVisitor):
                 f'private static final PyConcreteType type_singleton = new PyConcreteType("generator", {java_name}.class);',
                 *(f'private final PyCell pycell_{name};' for name in free_var_names),
                 'private final PyIter pyiter_iterable;',
-                *(f'private final PyCell pycell_{name} = new PyCell({ir.JavaPyConstant(None).emit_java(self.pool)});' for name in sorted(self.scope.info.cell_vars)),
-                *(f'private PyObject pylocal_{name} = {ir.JavaPyConstant(None).emit_java(self.pool)};' for name in sorted(self.scope.info.locals - self.scope.info.cell_vars)),
+                *(f'private final PyCell pycell_{name} = new PyCell({ir.PyConstant(None).emit_java(self.pool)});' for name in sorted(self.scope.info.cell_vars)),
+                *(f'private PyObject pylocal_{name} = {ir.PyConstant(None).emit_java(self.pool)};' for name in sorted(self.scope.info.locals - self.scope.info.cell_vars)),
                 f'{java_name}({", ".join([*(f"PyCell pycell_{name}" for name in free_var_names), "PyObject iterable"])}) {{' if free_var_names else f'{java_name}(PyObject iterable) {{',
                 *(f'this.pycell_{name} = pycell_{name};' for name in free_var_names),
                 'this.pyiter_iterable = iterable.iter();',
@@ -1239,18 +1239,18 @@ class LoweringVisitor(ast.NodeVisitor):
             assert java_name not in self.functions
             self.functions[java_name] = func_code
 
-        return ir.JavaCreateObject(java_name, [*(ir.JavaIdentifier(f'pycell_{name}') for name in sorted(free_vars)), self.visit(generator.iter)])
+        return ir.CreateObject(java_name, [*(ir.Identifier(f'pycell_{name}') for name in sorted(free_vars)), self.visit(generator.iter)])
 
-    def visit_ListComp(self, node) -> ir.JavaExpr:
+    def visit_ListComp(self, node) -> ir.Expr:
         return self._lower_comp(node, '<listcomp>', 'PyList', 'pymethod_append', node.lineno, node.generators, [node.elt])
 
-    def visit_SetComp(self, node) -> ir.JavaExpr:
+    def visit_SetComp(self, node) -> ir.Expr:
         return self._lower_comp(node, '<setcomp>', 'PySet', 'pymethod_add', node.lineno, node.generators, [node.elt])
 
-    def visit_DictComp(self, node) -> ir.JavaExpr:
+    def visit_DictComp(self, node) -> ir.Expr:
         return self._lower_comp(node, '<dictcomp>', 'PyDict', 'setItem', node.lineno, node.generators, [node.key, node.value])
 
-    def visit_GeneratorExp(self, node) -> ir.JavaExpr:
+    def visit_GeneratorExp(self, node) -> ir.Expr:
         return self._lower_genexpr(node)
 
     def visit_Module(self, node) -> None:
@@ -1267,7 +1267,7 @@ class LoweringVisitor(ast.NodeVisitor):
 
         # XXX Initializing all globals to None is weird, but we don't have a better option yet
         for name in sorted(self.scope.info.locals):
-            writer.write(f'private static PyObject pyglobal_{name} = {ir.JavaPyConstant(None).emit_java(self.pool)};')
+            writer.write(f'private static PyObject pyglobal_{name} = {ir.PyConstant(None).emit_java(self.pool)};')
         writer.write('')
 
         writer.write('public static void main(String[] args) {')
@@ -1440,7 +1440,7 @@ def get_module_function_params(spec: dict[str, object], module_name: str, func_n
     attrs = cast(dict[str, dict[str, object]], cast(dict[str, object], spec[module_name])['attrs'])
     return decode_signature(cast(Optional[dict[str, object]], attrs[func_name].get('signature')))
 
-def emit_python_function_static(visitor: LoweringVisitor, func_name: str, arg_names: list[str], body: list[ir.JavaStatement],
+def emit_python_function_static(visitor: LoweringVisitor, func_name: str, arg_names: list[str], body: list[ir.Statement],
                                 return_java_type: str) -> list[str]:
     java_return_type = 'PyNone' if return_java_type == 'NoReturn' else return_java_type
     func_code = [
@@ -1454,15 +1454,15 @@ def emit_python_function_static(visitor: LoweringVisitor, func_name: str, arg_na
         else:
             func_code.append(f'PyObject pylocal_{arg_name} = pyarg_{arg_name};')
     for name in sorted(visitor.scope.info.cell_vars - set(arg_names)):
-        func_code.append(f'PyCell pycell_{name} = new PyCell({ir.JavaPyConstant(None).emit_java(visitor.pool)});')
+        func_code.append(f'PyCell pycell_{name} = new PyCell({ir.PyConstant(None).emit_java(visitor.pool)});')
     for name in sorted(visitor.scope.info.locals - visitor.scope.info.cell_vars - set(arg_names)):
         func_code.append(f'PyObject pylocal_{name};')
     if return_java_type == 'NoReturn':
         func_code.extend(ir.block_emit_java(ir.block_simplify(body), visitor.pool))
     else:
-        implicit_return: ir.JavaStatement = ir.JavaReturnStatement(ir.JavaPyConstant(None))
+        implicit_return: ir.Statement = ir.ReturnStatement(ir.PyConstant(None))
         if return_java_type != 'PyObject':
-            implicit_return = ir.JavaReturnStatement(ir.JavaCastExpr(return_java_type, ir.JavaPyConstant(None)))
+            implicit_return = ir.ReturnStatement(ir.CastExpr(return_java_type, ir.PyConstant(None)))
         func_code.extend(ir.block_emit_java(ir.block_simplify([*body, implicit_return]), visitor.pool))
     func_code.append('}')
     return func_code
@@ -1546,63 +1546,63 @@ def emit_default_expr(default: object, pool: ir.ConstantPool) -> str:
     if inferred is not None:
         return inferred
     else:
-        return ir.JavaPyConstant(default).emit_java(pool)
+        return ir.PyConstant(default).emit_java(pool)
 
-def emit_default_java_expr(default: object) -> ir.JavaExpr:
+def emit_default_java_expr(default: object) -> ir.Expr:
     inferred = infer_default_expr(default)
     if inferred is not None:
-        return ir.JavaIdentifier(inferred)
-    return ir.JavaPyConstant(default)
+        return ir.Identifier(inferred)
+    return ir.PyConstant(default)
 
 def build_arg_binding_ir(shape: SignatureShape, positional_name: str,
                          kw_name: str, kw_overflow_args_length: str,
-                         noarg_name: str) -> tuple[list[ir.JavaStatement], list[ir.JavaExpr]]:
-    args_length = ir.JavaIdentifier('argsLength')
-    args = ir.JavaIdentifier('args')
-    kwargs = ir.JavaIdentifier('kwargs')
-    kwargs_bool = ir.JavaBinaryOp('&&',
-        ir.JavaBinaryOp('!=', kwargs, ir.JavaIdentifier('null')),
-        ir.JavaMethodCall(kwargs, 'boolValue', []),
+                         noarg_name: str) -> tuple[list[ir.Statement], list[ir.Expr]]:
+    args_length = ir.Identifier('argsLength')
+    args = ir.Identifier('args')
+    kwargs = ir.Identifier('kwargs')
+    kwargs_bool = ir.BinaryOp('&&',
+        ir.BinaryOp('!=', kwargs, ir.Identifier('null')),
+        ir.MethodCall(kwargs, 'boolValue', []),
     )
-    kwargs_len = ir.JavaIdentifier('kwargsLen')
-    unknown_kw = ir.JavaIdentifier('unknownKw')
-    entry_value = ir.JavaMethodCall(ir.JavaIdentifier('x'), 'getValue', [])
-    kwargs_items = ir.JavaMethodCall(ir.JavaField(kwargs, 'items'), 'entrySet', [])
+    kwargs_len = ir.Identifier('kwargsLen')
+    unknown_kw = ir.Identifier('unknownKw')
+    entry_value = ir.MethodCall(ir.Identifier('x'), 'getValue', [])
+    kwargs_items = ir.MethodCall(ir.Field(kwargs, 'items'), 'entrySet', [])
 
-    def throw_stmt(target: ir.JavaExpr) -> ir.JavaThrowStatement:
-        return ir.JavaThrowStatement(target)
+    def throw_stmt(target: ir.Expr) -> ir.ThrowStatement:
+        return ir.ThrowStatement(target)
 
-    def runtime_throw(method: str, args_: list[ir.JavaExpr]) -> ir.JavaThrowStatement:
-        return throw_stmt(ir.JavaMethodCall(ir.JavaIdentifier('Runtime'), method, args_))
+    def runtime_throw(method: str, args_: list[ir.Expr]) -> ir.ThrowStatement:
+        return throw_stmt(ir.MethodCall(ir.Identifier('Runtime'), method, args_))
 
-    def type_error_throw(msg: str) -> ir.JavaThrowStatement:
-        return throw_stmt(ir.JavaMethodCall(ir.JavaIdentifier('PyTypeError'), 'raise', [ir.JavaStrLiteral(msg)]))
+    def type_error_throw(msg: str) -> ir.ThrowStatement:
+        return throw_stmt(ir.MethodCall(ir.Identifier('PyTypeError'), 'raise', [ir.StrLiteral(msg)]))
 
-    def kw_loop_body(known_params: list[inspect.Parameter], include_poskw_duplicates: bool) -> list[ir.JavaStatement]:
-        statements: list[ir.JavaStatement] = [
-            ir.JavaVariableDecl('PyString', 'kw', ir.JavaCastExpr('PyString', ir.JavaMethodCall(ir.JavaIdentifier('x'), 'getKey', []))),
+    def kw_loop_body(known_params: list[inspect.Parameter], include_poskw_duplicates: bool) -> list[ir.Statement]:
+        statements: list[ir.Statement] = [
+            ir.VariableDecl('PyString', 'kw', ir.CastExpr('PyString', ir.MethodCall(ir.Identifier('x'), 'getKey', []))),
         ]
-        conds: list[tuple[ir.JavaExpr, list[ir.JavaStatement]]] = []
+        conds: list[tuple[ir.Expr, list[ir.Statement]]] = []
         for (i, param) in enumerate(known_params):
-            body: list[ir.JavaStatement] = []
+            body: list[ir.Statement] = []
             if include_poskw_duplicates and i < len(shape.poskw_params):
-                body.append(ir.JavaIfStatement(
-                    ir.JavaBinaryOp('!=', ir.JavaIdentifier(java_local_name(param.name)), ir.JavaIdentifier('null')),
+                body.append(ir.IfStatement(
+                    ir.BinaryOp('!=', ir.Identifier(java_local_name(param.name)), ir.Identifier('null')),
                     [runtime_throw('raiseArgGivenByNameAndPosition', [
-                        ir.JavaStrLiteral(kw_name),
-                        ir.JavaStrLiteral(param.name),
-                        ir.JavaIntLiteral(len(shape.posonly_params) + i + 1, ''),
+                        ir.StrLiteral(kw_name),
+                        ir.StrLiteral(param.name),
+                        ir.IntLiteral(len(shape.posonly_params) + i + 1, ''),
                     ])],
                     [],
                 ))
-            body.append(ir.JavaAssignStatement(ir.JavaIdentifier(java_local_name(param.name)), entry_value))
+            body.append(ir.AssignStatement(ir.Identifier(java_local_name(param.name)), entry_value))
             conds.append((
-                ir.JavaMethodCall(ir.JavaField(ir.JavaIdentifier('kw'), 'value'), 'equals', [ir.JavaStrLiteral(param.name)]),
+                ir.MethodCall(ir.Field(ir.Identifier('kw'), 'value'), 'equals', [ir.StrLiteral(param.name)]),
                 body,
             ))
-        else_body: list[ir.JavaStatement] = [ir.JavaIfStatement(
-            ir.JavaBinaryOp('==', unknown_kw, ir.JavaIdentifier('null')),
-            [ir.JavaAssignStatement(unknown_kw, ir.JavaField(ir.JavaIdentifier('kw'), 'value'))],
+        else_body: list[ir.Statement] = [ir.IfStatement(
+            ir.BinaryOp('==', unknown_kw, ir.Identifier('null')),
+            [ir.AssignStatement(unknown_kw, ir.Field(ir.Identifier('kw'), 'value'))],
             [],
         )]
         if conds:
@@ -1616,95 +1616,95 @@ def build_arg_binding_ir(shape: SignatureShape, positional_name: str,
         return ([], [args, kwargs])
     if not shape.posonly_params and not shape.poskw_params and not shape.kwonly_params and shape.vararg_param is not None:
         return ([
-            ir.JavaIfStatement(kwargs_bool, [runtime_throw('raiseNoKwArgs', [ir.JavaStrLiteral(noarg_name)])], []),
+            ir.IfStatement(kwargs_bool, [runtime_throw('raiseNoKwArgs', [ir.StrLiteral(noarg_name)])], []),
         ], [args])
     if not shape.posonly_params and not shape.poskw_params and shape.kwonly_params and \
         shape.vararg_param is not None and shape.varkw_param is None:
-        statements: list[ir.JavaStatement] = [
-            ir.JavaVariableDecl('int', 'argsLength', ir.JavaField(args, 'length')),
+        statements: list[ir.Statement] = [
+            ir.VariableDecl('int', 'argsLength', ir.Field(args, 'length')),
         ]
         for param in shape.kwonly_params:
-            statements.append(ir.JavaVariableDecl('PyObject', java_local_name(param.name), ir.JavaIdentifier('null')))
-        statements.append(ir.JavaIfStatement(kwargs_bool, [
-            ir.JavaVariableDecl('long', 'kwargsLen', ir.JavaMethodCall(kwargs, 'len', [])),
-            ir.JavaIfStatement(
-                ir.JavaBinaryOp('>', kwargs_len, ir.JavaIntLiteral(len(shape.kwonly_params), '')),
+            statements.append(ir.VariableDecl('PyObject', java_local_name(param.name), ir.Identifier('null')))
+        statements.append(ir.IfStatement(kwargs_bool, [
+            ir.VariableDecl('long', 'kwargsLen', ir.MethodCall(kwargs, 'len', [])),
+            ir.IfStatement(
+                ir.BinaryOp('>', kwargs_len, ir.IntLiteral(len(shape.kwonly_params), '')),
                 [runtime_throw('raiseAtMostKwArgs', [
-                    ir.JavaStrLiteral(kw_name),
-                    ir.JavaIntLiteral(len(shape.kwonly_params), ''),
-                    ir.JavaIdentifier(kw_overflow_args_length),
+                    ir.StrLiteral(kw_name),
+                    ir.IntLiteral(len(shape.kwonly_params), ''),
+                    ir.Identifier(kw_overflow_args_length),
                     kwargs_len,
                 ])],
                 [],
             ),
-            ir.JavaVariableDecl('String', 'unknownKw', ir.JavaIdentifier('null')),
-            ir.JavaForEachStatement('var', 'x', kwargs_items, kw_loop_body(shape.kwonly_params, False)),
-            ir.JavaIfStatement(
-                ir.JavaBinaryOp('!=', unknown_kw, ir.JavaIdentifier('null')),
-                [runtime_throw('raiseUnexpectedKwArg', [ir.JavaStrLiteral(kw_name), unknown_kw])],
+            ir.VariableDecl('String', 'unknownKw', ir.Identifier('null')),
+            ir.ForEachStatement('var', 'x', kwargs_items, kw_loop_body(shape.kwonly_params, False)),
+            ir.IfStatement(
+                ir.BinaryOp('!=', unknown_kw, ir.Identifier('null')),
+                [runtime_throw('raiseUnexpectedKwArg', [ir.StrLiteral(kw_name), unknown_kw])],
                 [],
             ),
         ], []))
-        bind_args: list[ir.JavaExpr] = [args]
+        bind_args: list[ir.Expr] = [args]
         for param in shape.kwonly_params:
-            local = ir.JavaIdentifier(java_local_name(param.name))
+            local = ir.Identifier(java_local_name(param.name))
             if param.default is not inspect.Parameter.empty:
-                statements.append(ir.JavaIfStatement(
-                    ir.JavaBinaryOp('==', local, ir.JavaIdentifier('null')),
-                    [ir.JavaAssignStatement(local, emit_default_java_expr(param.default))],
+                statements.append(ir.IfStatement(
+                    ir.BinaryOp('==', local, ir.Identifier('null')),
+                    [ir.AssignStatement(local, emit_default_java_expr(param.default))],
                     [],
                 ))
             bind_args.append(local)
         return (statements, bind_args)
 
-    statements = [ir.JavaVariableDecl('int', 'argsLength', ir.JavaField(args, 'length'))]
+    statements = [ir.VariableDecl('int', 'argsLength', ir.Field(args, 'length'))]
     if shape.params and not shape.poskw_params and not shape.kwonly_params and shape.vararg_param is None:
-        statements.append(ir.JavaIfStatement(kwargs_bool, [runtime_throw('raiseNoKwArgs', [ir.JavaStrLiteral(noarg_name)])], []))
+        statements.append(ir.IfStatement(kwargs_bool, [runtime_throw('raiseNoKwArgs', [ir.StrLiteral(noarg_name)])], []))
         min_args = sum(param.default is inspect.Parameter.empty for param in shape.posonly_params)
         max_args = len(shape.posonly_params)
-        bind_args: list[ir.JavaExpr] = [ir.JavaArrayAccess(args, ir.JavaIntLiteral(i, '')) for i in range(min_args)]
+        bind_args: list[ir.Expr] = [ir.ArrayAccess(args, ir.IntLiteral(i, '')) for i in range(min_args)]
         if min_args == max_args:
-            err: ir.JavaThrowStatement
+            err: ir.ThrowStatement
             if max_args == 0:
-                err = runtime_throw('raiseNoArgs', [args, ir.JavaStrLiteral(noarg_name)])
+                err = runtime_throw('raiseNoArgs', [args, ir.StrLiteral(noarg_name)])
             elif max_args == 1:
-                err = runtime_throw('raiseOneArg', [args, ir.JavaStrLiteral(noarg_name)])
+                err = runtime_throw('raiseOneArg', [args, ir.StrLiteral(noarg_name)])
             else:
-                err = runtime_throw('raiseExactArgs', [args, ir.JavaIntLiteral(max_args, ''), ir.JavaStrLiteral(kw_name)])
-            statements.append(ir.JavaIfStatement(
-                ir.JavaBinaryOp('!=', args_length, ir.JavaIntLiteral(max_args, '')),
+                err = runtime_throw('raiseExactArgs', [args, ir.IntLiteral(max_args, ''), ir.StrLiteral(kw_name)])
+            statements.append(ir.IfStatement(
+                ir.BinaryOp('!=', args_length, ir.IntLiteral(max_args, '')),
                 [err],
                 [],
             ))
         else:
             if min_args > 0:
-                statements.append(ir.JavaIfStatement(
-                    ir.JavaBinaryOp('<', args_length, ir.JavaIntLiteral(min_args, '')),
-                    [runtime_throw('raiseMinArgs', [args, ir.JavaIntLiteral(min_args, ''), ir.JavaStrLiteral(kw_name)])],
+                statements.append(ir.IfStatement(
+                    ir.BinaryOp('<', args_length, ir.IntLiteral(min_args, '')),
+                    [runtime_throw('raiseMinArgs', [args, ir.IntLiteral(min_args, ''), ir.StrLiteral(kw_name)])],
                     [],
                 ))
-            statements.append(ir.JavaIfStatement(
-                ir.JavaBinaryOp('>', args_length, ir.JavaIntLiteral(max_args, '')),
-                [runtime_throw('raiseMaxArgs', [args, ir.JavaIntLiteral(max_args, ''), ir.JavaStrLiteral(kw_name)])],
+            statements.append(ir.IfStatement(
+                ir.BinaryOp('>', args_length, ir.IntLiteral(max_args, '')),
+                [runtime_throw('raiseMaxArgs', [args, ir.IntLiteral(max_args, ''), ir.StrLiteral(kw_name)])],
                 [],
             ))
             for i in range(min_args, max_args):
-                statements.append(ir.JavaVariableDecl(
+                statements.append(ir.VariableDecl(
                     'PyObject', f'arg{i}',
-                    ir.JavaCondOp(
-                        ir.JavaBinaryOp('>=', args_length, ir.JavaIntLiteral(i + 1, '')),
-                        ir.JavaArrayAccess(args, ir.JavaIntLiteral(i, '')),
+                    ir.CondOp(
+                        ir.BinaryOp('>=', args_length, ir.IntLiteral(i + 1, '')),
+                        ir.ArrayAccess(args, ir.IntLiteral(i, '')),
                         emit_default_java_expr(shape.posonly_params[i].default),
                     ),
                 ))
-                bind_args.append(ir.JavaIdentifier(f'arg{i}'))
+                bind_args.append(ir.Identifier(f'arg{i}'))
         return (statements, bind_args)
     if not shape.params:
         statements.extend([
-            ir.JavaIfStatement(kwargs_bool, [runtime_throw('raiseNoKwArgs', [ir.JavaStrLiteral(noarg_name)])], []),
-            ir.JavaIfStatement(
-                ir.JavaBinaryOp('!=', args_length, ir.JavaIntLiteral(0, '')),
-                [runtime_throw('raiseNoArgs', [args, ir.JavaStrLiteral(noarg_name)])],
+            ir.IfStatement(kwargs_bool, [runtime_throw('raiseNoKwArgs', [ir.StrLiteral(noarg_name)])], []),
+            ir.IfStatement(
+                ir.BinaryOp('!=', args_length, ir.IntLiteral(0, '')),
+                [runtime_throw('raiseNoArgs', [args, ir.StrLiteral(noarg_name)])],
                 [],
             ),
         ])
@@ -1716,131 +1716,131 @@ def build_arg_binding_ir(shape: SignatureShape, positional_name: str,
     max_positional = shape.max_positional
     missing_style = shape.missing_style
     if missing_style == 'exact_args':
-        statements.append(ir.JavaIfStatement(
-            ir.JavaBinaryOp('!=', args_length, ir.JavaIntLiteral(1, '')),
-            [runtime_throw('raiseExactArgs', [args, ir.JavaIntLiteral(1, ''), ir.JavaStrLiteral(positional_name)])],
+        statements.append(ir.IfStatement(
+            ir.BinaryOp('!=', args_length, ir.IntLiteral(1, '')),
+            [runtime_throw('raiseExactArgs', [args, ir.IntLiteral(1, ''), ir.StrLiteral(positional_name)])],
             [],
         ))
     elif missing_style == 'min_positional':
-        statements.append(ir.JavaIfStatement(
-            ir.JavaBinaryOp('==', args_length, ir.JavaIntLiteral(0, '')),
+        statements.append(ir.IfStatement(
+            ir.BinaryOp('==', args_length, ir.IntLiteral(0, '')),
             [type_error_throw(f'{positional_name}() takes at least 1 positional argument (0 given)')],
             [],
         ))
     java_param_names = {param.name: java_local_name(param.name) for param in shape.params}
     for (i, param) in enumerate(posonly_params + poskw_params):
-        statements.append(ir.JavaVariableDecl(
+        statements.append(ir.VariableDecl(
             'PyObject', java_param_names[param.name],
-            ir.JavaCondOp(
-                ir.JavaBinaryOp('>=', args_length, ir.JavaIntLiteral(i + 1, '')),
-                ir.JavaArrayAccess(args, ir.JavaIntLiteral(i, '')),
-                ir.JavaIdentifier('null'),
+            ir.CondOp(
+                ir.BinaryOp('>=', args_length, ir.IntLiteral(i + 1, '')),
+                ir.ArrayAccess(args, ir.IntLiteral(i, '')),
+                ir.Identifier('null'),
             ),
         ))
     for param in kwonly_params:
-        statements.append(ir.JavaVariableDecl('PyObject', java_param_names[param.name], ir.JavaIdentifier('null')))
+        statements.append(ir.VariableDecl('PyObject', java_param_names[param.name], ir.Identifier('null')))
     if kwonly_params and not poskw_params:
         if missing_style != 'exact_args' and (max_positional != 0):
             assert False, (positional_name, shape.params, missing_style)
-        statements.append(ir.JavaIfStatement(kwargs_bool, [
-            ir.JavaVariableDecl('long', 'kwargsLen', ir.JavaMethodCall(kwargs, 'len', [])),
-            ir.JavaIfStatement(
-                ir.JavaBinaryOp('>', kwargs_len, ir.JavaIntLiteral(max_total, '')),
+        statements.append(ir.IfStatement(kwargs_bool, [
+            ir.VariableDecl('long', 'kwargsLen', ir.MethodCall(kwargs, 'len', [])),
+            ir.IfStatement(
+                ir.BinaryOp('>', kwargs_len, ir.IntLiteral(max_total, '')),
                 [runtime_throw('raiseAtMostKwArgs', [
-                    ir.JavaStrLiteral(kw_name),
-                    ir.JavaIntLiteral(max_total, ''),
-                    ir.JavaIdentifier(kw_overflow_args_length),
+                    ir.StrLiteral(kw_name),
+                    ir.IntLiteral(max_total, ''),
+                    ir.Identifier(kw_overflow_args_length),
                     kwargs_len,
                 ])],
                 [],
             ),
-            ir.JavaVariableDecl('String', 'unknownKw', ir.JavaIdentifier('null')),
-            ir.JavaForEachStatement('var', 'x', kwargs_items, kw_loop_body(kwonly_params, False)),
-            ir.JavaIfStatement(
-                ir.JavaBinaryOp('!=', unknown_kw, ir.JavaIdentifier('null')),
-                [runtime_throw('raiseUnexpectedKwArg', [ir.JavaStrLiteral(kw_name), unknown_kw])],
+            ir.VariableDecl('String', 'unknownKw', ir.Identifier('null')),
+            ir.ForEachStatement('var', 'x', kwargs_items, kw_loop_body(kwonly_params, False)),
+            ir.IfStatement(
+                ir.BinaryOp('!=', unknown_kw, ir.Identifier('null')),
+                [runtime_throw('raiseUnexpectedKwArg', [ir.StrLiteral(kw_name), unknown_kw])],
                 [],
             ),
         ], []))
         if max_positional == 0:
-            statements.append(ir.JavaIfStatement(
-                ir.JavaBinaryOp('>', args_length, ir.JavaIntLiteral(max_total, '')),
-                [runtime_throw('raiseAtMostArgs', [ir.JavaStrLiteral(positional_name), ir.JavaIntLiteral(max_total, ''), args_length])],
-                [ir.JavaIfStatement(
-                    ir.JavaBinaryOp('!=', args_length, ir.JavaIntLiteral(0, '')),
+            statements.append(ir.IfStatement(
+                ir.BinaryOp('>', args_length, ir.IntLiteral(max_total, '')),
+                [runtime_throw('raiseAtMostArgs', [ir.StrLiteral(positional_name), ir.IntLiteral(max_total, ''), args_length])],
+                [ir.IfStatement(
+                    ir.BinaryOp('!=', args_length, ir.IntLiteral(0, '')),
                     [type_error_throw(f'{positional_name}() takes no positional arguments')],
                     [],
                 )],
             ))
     else:
-        statements.append(ir.JavaIfStatement(kwargs_bool, [
-            ir.JavaVariableDecl('long', 'kwargsLen', ir.JavaMethodCall(kwargs, 'len', [])),
-            ir.JavaIfStatement(
-                ir.JavaBinaryOp('>', ir.JavaBinaryOp('+', args_length, kwargs_len), ir.JavaIntLiteral(max_total, '')),
+        statements.append(ir.IfStatement(kwargs_bool, [
+            ir.VariableDecl('long', 'kwargsLen', ir.MethodCall(kwargs, 'len', [])),
+            ir.IfStatement(
+                ir.BinaryOp('>', ir.BinaryOp('+', args_length, kwargs_len), ir.IntLiteral(max_total, '')),
                 [runtime_throw('raiseAtMostKwArgs', [
-                    ir.JavaStrLiteral(kw_name),
-                    ir.JavaIntLiteral(max_total, ''),
+                    ir.StrLiteral(kw_name),
+                    ir.IntLiteral(max_total, ''),
                     args_length,
                     kwargs_len,
                 ])],
                 [],
             ),
-            ir.JavaVariableDecl('String', 'unknownKw', ir.JavaIdentifier('null')),
-            ir.JavaForEachStatement('var', 'x', kwargs_items, kw_loop_body(poskw_params + kwonly_params, True)),
+            ir.VariableDecl('String', 'unknownKw', ir.Identifier('null')),
+            ir.ForEachStatement('var', 'x', kwargs_items, kw_loop_body(poskw_params + kwonly_params, True)),
             *([
-                ir.JavaIfStatement(
-                    ir.JavaBinaryOp('==', ir.JavaIdentifier(java_param_names[param.name]), ir.JavaIdentifier('null')),
+                ir.IfStatement(
+                    ir.BinaryOp('==', ir.Identifier(java_param_names[param.name]), ir.Identifier('null')),
                     [runtime_throw('raiseMissingRequiredArg', [
-                        ir.JavaStrLiteral(positional_name),
-                        ir.JavaStrLiteral(param.name),
-                        ir.JavaIntLiteral(i + 1, ''),
+                        ir.StrLiteral(positional_name),
+                        ir.StrLiteral(param.name),
+                        ir.IntLiteral(i + 1, ''),
                     ])],
                     [],
                 )
                 for (i, param) in enumerate(posonly_params + poskw_params)
                 if param.default is inspect.Parameter.empty and missing_style == 'required_arg'
             ]),
-            ir.JavaIfStatement(
-                ir.JavaBinaryOp('!=', unknown_kw, ir.JavaIdentifier('null')),
-                [runtime_throw('raiseUnexpectedKwArg', [ir.JavaStrLiteral(kw_name), unknown_kw])],
+            ir.IfStatement(
+                ir.BinaryOp('!=', unknown_kw, ir.Identifier('null')),
+                [runtime_throw('raiseUnexpectedKwArg', [ir.StrLiteral(kw_name), unknown_kw])],
                 [],
             ),
         ], []))
         if max_positional < max_total:
-            statements.append(ir.JavaIfStatement(
-                ir.JavaBinaryOp('>', args_length, ir.JavaIntLiteral(max_total, '')),
-                [runtime_throw('raiseAtMostArgs', [ir.JavaStrLiteral(positional_name), ir.JavaIntLiteral(max_total, ''), args_length])],
-                [ir.JavaIfStatement(
-                    ir.JavaBinaryOp('>', args_length, ir.JavaIntLiteral(max_positional, '')),
-                    [runtime_throw('raiseAtMostPosArgs', [ir.JavaStrLiteral(positional_name), ir.JavaIntLiteral(max_positional, ''), args_length])],
+            statements.append(ir.IfStatement(
+                ir.BinaryOp('>', args_length, ir.IntLiteral(max_total, '')),
+                [runtime_throw('raiseAtMostArgs', [ir.StrLiteral(positional_name), ir.IntLiteral(max_total, ''), args_length])],
+                [ir.IfStatement(
+                    ir.BinaryOp('>', args_length, ir.IntLiteral(max_positional, '')),
+                    [runtime_throw('raiseAtMostPosArgs', [ir.StrLiteral(positional_name), ir.IntLiteral(max_positional, ''), args_length])],
                     [],
                 )],
             ))
         else:
-            statements.append(ir.JavaIfStatement(
-                ir.JavaBinaryOp('>', args_length, ir.JavaIntLiteral(max_total, '')),
-                [runtime_throw('raiseAtMostArgs', [ir.JavaStrLiteral(positional_name), ir.JavaIntLiteral(max_total, ''), args_length])],
+            statements.append(ir.IfStatement(
+                ir.BinaryOp('>', args_length, ir.IntLiteral(max_total, '')),
+                [runtime_throw('raiseAtMostArgs', [ir.StrLiteral(positional_name), ir.IntLiteral(max_total, ''), args_length])],
                 [],
             ))
         if missing_style == 'required_arg':
             for (i, param) in enumerate(posonly_params + poskw_params):
                 if param.default is inspect.Parameter.empty:
-                    statements.append(ir.JavaIfStatement(
-                        ir.JavaBinaryOp('==', ir.JavaIdentifier(java_param_names[param.name]), ir.JavaIdentifier('null')),
+                    statements.append(ir.IfStatement(
+                        ir.BinaryOp('==', ir.Identifier(java_param_names[param.name]), ir.Identifier('null')),
                         [runtime_throw('raiseMissingRequiredArg', [
-                            ir.JavaStrLiteral(positional_name),
-                            ir.JavaStrLiteral(param.name),
-                            ir.JavaIntLiteral(i + 1, ''),
+                            ir.StrLiteral(positional_name),
+                            ir.StrLiteral(param.name),
+                            ir.IntLiteral(i + 1, ''),
                         ])],
                         [],
                     ))
-    bind_args: list[ir.JavaExpr] = []
+    bind_args: list[ir.Expr] = []
     for param in shape.params:
-        local = ir.JavaIdentifier(java_param_names[param.name])
+        local = ir.Identifier(java_param_names[param.name])
         if param.default is not inspect.Parameter.empty:
-            statements.append(ir.JavaIfStatement(
-                ir.JavaBinaryOp('==', local, ir.JavaIdentifier('null')),
-                [ir.JavaAssignStatement(local, emit_default_java_expr(param.default))],
+            statements.append(ir.IfStatement(
+                ir.BinaryOp('==', local, ir.Identifier('null')),
+                [ir.AssignStatement(local, emit_default_java_expr(param.default))],
                 [],
             ))
         bind_args.append(local)
@@ -2000,7 +2000,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                     writer.write(f'@Override public String methodName() {{ return "{method_name}"; }}')
                     writer.write('@Override public PyObject call(PyObject[] args, PyDict kwargs) {')
                     if kwarg_params is None:
-                        bind_args = [ir.JavaIdentifier('args'), ir.JavaIdentifier('kwargs')]
+                        bind_args = [ir.Identifier('args'), ir.Identifier('kwargs')]
                     else:
                         (bind_statements, bind_args) = build_arg_binding_ir(
                             kwarg_params, method_name,
@@ -2010,17 +2010,17 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                         )
                         ir.emit_java_statements(writer, bind_statements, pool)
                     if kind == 'classmethod':
-                        bind_args = [ir.JavaIdentifier('self')] + bind_args
+                        bind_args = [ir.Identifier('self')] + bind_args
                     if method_impl_target is not None:
-                        call_args = bind_args if kind == 'classmethod' else [ir.JavaIdentifier('self'), *bind_args]
-                        call_expr = ir.JavaMethodCall(
-                            ir.JavaIdentifier(method_impl_target.rsplit('.', 1)[0]),
+                        call_args = bind_args if kind == 'classmethod' else [ir.Identifier('self'), *bind_args]
+                        call_expr = ir.MethodCall(
+                            ir.Identifier(method_impl_target.rsplit('.', 1)[0]),
                             method_impl_target.rsplit('.', 1)[1],
                             call_args,
                         )
                     else:
-                        call_expr = ir.JavaMethodCall(ir.JavaIdentifier(method_target), f'pymethod_{method_name}', bind_args)
-                    ir.emit_java_statement(writer, ir.JavaReturnStatement(call_expr), pool)
+                        call_expr = ir.MethodCall(ir.Identifier(method_target), f'pymethod_{method_name}', bind_args)
+                    ir.emit_java_statement(writer, ir.ReturnStatement(call_expr), pool)
                     writer.write('}')
                     writer.write('}')
                 writer.write('')
@@ -2093,7 +2093,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                 writer.write('@Override public PyObject call(PyObject[] args, PyDict kwargs) {')
                 full_name = f'{module_name}.{func_name}'
                 if kwarg_params is None:
-                    bind_args = [ir.JavaIdentifier('args'), ir.JavaIdentifier('kwargs')]
+                    bind_args = [ir.Identifier('args'), ir.Identifier('kwargs')]
                 else:
                     (bind_statements, bind_args) = build_arg_binding_ir(
                         kwarg_params, func_name,
@@ -2102,8 +2102,8 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                         full_name,
                     )
                     ir.emit_java_statements(writer, bind_statements, pool)
-                ir.emit_java_statement(writer, ir.JavaReturnStatement(
-                    ir.JavaMethodCall(ir.JavaIdentifier('PyBuiltinFunctionsImpl'), f'pyfunc_{module_name.removeprefix("_")}_{func_name}', bind_args)
+                ir.emit_java_statement(writer, ir.ReturnStatement(
+                    ir.MethodCall(ir.Identifier('PyBuiltinFunctionsImpl'), f'pyfunc_{module_name.removeprefix("_")}_{func_name}', bind_args)
                 ), pool)
                 writer.write('}')
                 writer.write('}')
@@ -2120,9 +2120,9 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
             writer.write('')
             writer.write(f'private PyBuiltinFunction_{func_name}() {{ super("{func_name}"); }}')
             writer.write('@Override public PyObject call(PyObject[] args, PyDict kwargs) {')
-            bind_args: list[ir.JavaExpr]
+            bind_args: list[ir.Expr]
             if kwarg_params is None:
-                bind_args = [ir.JavaIdentifier('args'), ir.JavaIdentifier('kwargs')]
+                bind_args = [ir.Identifier('args'), ir.Identifier('kwargs')]
             else:
                 kw_name = 'sort' if func_name == 'sorted' else func_name
                 kw_overflow_args_length = '0' if func_name == 'sorted' else 'argsLength'
@@ -2137,8 +2137,8 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                 call_target = 'PyBuiltinFunctionsPythonImpl'
             else:
                 call_target = 'PyBuiltinFunctionsImpl'
-            ir.emit_java_statement(writer, ir.JavaReturnStatement(
-                ir.JavaMethodCall(ir.JavaIdentifier(call_target), f'pyfunc_{func_name}', bind_args)
+            ir.emit_java_statement(writer, ir.ReturnStatement(
+                ir.MethodCall(ir.Identifier(call_target), f'pyfunc_{func_name}', bind_args)
             ), pool)
             writer.write('}')
             writer.write('}')
