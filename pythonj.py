@@ -52,6 +52,10 @@ EXCEPTION_TYPES = {
     'KeyError', 'LookupError', 'OverflowError', 'StopIteration', 'TypeError', 'ValueError', 'ZeroDivisionError',
 }
 
+# Keep this explicit and narrow; widen it only for builtin types we have actually
+# exercised and are comfortable lowering directly to JVM instanceof checks.
+ISINSTANCE_SINGLE_FASTPATH_BUILTIN_TYPES = {'bytearray', 'bytes', 'str', 'tuple'}
+
 RUNTIME_JAVA_FILES = (
     'PyBool.java',
     'PyBuiltinFunctions.java',
@@ -945,6 +949,12 @@ class PythonjVisitor(ast.NodeVisitor):
                     return JavaMethodCall(JavaIdentifier('Runtime'), 'pythonjHash', [self.visit(node.args[0])])
                 case '__pythonj_isinstance_single__':
                     assert len(node.args) == 2 and not node.keywords, node.args
+                    if isinstance(node.args[1], ast.Name) and node.args[1].id in ISINSTANCE_SINGLE_FASTPATH_BUILTIN_TYPES:
+                        builtin_type = node.args[1].id
+                        assert builtin_type in BUILTIN_TYPES, builtin_type
+                        return JavaMethodCall(JavaIdentifier('PyBool'), 'create', [
+                            JavaBinaryOp('instanceof', self.visit(node.args[0]), JavaIdentifier(BUILTIN_TYPES[builtin_type]))
+                        ])
                     return JavaMethodCall(JavaIdentifier('Runtime'), 'pythonjIsInstanceSingle', [self.visit(node.args[0]), self.visit(node.args[1])])
                 case '__pythonj_issubclass_single__':
                     assert len(node.args) == 2 and not node.keywords, node.args

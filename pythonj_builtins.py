@@ -72,11 +72,11 @@ def setattr(obj, name, value):
     return __pythonj_setattr__(obj, name, value)
 
 def sum(iterable, start):
-    if isinstance(start, str):
+    if __pythonj_isinstance_single__(start, str):
         raise TypeError("sum() can't sum strings [use ''.join(seq) instead]")
-    if isinstance(start, bytes):
+    if __pythonj_isinstance_single__(start, bytes):
         raise TypeError("sum() can't sum bytes [use b''.join(seq) instead]")
-    if isinstance(start, bytearray):
+    if __pythonj_isinstance_single__(start, bytearray):
         raise TypeError("sum() can't sum bytearray [use b''.join(seq) instead]")
     for item in iterable:
         start = start + item
