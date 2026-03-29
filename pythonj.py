@@ -27,6 +27,9 @@ BUILTIN_FUNCTIONS = {
     'isinstance', 'issubclass', 'iter', 'len', 'max', 'min', 'next', 'open', 'ord', 'print', 'repr',
     'setattr', 'sorted', 'sum', 'oct',
 }
+BUILTIN_MODULES = {
+    'math': 'PyMathModule',
+}
 BUILTIN_TYPES = {
     'bool': 'PyBool',
     'bytearray': 'PyByteArray',
@@ -571,6 +574,14 @@ class ScopeAnalyzer(ast.NodeVisitor):
         if isinstance(node, ast.ClassDef):
             writes.add(node.name)
             return
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                writes.add(alias.asname if alias.asname is not None else alias.name)
+            return
+        if isinstance(node, ast.ImportFrom):
+            for alias in node.names:
+                writes.add(alias.asname if alias.asname is not None else alias.name)
+            return
         if isinstance(node, (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)):
             self._walk_local(node.generators[0].iter, reads, writes, explicit_globals, nonlocals, children)
             children.append(node)
@@ -1019,6 +1030,20 @@ class PythonjVisitor(ast.NodeVisitor):
 
     def visit_Attribute(self, node) -> JavaExpr:
         return JavaMethodCall(self.visit(node.value), 'getAttr', [JavaStrLiteral(node.attr)])
+
+    def visit_Import(self, node) -> None:
+        for alias in node.names:
+            if alias.name not in BUILTIN_MODULES:
+                self.error(node.lineno, f"only builtin-module imports are supported (got import {alias.name!r})")
+                continue
+            if '.' in alias.name:
+                self.error(node.lineno, f"package imports are unsupported (got import {alias.name!r})")
+                continue
+            bind_name = alias.asname if alias.asname is not None else alias.name
+            self.code.extend(self.emit_bind(ast.Name(id=bind_name), JavaField(JavaIdentifier(BUILTIN_MODULES[alias.name]), 'singleton')))
+
+    def visit_ImportFrom(self, node) -> None:
+        self.error(node.lineno, 'from ... import ... is unsupported')
 
     def visit_Slice(self, node) -> JavaExpr:
         lower = self.visit(node.lower) if node.lower else JavaPyConstant(None)

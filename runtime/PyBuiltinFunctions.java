@@ -11,7 +11,51 @@ abstract class PyBuiltinFunction extends PyBuiltinFunctionOrMethod {
     @Override public final String repr() { return "<built-in function " + funcName + ">"; }
 }
 
+final class PyMathFunction_isinf extends PyBuiltinFunction {
+    public static final PyMathFunction_isinf singleton = new PyMathFunction_isinf();
+
+    private PyMathFunction_isinf() { super("isinf"); }
+
+    @Override public PyObject call(PyObject[] args, PyDict kwargs) {
+        if ((kwargs != null) && kwargs.boolValue()) {
+            throw Runtime.raiseNoKwArgs("math.isinf");
+        }
+        if (args.length != 1) {
+            throw Runtime.raiseOneArg(args, "math.isinf");
+        }
+        return PyBuiltinFunctionsImpl.pyfunc_math_isinf(args[0]);
+    }
+}
+
+final class PyMathFunction_isnan extends PyBuiltinFunction {
+    public static final PyMathFunction_isnan singleton = new PyMathFunction_isnan();
+
+    private PyMathFunction_isnan() { super("isnan"); }
+
+    @Override public PyObject call(PyObject[] args, PyDict kwargs) {
+        if ((kwargs != null) && kwargs.boolValue()) {
+            throw Runtime.raiseNoKwArgs("math.isnan");
+        }
+        if (args.length != 1) {
+            throw Runtime.raiseOneArg(args, "math.isnan");
+        }
+        return PyBuiltinFunctionsImpl.pyfunc_math_isnan(args[0]);
+    }
+}
+
 final class PyBuiltinFunctionsImpl {
+    static PyBool pyfunc_math_isinf(PyObject arg) {
+        if ((arg instanceof PyFloat) || (arg instanceof PyInt) || (arg instanceof PyBool)) {
+            return PyBool.create(Double.isInfinite(arg.floatValue()));
+        }
+        throw PyTypeError.raise("must be real number, not " + arg.type().name());
+    }
+    static PyBool pyfunc_math_isnan(PyObject arg) {
+        if ((arg instanceof PyFloat) || (arg instanceof PyInt) || (arg instanceof PyBool)) {
+            return PyBool.create(Double.isNaN(arg.floatValue()));
+        }
+        throw PyTypeError.raise("must be real number, not " + arg.type().name());
+    }
     static PyString pyfunc_ascii(PyObject arg) {
         String r = arg.repr();
         var s = new StringBuilder();

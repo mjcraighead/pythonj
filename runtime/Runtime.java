@@ -83,6 +83,39 @@ abstract class PySlottedObject extends PyTruthyObject {
     @Override public PyType type() { return slotType; }
 }
 
+abstract class PyModule extends PyTruthyObject {
+    private final String moduleName;
+
+    protected PyModule(String _moduleName) {
+        moduleName = _moduleName;
+    }
+
+    @Override public PyObject getAttr(String key) {
+        if (key.equals("__name__")) {
+            return new PyString(moduleName);
+        }
+        return super.getAttr(key);
+    }
+    @Override public boolean equals(Object rhs) { return this == rhs; }
+    @Override public int hashCode() { return defaultHashCode(); }
+    @Override public String repr() { return "<module '" + moduleName + "'>"; }
+    @Override public PyType type() { return PyModuleType.singleton; }
+}
+
+final class PyMathModule extends PyModule {
+    public static final PyMathModule singleton = new PyMathModule();
+
+    private PyMathModule() { super("math"); }
+
+    @Override public PyObject getAttr(String key) {
+        switch (key) {
+            case "isnan": return PyMathFunction_isnan.singleton;
+            case "isinf": return PyMathFunction_isinf.singleton;
+            default: return super.getAttr(key);
+        }
+    }
+}
+
 abstract class PyType extends PyTruthyObject {
     public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
         if (args.length != 1) {
@@ -167,6 +200,12 @@ class PyConcreteType extends PyType {
     @Override public final String repr() { return "<class '" + typeName + "'>"; }
     @Override public final PyTypeType type() { return PyTypeType.singleton; }
     @Override public final String name() { return typeName; }
+}
+
+final class PyModuleType extends PyConcreteType {
+    public static final PyModuleType singleton = new PyModuleType();
+
+    private PyModuleType() { super("module", PyModule.class); }
 }
 
 abstract class PyGettableDescriptor extends PyTruthyObject {
