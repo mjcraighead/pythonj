@@ -365,6 +365,13 @@ public final class Runtime {
     public static PyRaise raiseMultipleValues(String name, String argName) {
         return PyTypeError.raiseFormat("%s() got multiple values for argument %s", name, PyString.reprOf(argName));
     }
+    public static PyRaise raiseExpr(PyObject exc) {
+        if (exc instanceof PyBaseException baseExc) {
+            return new PyRaise(baseExc);
+        } else {
+            throw PyTypeError.raise("exceptions must derive from BaseException");
+        }
+    }
     public static PyRaise raiseNamedReadOnlyAttr(PyType owner, String key) {
         return PyAttributeError.raise(PyString.reprOf(owner.name()) + " object attribute " + PyString.reprOf(key) + " is read-only");
     }

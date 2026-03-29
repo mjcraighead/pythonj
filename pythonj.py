@@ -1026,6 +1026,17 @@ class PythonjVisitor(ast.NodeVisitor):
         value = self.visit(node.value) if node.value else JavaPyConstant(None)
         self.code.append(JavaReturnStatement(value))
 
+    def visit_Raise(self, node) -> None:
+        if node.exc is None:
+            self.error(node.lineno, "bare 'raise' is unsupported")
+            return
+        if node.cause is not None:
+            self.error(node.lineno, "'raise ... from ...' is unsupported")
+            self.visit(node.exc)
+            self.visit(node.cause)
+            return
+        self.code.append(JavaThrowStatement(JavaMethodCall(JavaIdentifier('Runtime'), 'raiseExpr', [self.visit(node.exc)])))
+
     @contextmanager
     def new_block(self) -> Iterator[list[JavaStatement]]:
         saved = self.code
