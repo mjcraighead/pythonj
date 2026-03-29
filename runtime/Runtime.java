@@ -331,27 +331,18 @@ public final class Runtime {
         return 31 * Long.hashCode(numerator) + Long.hashCode(denominator);
     }
     public static PyObject pythonjGetAttr(PyObject obj, PyObject nameObj) {
-        if (nameObj instanceof PyString name) {
-            return obj.getAttr(name.value);
-        } else {
-            throw PyTypeError.raiseFormat("attribute name must be string, not %s", PyString.reprOf(nameObj.type().name()));
-        }
+        return obj.getAttr(((PyString)nameObj).value);
     }
     public static PyNone pythonjSetAttr(PyObject obj, PyObject nameObj, PyObject value) {
-        if (nameObj instanceof PyString name) {
-            obj.setAttr(name.value, value);
-            return PyNone.singleton;
-        } else {
-            throw PyTypeError.raiseFormat("attribute name must be string, not %s", PyString.reprOf(nameObj.type().name()));
-        }
+        obj.setAttr(((PyString)nameObj).value, value);
+        return PyNone.singleton;
     }
     public static PyNone pythonjDelAttr(PyObject obj, PyObject nameObj) {
-        if (nameObj instanceof PyString name) {
-            obj.delAttr(name.value);
-            return PyNone.singleton;
-        } else {
-            throw PyTypeError.raiseFormat("attribute name must be string, not %s", PyString.reprOf(nameObj.type().name()));
-        }
+        obj.delAttr(((PyString)nameObj).value);
+        return PyNone.singleton;
+    }
+    public static PyString pythonjFormat(PyObject obj, PyObject formatSpecObj) {
+        return new PyString(obj.format(((PyString)formatSpecObj).value));
     }
     public static PyInt pythonjLen(PyObject obj) {
         return new PyInt(obj.len());

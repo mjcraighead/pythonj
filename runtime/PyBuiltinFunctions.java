@@ -55,13 +55,6 @@ final class PyBuiltinFunctionsImpl {
         Collections.sort(list);
         return new PyList(list);
     }
-    static PyString pyfunc_format(PyObject value, PyObject format_spec_obj) {
-        if (format_spec_obj instanceof PyString format_spec_str) {
-            return new PyString(value.format(format_spec_str.value));
-        } else {
-            throw PyTypeError.raiseFormat("format() argument 2 must be str, not %s", format_spec_obj.type().name());
-        }
-    }
     static PyString pyfunc_hex(PyObject arg) {
         long index = arg.indexValue();
         if (index < 0) {

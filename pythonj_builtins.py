@@ -18,9 +18,18 @@ def any(iterable):
     return False
 
 def delattr(obj, name):
+    if not __pythonj_isinstance_single__(name, str):
+        raise TypeError('attribute name must be string, not ' + repr(type(name).__name__))
     return __pythonj_delattr__(obj, name)
 
+def format(value, format_spec):
+    if not __pythonj_isinstance_single__(format_spec, str):
+        raise TypeError('format() argument 2 must be str, not ' + type(format_spec).__name__)
+    return __pythonj_format__(value, format_spec)
+
 def getattr(obj, name, default):
+    if not __pythonj_isinstance_single__(name, str):
+        raise TypeError('attribute name must be string, not ' + repr(type(name).__name__))
     try:
         return __pythonj_getattr__(obj, name)
     except AttributeError as e:
@@ -69,6 +78,8 @@ def repr(arg):
     return __pythonj_repr__(arg)
 
 def setattr(obj, name, value):
+    if not __pythonj_isinstance_single__(name, str):
+        raise TypeError('attribute name must be string, not ' + repr(type(name).__name__))
     return __pythonj_setattr__(obj, name, value)
 
 def sum(iterable, start):
