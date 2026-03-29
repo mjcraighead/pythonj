@@ -162,7 +162,7 @@ class ConstantPool:
                 self.all_bytes[value] = len(self.all_bytes)
             return self.qualify(f'bytes_singleton_{self.all_bytes[value]}')
 
-    def emit_java(self) -> Iterator[str]:
+    def emit_pool(self) -> Iterator[str]:
         if self.holder_name is not None:
             yield f'final class {self.holder_name} {{'
         field_prefix = 'private static final' if self.holder_name is None else 'static final'
@@ -185,106 +185,106 @@ class ConstantPool:
 
 class JavaExpr(ABC):
     @abstractmethod
-    def emit_java(self, ctx: ConstantPool) -> str:
+    def emit_java(self, pool: ConstantPool) -> str:
         raise NotImplementedError()
 
 @dataclass(slots=True)
 class JavaIntLiteral(JavaExpr):
     value: int
     suffix: str
-    def emit_java(self, ctx: ConstantPool) -> str:
+    def emit_java(self, pool: ConstantPool) -> str:
         return f'{self.value}{self.suffix}'
 
 @dataclass(slots=True)
 class JavaStrLiteral(JavaExpr):
     s: str
-    def emit_java(self, ctx: ConstantPool) -> str:
+    def emit_java(self, pool: ConstantPool) -> str:
         return java_string_literal(self.s)
 
 @dataclass(slots=True)
 class JavaIdentifier(JavaExpr):
     name: str
-    def emit_java(self, ctx: ConstantPool) -> str:
+    def emit_java(self, pool: ConstantPool) -> str:
         return self.name
 
 @dataclass(slots=True)
 class JavaField(JavaExpr):
     obj: JavaExpr
     field: str
-    def emit_java(self, ctx: ConstantPool) -> str:
-        return f'{self.obj.emit_java(ctx)}.{self.field}'
+    def emit_java(self, pool: ConstantPool) -> str:
+        return f'{self.obj.emit_java(pool)}.{self.field}'
 
 @dataclass(slots=True)
 class JavaArrayAccess(JavaExpr):
     obj: JavaExpr
     index: JavaExpr
-    def emit_java(self, ctx: ConstantPool) -> str:
-        return f'{self.obj.emit_java(ctx)}[{self.index.emit_java(ctx)}]'
+    def emit_java(self, pool: ConstantPool) -> str:
+        return f'{self.obj.emit_java(pool)}[{self.index.emit_java(pool)}]'
 
 @dataclass(slots=True)
 class JavaUnaryOp(JavaExpr):
     op: str
     operand: JavaExpr
-    def emit_java(self, ctx: ConstantPool) -> str:
-        return f'({self.op}{self.operand.emit_java(ctx)})'
+    def emit_java(self, pool: ConstantPool) -> str:
+        return f'({self.op}{self.operand.emit_java(pool)})'
 
 @dataclass(slots=True)
 class JavaBinaryOp(JavaExpr):
     op: str
     lhs: JavaExpr
     rhs: JavaExpr
-    def emit_java(self, ctx: ConstantPool) -> str:
-        return f'({self.lhs.emit_java(ctx)} {self.op} {self.rhs.emit_java(ctx)})'
+    def emit_java(self, pool: ConstantPool) -> str:
+        return f'({self.lhs.emit_java(pool)} {self.op} {self.rhs.emit_java(pool)})'
 
 @dataclass(slots=True)
 class JavaCondOp(JavaExpr):
     cond: JavaExpr
     true: JavaExpr
     false: JavaExpr
-    def emit_java(self, ctx: ConstantPool) -> str:
-        return f'({self.cond.emit_java(ctx)} ? {self.true.emit_java(ctx)} : {self.false.emit_java(ctx)})'
+    def emit_java(self, pool: ConstantPool) -> str:
+        return f'({self.cond.emit_java(pool)} ? {self.true.emit_java(pool)} : {self.false.emit_java(pool)})'
 
 @dataclass(slots=True)
 class JavaCreateObject(JavaExpr):
     type: str
     args: list[JavaExpr]
-    def emit_java(self, ctx: ConstantPool) -> str:
-        return f"new {self.type}({', '.join(arg.emit_java(ctx) for arg in self.args)})"
+    def emit_java(self, pool: ConstantPool) -> str:
+        return f"new {self.type}({', '.join(arg.emit_java(pool) for arg in self.args)})"
 
 @dataclass(slots=True)
 class JavaCreateArray(JavaExpr):
     type: str
     elts: list[JavaExpr]
-    def emit_java(self, ctx: ConstantPool) -> str:
-        return f"new {self.type}[] {{{', '.join(x.emit_java(ctx) for x in self.elts)}}}"
+    def emit_java(self, pool: ConstantPool) -> str:
+        return f"new {self.type}[] {{{', '.join(x.emit_java(pool) for x in self.elts)}}}"
 
 @dataclass(slots=True)
 class JavaMethodCall(JavaExpr):
     obj: JavaExpr
     method: str
     args: list[JavaExpr]
-    def emit_java(self, ctx: ConstantPool) -> str:
-        return f"{self.obj.emit_java(ctx)}.{self.method}({', '.join(arg.emit_java(ctx) for arg in self.args)})"
+    def emit_java(self, pool: ConstantPool) -> str:
+        return f"{self.obj.emit_java(pool)}.{self.method}({', '.join(arg.emit_java(pool) for arg in self.args)})"
 
 @dataclass(slots=True)
 class JavaAssignExpr(JavaExpr):
     lhs: JavaExpr
     rhs: JavaExpr
-    def emit_java(self, ctx: ConstantPool) -> str:
-        return f'({self.lhs.emit_java(ctx)} = {self.rhs.emit_java(ctx)})'
+    def emit_java(self, pool: ConstantPool) -> str:
+        return f'({self.lhs.emit_java(pool)} = {self.rhs.emit_java(pool)})'
 
 @dataclass(slots=True)
 class JavaPyConstant(JavaExpr):
     value: object
-    def emit_java(self, ctx: ConstantPool) -> str:
-        return ctx.emit_constant(self.value)
+    def emit_java(self, pool: ConstantPool) -> str:
+        return pool.emit_constant(self.value)
 
 class JavaStatement(ABC):
     def ends_control_flow(self) -> bool:
         return False
 
     @abstractmethod
-    def emit_java(self, ctx: ConstantPool) -> Iterator[str]:
+    def emit_java(self, pool: ConstantPool) -> Iterator[str]:
         raise NotImplementedError()
 
 @dataclass(slots=True)
@@ -292,9 +292,9 @@ class JavaVariableDecl(JavaStatement):
     type: str
     name: str
     value: Optional[JavaExpr]
-    def emit_java(self, ctx: ConstantPool) -> Iterator[str]:
+    def emit_java(self, pool: ConstantPool) -> Iterator[str]:
         if self.value:
-            yield f'{self.type} {self.name} = {self.value.emit_java(ctx)};'
+            yield f'{self.type} {self.name} = {self.value.emit_java(pool)};'
         else:
             yield f'{self.type} {self.name};'
 
@@ -302,28 +302,28 @@ class JavaVariableDecl(JavaStatement):
 class JavaAssignStatement(JavaStatement):
     lhs: JavaExpr
     rhs: JavaExpr
-    def emit_java(self, ctx: ConstantPool) -> Iterator[str]:
-        yield f'{self.lhs.emit_java(ctx)} = {self.rhs.emit_java(ctx)};'
+    def emit_java(self, pool: ConstantPool) -> Iterator[str]:
+        yield f'{self.lhs.emit_java(pool)} = {self.rhs.emit_java(pool)};'
 
 @dataclass(slots=True)
 class JavaExprStatement(JavaStatement):
     call: JavaCreateObject | JavaMethodCall # only limited types of expressions allowed by Java grammar
-    def emit_java(self, ctx: ConstantPool) -> Iterator[str]:
-        yield f'{self.call.emit_java(ctx)};'
+    def emit_java(self, pool: ConstantPool) -> Iterator[str]:
+        yield f'{self.call.emit_java(pool)};'
 
 @dataclass(slots=True)
 class JavaBreakStatement(JavaStatement):
     name: Optional[str]
     def ends_control_flow(self) -> bool:
         return True
-    def emit_java(self, ctx: ConstantPool) -> Iterator[str]:
+    def emit_java(self, pool: ConstantPool) -> Iterator[str]:
         yield f'break {self.name};' if self.name else 'break;'
 
 @dataclass(slots=True)
 class JavaContinueStatement(JavaStatement):
     def ends_control_flow(self) -> bool:
         return True
-    def emit_java(self, ctx: ConstantPool) -> Iterator[str]:
+    def emit_java(self, pool: ConstantPool) -> Iterator[str]:
         yield 'continue;'
 
 @dataclass(slots=True)
@@ -331,16 +331,16 @@ class JavaReturnStatement(JavaStatement):
     expr: JavaExpr
     def ends_control_flow(self) -> bool:
         return True
-    def emit_java(self, ctx: ConstantPool) -> Iterator[str]:
-        yield f'return {self.expr.emit_java(ctx)};'
+    def emit_java(self, pool: ConstantPool) -> Iterator[str]:
+        yield f'return {self.expr.emit_java(pool)};'
 
 @dataclass(slots=True)
 class JavaThrowStatement(JavaStatement):
     expr: JavaExpr
     def ends_control_flow(self) -> bool:
         return True
-    def emit_java(self, ctx: ConstantPool) -> Iterator[str]:
-        yield f'throw {self.expr.emit_java(ctx)};'
+    def emit_java(self, pool: ConstantPool) -> Iterator[str]:
+        yield f'throw {self.expr.emit_java(pool)};'
 
 def block_simplify(block: list[JavaStatement]) -> list[JavaStatement]:
     ret = []
@@ -350,9 +350,9 @@ def block_simplify(block: list[JavaStatement]) -> list[JavaStatement]:
             break
     return ret
 
-def block_emit_java(block: list[JavaStatement], ctx: ConstantPool) -> Iterator[str]:
+def block_emit_java(block: list[JavaStatement], pool: ConstantPool) -> Iterator[str]:
     for s in block:
-        yield from s.emit_java(ctx)
+        yield from s.emit_java(pool)
 
 def block_ends_control_flow(block: list[JavaStatement]) -> bool:
     return bool(block) and block[-1].ends_control_flow()
@@ -370,12 +370,12 @@ class JavaIfStatement(JavaStatement):
     def ends_control_flow(self) -> bool:
         return block_ends_control_flow(self.body) and block_ends_control_flow(self.orelse)
 
-    def emit_java(self, ctx: ConstantPool) -> Iterator[str]:
-        yield f'if ({self.cond.emit_java(ctx)}) {{'
-        yield from block_emit_java(self.body, ctx)
+    def emit_java(self, pool: ConstantPool) -> Iterator[str]:
+        yield f'if ({self.cond.emit_java(pool)}) {{'
+        yield from block_emit_java(self.body, pool)
         if self.orelse:
             yield '} else {'
-            yield from block_emit_java(self.orelse, ctx)
+            yield from block_emit_java(self.orelse, pool)
         yield '}'
 
 @dataclass(slots=True)
@@ -386,9 +386,9 @@ class JavaWhileStatement(JavaStatement):
     def __post_init__(self):
         self.body = block_simplify(self.body)
 
-    def emit_java(self, ctx: ConstantPool) -> Iterator[str]:
-        yield f'while ({self.cond.emit_java(ctx)}) {{'
-        yield from block_emit_java(self.body, ctx)
+    def emit_java(self, pool: ConstantPool) -> Iterator[str]:
+        yield f'while ({self.cond.emit_java(pool)}) {{'
+        yield from block_emit_java(self.body, pool)
         yield '}'
 
 # simplified; init/incr are weird because of semicolons/parens if we try to map them to statement or expr
@@ -405,9 +405,9 @@ class JavaForStatement(JavaStatement):
     def __post_init__(self):
         self.body = block_simplify(self.body)
 
-    def emit_java(self, ctx: ConstantPool) -> Iterator[str]:
-        yield f'for ({self.init_type} {self.init_name} = {self.init_value.emit_java(ctx)}; {self.cond.emit_java(ctx)}; {self.incr_name} = {self.incr_value.emit_java(ctx)}) {{'
-        yield from block_emit_java(self.body, ctx)
+    def emit_java(self, pool: ConstantPool) -> Iterator[str]:
+        yield f'for ({self.init_type} {self.init_name} = {self.init_value.emit_java(pool)}; {self.cond.emit_java(pool)}; {self.incr_name} = {self.incr_value.emit_java(pool)}) {{'
+        yield from block_emit_java(self.body, pool)
         yield '}'
 
 @dataclass(slots=True)
@@ -431,18 +431,18 @@ class JavaTryStatement(JavaStatement):
         else:
             return block_ends_control_flow(self.try_body)
 
-    def emit_java(self, ctx: ConstantPool) -> Iterator[str]:
+    def emit_java(self, pool: ConstantPool) -> Iterator[str]:
         yield 'try {'
-        yield from block_emit_java(self.try_body, ctx)
+        yield from block_emit_java(self.try_body, pool)
         if self.exc_type is not None:
             yield f'}} catch ({self.exc_type} {self.exc_name}) {{'
-            yield from block_emit_java(self.catch_body, ctx)
+            yield from block_emit_java(self.catch_body, pool)
         else: # if no exception type, should not have an exception name or catch block either
             assert self.exc_name is None, self.exc_name
             assert not self.catch_body, self.catch_body
         if self.finally_body:
             yield '} finally {'
-            yield from block_emit_java(self.finally_body, ctx)
+            yield from block_emit_java(self.finally_body, pool)
         yield '}'
 
 @dataclass(slots=True)
@@ -453,9 +453,9 @@ class JavaLabeledBlock(JavaStatement):
     def __post_init__(self):
         self.body = block_simplify(self.body)
 
-    def emit_java(self, ctx: ConstantPool) -> Iterator[str]:
+    def emit_java(self, pool: ConstantPool) -> Iterator[str]:
         yield f'{self.name}: {{'
-        yield from block_emit_java(self.body, ctx)
+        yield from block_emit_java(self.body, pool)
         yield '}'
 
 def unary_op(op: str, operand: JavaExpr) -> JavaExpr:
@@ -663,8 +663,7 @@ class Scope:
 # XXX "invokedynamic" might help us a lot, but there is no way to access it from Java source
 class PythonjVisitor(ast.NodeVisitor):
     __slots__ = ('path', 'n_errors', 'n_functions', 'n_lambdas', 'scope', 'global_code', 'code',
-                 'scope_infos',
-                 'emit_ctx', 'break_name', 'functions', 'allow_intrinsics')
+                 'scope_infos', 'pool', 'break_name', 'functions', 'allow_intrinsics')
     path: str
     n_errors: int
     n_functions: int
@@ -673,7 +672,7 @@ class PythonjVisitor(ast.NodeVisitor):
     global_code: list[JavaStatement]
     code: list[JavaStatement]
     scope_infos: dict[ast.AST, ScopeInfo]
-    emit_ctx: ConstantPool
+    pool: ConstantPool
     break_name: Optional[str]
     functions: dict[str, list[str]]
     allow_intrinsics: bool # enables special internal-only codegen features for builtins
@@ -687,7 +686,7 @@ class PythonjVisitor(ast.NodeVisitor):
         self.global_code = [JavaVariableDecl('PyObject', 'expr_discard', None)] # XXX remove this variable if not needed
         self.code = self.global_code
         self.scope_infos = scope_infos
-        self.emit_ctx = ConstantPool()
+        self.pool = ConstantPool()
         self.break_name = None
         self.functions = {}
         self.allow_intrinsics = False
@@ -1322,7 +1321,7 @@ class PythonjVisitor(ast.NodeVisitor):
                 func_code.append('}')
         func_code.append('}')
         for (i, name) in enumerate(bind_arg_names[n_required:]):
-            func_code.append(f'if ({name} == null) {{ {name} = {emit_default_expr(arg_defaults[i], self.emit_ctx)}; }}')
+            func_code.append(f'if ({name} == null) {{ {name} = {emit_default_expr(arg_defaults[i], self.pool)}; }}')
         if self.scope.used_expr_discard:
             func_code.append('PyObject expr_discard;')
         for (arg_name, bind_arg_name) in zip(arg_names, bind_arg_names):
@@ -1332,11 +1331,11 @@ class PythonjVisitor(ast.NodeVisitor):
                 local_arg_name = arg_name if invisible_args else f'pylocal_{arg_name}'
                 func_code.append(f'PyObject {local_arg_name} = {bind_arg_name};')
         for name in sorted(self.scope.info.cell_vars - set(arg_names)):
-            func_code.append(f'PyCell pycell_{name} = new PyCell({JavaPyConstant(None).emit_java(self.emit_ctx)});')
+            func_code.append(f'PyCell pycell_{name} = new PyCell({JavaPyConstant(None).emit_java(self.pool)});')
         for name in sorted(self.scope.info.locals - self.scope.info.cell_vars - set(arg_names)):
             if invisible_args or name not in arg_names:
                 func_code.append(f'PyObject pylocal_{name};')
-        func_code.extend(block_emit_java(block_simplify([*body, JavaReturnStatement(JavaPyConstant(None))]), self.emit_ctx))
+        func_code.extend(block_emit_java(block_simplify([*body, JavaReturnStatement(JavaPyConstant(None))]), self.pool))
         func_code.extend([
             '}',
             '}',
@@ -1472,14 +1471,14 @@ class PythonjVisitor(ast.NodeVisitor):
                 f'private static final PyBuiltinType type_singleton = new PyBuiltinType("generator", {java_name}.class);',
                 *(f'private final PyCell pycell_{name};' for name in free_var_names),
                 'private final PyIter pyiter_iterable;',
-                *(f'private final PyCell pycell_{name} = new PyCell({JavaPyConstant(None).emit_java(self.emit_ctx)});' for name in sorted(self.scope.info.cell_vars)),
-                *(f'private PyObject pylocal_{name} = {JavaPyConstant(None).emit_java(self.emit_ctx)};' for name in sorted(self.scope.info.locals - self.scope.info.cell_vars)),
+                *(f'private final PyCell pycell_{name} = new PyCell({JavaPyConstant(None).emit_java(self.pool)});' for name in sorted(self.scope.info.cell_vars)),
+                *(f'private PyObject pylocal_{name} = {JavaPyConstant(None).emit_java(self.pool)};' for name in sorted(self.scope.info.locals - self.scope.info.cell_vars)),
                 f'{java_name}({", ".join([*(f"PyCell pycell_{name}" for name in free_var_names), "PyObject iterable"])}) {{' if free_var_names else f'{java_name}(PyObject iterable) {{',
                 *(f'this.pycell_{name} = pycell_{name};' for name in free_var_names),
                 'this.pyiter_iterable = iterable.iter();',
                 '}',
                 '@Override public PyObject next() {',
-                *block_emit_java(block_simplify(next_body), self.emit_ctx),
+                *block_emit_java(block_simplify(next_body), self.pool),
                 '}',
                 f'@Override public String repr() {{ return "<generator object {qualname}>"; }}',
                 '@Override public PyBuiltinType type() { return type_singleton; }',
@@ -1516,16 +1515,16 @@ class PythonjVisitor(ast.NodeVisitor):
 
         # XXX Initializing all globals to None is weird, but we don't have a better option yet
         for name in sorted(self.scope.info.locals):
-            writer.write(f'private static PyObject pyglobal_{name} = {JavaPyConstant(None).emit_java(self.emit_ctx)};')
+            writer.write(f'private static PyObject pyglobal_{name} = {JavaPyConstant(None).emit_java(self.pool)};')
         writer.write('')
 
         writer.write('public static void main(String[] args) {')
-        for line in block_emit_java(block_simplify(self.global_code), self.emit_ctx):
+        for line in block_emit_java(block_simplify(self.global_code), self.pool):
             writer.write(line)
         writer.write('}')
 
         writer.write('')
-        for line in self.emit_ctx.emit_java():
+        for line in self.pool.emit_pool():
             writer.write(line)
         writer.write('}')
         assert writer.indent == 0, writer.indent
@@ -1728,16 +1727,16 @@ def infer_default_expr(default: object) -> Optional[str]:
     else:
         return None
 
-def emit_default_expr(default: object, emit_ctx: ConstantPool) -> str:
+def emit_default_expr(default: object, pool: ConstantPool) -> str:
     inferred = infer_default_expr(default)
     if inferred is not None:
         return inferred
     else:
-        return JavaPyConstant(default).emit_java(emit_ctx)
+        return JavaPyConstant(default).emit_java(pool)
 
 def emit_arg_binding(writer: IndentedWriter, shape: SignatureShape, positional_name: str,
                      kw_name: str, kw_overflow_args_length: str,
-                     noarg_name: str, emit_ctx: ConstantPool) -> list[str]:
+                     noarg_name: str, pool: ConstantPool) -> list[str]:
     if not shape.posonly_params and not shape.poskw_params and not shape.kwonly_params and shape.vararg_param is not None:
         writer.write('if ((kwargs != null) && kwargs.boolValue()) {')
         writer.write(f'throw Runtime.raiseNoKwArgs("{noarg_name}");')
@@ -1771,7 +1770,7 @@ def emit_arg_binding(writer: IndentedWriter, shape: SignatureShape, positional_n
             for i in range(min_args, max_args):
                 writer.write(
                     f'PyObject arg{i} = (argsLength >= {i+1}) ? args[{i}] : '
-                    f'{emit_default_expr(shape.posonly_params[i].default, emit_ctx)};'
+                    f'{emit_default_expr(shape.posonly_params[i].default, pool)};'
                 )
                 bind_args.append(f'arg{i}')
         return bind_args
@@ -1888,7 +1887,7 @@ def emit_arg_binding(writer: IndentedWriter, shape: SignatureShape, positional_n
     for param in shape.params:
         if param.default is not inspect.Parameter.empty:
             writer.write(f'if ({param.name} == null) {{')
-            writer.write(f'{param.name} = {emit_default_expr(param.default, emit_ctx)};')
+            writer.write(f'{param.name} = {emit_default_expr(param.default, pool)};')
             writer.write('}')
         bind_args.append(param.name)
     return bind_args
@@ -1909,7 +1908,7 @@ def gen_code(spec_path: str, java_path: str) -> None:
     with open(spec_path) as f:
         spec = json.load(f)
 
-    emit_ctx = ConstantPool('PyGeneratedConstants')
+    pool = ConstantPool('PyGeneratedConstants')
     with open(java_path, 'w') as f:
         writer = IndentedWriter(f, 0)
         for (name, attrs) in spec.items():
@@ -2031,7 +2030,7 @@ def gen_code(spec_path: str, java_path: str) -> None:
                             method_name,
                             'argsLength',
                             f'{py_name}.{method_name}',
-                            emit_ctx,
+                            pool,
                         )
                     if kind == 'classmethod':
                         bind_args = ['self'] + bind_args
@@ -2061,14 +2060,14 @@ def gen_code(spec_path: str, java_path: str) -> None:
                     kw_name,
                     kw_overflow_args_length,
                     func_name,
-                    emit_ctx,
+                    pool,
                 )
             writer.write(f'return PyBuiltinFunctionsImpl.pyfunc_{func_name}({", ".join(bind_args)});')
             writer.write('}')
             writer.write('}')
             writer.write('')
 
-        for line in emit_ctx.emit_java():
+        for line in pool.emit_pool():
             writer.write(line)
 
 def main() -> None:
