@@ -321,6 +321,10 @@ class int:
     def is_integer(self):
         return True
 
+class range:
+    def count(self, value):
+        return 1 if value in self else 0
+
 class str:
     def removeprefix(self, prefix):
         if not __pythonj_isinstance_single__(prefix, str):

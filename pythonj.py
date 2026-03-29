@@ -1772,6 +1772,7 @@ PYTHON_IMPLS = {
     'dict': {'fromkeys', 'setdefault'},
     'float': {'conjugate'},
     'int': {'as_integer_ratio', 'conjugate', 'is_integer'},
+    'range': {'count'},
     'str': {'removeprefix', 'removesuffix'},
 }
 
