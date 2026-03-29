@@ -10,7 +10,6 @@ from enum import Enum
 import inspect
 import itertools
 import json
-import os
 import types
 from typing import Iterator, Optional, TextIO, cast
 
@@ -1478,13 +1477,15 @@ class LoweringVisitor(ast.NodeVisitor):
                 self.error(node.lineno, "only 'class X: pass' and 'class X: __slots__ = (...)' are supported")
             if not isinstance(assign.value, (ast.Tuple, ast.List)):
                 self.error(node.lineno, "__slots__ must be a tuple or list of strings")
-            slots = []
-            for elt in assign.value.elts:
-                if not isinstance(elt, ast.Constant) or not isinstance(elt.value, str):
-                    self.error(node.lineno, "__slots__ must be a tuple or list of strings")
-                if elt.value in slots:
-                    self.error(node.lineno, 'duplicate name in __slots__')
-                slots.append(elt.value)
+            else:
+                slots = []
+                for elt in assign.value.elts:
+                    if not isinstance(elt, ast.Constant) or not isinstance(elt.value, str):
+                        self.error(node.lineno, "__slots__ must be a tuple or list of strings")
+                    else:
+                        if elt.value in slots:
+                            self.error(node.lineno, 'duplicate name in __slots__')
+                        slots.append(elt.value)
         elif len(node.body) != 1 or not isinstance(node.body[0], ast.Pass):
             self.error(node.lineno, "only 'class X: pass' and 'class X: __slots__ = (...)' are supported")
 
@@ -2024,7 +2025,7 @@ def emit_java_statement(writer: IndentedWriter, statement: JavaStatement, pool: 
 def if_chain(conditions_and_bodies: list[tuple[JavaExpr, list[JavaStatement]]],
              else_body: list[JavaStatement]) -> JavaIfStatement:
     assert conditions_and_bodies, conditions_and_bodies
-    orelse = else_body
+    orelse: list[JavaStatement] = else_body
     for (cond, body) in reversed(conditions_and_bodies[1:]):
         orelse = [JavaIfStatement(cond, body, orelse)]
     return JavaIfStatement(conditions_and_bodies[0][0], conditions_and_bodies[0][1], orelse)
@@ -2075,7 +2076,7 @@ def build_arg_binding_ir(shape: SignatureShape, positional_name: str,
                 JavaMethodCall(JavaField(JavaIdentifier('kw'), 'value'), 'equals', [JavaStrLiteral(param.name)]),
                 body,
             ))
-        else_body = [JavaIfStatement(
+        else_body: list[JavaStatement] = [JavaIfStatement(
             JavaBinaryOp('==', unknown_kw, JavaIdentifier('null')),
             [JavaAssignStatement(unknown_kw, JavaField(JavaIdentifier('kw'), 'value'))],
             [],
@@ -2595,6 +2596,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
             writer.write('')
             writer.write(f'private PyBuiltinFunction_{func_name}() {{ super("{func_name}"); }}')
             writer.write('@Override public PyObject call(PyObject[] args, PyDict kwargs) {')
+            bind_args: list[JavaExpr]
             if kwarg_params is None:
                 bind_args = [JavaIdentifier('args'), JavaIdentifier('kwargs')]
             else:
