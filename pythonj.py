@@ -1805,6 +1805,7 @@ PYTHON_IMPLS = {
         'pyj_float_special_text',
     },
     'builtins': {'abs', 'all', 'any', 'delattr', 'format', 'getattr', 'hash', 'hasattr', 'isinstance', 'issubclass', 'len', 'next', 'repr', 'setattr', 'sum'},
+    'bytes': {'capitalize', 'isalnum', 'isalpha', 'isascii', 'isdigit', 'islower', 'isspace', 'istitle', 'isupper', 'lower', 'swapcase', 'title', 'upper'},
     'dict': {'setdefault'},
     'float': {'conjugate'},
     'int': {'as_integer_ratio', 'conjugate', 'is_integer'},

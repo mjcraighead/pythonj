@@ -9,6 +9,149 @@ def dict__setdefault(self, key, defaultValue):
     self[key] = defaultValue
     return defaultValue
 
+def bytes__capitalize(self):
+    ret = []
+    seen_alpha = False
+    for c in self:
+        if 97 <= c <= 122:
+            if not seen_alpha:
+                ret.append(c - 32)
+                seen_alpha = True
+            else:
+                ret.append(c)
+        elif 65 <= c <= 90:
+            if not seen_alpha:
+                ret.append(c)
+                seen_alpha = True
+            else:
+                ret.append(c + 32)
+        else:
+            ret.append(c)
+    return bytes(ret)
+
+def bytes__isalnum(self):
+    if not self:
+        return False
+    for c in self:
+        if not (48 <= c <= 57 or 65 <= c <= 90 or 97 <= c <= 122):
+            return False
+    return True
+
+def bytes__isalpha(self):
+    if not self:
+        return False
+    for c in self:
+        if not (65 <= c <= 90 or 97 <= c <= 122):
+            return False
+    return True
+
+def bytes__isascii(self):
+    for c in self:
+        if c >= 128:
+            return False
+    return True
+
+def bytes__isdigit(self):
+    if not self:
+        return False
+    for c in self:
+        if not (48 <= c <= 57):
+            return False
+    return True
+
+def bytes__islower(self):
+    has_cased = False
+    for c in self:
+        if 65 <= c <= 90:
+            return False
+        if 97 <= c <= 122:
+            has_cased = True
+    return has_cased
+
+def bytes__isspace(self):
+    if not self:
+        return False
+    for c in self:
+        if c not in b' \t\n\r\x0b\x0c':
+            return False
+    return True
+
+def bytes__istitle(self):
+    has_cased = False
+    in_word = False
+    for c in self:
+        if 65 <= c <= 90:
+            if in_word:
+                return False
+            has_cased = True
+            in_word = True
+        elif 97 <= c <= 122:
+            if not in_word:
+                return False
+            has_cased = True
+        else:
+            in_word = False
+    return has_cased
+
+def bytes__isupper(self):
+    has_cased = False
+    for c in self:
+        if 97 <= c <= 122:
+            return False
+        if 65 <= c <= 90:
+            has_cased = True
+    return has_cased
+
+def bytes__lower(self):
+    ret = []
+    for c in self:
+        if 65 <= c <= 90:
+            ret.append(c + 32)
+        else:
+            ret.append(c)
+    return bytes(ret)
+
+def bytes__swapcase(self):
+    ret = []
+    for c in self:
+        if 65 <= c <= 90:
+            ret.append(c + 32)
+        elif 97 <= c <= 122:
+            ret.append(c - 32)
+        else:
+            ret.append(c)
+    return bytes(ret)
+
+def bytes__title(self):
+    ret = []
+    in_word = False
+    for c in self:
+        if 97 <= c <= 122:
+            if in_word:
+                ret.append(c)
+            else:
+                ret.append(c - 32)
+                in_word = True
+        elif 65 <= c <= 90:
+            if in_word:
+                ret.append(c + 32)
+            else:
+                ret.append(c)
+                in_word = True
+        else:
+            ret.append(c)
+            in_word = False
+    return bytes(ret)
+
+def bytes__upper(self):
+    ret = []
+    for c in self:
+        if 97 <= c <= 122:
+            ret.append(c - 32)
+        else:
+            ret.append(c)
+    return bytes(ret)
+
 def float__conjugate(self):
     return self
 
