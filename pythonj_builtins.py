@@ -238,6 +238,45 @@ class bytes:
             i += 2
         return self(ret)
 
+    def hex(self, sep, bytes_per_sep):
+        if sep is __pythonj_null__:
+            sep = ''
+        elif __pythonj_isinstance__(sep, bytes):
+            if len(sep) != 1:
+                raise ValueError('sep must be length 1.')
+            sep = chr(sep[0])
+        elif __pythonj_isinstance__(sep, str):
+            if len(sep) != 1:
+                raise ValueError('sep must be length 1.')
+        else:
+            len(sep)
+            raise AssertionError(sep)
+        bytes_per_sep = __pythonj_index__(bytes_per_sep)
+        ret = []
+        for c in self:
+            ret.append(format(c, '02x'))
+        if sep and bytes_per_sep != 0:
+            grouped = []
+            n = len(ret)
+            group_size = abs(bytes_per_sep)
+            if bytes_per_sep > 0:
+                first_group = n % group_size
+                if first_group == 0:
+                    first_group = group_size
+                i = 0
+                grouped.append(''.join(ret[:first_group]))
+                i = first_group
+                while i < n:
+                    grouped.append(''.join(ret[i:i + group_size]))
+                    i += group_size
+            else:
+                i = 0
+                while i < n:
+                    grouped.append(''.join(ret[i:i + group_size]))
+                    i += group_size
+            return sep.join(grouped)
+        return ''.join(ret)
+
     def index(self, sub, start, end):
         ret = self.find(sub, start, end)
         if ret == -1:

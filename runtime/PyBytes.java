@@ -269,7 +269,6 @@ public final class PyBytes extends PyObject {
     public PyObject pymethod_center(PyObject width, PyObject fillchar) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_decode(PyObject encoding, PyObject errors) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_expandtabs(PyObject tabsize) { throw new UnsupportedOperationException(); }
-    public PyObject pymethod_hex(PyObject sep, PyObject bytes_per_sep) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_ljust(PyObject width, PyObject fillchar) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_lstrip(PyObject bytes) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_partition(PyObject sep) { throw new UnsupportedOperationException(); }
