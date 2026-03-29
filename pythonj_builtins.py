@@ -43,15 +43,15 @@ def getattr(obj, name, default):
             return default
         raise e
 
-def hash(arg):
-    return __pythonj_hash__(arg)
-
 def hasattr(obj, name):
     try:
         getattr(obj, name)
     except AttributeError:
         return False
     return True
+
+def hash(arg):
+    return __pythonj_hash__(arg)
 
 def isinstance(obj, class_or_tuple):
     if __pythonj_isinstance_single__(class_or_tuple, tuple):
