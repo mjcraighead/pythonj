@@ -7,7 +7,7 @@ import typing
 def bind_exact_positional(args, kwargs, name, n) -> tuple:
     if kwargs is not __pythonj_null__ and kwargs:
         raise TypeError(name + '() takes no keyword arguments')
-    args_len = len(args)
+    args_len = __pythonj_len__(args)
     if args_len != n:
         if n == 0:
             raise TypeError(f'{name}() takes no arguments ({args_len} given)')
@@ -19,7 +19,7 @@ def bind_exact_positional(args, kwargs, name, n) -> tuple:
 def bind_min_max_positional(args, kwargs, name, min_args, max_args) -> tuple:
     if kwargs is not __pythonj_null__ and kwargs:
         raise TypeError(name + '() takes no keyword arguments')
-    args_len = len(args)
+    args_len = __pythonj_len__(args)
     if args_len < min_args:
         suffix = '' if min_args == 1 else 's'
         raise TypeError(f'{name} expected at least {min_args} argument{suffix}, got {args_len}')
