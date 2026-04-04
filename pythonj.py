@@ -235,7 +235,7 @@ class LoweringVisitor(ast.NodeVisitor):
         self.n_functions = 0
         self.n_lambdas = 0
         self.scope = Scope(None, module_info)
-        self.global_code = [ir.VariableDecl('PyObject', 'expr_discard', None)] # XXX remove this variable if not needed
+        self.global_code = [ir.LocalDecl('PyObject', 'expr_discard', None)] # XXX remove this variable if not needed
         self.code = self.global_code
         self.scope_infos = scope_infos
         self.pool = ir.ConstantPool()
@@ -361,7 +361,7 @@ class LoweringVisitor(ast.NodeVisitor):
             rhs = self.visit(comparator)
             if i < n_compares - 1:
                 temp_name = self.scope.make_temp()
-                self.code.append(ir.VariableDecl('PyObject', temp_name, None))
+                self.code.append(ir.LocalDecl('PyObject', temp_name, None))
                 rhs = ir.AssignExpr(ir.Identifier(temp_name), rhs)
             else:
                 temp_name = '__unused__'
@@ -388,7 +388,7 @@ class LoweringVisitor(ast.NodeVisitor):
         if len(values) == 1:
             return self.visit(values[0])
         temp_name = self.scope.make_temp()
-        self.code.append(ir.VariableDecl('PyObject', temp_name, None))
+        self.code.append(ir.LocalDecl('PyObject', temp_name, None))
         lhs = self.visit(values[0])
         rhs = self.emit_bool_op(op, values[1:])
         if isinstance(op, ast.And):
@@ -596,15 +596,15 @@ class LoweringVisitor(ast.NodeVisitor):
             yield ir.AssignStatement(self.visit(target), value)
         elif isinstance(target, ast.Attribute):
             temp_name = self.scope.make_temp()
-            yield ir.VariableDecl('var', temp_name, value)
+            yield ir.LocalDecl('var', temp_name, value)
             yield ir.ExprStatement(ir.MethodCall(self.visit(target.value), 'setAttr', [ir.StrLiteral(target.attr), ir.Identifier(temp_name)]))
         elif isinstance(target, ast.Subscript):
             temp_name = self.scope.make_temp()
-            yield ir.VariableDecl('var', temp_name, value)
+            yield ir.LocalDecl('var', temp_name, value)
             yield ir.ExprStatement(ir.MethodCall(self.visit(target.value), 'setItem', [self.visit(target.slice), ir.Identifier(temp_name)]))
         elif isinstance(target, (ast.Tuple, ast.List)):
             temp_name = self.scope.make_temp()
-            yield ir.VariableDecl('var', temp_name, ir.MethodCall(value, 'iter', []))
+            yield ir.LocalDecl('var', temp_name, ir.MethodCall(value, 'iter', []))
             # XXX This is not atomic if an exception is thrown; a subset of LHS's will be left assigned
             for subtarget in target.elts:
                 yield from self.emit_bind(subtarget, ir.MethodCall(ir.Identifier('Runtime'), 'nextRequireNonNull', [ir.Identifier(temp_name)]))
@@ -625,7 +625,7 @@ class LoweringVisitor(ast.NodeVisitor):
             code = ir.AssignStatement(self.visit(node.target), ir.MethodCall(self.visit(node.target), op, [self.visit(node.value)]))
         elif isinstance(node.target, ast.Attribute):
             temp_name = self.scope.make_temp()
-            self.code.append(ir.VariableDecl('var', temp_name, self.visit(node.target.value)))
+            self.code.append(ir.LocalDecl('var', temp_name, self.visit(node.target.value)))
             code = ir.ExprStatement(ir.MethodCall(ir.Identifier(temp_name), 'setAttr', [
                 ir.StrLiteral(node.target.attr),
                 ir.MethodCall(
@@ -637,8 +637,8 @@ class LoweringVisitor(ast.NodeVisitor):
         elif isinstance(node.target, ast.Subscript):
             temp_name0 = self.scope.make_temp()
             temp_name1 = self.scope.make_temp()
-            self.code.append(ir.VariableDecl('var', temp_name0, self.visit(node.target.value)))
-            self.code.append(ir.VariableDecl('var', temp_name1, self.visit(node.target.slice)))
+            self.code.append(ir.LocalDecl('var', temp_name0, self.visit(node.target.value)))
+            self.code.append(ir.LocalDecl('var', temp_name1, self.visit(node.target.slice)))
             code = ir.ExprStatement(ir.MethodCall(ir.Identifier(temp_name0), 'setItem', [
                 ir.Identifier(temp_name1),
                 ir.MethodCall(
@@ -737,7 +737,7 @@ class LoweringVisitor(ast.NodeVisitor):
         block_name = self.scope.make_temp() if node.orelse else None
         temp_name0 = self.scope.make_temp()
         temp_name1 = self.scope.make_temp()
-        self.code.append(ir.VariableDecl('var', temp_name0, ir.MethodCall(self.visit(node.iter), 'iter', [])))
+        self.code.append(ir.LocalDecl('var', temp_name0, ir.MethodCall(self.visit(node.iter), 'iter', [])))
 
         with self.push_break_name(block_name):
             loop = ir.ForStatement(
@@ -762,7 +762,7 @@ class LoweringVisitor(ast.NodeVisitor):
         item = node.items[0]
 
         temp_name = self.scope.make_temp()
-        self.code.append(ir.VariableDecl('var', temp_name, self.visit(item.context_expr)))
+        self.code.append(ir.LocalDecl('var', temp_name, self.visit(item.context_expr)))
         if item.optional_vars is None:
             self.code.append(ir.ExprStatement(ir.MethodCall(ir.Identifier(temp_name), 'enter', [])))
         else:
@@ -1141,7 +1141,7 @@ class LoweringVisitor(ast.NodeVisitor):
         temp_iter = self.scope.make_temp()
         temp_element = self.scope.make_temp()
         return [
-            ir.VariableDecl('var', temp_iter, ir.MethodCall(iterable, 'iter', [])),
+            ir.LocalDecl('var', temp_iter, ir.MethodCall(iterable, 'iter', [])),
             ir.ForStatement(
                 'var', temp_element, ir.MethodCall(ir.Identifier(temp_iter), 'next', []),
                 ir.BinaryOp('!=', ir.Identifier(temp_element), ir.Null()),
@@ -1174,7 +1174,7 @@ class LoweringVisitor(ast.NodeVisitor):
                     iterable = ir.Identifier(arg_name) if i == len(generators)-1 else self.visit(generator.iter)
                     statements = self._lower_comp_generator(generator, iterable, statements)
                 body += [
-                    ir.VariableDecl('var', temp_result, ir.CreateObject(type_name, [])),
+                    ir.LocalDecl('var', temp_result, ir.CreateObject(type_name, [])),
                     *statements,
                     ir.ReturnStatement(ir.Identifier(temp_result)),
                 ]
@@ -1205,7 +1205,7 @@ class LoweringVisitor(ast.NodeVisitor):
             with self.new_block() as next_body:
                 temp_item = self.scope.make_temp()
                 temp_item_expr = ir.Identifier(temp_item)
-                next_body.append(ir.VariableDecl('PyObject', temp_item, None))
+                next_body.append(ir.LocalDecl('PyObject', temp_item, None))
                 body: list[ir.Statement] = [ir.ReturnStatement(self.visit(node.elt))]
                 for _if in reversed(generator.ifs):
                     body = list(ir.if_statement(ir.bool_value(self.visit(_if)), body, [ir.ContinueStatement()]))
@@ -1574,7 +1574,7 @@ def build_arg_binding_ir(shape: SignatureShape, positional_name: str,
 
     def kw_loop_body(known_params: list[inspect.Parameter], include_poskw_duplicates: bool) -> list[ir.Statement]:
         statements: list[ir.Statement] = [
-            ir.VariableDecl('PyString', 'kw', ir.CastExpr('PyString', ir.MethodCall(ir.Identifier('x'), 'getKey', []))),
+            ir.LocalDecl('PyString', 'kw', ir.CastExpr('PyString', ir.MethodCall(ir.Identifier('x'), 'getKey', []))),
         ]
         conds: list[tuple[ir.Expr, list[ir.Statement]]] = []
         for (i, param) in enumerate(known_params):
@@ -1615,12 +1615,12 @@ def build_arg_binding_ir(shape: SignatureShape, positional_name: str,
     if not shape.posonly_params and not shape.poskw_params and shape.kwonly_params and \
         shape.vararg_param is not None and shape.varkw_param is None:
         statements: list[ir.Statement] = [
-            ir.VariableDecl('int', 'argsLength', ir.Field(args, 'length')),
+            ir.LocalDecl('int', 'argsLength', ir.Field(args, 'length')),
         ]
         for param in shape.kwonly_params:
-            statements.append(ir.VariableDecl('PyObject', java_local_name(param.name), ir.Null()))
+            statements.append(ir.LocalDecl('PyObject', java_local_name(param.name), ir.Null()))
         statements.append(ir.IfStatement(kwargs_bool, [
-            ir.VariableDecl('long', 'kwargsLen', ir.MethodCall(kwargs, 'len', [])),
+            ir.LocalDecl('long', 'kwargsLen', ir.MethodCall(kwargs, 'len', [])),
             ir.IfStatement(
                 ir.BinaryOp('>', kwargs_len, ir.IntLiteral(len(shape.kwonly_params), '')),
                 [runtime_throw('raiseAtMostKwArgs', [
@@ -1631,7 +1631,7 @@ def build_arg_binding_ir(shape: SignatureShape, positional_name: str,
                 ])],
                 [],
             ),
-            ir.VariableDecl('String', 'unknownKw', ir.Null()),
+            ir.LocalDecl('String', 'unknownKw', ir.Null()),
             ir.ForEachStatement('var', 'x', kwargs_items, kw_loop_body(shape.kwonly_params, False)),
             ir.IfStatement(
                 ir.BinaryOp('!=', unknown_kw, ir.Null()),
@@ -1651,7 +1651,7 @@ def build_arg_binding_ir(shape: SignatureShape, positional_name: str,
             bind_args.append(local)
         return (statements, bind_args)
 
-    statements = [ir.VariableDecl('int', 'argsLength', ir.Field(args, 'length'))]
+    statements = [ir.LocalDecl('int', 'argsLength', ir.Field(args, 'length'))]
     if shape.params and not shape.poskw_params and not shape.kwonly_params and shape.vararg_param is None:
         statements.append(ir.IfStatement(kwargs_bool, [runtime_throw('raiseNoKwArgs', [ir.StrLiteral(noarg_name)])], []))
         min_args = sum(param.default is inspect.Parameter.empty for param in shape.posonly_params)
@@ -1683,7 +1683,7 @@ def build_arg_binding_ir(shape: SignatureShape, positional_name: str,
                 [],
             ))
             for i in range(min_args, max_args):
-                statements.append(ir.VariableDecl(
+                statements.append(ir.LocalDecl(
                     'PyObject', f'arg{i}',
                     ir.CondOp(
                         ir.BinaryOp('>=', args_length, ir.IntLiteral(i + 1)),
@@ -1723,7 +1723,7 @@ def build_arg_binding_ir(shape: SignatureShape, positional_name: str,
         ))
     java_param_names = {param.name: java_local_name(param.name) for param in shape.params}
     for (i, param) in enumerate(posonly_params + poskw_params):
-        statements.append(ir.VariableDecl(
+        statements.append(ir.LocalDecl(
             'PyObject', java_param_names[param.name],
             ir.CondOp(
                 ir.BinaryOp('>=', args_length, ir.IntLiteral(i + 1)),
@@ -1732,12 +1732,12 @@ def build_arg_binding_ir(shape: SignatureShape, positional_name: str,
             ),
         ))
     for param in kwonly_params:
-        statements.append(ir.VariableDecl('PyObject', java_param_names[param.name], ir.Null()))
+        statements.append(ir.LocalDecl('PyObject', java_param_names[param.name], ir.Null()))
     if kwonly_params and not poskw_params:
         if missing_style != 'exact_args' and (max_positional != 0):
             assert False, (positional_name, shape.params, missing_style)
         statements.append(ir.IfStatement(kwargs_bool, [
-            ir.VariableDecl('long', 'kwargsLen', ir.MethodCall(kwargs, 'len', [])),
+            ir.LocalDecl('long', 'kwargsLen', ir.MethodCall(kwargs, 'len', [])),
             ir.IfStatement(
                 ir.BinaryOp('>', kwargs_len, ir.IntLiteral(max_total)),
                 [runtime_throw('raiseAtMostKwArgs', [
@@ -1748,7 +1748,7 @@ def build_arg_binding_ir(shape: SignatureShape, positional_name: str,
                 ])],
                 [],
             ),
-            ir.VariableDecl('String', 'unknownKw', ir.Null()),
+            ir.LocalDecl('String', 'unknownKw', ir.Null()),
             ir.ForEachStatement('var', 'x', kwargs_items, kw_loop_body(kwonly_params, False)),
             ir.IfStatement(
                 ir.BinaryOp('!=', unknown_kw, ir.Null()),
@@ -1768,7 +1768,7 @@ def build_arg_binding_ir(shape: SignatureShape, positional_name: str,
             ))
     else:
         statements.append(ir.IfStatement(kwargs_bool, [
-            ir.VariableDecl('long', 'kwargsLen', ir.MethodCall(kwargs, 'len', [])),
+            ir.LocalDecl('long', 'kwargsLen', ir.MethodCall(kwargs, 'len', [])),
             ir.IfStatement(
                 ir.BinaryOp('>', ir.BinaryOp('+', args_length, kwargs_len), ir.IntLiteral(max_total)),
                 [runtime_throw('raiseAtMostKwArgs', [
@@ -1779,7 +1779,7 @@ def build_arg_binding_ir(shape: SignatureShape, positional_name: str,
                 ])],
                 [],
             ),
-            ir.VariableDecl('String', 'unknownKw', ir.Null()),
+            ir.LocalDecl('String', 'unknownKw', ir.Null()),
             ir.ForEachStatement('var', 'x', kwargs_items, kw_loop_body(poskw_params + kwonly_params, True)),
             *([
                 ir.IfStatement(

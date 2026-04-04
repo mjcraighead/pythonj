@@ -264,7 +264,7 @@ class Statement(ABC):
         raise NotImplementedError()
 
 @dataclass(slots=True)
-class VariableDecl(Statement):
+class LocalDecl(Statement):
     type: str
     name: str
     value: Optional[Expr]
