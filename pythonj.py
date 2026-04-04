@@ -1928,7 +1928,13 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
             writer.write(f'static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>({len(attrs)});')
             writer.write('static {')
             for k in attrs:
-                writer.write(f'attrs.put(new PyString("{k}"), pyattr_{k});')
+                ir.emit_java_statement(writer, ir.ExprStatement(
+                    ir.MethodCall(
+                        ir.Identifier('attrs'),
+                        'put',
+                        [ir.CreateObject('PyString', [ir.StrLiteral(k)]), ir.Identifier(f'pyattr_{k}')],
+                    )
+                ), pool)
             writer.write('}')
             writer.write('}')
             writer.write('')
@@ -1948,9 +1954,13 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                 for method_name in ['mro']:
                     writer.write(f'final class {java_name}Method_{method_name} extends PyBuiltinMethod<{java_name}> {{')
                     writer.write(f'{java_name}Method_{method_name}(PyObject _self) {{ super(({java_name})_self); }}')
-                    writer.write('@Override public String methodName() { return "{method_name}"; }')
+                    writer.write('@Override public String methodName() {')
+                    ir.emit_java_statement(writer, ir.ReturnStatement(ir.StrLiteral(method_name)), pool)
+                    writer.write('}')
                     writer.write('@Override public PyObject call(PyObject[] args, PyDict kwargs) {')
-                    writer.write('throw new UnsupportedOperationException("{name}.{method_name}() unimplemented");')
+                    ir.emit_java_statement(writer, ir.ThrowStatement(
+                        ir.CreateObject('UnsupportedOperationException', [ir.StrLiteral(f'{name}.{method_name}() unimplemented')])
+                    ), pool)
                     writer.write('}')
                     writer.write('}')
                     writer.write('')
@@ -2003,7 +2013,9 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                         python_method_helper_methods.append(helper_method)
                     writer.write(f'final class {method_class_name} extends PyBuiltinMethod<{self_type}> {{')
                     writer.write(f'{method_class_name}({ctor_arg}) {{ super({super_arg}); }}')
-                    writer.write(f'@Override public String methodName() {{ return "{method_name}"; }}')
+                    writer.write('@Override public String methodName() {')
+                    ir.emit_java_statement(writer, ir.ReturnStatement(ir.StrLiteral(method_name)), pool)
+                    writer.write('}')
                     writer.write('@Override public PyObject call(PyObject[] args, PyDict kwargs) {')
                     if kwarg_params is None:
                         bind_args = [ir.Identifier('args'), ir.Identifier('kwargs')]
