@@ -106,26 +106,26 @@ class ConstantPool:
                 self.all_bytes[value] = len(self.all_bytes)
             return self.qualify(f'bytes_singleton_{self.all_bytes[value]}')
 
-    def emit_pool(self) -> Iterator[str]:
-        if self.holder_name is not None:
-            yield f'final class {self.holder_name} {{'
+    def build_pool_decls(self) -> list['Decl']:
+        decls: list[Decl] = []
         field_prefix = 'private static final' if self.holder_name is None else 'static final'
         for i in sorted(self.all_ints):
             value = CreateObject('PyInt', [IntLiteral(i, 'L')])
-            yield f'{field_prefix} PyInt {_int_name(i)} = {value.emit_java(self)};'
+            decls.append(FieldDecl(field_prefix, 'PyInt', _int_name(i), value))
         for (k, v) in sorted(self.all_strings.items()):
             value = CreateObject('PyString', [StrLiteral(k)])
-            yield f'{field_prefix} PyString str_singleton_{v} = {value.emit_java(self)};'
+            decls.append(FieldDecl(field_prefix, 'PyString', f'str_singleton_{v}', value))
         for (k, v) in sorted(self.all_floats.items()):
-            yield f'{field_prefix} PyFloat float_singleton_{v} = new PyFloat({k!r});'
+            decls.append(FieldDecl(field_prefix, 'PyFloat', f'float_singleton_{v}', CreateObject('PyFloat', [FloatLiteral(k)])))
         for (k, v) in sorted(self.all_tuples.items(), key=lambda x: x[1]):
             value = CreateObject('PyTuple', [CreateArray('PyObject', [PyConstant(x) for x in k])])
-            yield f'{field_prefix} PyTuple tuple_singleton_{v} = {value.emit_java(self)};'
+            decls.append(FieldDecl(field_prefix, 'PyTuple', f'tuple_singleton_{v}', value))
         for (k, v) in sorted(self.all_bytes.items()):
             value = CreateObject('PyBytes', [CreateArray('byte', [IntLiteral(((x + 0x80) & 0xFF) - 0x80, '') for x in k])])
-            yield f'{field_prefix} PyBytes bytes_singleton_{v} = {value.emit_java(self)};'
+            decls.append(FieldDecl(field_prefix, 'PyBytes', f'bytes_singleton_{v}', value))
         if self.holder_name is not None:
-            yield '}'
+            return [ClassDecl('final', self.holder_name, None, decls)]
+        return decls
 
 class Expr(ABC):
     @abstractmethod
@@ -138,6 +138,12 @@ class IntLiteral(Expr):
     suffix: str = ''
     def emit_java(self, pool: ConstantPool) -> str:
         return f'{self.value}{self.suffix}'
+
+@dataclass(slots=True)
+class FloatLiteral(Expr):
+    value: float
+    def emit_java(self, pool: ConstantPool) -> str:
+        return f'{self.value!r}'
 
 @dataclass(slots=True)
 class StrLiteral(Expr):

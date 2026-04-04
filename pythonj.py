@@ -1322,8 +1322,8 @@ class LoweringVisitor(ast.NodeVisitor):
         writer.write('}')
 
         writer.write('')
-        for line in self.pool.emit_pool():
-            writer.write(line)
+        for decl in self.pool.build_pool_decls():
+            ir.emit_decl(writer, decl, self.pool)
         writer.write('}')
         assert writer.indent == 0, writer.indent
 
@@ -1903,11 +1903,11 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
     with open(java_path, 'w') as f:
         writer = ir.IndentedWriter(f, 0)
         python_runtime_helper_classes: list[list[str]] = []
-        python_runtime_helper_methods: list[ir.MethodDecl] = []
+        python_runtime_helper_methods: list[ir.Decl] = []
         python_builtin_helper_classes: list[list[str]] = []
-        python_builtin_helper_methods: list[ir.MethodDecl] = []
+        python_builtin_helper_methods: list[ir.Decl] = []
         python_method_helper_classes: list[list[str]] = []
-        python_method_helper_methods: list[ir.MethodDecl] = []
+        python_method_helper_methods: list[ir.Decl] = []
         for (name, obj_spec) in spec.items():
             if obj_spec['kind'] != 'type':
                 continue
@@ -2210,5 +2210,5 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
             ir.emit_decl(writer, ir.ClassDecl('final', f'PyBuiltinFunction_{func_name}', 'PyBuiltinFunction', decls), pool)
             writer.write('')
 
-        for line in pool.emit_pool():
-            writer.write(line)
+        for decl in pool.build_pool_decls():
+            ir.emit_decl(writer, decl, pool)
