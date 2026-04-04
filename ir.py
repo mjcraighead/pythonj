@@ -16,7 +16,7 @@ JAVA_FORBIDDEN_IDENTIFIERS = {
     'void', 'volatile', 'while', 'with', 'yield',
 }
 
-def int_name(i: int) -> str:
+def _int_name(i: int) -> str:
     """Return the Java variable name to use for the PyInt singleton with a given value."""
     return f'int_singleton_neg{-i}' if i < 0 else f'int_singleton_{i}'
 
@@ -29,7 +29,7 @@ CHAR_ESCAPE = {
     '\b': r'\b',
     '\f': r'\f',
 }
-def java_string_literal(s: str) -> str:
+def _java_string_literal(s: str) -> str:
     """Escape a Python string into a Java string literal with all special characters escaped."""
     out = ['"']
     for c in s:
@@ -79,7 +79,7 @@ class ConstantPool:
                 else:
                     return f'PyInt.singleton_{value}'
             self.all_ints.add(value)
-            return self.qualify(int_name(value))
+            return self.qualify(_int_name(value))
         elif isinstance(value, str):
             if not value:
                 return 'PyString.empty_singleton'
@@ -112,7 +112,7 @@ class ConstantPool:
         field_prefix = 'private static final' if self.holder_name is None else 'static final'
         for i in sorted(self.all_ints):
             value = CreateObject('PyInt', [IntLiteral(i, 'L')])
-            yield f'{field_prefix} PyInt {int_name(i)} = {value.emit_java(self)};'
+            yield f'{field_prefix} PyInt {_int_name(i)} = {value.emit_java(self)};'
         for (k, v) in sorted(self.all_strings.items()):
             value = CreateObject('PyString', [StrLiteral(k)])
             yield f'{field_prefix} PyString str_singleton_{v} = {value.emit_java(self)};'
@@ -143,7 +143,7 @@ class IntLiteral(Expr):
 class StrLiteral(Expr):
     s: str
     def emit_java(self, pool: ConstantPool) -> str:
-        return java_string_literal(self.s)
+        return _java_string_literal(self.s)
 
 @dataclass(slots=True)
 class Identifier(Expr):

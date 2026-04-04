@@ -883,9 +883,9 @@ class LoweringVisitor(ast.NodeVisitor):
         n_required = n_args - len(arg_defaults)
         bind_arg_names = [f'pyarg_{arg}' for arg in arg_names]
         free_var_names = sorted(self.scope.free_vars)
-        py_name_java = ir.java_string_literal(py_name)
-        arg_names_java = ', '.join(ir.java_string_literal(arg) for arg in arg_names)
-        required_arg_names_java = ', '.join(ir.java_string_literal(arg) for arg in arg_names[:n_required])
+        py_name_java = ir.StrLiteral(py_name).emit_java(self.pool)
+        arg_names_java = ', '.join(ir.StrLiteral(arg).emit_java(self.pool) for arg in arg_names)
+        required_arg_names_java = ', '.join(ir.StrLiteral(arg).emit_java(self.pool) for arg in arg_names[:n_required])
         func_code = [
             f'private static final class {java_name} extends PyFunction {{',
             *(f'private final PyCell pycell_{name};' for name in free_var_names),
@@ -926,9 +926,9 @@ class LoweringVisitor(ast.NodeVisitor):
             for (i, arg_name) in enumerate(arg_names):
                 prefix = '' if i == 0 else 'else '
                 func_code.extend([
-                    f'{prefix}if (kwName.equals({ir.java_string_literal(arg_name)})) {{',
+                    f'{prefix}if (kwName.equals({ir.StrLiteral(arg_name).emit_java(self.pool)})) {{',
                     f'if ({bind_arg_names[i]} != null) {{',
-                    f'throw Runtime.raiseMultipleValues({py_name_java}, {ir.java_string_literal(arg_name)});',
+                    f'throw Runtime.raiseMultipleValues({py_name_java}, {ir.StrLiteral(arg_name).emit_java(self.pool)});',
                     '}',
                     f'{bind_arg_names[i]} = kwValue;',
                     '}',
@@ -1055,7 +1055,7 @@ class LoweringVisitor(ast.NodeVisitor):
             ])
             for name in slots:
                 class_code.extend([
-                    f'case {ir.java_string_literal(name)}:',
+                    f'case {ir.StrLiteral(name).emit_java(self.pool)}:',
                     f'if (pyslot_{name} == null) {{',
                     'throw raiseMissingAttr(key);',
                     '}',
@@ -1071,7 +1071,7 @@ class LoweringVisitor(ast.NodeVisitor):
             ])
             for name in slots:
                 class_code.extend([
-                    f'case {ir.java_string_literal(name)}:',
+                    f'case {ir.StrLiteral(name).emit_java(self.pool)}:',
                     f'pyslot_{name} = value;',
                     'return;',
                 ])
@@ -1085,7 +1085,7 @@ class LoweringVisitor(ast.NodeVisitor):
             ])
             for name in slots:
                 class_code.extend([
-                    f'case {ir.java_string_literal(name)}:',
+                    f'case {ir.StrLiteral(name).emit_java(self.pool)}:',
                     f'if (pyslot_{name} == null) {{',
                     'throw raiseMissingAttr(key);',
                     '}',
@@ -1109,7 +1109,7 @@ class LoweringVisitor(ast.NodeVisitor):
         class_code.extend([
             f'private static final class {type_class_name} extends PyConcreteType {{',
             f'private static final {type_class_name} singleton = new {type_class_name}();',
-            f'private {type_class_name}() {{ super({ir.java_string_literal(node.name)}, {java_name}.class, {java_name}::newObj); }}',
+            f'private {type_class_name}() {{ super({ir.StrLiteral(node.name).emit_java(self.pool)}, {java_name}.class, {java_name}::newObj); }}',
             '}',
         ])
         assert java_name not in self.functions
@@ -1886,31 +1886,31 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
             writer.write(f'public static final {java_name}Type singleton = new {java_name}Type();')
             for (k, v) in attrs.items():
                 if v['kind'] == 'string':
-                    writer.write(f"private static final PyString pyattr_{k} = new PyString({ir.java_string_literal(v['value'])});")
+                    writer.write(f"private static final PyString pyattr_{k} = {ir.CreateObject('PyString', [ir.StrLiteral(v['value'])]).emit_java(pool)};")
                 elif v['kind'] == 'member':
                     doc_value = v.get('doc')
-                    doc = 'null' if doc_value is None else ir.java_string_literal(doc_value)
-                    writer.write(f"private static final PyMemberDescriptor pyattr_{k} = new PyMemberDescriptor(singleton, {ir.java_string_literal(k)}, {java_name}::pymember_{k}, {doc});")
+                    doc = ir.Null().emit_java(pool) if doc_value is None else ir.StrLiteral(doc_value).emit_java(pool)
+                    writer.write(f"private static final PyMemberDescriptor pyattr_{k} = new PyMemberDescriptor(singleton, {ir.StrLiteral(k).emit_java(pool)}, {java_name}::pymember_{k}, {doc});")
                 elif v['kind'] == 'getset':
                     doc_value = v.get('doc')
-                    doc = 'null' if doc_value is None else ir.java_string_literal(doc_value)
-                    writer.write(f"private static final PyGetSetDescriptor pyattr_{k} = new PyGetSetDescriptor(singleton, {ir.java_string_literal(k)}, {java_name}::pygetset_{k}, {doc});")
+                    doc = ir.Null().emit_java(pool) if doc_value is None else ir.StrLiteral(doc_value).emit_java(pool)
+                    writer.write(f"private static final PyGetSetDescriptor pyattr_{k} = new PyGetSetDescriptor(singleton, {ir.StrLiteral(k).emit_java(pool)}, {java_name}::pygetset_{k}, {doc});")
                 elif v['kind'] == 'method':
                     doc_value = v.get('doc')
-                    doc = 'null' if doc_value is None else ir.java_string_literal(doc_value)
+                    doc = ir.Null().emit_java(pool) if doc_value is None else ir.StrLiteral(doc_value).emit_java(pool)
                     if name in UNIMPLEMENTED_METHODS and k in UNIMPLEMENTED_METHODS[name]:
-                        constructor = f'obj -> new {java_name}MethodUnimplemented(obj, {ir.java_string_literal(k)})'
+                        constructor = f'obj -> new {java_name}MethodUnimplemented(obj, {ir.StrLiteral(k).emit_java(pool)})'
                     else:
                         constructor = f'{java_name}Method_{k}::new'
-                    writer.write(f"private static final PyMethodDescriptor pyattr_{k} = new PyMethodDescriptor(singleton, {ir.java_string_literal(k)}, {constructor}, {doc});")
+                    writer.write(f"private static final PyMethodDescriptor pyattr_{k} = new PyMethodDescriptor(singleton, {ir.StrLiteral(k).emit_java(pool)}, {constructor}, {doc});")
                 elif v['kind'] == 'classmethod':
                     doc_value = v.get('doc')
-                    doc = 'null' if doc_value is None else ir.java_string_literal(doc_value)
+                    doc = ir.Null().emit_java(pool) if doc_value is None else ir.StrLiteral(doc_value).emit_java(pool)
                     constructor = f'{java_name}ClassMethod_{k}::new'
-                    writer.write(f"private static final PyClassMethodDescriptor pyattr_{k} = new PyClassMethodDescriptor(singleton, {ir.java_string_literal(k)}, {constructor}, {doc});")
+                    writer.write(f"private static final PyClassMethodDescriptor pyattr_{k} = new PyClassMethodDescriptor(singleton, {ir.StrLiteral(k).emit_java(pool)}, {constructor}, {doc});")
                 elif v['kind'] == 'staticmethod':
                     constructor = f'new {java_name}StaticMethod_{k}(singleton)'
-                    writer.write(f'private static final PyStaticMethod pyattr_{k} = new PyStaticMethod(singleton, {ir.java_string_literal(k)}, {constructor});')
+                    writer.write(f'private static final PyStaticMethod pyattr_{k} = new PyStaticMethod(singleton, {ir.StrLiteral(k).emit_java(pool)}, {constructor});')
                 else:
                     assert False, (name, k, v)
             writer.write('private static final class AttrsHolder {')
@@ -1921,12 +1921,12 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
             writer.write('}')
             writer.write('}')
             writer.write('')
-            writer.write(f'private {java_name}Type() {{ super({ir.java_string_literal(py_name)}, {java_name}.class, {java_name}::newObj); }}')
+            writer.write(f'private {java_name}Type() {{ super({ir.StrLiteral(py_name).emit_java(pool)}, {java_name}.class, {java_name}::newObj); }}')
             writer.write('@Override public java.util.Map<PyObject, PyObject> getAttributes() { return AttrsHolder.attrs; }')
             writer.write('@Override public PyObject lookupAttr(String name) {')
             writer.write('switch (name) {')
             for (k, v) in attrs.items():
-                writer.write(f'case {ir.java_string_literal(k)}: return pyattr_{k};')
+                writer.write(f'case {ir.StrLiteral(k).emit_java(pool)}: return pyattr_{k};')
             writer.write('default: return null;')
             writer.write('}')
             writer.write('}')
