@@ -1297,10 +1297,6 @@ def get_class_functions(node: ast.Module, class_name: str) -> dict[str, ast.Func
     classes = {x.name: x for x in node.body if isinstance(x, ast.ClassDef)}
     return {x.name: x for x in classes[class_name].body if isinstance(x, ast.FunctionDef)}
 
-UNIMPLEMENTED_METHODS = {
-    'type': {'mro'},
-}
-
 NULL = object()
 RAW_ARGS_KWARGS_BUILTINS = {'max', 'min'}
 
@@ -1431,6 +1427,9 @@ def get_builtin_function_params(spec: dict[str, object], name: str) -> Optional[
 def get_module_function_params(spec: dict[str, object], module_name: str, func_name: str) -> Optional[list[inspect.Parameter]]:
     attrs = cast(dict[str, dict[str, object]], cast(dict[str, object], spec[module_name])['attrs'])
     return decode_signature(cast(Optional[dict[str, object]], attrs[func_name].get('signature')))
+
+def is_special_method_wrapper(type_name: str, method_name: str) -> bool:
+    return type_name == 'type' and method_name == 'mro'
 
 def emit_python_function_static(visitor: LoweringVisitor, func_name: str, arg_names: list[str], body: list[ir.Statement],
                                 return_java_type: str) -> list[str]:
@@ -1909,10 +1908,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                 elif v['kind'] == 'method':
                     doc_value = v.get('doc')
                     doc = ir.Null().emit_java(pool) if doc_value is None else ir.StrLiteral(doc_value).emit_java(pool)
-                    if name in UNIMPLEMENTED_METHODS and k in UNIMPLEMENTED_METHODS[name]:
-                        constructor = f'obj -> new {java_name}MethodUnimplemented(obj, {ir.StrLiteral(k).emit_java(pool)})'
-                    else:
-                        constructor = ir.MethodRef(f'{java_name}Method_{k}', 'new').emit_java(pool)
+                    constructor = ir.MethodRef(f'{java_name}Method_{k}', 'new').emit_java(pool)
                     writer.write(f"private static final PyMethodDescriptor pyattr_{k} = new PyMethodDescriptor(singleton, {ir.StrLiteral(k).emit_java(pool)}, {constructor}, {doc});")
                 elif v['kind'] == 'classmethod':
                     doc_value = v.get('doc')
@@ -1952,22 +1948,22 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
             writer.write('}')
             writer.write('')
 
-            if name in UNIMPLEMENTED_METHODS:
-                writer.write(f'final class {java_name}MethodUnimplemented extends PyBuiltinMethod<{java_name}> {{')
-                writer.write('private final String name;')
-                writer.write(f'{java_name}MethodUnimplemented(PyObject _self, String _name) {{ super(({java_name})_self); name = _name; }}')
-                writer.write('@Override public String methodName() { return name; }')
-                writer.write('@Override public PyObject call(PyObject[] args, PyDict kwargs) {')
-                writer.write(f'throw new UnsupportedOperationException("{name}." + name + "() unimplemented");')
-                writer.write('}')
-                writer.write('}')
-                writer.write('')
+            if name == 'type':
+                for method_name in ['mro']:
+                    writer.write(f'final class {java_name}Method_{method_name} extends PyBuiltinMethod<{java_name}> {{')
+                    writer.write(f'{java_name}Method_{method_name}(PyObject _self) {{ super(({java_name})_self); }}')
+                    writer.write('@Override public String methodName() { return "{method_name}"; }')
+                    writer.write('@Override public PyObject call(PyObject[] args, PyDict kwargs) {')
+                    writer.write('throw new UnsupportedOperationException("{name}.{method_name}() unimplemented");')
+                    writer.write('}')
+                    writer.write('}')
+                    writer.write('')
 
             gen_methods = {}
             for (method_name, v) in attrs.items():
                 if v['kind'] not in {'method', 'classmethod', 'staticmethod'}:
                     continue
-                if name in UNIMPLEMENTED_METHODS and method_name in UNIMPLEMENTED_METHODS[name]:
+                if is_special_method_wrapper(name, method_name):
                     continue
                 params = get_method_params(spec, name, method_name)
                 if params is None:
