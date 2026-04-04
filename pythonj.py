@@ -1235,9 +1235,7 @@ class LoweringVisitor(ast.NodeVisitor):
                 *(f'this.pycell_{name} = pycell_{name};' for name in free_var_names),
                 'this.pyiter_iterable = iterable.iter();',
                 '}',
-                '@Override public PyObject next() {',
-                *ir.block_emit_java(ir.block_simplify(next_body), self.pool),
-                '}',
+                *ir.MethodDecl('public', 'PyObject', 'next', [], next_body).emit_java(self.pool),
                 *ir.MethodDecl('public', 'String', 'repr', [], [ir.ReturnStatement(ir.StrLiteral(f'<generator object {qualname}>'))]).emit_java(self.pool),
                 *ir.MethodDecl('public', 'PyConcreteType', 'type', [], [ir.ReturnStatement(ir.Identifier('type_singleton'))]).emit_java(self.pool),
                 '}',
@@ -1971,11 +1969,9 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                     ir.emit_statement(writer, ir.SuperConstructorCall([ir.CastExpr(java_name, ir.Identifier('_self'))]), pool)
                     writer.write('}')
                     ir.emit_decl(writer, ir.MethodDecl('public', 'String', 'methodName', [], [ir.ReturnStatement(ir.StrLiteral(method_name))]), pool)
-                    writer.write('@Override public PyObject call(PyObject[] args, PyDict kwargs) {')
-                    ir.emit_statement(writer, ir.ThrowStatement(
-                        ir.CreateObject('UnsupportedOperationException', [ir.StrLiteral(f'{name}.{method_name}() unimplemented')])
-                    ), pool)
-                    writer.write('}')
+                    ir.emit_decl(writer, ir.MethodDecl('public', 'PyObject', 'call', ['PyObject[] args', 'PyDict kwargs'], [
+                        ir.ThrowStatement(ir.CreateObject('UnsupportedOperationException', [ir.StrLiteral(f'{name}.{method_name}() unimplemented')])),
+                    ]), pool)
                     writer.write('}')
                     writer.write('')
 
@@ -2030,7 +2026,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                     ir.emit_statement(writer, ir.SuperConstructorCall([ir.Identifier(super_arg) if super_arg == '_self' else ir.CastExpr(java_name, ir.Identifier('_self'))]), pool)
                     writer.write('}')
                     ir.emit_decl(writer, ir.MethodDecl('public', 'String', 'methodName', [], [ir.ReturnStatement(ir.StrLiteral(method_name))]), pool)
-                    writer.write('@Override public PyObject call(PyObject[] args, PyDict kwargs) {')
+                    call_body: list[ir.Statement] = []
                     if kwarg_params is None:
                         bind_args = [ir.Identifier('args'), ir.Identifier('kwargs')]
                     else:
@@ -2040,7 +2036,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                             'argsLength',
                             f'{py_name}.{method_name}',
                         )
-                        ir.emit_statements(writer, bind_statements, pool)
+                        call_body.extend(bind_statements)
                     if kind == 'classmethod':
                         bind_args = [ir.Identifier('self')] + bind_args
                     if method_impl_target is not None:
@@ -2052,8 +2048,8 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                         )
                     else:
                         call_expr = ir.MethodCall(ir.Identifier(method_target), f'pymethod_{method_name}', bind_args)
-                    ir.emit_statement(writer, ir.ReturnStatement(call_expr), pool)
-                    writer.write('}')
+                    call_body.append(ir.ReturnStatement(call_expr))
+                    ir.emit_decl(writer, ir.MethodDecl('public', 'PyObject', 'call', ['PyObject[] args', 'PyDict kwargs'], call_body), pool)
                     writer.write('}')
                 writer.write('')
 
@@ -2124,7 +2120,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                 writer.write(f'private {module_func_prefix}Function_{func_name}() {{')
                 ir.emit_statement(writer, ir.SuperConstructorCall([ir.StrLiteral(func_name)]), pool)
                 writer.write('}')
-                writer.write('@Override public PyObject call(PyObject[] args, PyDict kwargs) {')
+                call_body: list[ir.Statement] = []
                 full_name = f'{module_name}.{func_name}'
                 if kwarg_params is None:
                     bind_args = [ir.Identifier('args'), ir.Identifier('kwargs')]
@@ -2135,11 +2131,11 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                         'argsLength',
                         full_name,
                     )
-                    ir.emit_statements(writer, bind_statements, pool)
-                ir.emit_statement(writer, ir.ReturnStatement(
+                    call_body.extend(bind_statements)
+                call_body.append(ir.ReturnStatement(
                     ir.MethodCall(ir.Identifier('PyBuiltinFunctionsImpl'), f'pyfunc_{module_name.removeprefix("_")}_{func_name}', bind_args)
-                ), pool)
-                writer.write('}')
+                ))
+                ir.emit_decl(writer, ir.MethodDecl('public', 'PyObject', 'call', ['PyObject[] args', 'PyDict kwargs'], call_body), pool)
                 writer.write('}')
                 writer.write('')
 
@@ -2155,7 +2151,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
             writer.write(f'private PyBuiltinFunction_{func_name}() {{')
             ir.emit_statement(writer, ir.SuperConstructorCall([ir.StrLiteral(func_name)]), pool)
             writer.write('}')
-            writer.write('@Override public PyObject call(PyObject[] args, PyDict kwargs) {')
+            call_body: list[ir.Statement] = []
             bind_args: list[ir.Expr]
             if kwarg_params is None:
                 bind_args = [ir.Identifier('args'), ir.Identifier('kwargs')]
@@ -2168,15 +2164,15 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                     kw_overflow_args_length,
                     func_name,
                 )
-                ir.emit_statements(writer, bind_statements, pool)
+                call_body.extend(bind_statements)
             if func_name in PYTHON_AUTHORED_IMPLS['builtins']:
                 call_target = 'PyBuiltinFunctionsPythonImpl'
             else:
                 call_target = 'PyBuiltinFunctionsImpl'
-            ir.emit_statement(writer, ir.ReturnStatement(
+            call_body.append(ir.ReturnStatement(
                 ir.MethodCall(ir.Identifier(call_target), f'pyfunc_{func_name}', bind_args)
-            ), pool)
-            writer.write('}')
+            ))
+            ir.emit_decl(writer, ir.MethodDecl('public', 'PyObject', 'call', ['PyObject[] args', 'PyDict kwargs'], call_body), pool)
             writer.write('}')
             writer.write('')
 
