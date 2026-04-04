@@ -271,6 +271,25 @@ class LoweringVisitor(ast.NodeVisitor):
         else:
             return ir.Identifier(f'pyglobal_{name}')
 
+    def module_scope(self) -> Scope:
+        scope = self.scope
+        while scope.parent is not None:
+            scope = scope.parent
+        return scope
+
+    def module_binds_name(self, name: str) -> bool:
+        return name in self.module_scope().info.locals
+
+    def name_resolves_to_builtin_function(self, name: str) -> bool:
+        if name not in extract_spec.BUILTIN_FUNCTIONS:
+            return False
+        if self.allow_intrinsics:
+            return True
+        if self.scope.info.kind == ScopeKind.FUNCTION:
+            if name in self.scope.info.locals or name in self.scope.info.cell_vars or name in self.scope.free_vars:
+                return False
+        return not self.module_binds_name(name)
+
     def resolve_free_vars(self, lineno: int, scope_info: ScopeInfo, func_type: str) -> set[str]:
         free_vars = set()
         for name in scope_info.needs_from_outer:
@@ -529,6 +548,14 @@ class LoweringVisitor(ast.NodeVisitor):
                 case '__pythonj_setattr__':
                     assert len(node.args) == 3 and not node.keywords, node.args
                     return ir.MethodCall(ir.Identifier('Runtime'), 'pythonjSetAttr', [self.visit(node.args[0]), self.visit(node.args[1]), self.visit(node.args[2])])
+        if (isinstance(node.func, ast.Name) and node.func.id in DIRECT_CALL_REQUIRED_POSONLY_BUILTINS and
+            self.name_resolves_to_builtin_function(node.func.id) and
+            len(node.args) == DIRECT_CALL_REQUIRED_POSONLY_BUILTINS[node.func.id] and
+            not node.keywords and
+            not any(isinstance(arg, ast.Starred) for arg in node.args)):
+            func_name = node.func.id
+            call_target = 'PyBuiltinFunctionsPythonImpl' if func_name in PYTHON_AUTHORED_IMPLS['builtins'] else 'PyBuiltinFunctionsImpl'
+            return ir.MethodCall(ir.Identifier(call_target), f'pyfunc_{func_name}', [self.visit(arg) for arg in node.args])
         if isinstance(node.func, ast.Name) and node.func.id in self.python_helper_names:
             if node.keywords or any(isinstance(arg, ast.Starred) for arg in node.args):
                 self.error(node.lineno, 'same-file helper calls only support plain positional args')
@@ -1345,6 +1372,7 @@ def get_class_functions(node: ast.Module, class_name: str) -> dict[str, ast.Func
 
 NULL = object()
 RAW_ARGS_KWARGS_BUILTINS = {'max', 'min'}
+DIRECT_CALL_REQUIRED_POSONLY_BUILTINS: dict[str, int] = {}
 
 PYTHON_AUTHORED_IMPLS = {
     'builtins': {'abs', 'all', 'any', 'bin', 'delattr', 'format', 'getattr', 'hash', 'hasattr', 'isinstance', 'issubclass', 'len', 'next', 'oct', 'repr', 'setattr', 'sum'},
@@ -1898,6 +1926,16 @@ def get_java_name(name: str) -> str:
 def gen_runtime_java(spec_path: str, java_path: str) -> None:
     with open(spec_path) as f:
         spec = json.load(f)
+    DIRECT_CALL_REQUIRED_POSONLY_BUILTINS.clear()
+    for func_name in extract_spec.BUILTIN_FUNCTIONS:
+        params = get_builtin_function_params(spec, func_name)
+        if params is None:
+            continue
+        if all(
+            param.kind is inspect.Parameter.POSITIONAL_ONLY and param.default is inspect.Parameter.empty
+            for param in params
+        ):
+            DIRECT_CALL_REQUIRED_POSONLY_BUILTINS[func_name] = len(params)
 
     pool = ir.ConstantPool('PyGeneratedConstants')
     with open(java_path, 'w') as f:
