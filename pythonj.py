@@ -1058,60 +1058,77 @@ class LoweringVisitor(ast.NodeVisitor):
                 ],
             ).emit_java(self.pool))
         else:
-            class_code.extend([
-                f'private static final class {java_name} extends PySlottedObject {{',
-                *(line for name in slots for line in ir.FieldDecl('private', 'PyObject', f'pyslot_{name}', ir.Null()).emit_java(self.pool)),
-                *ir.ConstructorDecl('', java_name, [], [
-                    ir.SuperConstructorCall([ir.Identifier(f'{type_class_name}.singleton')]),
-                ]).emit_java(self.pool),
-                '@Override public PyObject getAttr(String key) {',
-                'switch (key) {',
-            ])
-            for name in slots:
-                class_code.extend([
-                    f'case {ir.StrLiteral(name).emit_java(self.pool)}:',
-                    f'if (pyslot_{name} == null) {{',
-                    'throw raiseMissingAttr(key);',
-                    '}',
-                    f'return pyslot_{name};',
+            get_attr_helper_decls = [
+                ir.MethodDecl('private', 'PyObject', f'pygetslot_{name}', [], [
+                    ir.IfStatement(
+                        ir.BinaryOp('==', ir.Identifier(f'pyslot_{name}'), ir.Null()),
+                        [ir.ThrowStatement(ir.MethodCall(ir.This(), 'raiseMissingAttr', [ir.StrLiteral(name)]))],
+                        [],
+                    ),
+                    ir.ReturnStatement(ir.Identifier(f'pyslot_{name}')),
                 ])
-            class_code.extend([
-                'case "__dict__": throw raiseMissingAttr(key);',
-                'default: return super.getAttr(key);',
-                '}',
-                '}',
-                '@Override public void setAttr(String key, PyObject value) {',
-                'switch (key) {',
-            ])
-            for name in slots:
-                class_code.extend([
-                    f'case {ir.StrLiteral(name).emit_java(self.pool)}:',
-                    f'pyslot_{name} = value;',
-                    *ir.ReturnStatement(None).emit_java(self.pool),
+                for name in slots
+            ]
+            get_attr_helper_decls.append(ir.MethodDecl('private', 'PyObject', 'pygetslot___dict__', [], [
+                ir.ThrowStatement(ir.MethodCall(ir.This(), 'raiseMissingAttr', [ir.StrLiteral('__dict__')])),
+            ]))
+            set_attr_helper_decls = [
+                ir.MethodDecl('private', 'void', f'pysetslot_{name}', ['PyObject value'], [
+                    ir.AssignStatement(ir.Identifier(f'pyslot_{name}'), ir.Identifier('value')),
+                    ir.ReturnStatement(None),
                 ])
-            class_code.extend([
-                'case "__class__": throw Runtime.raiseNamedReadOnlyAttr(type(), key);',
-                'default: super.setAttr(key, value);',
-                '}',
-                '}',
-                '@Override public void delAttr(String key) {',
-                'switch (key) {',
-            ])
-            for name in slots:
-                class_code.extend([
-                    f'case {ir.StrLiteral(name).emit_java(self.pool)}:',
-                    f'if (pyslot_{name} == null) {{',
-                    'throw raiseMissingAttr(key);',
-                    '}',
-                    f'pyslot_{name} = null;',
-                    *ir.ReturnStatement(None).emit_java(self.pool),
+                for name in slots
+            ]
+            del_attr_helper_decls = [
+                ir.MethodDecl('private', 'void', f'pydelslot_{name}', [], [
+                    ir.IfStatement(
+                        ir.BinaryOp('==', ir.Identifier(f'pyslot_{name}'), ir.Null()),
+                        [ir.ThrowStatement(ir.MethodCall(ir.This(), 'raiseMissingAttr', [ir.StrLiteral(name)]))],
+                        [],
+                    ),
+                    ir.AssignStatement(ir.Identifier(f'pyslot_{name}'), ir.Null()),
+                    ir.ReturnStatement(None),
                 ])
-            class_code.extend([
-                'case "__class__": throw Runtime.raiseNamedReadOnlyAttr(type(), key);',
-                'default: super.delAttr(key);',
-                '}',
-                '}',
-                *ir.MethodDecl('public static', 'PyObject', 'newObj', ['PyConcreteType type', 'PyObject[] args', 'PyDict kwargs'], [
+                for name in slots
+            ]
+            readonly_helper_decl = ir.MethodDecl('private', 'void', 'pyraise_readonly___class__', ['String key'], [
+                ir.ThrowStatement(ir.MethodCall(ir.Identifier('Runtime'), 'raiseNamedReadOnlyAttr', [
+                    ir.MethodCall(ir.This(), 'type', []),
+                    ir.Identifier('key'),
+                ])),
+            ])
+            class_code.extend(ir.ClassDecl(
+                'private static final',
+                java_name,
+                'PySlottedObject',
+                [
+                    *(ir.FieldDecl('private', 'PyObject', f'pyslot_{name}', ir.Null()) for name in slots),
+                    ir.ConstructorDecl('', java_name, [], [
+                        ir.SuperConstructorCall([ir.Identifier(f'{type_class_name}.singleton')]),
+                    ]),
+                    *get_attr_helper_decls,
+                    *set_attr_helper_decls,
+                    *del_attr_helper_decls,
+                    readonly_helper_decl,
+                    ir.MethodDecl('public', 'PyObject', 'getAttr', ['String key'], [
+                        ir.SwitchStatement(ir.Identifier('key'), [
+                            *(ir.SwitchCase(ir.StrLiteral(name), ir.MethodCall(ir.This(), f'pygetslot_{name}', [])) for name in slots),
+                            ir.SwitchCase(ir.StrLiteral('__dict__'), ir.MethodCall(ir.This(), 'pygetslot___dict__', [])),
+                        ], ir.MethodCall(ir.Super(), 'getAttr', [ir.Identifier('key')])),
+                    ]),
+                    ir.MethodDecl('public', 'void', 'setAttr', ['String key', 'PyObject value'], [
+                        ir.SwitchVoidStatement(ir.Identifier('key'), [
+                            *(ir.SwitchCase(ir.StrLiteral(name), ir.MethodCall(ir.This(), f'pysetslot_{name}', [ir.Identifier('value')])) for name in slots),
+                            ir.SwitchCase(ir.StrLiteral('__class__'), ir.MethodCall(ir.This(), 'pyraise_readonly___class__', [ir.Identifier('key')])),
+                        ], ir.MethodCall(ir.Super(), 'setAttr', [ir.Identifier('key'), ir.Identifier('value')])),
+                    ]),
+                    ir.MethodDecl('public', 'void', 'delAttr', ['String key'], [
+                        ir.SwitchVoidStatement(ir.Identifier('key'), [
+                            *(ir.SwitchCase(ir.StrLiteral(name), ir.MethodCall(ir.This(), f'pydelslot_{name}', [])) for name in slots),
+                            ir.SwitchCase(ir.StrLiteral('__class__'), ir.MethodCall(ir.This(), 'pyraise_readonly___class__', [ir.Identifier('key')])),
+                        ], ir.MethodCall(ir.Super(), 'delAttr', [ir.Identifier('key')])),
+                    ]),
+                    ir.MethodDecl('public static', 'PyObject', 'newObj', ['PyConcreteType type', 'PyObject[] args', 'PyDict kwargs'], [
                     ir.ExprStatement(ir.MethodCall(ir.Identifier('Runtime'), 'requireNoKwArgs', [
                         ir.Identifier('kwargs'),
                         ir.MethodCall(ir.Identifier('type'), 'name', []),
@@ -1124,9 +1141,9 @@ class LoweringVisitor(ast.NodeVisitor):
                         [],
                     ),
                     ir.ReturnStatement(ir.CreateObject(java_name, [])),
-                ]).emit_java(self.pool),
-                '}',
-            ])
+                ]),
+                ],
+            ).emit_java(self.pool))
         class_code.extend(ir.ClassDecl(
             'private static final',
             type_class_name,

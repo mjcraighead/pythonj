@@ -164,6 +164,11 @@ class This(Expr):
         return 'this'
 
 @dataclass(slots=True)
+class Super(Expr):
+    def emit_java(self, pool: ConstantPool) -> str:
+        return 'super'
+
+@dataclass(slots=True)
 class Bool(Expr):
     value: bool
     def emit_java(self, pool: ConstantPool) -> str:
@@ -477,6 +482,26 @@ class SwitchStatement(Statement):
         for case in self.cases:
             yield f'case {case.expr.emit_java(pool)}: return {case.value.emit_java(pool)};'
         yield f'default: return {self.default.emit_java(pool)};'
+        yield '}'
+
+@dataclass(slots=True)
+class SwitchVoidStatement(Statement):
+    expr: Expr
+    cases: list[SwitchCase]
+    default: Expr
+
+    def __post_init__(self):
+        assert self.cases, self.cases
+
+    def emit_java(self, pool: ConstantPool) -> Iterator[str]:
+        yield f'switch ({self.expr.emit_java(pool)}) {{'
+        for case in self.cases:
+            yield f'case {case.expr.emit_java(pool)}:'
+            yield f'{case.value.emit_java(pool)};'
+            yield 'return;'
+        yield 'default:'
+        yield f'{self.default.emit_java(pool)};'
+        yield 'return;'
         yield '}'
 
 class Decl(ABC):
