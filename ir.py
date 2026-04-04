@@ -297,6 +297,12 @@ class ExprStatement(Statement):
         yield f'{self.call.emit_java(pool)};'
 
 @dataclass(slots=True)
+class SuperConstructorCall(Statement):
+    args: list[Expr]
+    def emit_java(self, pool: ConstantPool) -> Iterator[str]:
+        yield f"super({', '.join(arg.emit_java(pool) for arg in self.args)});"
+
+@dataclass(slots=True)
 class BreakStatement(Statement):
     name: Optional[str]
     def ends_control_flow(self) -> bool:
