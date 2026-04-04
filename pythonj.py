@@ -255,12 +255,12 @@ class LoweringVisitor(ast.NodeVisitor):
 
     def ident_expr(self, name: str) -> ir.Expr:
         if self.allow_intrinsics and name == '__pythonj_null__':
-            return ir.Identifier('null')
+            return ir.Null()
         elif self.scope.info.kind == ScopeKind.FUNCTION and (name in self.scope.info.cell_vars or name in self.scope.free_vars):
             return ir.Field(ir.Identifier(f'pycell_{name}'), 'obj')
         elif self.scope.info.kind == ScopeKind.FUNCTION and name in self.scope.info.locals:
             if self.scope.locals_are_fields:
-                return ir.Field(ir.Identifier('this'), f'pylocal_{name}')
+                return ir.Field(ir.This(), f'pylocal_{name}')
             return ir.Identifier(f'pylocal_{name}')
         elif name in extract_spec.BUILTIN_TYPES:
             return ir.Field(ir.Identifier(f'{extract_spec.BUILTIN_TYPES[name]}Type'), 'singleton')
@@ -476,7 +476,7 @@ class LoweringVisitor(ast.NodeVisitor):
     def visit_Dict(self, node) -> ir.Expr:
         assert len(node.keys) == len(node.values), node
         kv_iter = itertools.chain.from_iterable(zip(node.keys, node.values))
-        return ir.CreateObject('PyDict', [ir.Identifier('null') if x is None else self.visit(x) for x in kv_iter])
+        return ir.CreateObject('PyDict', [ir.Null() if x is None else self.visit(x) for x in kv_iter])
 
     def visit_Call(self, node) -> ir.Expr:
         if self.allow_intrinsics and isinstance(node.func, ast.Name):
@@ -541,7 +541,7 @@ class LoweringVisitor(ast.NodeVisitor):
             kv_list: list[ir.Expr] = []
             for kwarg in node.keywords:
                 if kwarg.arg is None: # **kwargs
-                    kv_list.append(ir.Identifier('null'))
+                    kv_list.append(ir.Null())
                     kv_list.append(self.visit(kwarg.value))
                 else:
                     assert isinstance(kwarg.arg, str), kwarg.arg
@@ -549,7 +549,7 @@ class LoweringVisitor(ast.NodeVisitor):
                     kv_list.append(self.visit(kwarg.value))
             kwargs = ir.MethodCall(ir.Identifier('Runtime'), 'requireKwStrings', [ir.CreateObject('PyDict', kv_list)])
         else:
-            kwargs = ir.Identifier('null')
+            kwargs = ir.Null()
         return ir.MethodCall(func, 'call', [args, kwargs])
 
     def visit_Name(self, node) -> ir.Expr:
@@ -742,7 +742,7 @@ class LoweringVisitor(ast.NodeVisitor):
         with self.push_break_name(block_name):
             loop = ir.ForStatement(
                 'var', temp_name1, ir.MethodCall(ir.Identifier(temp_name0), 'next', []),
-                ir.BinaryOp('!=', ir.Identifier(temp_name1), ir.Identifier('null')),
+                ir.BinaryOp('!=', ir.Identifier(temp_name1), ir.Null()),
                 temp_name1, ir.MethodCall(ir.Identifier(temp_name0), 'next', []),
                 [
                     *self.emit_bind(node.target, ir.Identifier(temp_name1)),
@@ -1144,7 +1144,7 @@ class LoweringVisitor(ast.NodeVisitor):
             ir.VariableDecl('var', temp_iter, ir.MethodCall(iterable, 'iter', [])),
             ir.ForStatement(
                 'var', temp_element, ir.MethodCall(ir.Identifier(temp_iter), 'next', []),
-                ir.BinaryOp('!=', ir.Identifier(temp_element), ir.Identifier('null')),
+                ir.BinaryOp('!=', ir.Identifier(temp_element), ir.Null()),
                 temp_element, ir.MethodCall(ir.Identifier(temp_iter), 'next', []),
                 [
                     *self.emit_bind(generator.target, ir.Identifier(temp_element)),
@@ -1180,7 +1180,7 @@ class LoweringVisitor(ast.NodeVisitor):
                 ]
             self.add_function(qualname, java_name, [arg_name], [], body, invisible_args=True)
 
-        return ir.MethodCall(ir.CreateObject(java_name, [ir.Identifier(f'pycell_{name}') for name in sorted(free_vars)]), 'call', [ir.CreateArray('PyObject', [self.visit(generators[0].iter)]), ir.Identifier('null')])
+        return ir.MethodCall(ir.CreateObject(java_name, [ir.Identifier(f'pycell_{name}') for name in sorted(free_vars)]), 'call', [ir.CreateArray('PyObject', [self.visit(generators[0].iter)]), ir.Null()])
 
     def _lower_genexpr(self, node: ast.GeneratorExp) -> ir.Expr:
         if len(node.generators) != 1:
@@ -1211,11 +1211,11 @@ class LoweringVisitor(ast.NodeVisitor):
                     body = list(ir.if_statement(ir.bool_value(self.visit(_if)), body, [ir.ContinueStatement()]))
                 body = [
                     ir.AssignStatement(temp_item_expr, ir.MethodCall(ir.Identifier('pyiter_iterable'), 'next', [])),
-                    *ir.if_statement(ir.BinaryOp('==', temp_item_expr, ir.Identifier('null')), [ir.ReturnStatement(ir.Identifier('null'))], []),
+                    *ir.if_statement(ir.BinaryOp('==', temp_item_expr, ir.Null()), [ir.ReturnStatement(ir.Null())], []),
                     *self.emit_bind(generator.target, temp_item_expr),
                     *body,
                 ]
-                next_body.append(ir.WhileStatement(ir.Identifier('true'), body))
+                next_body.append(ir.WhileStatement(ir.Bool(True), body))
 
             free_var_names = sorted(self.scope.free_vars)
             func_code = [
@@ -1542,6 +1542,12 @@ def emit_default_expr(default: object, pool: ir.ConstantPool) -> str:
 
 def emit_default_java_expr(default: object) -> ir.Expr:
     inferred = infer_default_expr(default)
+    if inferred == 'null':
+        return ir.Null()
+    if inferred == 'true':
+        return ir.Bool(True)
+    if inferred == 'false':
+        return ir.Bool(False)
     if inferred is not None:
         return ir.Identifier(inferred)
     return ir.PyConstant(default)
@@ -1559,7 +1565,7 @@ def build_arg_binding_ir(shape: SignatureShape, positional_name: str,
     args = ir.Identifier('args')
     kwargs = ir.Identifier('kwargs')
     kwargs_bool = ir.BinaryOp('&&',
-        ir.BinaryOp('!=', kwargs, ir.Identifier('null')),
+        ir.BinaryOp('!=', kwargs, ir.Null()),
         ir.MethodCall(kwargs, 'boolValue', []),
     )
     kwargs_len = ir.Identifier('kwargsLen')
@@ -1576,7 +1582,7 @@ def build_arg_binding_ir(shape: SignatureShape, positional_name: str,
             body: list[ir.Statement] = []
             if include_poskw_duplicates and i < len(shape.poskw_params):
                 body.append(ir.IfStatement(
-                    ir.BinaryOp('!=', ir.Identifier(java_local_name(param.name)), ir.Identifier('null')),
+                    ir.BinaryOp('!=', ir.Identifier(java_local_name(param.name)), ir.Null()),
                     [runtime_throw('raiseArgGivenByNameAndPosition', [
                         ir.StrLiteral(kw_name),
                         ir.StrLiteral(param.name),
@@ -1590,7 +1596,7 @@ def build_arg_binding_ir(shape: SignatureShape, positional_name: str,
                 body,
             ))
         else_body: list[ir.Statement] = [ir.IfStatement(
-            ir.BinaryOp('==', unknown_kw, ir.Identifier('null')),
+            ir.BinaryOp('==', unknown_kw, ir.Null()),
             [ir.AssignStatement(unknown_kw, ir.Field(ir.Identifier('kw'), 'value'))],
             [],
         )]
@@ -1613,7 +1619,7 @@ def build_arg_binding_ir(shape: SignatureShape, positional_name: str,
             ir.VariableDecl('int', 'argsLength', ir.Field(args, 'length')),
         ]
         for param in shape.kwonly_params:
-            statements.append(ir.VariableDecl('PyObject', java_local_name(param.name), ir.Identifier('null')))
+            statements.append(ir.VariableDecl('PyObject', java_local_name(param.name), ir.Null()))
         statements.append(ir.IfStatement(kwargs_bool, [
             ir.VariableDecl('long', 'kwargsLen', ir.MethodCall(kwargs, 'len', [])),
             ir.IfStatement(
@@ -1626,10 +1632,10 @@ def build_arg_binding_ir(shape: SignatureShape, positional_name: str,
                 ])],
                 [],
             ),
-            ir.VariableDecl('String', 'unknownKw', ir.Identifier('null')),
+            ir.VariableDecl('String', 'unknownKw', ir.Null()),
             ir.ForEachStatement('var', 'x', kwargs_items, kw_loop_body(shape.kwonly_params, False)),
             ir.IfStatement(
-                ir.BinaryOp('!=', unknown_kw, ir.Identifier('null')),
+                ir.BinaryOp('!=', unknown_kw, ir.Null()),
                 [runtime_throw('raiseUnexpectedKwArg', [ir.StrLiteral(kw_name), unknown_kw])],
                 [],
             ),
@@ -1639,7 +1645,7 @@ def build_arg_binding_ir(shape: SignatureShape, positional_name: str,
             local = ir.Identifier(java_local_name(param.name))
             if param.default is not inspect.Parameter.empty:
                 statements.append(ir.IfStatement(
-                    ir.BinaryOp('==', local, ir.Identifier('null')),
+                    ir.BinaryOp('==', local, ir.Null()),
                     [ir.AssignStatement(local, emit_default_java_expr(param.default))],
                     [],
                 ))
@@ -1723,11 +1729,11 @@ def build_arg_binding_ir(shape: SignatureShape, positional_name: str,
             ir.CondOp(
                 ir.BinaryOp('>=', args_length, ir.IntLiteral(i + 1, '')),
                 ir.ArrayAccess(args, ir.IntLiteral(i, '')),
-                ir.Identifier('null'),
+                ir.Null(),
             ),
         ))
     for param in kwonly_params:
-        statements.append(ir.VariableDecl('PyObject', java_param_names[param.name], ir.Identifier('null')))
+        statements.append(ir.VariableDecl('PyObject', java_param_names[param.name], ir.Null()))
     if kwonly_params and not poskw_params:
         if missing_style != 'exact_args' and (max_positional != 0):
             assert False, (positional_name, shape.params, missing_style)
@@ -1743,10 +1749,10 @@ def build_arg_binding_ir(shape: SignatureShape, positional_name: str,
                 ])],
                 [],
             ),
-            ir.VariableDecl('String', 'unknownKw', ir.Identifier('null')),
+            ir.VariableDecl('String', 'unknownKw', ir.Null()),
             ir.ForEachStatement('var', 'x', kwargs_items, kw_loop_body(kwonly_params, False)),
             ir.IfStatement(
-                ir.BinaryOp('!=', unknown_kw, ir.Identifier('null')),
+                ir.BinaryOp('!=', unknown_kw, ir.Null()),
                 [runtime_throw('raiseUnexpectedKwArg', [ir.StrLiteral(kw_name), unknown_kw])],
                 [],
             ),
@@ -1774,11 +1780,11 @@ def build_arg_binding_ir(shape: SignatureShape, positional_name: str,
                 ])],
                 [],
             ),
-            ir.VariableDecl('String', 'unknownKw', ir.Identifier('null')),
+            ir.VariableDecl('String', 'unknownKw', ir.Null()),
             ir.ForEachStatement('var', 'x', kwargs_items, kw_loop_body(poskw_params + kwonly_params, True)),
             *([
                 ir.IfStatement(
-                    ir.BinaryOp('==', ir.Identifier(java_param_names[param.name]), ir.Identifier('null')),
+                    ir.BinaryOp('==', ir.Identifier(java_param_names[param.name]), ir.Null()),
                     [runtime_throw('raiseMissingRequiredArg', [
                         ir.StrLiteral(positional_name),
                         ir.StrLiteral(param.name),
@@ -1790,7 +1796,7 @@ def build_arg_binding_ir(shape: SignatureShape, positional_name: str,
                 if param.default is inspect.Parameter.empty and missing_style == 'required_arg'
             ]),
             ir.IfStatement(
-                ir.BinaryOp('!=', unknown_kw, ir.Identifier('null')),
+                ir.BinaryOp('!=', unknown_kw, ir.Null()),
                 [runtime_throw('raiseUnexpectedKwArg', [ir.StrLiteral(kw_name), unknown_kw])],
                 [],
             ),
@@ -1815,7 +1821,7 @@ def build_arg_binding_ir(shape: SignatureShape, positional_name: str,
             for (i, param) in enumerate(posonly_params + poskw_params):
                 if param.default is inspect.Parameter.empty:
                     statements.append(ir.IfStatement(
-                        ir.BinaryOp('==', ir.Identifier(java_param_names[param.name]), ir.Identifier('null')),
+                        ir.BinaryOp('==', ir.Identifier(java_param_names[param.name]), ir.Null()),
                         [runtime_throw('raiseMissingRequiredArg', [
                             ir.StrLiteral(positional_name),
                             ir.StrLiteral(param.name),
@@ -1828,7 +1834,7 @@ def build_arg_binding_ir(shape: SignatureShape, positional_name: str,
         local = ir.Identifier(java_param_names[param.name])
         if param.default is not inspect.Parameter.empty:
             statements.append(ir.IfStatement(
-                ir.BinaryOp('==', local, ir.Identifier('null')),
+                ir.BinaryOp('==', local, ir.Null()),
                 [ir.AssignStatement(local, emit_default_java_expr(param.default))],
                 [],
             ))

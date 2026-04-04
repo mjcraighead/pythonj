@@ -148,8 +148,26 @@ class StrLiteral(Expr):
 @dataclass(slots=True)
 class Identifier(Expr):
     name: str
+    def __post_init__(self):
+        assert self.name not in JAVA_FORBIDDEN_IDENTIFIERS, self.name
     def emit_java(self, pool: ConstantPool) -> str:
         return self.name
+
+@dataclass(slots=True)
+class Null(Expr):
+    def emit_java(self, pool: ConstantPool) -> str:
+        return 'null'
+
+@dataclass(slots=True)
+class This(Expr):
+    def emit_java(self, pool: ConstantPool) -> str:
+        return 'this'
+
+@dataclass(slots=True)
+class Bool(Expr):
+    value: bool
+    def emit_java(self, pool: ConstantPool) -> str:
+        return 'true' if self.value else 'false'
 
 @dataclass(slots=True)
 class Field(Expr):
@@ -425,11 +443,8 @@ class LabeledBlock(Statement):
         yield '}'
 
 def unary_op(op: str, operand: Expr) -> Expr:
-    if op == '!' and isinstance(operand, Identifier):
-        if operand.name == 'false':
-            return Identifier('true')
-        if operand.name == 'true':
-            return Identifier('false')
+    if op == '!' and isinstance(operand, Bool):
+        return Bool(not operand.value)
     return UnaryOp(op, operand)
 
 def bool_value(expr: Expr) -> Expr:
@@ -437,7 +452,7 @@ def bool_value(expr: Expr) -> Expr:
         expr.obj.name == 'PyBool' and expr.method == 'create' and len(expr.args) == 1):
         return expr.args[0] # return the raw boolean instead of box/unbox
     if isinstance(expr, PyConstant):
-        return Identifier('true') if expr.value else Identifier('false')
+        return Bool(bool(expr.value))
     return MethodCall(expr, 'boolValue', [])
 
 def chained_binary_op(op: str, exprs: list[Expr]) -> Expr:
@@ -448,9 +463,9 @@ def chained_binary_op(op: str, exprs: list[Expr]) -> Expr:
     return expr
 
 def if_statement(cond: Expr, body: list[Statement], orelse: list[Statement]) -> Iterator[Statement]:
-    if isinstance(cond, Identifier) and cond.name == 'true':
+    if isinstance(cond, Bool) and cond.value:
         yield from body
-    elif isinstance(cond, Identifier) and cond.name == 'false':
+    elif isinstance(cond, Bool) and not cond.value:
         yield from orelse
     else:
         yield IfStatement(cond, body, orelse)
@@ -464,7 +479,7 @@ def if_chain(conditions_and_bodies: list[tuple[Expr, list[Statement]]],
     return IfStatement(conditions_and_bodies[0][0], conditions_and_bodies[0][1], orelse)
 
 def while_statement(cond: Expr, body: list[Statement]) -> Iterator[Statement]:
-    if isinstance(cond, Identifier) and cond.name == 'false':
+    if isinstance(cond, Bool) and not cond.value:
         pass
     else:
         yield WhileStatement(cond, body)
