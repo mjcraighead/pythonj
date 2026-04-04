@@ -290,6 +290,16 @@ class LoweringVisitor(ast.NodeVisitor):
                 return False
         return not self.module_binds_name(name)
 
+    def name_resolves_to_builtin_type(self, name: str) -> bool:
+        if name not in extract_spec.BUILTIN_TYPES:
+            return False
+        if self.allow_intrinsics:
+            return True
+        if self.scope.info.kind == ScopeKind.FUNCTION:
+            if name in self.scope.info.locals or name in self.scope.info.cell_vars or name in self.scope.free_vars:
+                return False
+        return not self.module_binds_name(name)
+
     def resolve_free_vars(self, lineno: int, scope_info: ScopeInfo, func_type: str) -> set[str]:
         free_vars = set()
         for name in scope_info.needs_from_outer:
@@ -586,6 +596,18 @@ class LoweringVisitor(ast.NodeVisitor):
         return ir.MethodCall(self.visit(node.value), 'getItem', [self.visit(node.slice)])
 
     def visit_Attribute(self, node) -> ir.Expr:
+        attr_kind = None
+        if isinstance(node.value, ast.Name):
+            attr_kind = DIRECT_GETATTR_BUILTIN_TYPE_ATTRS.get(node.value.id, {}).get(node.attr)
+        if (isinstance(node.value, ast.Name) and
+            self.name_resolves_to_builtin_type(node.value.id) and
+            attr_kind is not None):
+            java_name = extract_spec.BUILTIN_TYPES[node.value.id]
+            return ir.MethodCall(
+                ir.Field(ir.Identifier(f'{java_name}Type'), f'pyattr_{node.attr}'),
+                'get',
+                [ir.Null()],
+            )
         return ir.MethodCall(self.visit(node.value), 'getAttr', [ir.StrLiteral(node.attr)])
 
     def visit_Import(self, node) -> None:
@@ -1373,6 +1395,7 @@ def get_class_functions(node: ast.Module, class_name: str) -> dict[str, ast.Func
 NULL = object()
 RAW_ARGS_KWARGS_BUILTINS = {'max', 'min'}
 DIRECT_CALL_REQUIRED_POSONLY_BUILTINS: dict[str, int] = {}
+DIRECT_GETATTR_BUILTIN_TYPE_ATTRS: dict[str, dict[str, str]] = {}
 
 PYTHON_AUTHORED_IMPLS = {
     'builtins': {'abs', 'all', 'any', 'bin', 'delattr', 'format', 'getattr', 'hash', 'hasattr', 'isinstance', 'issubclass', 'len', 'next', 'oct', 'repr', 'setattr', 'sum'},
@@ -1926,7 +1949,6 @@ def get_java_name(name: str) -> str:
 def gen_runtime_java(spec_path: str, java_path: str) -> None:
     with open(spec_path) as f:
         spec = json.load(f)
-    DIRECT_CALL_REQUIRED_POSONLY_BUILTINS.clear()
     for func_name in extract_spec.BUILTIN_FUNCTIONS:
         params = get_builtin_function_params(spec, func_name)
         if params is None:
@@ -1936,6 +1958,12 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
             for param in params
         ):
             DIRECT_CALL_REQUIRED_POSONLY_BUILTINS[func_name] = len(params)
+    for type_name in extract_spec.BUILTIN_TYPES:
+        type_spec = cast(dict[str, object], spec[type_name])
+        attrs = cast(dict[str, dict[str, object]], type_spec['attrs'])
+        DIRECT_GETATTR_BUILTIN_TYPE_ATTRS[type_name] = {
+            attr_name: cast(str, attr_spec['kind']) for (attr_name, attr_spec) in attrs.items()
+        }
 
     pool = ir.ConstantPool('PyGeneratedConstants')
     with open(java_path, 'w') as f:
@@ -2005,7 +2033,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                     ])
                 else:
                     assert False, (name, k, v)
-                type_decls.append(ir.FieldDecl('private static final', value.type, f'pyattr_{k}', value))
+                type_decls.append(ir.FieldDecl('static final', value.type, f'pyattr_{k}', value))
             type_decls.append(ir.ClassDecl('private static final', 'AttrsHolder', None, [
                 ir.FieldDecl(
                     'static final',
