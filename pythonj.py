@@ -1318,7 +1318,7 @@ def make_param(name: str, default: object = inspect.Parameter.empty) -> inspect.
     return inspect.Parameter(name, inspect.Parameter.POSITIONAL_ONLY, default=default)
 
 def java_local_name(name: str) -> str:
-    if name in ir.JAVA_RESERVED_WORDS:
+    if name in ir.JAVA_FORBIDDEN_IDENTIFIERS:
         return f'pyarg_{name}'
     return name
 

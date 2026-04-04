@@ -6,12 +6,14 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Iterator, Optional, TextIO
 
-JAVA_RESERVED_WORDS = {
-    'abstract', 'assert', 'boolean', 'break', 'byte', 'case', 'catch', 'char', 'class', 'const', 'continue',
-    'default', 'do', 'double', 'else', 'enum', 'extends', 'final', 'finally', 'float', 'for', 'goto', 'if',
-    'implements', 'import', 'instanceof', 'int', 'interface', 'long', 'native', 'new', 'package', 'private',
-    'protected', 'public', 'return', 'short', 'static', 'strictfp', 'super', 'switch', 'synchronized', 'this',
-    'throw', 'throws', 'transient', 'try', 'void', 'volatile', 'while',
+JAVA_FORBIDDEN_IDENTIFIERS = {
+    '_', 'abstract', 'assert', 'boolean', 'break', 'byte', 'case', 'catch', 'char', 'class', 'const',
+    'continue', 'default', 'do', 'double', 'else', 'enum', 'exports', 'extends', 'false', 'final', 'finally',
+    'float', 'for', 'goto', 'if', 'implements', 'import', 'instanceof', 'int', 'interface', 'long', 'module',
+    'native', 'new', 'null', 'open', 'opens', 'package', 'permits', 'private', 'protected', 'provides',
+    'public', 'record', 'requires', 'return', 'sealed', 'short', 'static', 'strictfp', 'super', 'switch',
+    'synchronized', 'this', 'throw', 'throws', 'to', 'transient', 'transitive', 'true', 'try', 'uses', 'var',
+    'void', 'volatile', 'while', 'with', 'yield',
 }
 
 def int_name(i: int) -> str:
