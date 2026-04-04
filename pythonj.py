@@ -603,11 +603,10 @@ class LoweringVisitor(ast.NodeVisitor):
             self.name_resolves_to_builtin_type(node.value.id) and
             attr_kind is not None):
             java_name = extract_spec.BUILTIN_TYPES[node.value.id]
-            return ir.MethodCall(
-                ir.Field(ir.Identifier(f'{java_name}Type'), f'pyattr_{node.attr}'),
-                'get',
-                [ir.Null()],
-            )
+            attr_expr = ir.Field(ir.Identifier(f'{java_name}Type'), f'pyattr_{node.attr}')
+            if attr_kind in DIRECT_GETATTR_IDENTITY_KINDS:
+                return attr_expr
+            return ir.MethodCall(attr_expr, 'get', [ir.Null()])
         return ir.MethodCall(self.visit(node.value), 'getAttr', [ir.StrLiteral(node.attr)])
 
     def visit_Import(self, node) -> None:
@@ -1396,6 +1395,7 @@ NULL = object()
 RAW_ARGS_KWARGS_BUILTINS = {'max', 'min'}
 DIRECT_CALL_REQUIRED_POSONLY_BUILTINS: dict[str, int] = {}
 DIRECT_GETATTR_BUILTIN_TYPE_ATTRS: dict[str, dict[str, str]] = {}
+DIRECT_GETATTR_IDENTITY_KINDS = {'string', 'member', 'getset', 'method'}
 
 PYTHON_AUTHORED_IMPLS = {
     'builtins': {'abs', 'all', 'any', 'bin', 'delattr', 'format', 'getattr', 'hash', 'hasattr', 'isinstance', 'issubclass', 'len', 'next', 'oct', 'repr', 'setattr', 'sum'},
