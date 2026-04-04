@@ -1910,8 +1910,9 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                 case 'types.NoneType': py_name = 'NoneType'
                 case _: py_name = name
 
-            writer.write(f'final class {java_name}Type extends PyConcreteType {{')
-            ir.emit_decl(writer, ir.FieldDecl('public static final', f'{java_name}Type', 'singleton', ir.CreateObject(f'{java_name}Type', [])), pool)
+            type_decls: list[ir.Decl] = [
+                ir.FieldDecl('public static final', f'{java_name}Type', 'singleton', ir.CreateObject(f'{java_name}Type', [])),
+            ]
             for (k, v) in attrs.items():
                 doc_value = v.get('doc')
                 if v['kind'] == 'string':
@@ -1952,8 +1953,8 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                     ])
                 else:
                     assert False, (name, k, v)
-                ir.emit_decl(writer, ir.FieldDecl('private static final', value.type, f'pyattr_{k}', value), pool)
-            ir.emit_decl(writer, ir.ClassDecl('private static final', 'AttrsHolder', None, [
+                type_decls.append(ir.FieldDecl('private static final', value.type, f'pyattr_{k}', value))
+            type_decls.append(ir.ClassDecl('private static final', 'AttrsHolder', None, [
                 ir.FieldDecl(
                     'static final',
                     'java.util.LinkedHashMap<PyObject, PyObject>',
@@ -1968,25 +1969,24 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                     ))
                     for k in attrs
                 ]),
-            ]), pool)
-            writer.write('')
-            ir.emit_decl(writer, ir.ConstructorDecl('private', f'{java_name}Type', [], [
+            ]))
+            type_decls.append(ir.ConstructorDecl('private', f'{java_name}Type', [], [
                 ir.SuperConstructorCall([
                     ir.StrLiteral(py_name),
                     ir.Field(ir.Identifier(java_name), 'class'),
                     ir.MethodRef(java_name, 'newObj'),
                 ]),
-            ]), pool)
-            ir.emit_decl(writer, ir.MethodDecl('public', 'java.util.Map<PyObject, PyObject>', 'getAttributes', [], [
+            ]))
+            type_decls.append(ir.MethodDecl('public', 'java.util.Map<PyObject, PyObject>', 'getAttributes', [], [
                 ir.ReturnStatement(ir.Field(ir.Identifier('AttrsHolder'), 'attrs')),
-            ]), pool)
-            ir.emit_decl(writer, ir.MethodDecl('@Override public', 'PyObject', 'lookupAttr', ['String name'], [
+            ]))
+            type_decls.append(ir.MethodDecl('@Override public', 'PyObject', 'lookupAttr', ['String name'], [
                 ir.SwitchStatement(ir.Identifier('name'), [
                     ir.SwitchCase(ir.StrLiteral(k), ir.Identifier(f'pyattr_{k}'))
                     for k in attrs
                 ], ir.Null()),
-            ]), pool)
-            writer.write('}')
+            ]))
+            ir.emit_decl(writer, ir.ClassDecl('final', f'{java_name}Type', 'PyConcreteType', type_decls), pool)
             writer.write('')
 
             if name == 'type':
