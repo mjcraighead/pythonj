@@ -310,11 +310,14 @@ class ContinueStatement(Statement):
 
 @dataclass(slots=True)
 class ReturnStatement(Statement):
-    expr: Expr
+    expr: Optional[Expr]
     def ends_control_flow(self) -> bool:
         return True
     def emit_java(self, pool: ConstantPool) -> Iterator[str]:
-        yield f'return {self.expr.emit_java(pool)};'
+        if self.expr is None:
+            yield 'return;'
+        else:
+            yield f'return {self.expr.emit_java(pool)};'
 
 @dataclass(slots=True)
 class ThrowStatement(Statement):
@@ -453,6 +456,27 @@ class LabeledBlock(Statement):
     def emit_java(self, pool: ConstantPool) -> Iterator[str]:
         yield f'{self.name}: {{'
         yield from block_emit_java(self.body, pool)
+        yield '}'
+
+@dataclass(slots=True)
+class SwitchCase:
+    expr: Expr
+    value: Expr
+
+@dataclass(slots=True)
+class SwitchStatement(Statement):
+    expr: Expr
+    cases: list[SwitchCase]
+    default: Expr
+
+    def __post_init__(self):
+        assert self.cases, self.cases
+
+    def emit_java(self, pool: ConstantPool) -> Iterator[str]:
+        yield f'switch ({self.expr.emit_java(pool)}) {{'
+        for case in self.cases:
+            yield f'case {case.expr.emit_java(pool)}: return {case.value.emit_java(pool)};'
+        yield f'default: return {self.default.emit_java(pool)};'
         yield '}'
 
 class Decl(ABC):

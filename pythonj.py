@@ -1087,7 +1087,7 @@ class LoweringVisitor(ast.NodeVisitor):
                 class_code.extend([
                     f'case {ir.StrLiteral(name).emit_java(self.pool)}:',
                     f'pyslot_{name} = value;',
-                    'return;',
+                    *ir.ReturnStatement(None).emit_java(self.pool),
                 ])
             class_code.extend([
                 'case "__class__": throw Runtime.raiseNamedReadOnlyAttr(type(), key);',
@@ -1104,7 +1104,7 @@ class LoweringVisitor(ast.NodeVisitor):
                     'throw raiseMissingAttr(key);',
                     '}',
                     f'pyslot_{name} = null;',
-                    'return;',
+                    *ir.ReturnStatement(None).emit_java(self.pool),
                 ])
             class_code.extend([
                 'case "__class__": throw Runtime.raiseNamedReadOnlyAttr(type(), key);',
@@ -1980,13 +1980,12 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
             ir.emit_decl(writer, ir.MethodDecl('public', 'java.util.Map<PyObject, PyObject>', 'getAttributes', [], [
                 ir.ReturnStatement(ir.Field(ir.Identifier('AttrsHolder'), 'attrs')),
             ]), pool)
-            writer.write('@Override public PyObject lookupAttr(String name) {')
-            writer.write('switch (name) {')
-            for (k, v) in attrs.items():
-                writer.write(f'case {ir.StrLiteral(k).emit_java(pool)}: return pyattr_{k};')
-            writer.write('default: return null;')
-            writer.write('}')
-            writer.write('}')
+            ir.emit_decl(writer, ir.MethodDecl('@Override public', 'PyObject', 'lookupAttr', ['String name'], [
+                ir.SwitchStatement(ir.Identifier('name'), [
+                    ir.SwitchCase(ir.StrLiteral(k), ir.Identifier(f'pyattr_{k}'))
+                    for k in attrs
+                ], ir.Null()),
+            ]), pool)
             writer.write('}')
             writer.write('')
 
