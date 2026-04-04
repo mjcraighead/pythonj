@@ -1886,15 +1886,26 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
             writer.write(f'public static final {java_name}Type singleton = new {java_name}Type();')
             for (k, v) in attrs.items():
                 if v['kind'] == 'string':
-                    writer.write(f"private static final PyString pyattr_{k} = {ir.CreateObject('PyString', [ir.StrLiteral(v['value'])]).emit_java(pool)};")
+                    value = ir.CreateObject('PyString', [ir.StrLiteral(v['value'])])
+                    writer.write(f"private static final PyString pyattr_{k} = {value.emit_java(pool)};")
                 elif v['kind'] == 'member':
                     doc_value = v.get('doc')
-                    doc = ir.Null().emit_java(pool) if doc_value is None else ir.StrLiteral(doc_value).emit_java(pool)
-                    writer.write(f"private static final PyMemberDescriptor pyattr_{k} = new PyMemberDescriptor(singleton, {ir.StrLiteral(k).emit_java(pool)}, {ir.MethodRef(java_name, f'pymember_{k}').emit_java(pool)}, {doc});")
+                    value = ir.CreateObject('PyMemberDescriptor', [
+                        ir.Identifier('singleton'),
+                        ir.StrLiteral(k),
+                        ir.MethodRef(java_name, f'pymember_{k}'),
+                        ir.Null() if doc_value is None else ir.StrLiteral(doc_value),
+                    ])
+                    writer.write(f"private static final PyMemberDescriptor pyattr_{k} = {value.emit_java(pool)};")
                 elif v['kind'] == 'getset':
                     doc_value = v.get('doc')
-                    doc = ir.Null().emit_java(pool) if doc_value is None else ir.StrLiteral(doc_value).emit_java(pool)
-                    writer.write(f"private static final PyGetSetDescriptor pyattr_{k} = new PyGetSetDescriptor(singleton, {ir.StrLiteral(k).emit_java(pool)}, {ir.MethodRef(java_name, f'pygetset_{k}').emit_java(pool)}, {doc});")
+                    value = ir.CreateObject('PyGetSetDescriptor', [
+                        ir.Identifier('singleton'),
+                        ir.StrLiteral(k),
+                        ir.MethodRef(java_name, f'pygetset_{k}'),
+                        ir.Null() if doc_value is None else ir.StrLiteral(doc_value),
+                    ])
+                    writer.write(f"private static final PyGetSetDescriptor pyattr_{k} = {value.emit_java(pool)};")
                 elif v['kind'] == 'method':
                     doc_value = v.get('doc')
                     doc = ir.Null().emit_java(pool) if doc_value is None else ir.StrLiteral(doc_value).emit_java(pool)
@@ -1905,12 +1916,20 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                     writer.write(f"private static final PyMethodDescriptor pyattr_{k} = new PyMethodDescriptor(singleton, {ir.StrLiteral(k).emit_java(pool)}, {constructor}, {doc});")
                 elif v['kind'] == 'classmethod':
                     doc_value = v.get('doc')
-                    doc = ir.Null().emit_java(pool) if doc_value is None else ir.StrLiteral(doc_value).emit_java(pool)
-                    constructor = ir.MethodRef(f'{java_name}ClassMethod_{k}', 'new').emit_java(pool)
-                    writer.write(f"private static final PyClassMethodDescriptor pyattr_{k} = new PyClassMethodDescriptor(singleton, {ir.StrLiteral(k).emit_java(pool)}, {constructor}, {doc});")
+                    value = ir.CreateObject('PyClassMethodDescriptor', [
+                        ir.Identifier('singleton'),
+                        ir.StrLiteral(k),
+                        ir.MethodRef(f'{java_name}ClassMethod_{k}', 'new'),
+                        ir.Null() if doc_value is None else ir.StrLiteral(doc_value),
+                    ])
+                    writer.write(f"private static final PyClassMethodDescriptor pyattr_{k} = {value.emit_java(pool)};")
                 elif v['kind'] == 'staticmethod':
-                    constructor = f'new {java_name}StaticMethod_{k}(singleton)'
-                    writer.write(f'private static final PyStaticMethod pyattr_{k} = new PyStaticMethod(singleton, {ir.StrLiteral(k).emit_java(pool)}, {constructor});')
+                    value = ir.CreateObject('PyStaticMethod', [
+                        ir.Identifier('singleton'),
+                        ir.StrLiteral(k),
+                        ir.CreateObject(f'{java_name}StaticMethod_{k}', [ir.Identifier('singleton')]),
+                    ])
+                    writer.write(f'private static final PyStaticMethod pyattr_{k} = {value.emit_java(pool)};')
                 else:
                     assert False, (name, k, v)
             writer.write('private static final class AttrsHolder {')
