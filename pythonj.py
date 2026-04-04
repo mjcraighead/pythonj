@@ -1215,7 +1215,7 @@ class LoweringVisitor(ast.NodeVisitor):
                     *self.emit_bind(generator.target, temp_item_expr),
                     *body,
                 ]
-                next_body.append(ir.WhileStatement(ir.Bool(True), body))
+                next_body.extend(ir.while_statement(ir.Bool(True), body))
 
             free_var_names = sorted(self.scope.free_vars)
             func_code = [
