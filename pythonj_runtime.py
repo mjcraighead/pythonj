@@ -4,6 +4,18 @@
 
 import typing
 
+def bind_exact_positional(args, kwargs, name, n) -> tuple:
+    if kwargs is not __pythonj_null__ and kwargs:
+        raise TypeError(name + '() takes no keyword arguments')
+    args_len = len(args)
+    if args_len != n:
+        if n == 0:
+            raise TypeError(f'{name}() takes no arguments ({args_len} given)')
+        if n == 1:
+            raise TypeError(f'{name}() takes exactly one argument ({args_len} given)')
+        raise TypeError(f'{name} expected {n} arguments, got {args_len}')
+    return args
+
 def max_iterable(iterable, default_obj, key_func):
     it = __pythonj_iter__(iterable)
     ret = __pythonj_next__(it)

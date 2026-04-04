@@ -2034,6 +2034,15 @@ def get_positional_call_range(params: Optional[list[inspect.Parameter]]) -> Opti
     min_args = sum(param.default is inspect.Parameter.empty for param in params)
     return (min_args, len(params))
 
+def get_exact_positional_call_arity(params: Optional[list[inspect.Parameter]]) -> Optional[int]:
+    call_range = get_positional_call_range(params)
+    if call_range is None:
+        return None
+    (min_args, max_args) = call_range
+    if min_args != max_args:
+        return None
+    return max_args
+
 def build_call_positional_ir(shape: SignatureShape) -> tuple[list[ir.Statement], list[ir.Expr]]:
     assert not shape.kwonly_params, shape
     assert shape.vararg_param is None, shape
@@ -2404,6 +2413,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                 kwarg_params = None
             else:
                 kwarg_params = analyze_params(params)
+            exact_positional_arity = None if params is None else get_exact_positional_call_arity(params)
             call_positional_shape = kwarg_params if (kwarg_params is not None and get_positional_call_range(kwarg_params.params) is not None) else None
             decls: list[ir.Decl] = [
                 ir.FieldDecl('public static final', f'PyBuiltinFunction_{func_name}', 'singleton', ir.CreateObject(f'PyBuiltinFunction_{func_name}', [])),
@@ -2413,7 +2423,26 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
             ]
             call_body: list[ir.Statement] = []
             bind_args: list[ir.Expr]
-            if kwarg_params is None:
+            if exact_positional_arity is not None:
+                call_body.append(ir.LocalDecl(
+                    'PyTuple',
+                    'boundArgs',
+                    ir.CastExpr(
+                        'PyTuple',
+                        ir.MethodCall(
+                            ir.Identifier('PyRuntimePythonImpl'),
+                            'pyfunc_bind_exact_positional',
+                            [
+                                ir.CreateObject('PyTuple', [ir.Identifier('args')]),
+                                ir.Identifier('kwargs'),
+                                ir.PyConstant(func_name),
+                                ir.PyConstant(exact_positional_arity),
+                            ],
+                        ),
+                    ),
+                ))
+                bind_args = [ir.ArrayAccess(ir.Field(ir.Identifier('boundArgs'), 'items'), ir.IntLiteral(i)) for i in range(exact_positional_arity)]
+            elif kwarg_params is None:
                 bind_args = [ir.Identifier('args'), ir.Identifier('kwargs')]
             else:
                 kw_name = 'sort' if func_name == 'sorted' else func_name
