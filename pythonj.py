@@ -1657,7 +1657,7 @@ def build_arg_binding_ir(shape: SignatureShape, positional_name: str,
         statements.append(ir.IfStatement(kwargs_bool, [runtime_throw('raiseNoKwArgs', [ir.StrLiteral(noarg_name)])], []))
         min_args = sum(param.default is inspect.Parameter.empty for param in shape.posonly_params)
         max_args = len(shape.posonly_params)
-        bind_args: list[ir.Expr] = [ir.ArrayAccess(args, ir.IntLiteral(i, '')) for i in range(min_args)]
+        bind_args: list[ir.Expr] = [ir.ArrayAccess(args, ir.IntLiteral(i)) for i in range(min_args)]
         if min_args == max_args:
             err: ir.ThrowStatement
             if max_args == 0:
@@ -1665,30 +1665,30 @@ def build_arg_binding_ir(shape: SignatureShape, positional_name: str,
             elif max_args == 1:
                 err = runtime_throw('raiseOneArg', [args, ir.StrLiteral(noarg_name)])
             else:
-                err = runtime_throw('raiseExactArgs', [args, ir.IntLiteral(max_args, ''), ir.StrLiteral(kw_name)])
+                err = runtime_throw('raiseExactArgs', [args, ir.IntLiteral(max_args), ir.StrLiteral(kw_name)])
             statements.append(ir.IfStatement(
-                ir.BinaryOp('!=', args_length, ir.IntLiteral(max_args, '')),
+                ir.BinaryOp('!=', args_length, ir.IntLiteral(max_args)),
                 [err],
                 [],
             ))
         else:
             if min_args > 0:
                 statements.append(ir.IfStatement(
-                    ir.BinaryOp('<', args_length, ir.IntLiteral(min_args, '')),
-                    [runtime_throw('raiseMinArgs', [args, ir.IntLiteral(min_args, ''), ir.StrLiteral(kw_name)])],
+                    ir.BinaryOp('<', args_length, ir.IntLiteral(min_args)),
+                    [runtime_throw('raiseMinArgs', [args, ir.IntLiteral(min_args), ir.StrLiteral(kw_name)])],
                     [],
                 ))
             statements.append(ir.IfStatement(
-                ir.BinaryOp('>', args_length, ir.IntLiteral(max_args, '')),
-                [runtime_throw('raiseMaxArgs', [args, ir.IntLiteral(max_args, ''), ir.StrLiteral(kw_name)])],
+                ir.BinaryOp('>', args_length, ir.IntLiteral(max_args)),
+                [runtime_throw('raiseMaxArgs', [args, ir.IntLiteral(max_args), ir.StrLiteral(kw_name)])],
                 [],
             ))
             for i in range(min_args, max_args):
                 statements.append(ir.VariableDecl(
                     'PyObject', f'arg{i}',
                     ir.CondOp(
-                        ir.BinaryOp('>=', args_length, ir.IntLiteral(i + 1, '')),
-                        ir.ArrayAccess(args, ir.IntLiteral(i, '')),
+                        ir.BinaryOp('>=', args_length, ir.IntLiteral(i + 1)),
+                        ir.ArrayAccess(args, ir.IntLiteral(i)),
                         emit_default_java_expr(shape.posonly_params[i].default),
                     ),
                 ))
@@ -1698,7 +1698,7 @@ def build_arg_binding_ir(shape: SignatureShape, positional_name: str,
         statements.extend([
             ir.IfStatement(kwargs_bool, [runtime_throw('raiseNoKwArgs', [ir.StrLiteral(noarg_name)])], []),
             ir.IfStatement(
-                ir.BinaryOp('!=', args_length, ir.IntLiteral(0, '')),
+                ir.BinaryOp('!=', args_length, ir.IntLiteral(0)),
                 [runtime_throw('raiseNoArgs', [args, ir.StrLiteral(noarg_name)])],
                 [],
             ),
@@ -1712,13 +1712,13 @@ def build_arg_binding_ir(shape: SignatureShape, positional_name: str,
     missing_style = shape.missing_style
     if missing_style == 'exact_args':
         statements.append(ir.IfStatement(
-            ir.BinaryOp('!=', args_length, ir.IntLiteral(1, '')),
-            [runtime_throw('raiseExactArgs', [args, ir.IntLiteral(1, ''), ir.StrLiteral(positional_name)])],
+            ir.BinaryOp('!=', args_length, ir.IntLiteral(1)),
+            [runtime_throw('raiseExactArgs', [args, ir.IntLiteral(1), ir.StrLiteral(positional_name)])],
             [],
         ))
     elif missing_style == 'min_positional':
         statements.append(ir.IfStatement(
-            ir.BinaryOp('==', args_length, ir.IntLiteral(0, '')),
+            ir.BinaryOp('==', args_length, ir.IntLiteral(0)),
             [type_error_throw(f'{positional_name}() takes at least 1 positional argument (0 given)')],
             [],
         ))
@@ -1727,8 +1727,8 @@ def build_arg_binding_ir(shape: SignatureShape, positional_name: str,
         statements.append(ir.VariableDecl(
             'PyObject', java_param_names[param.name],
             ir.CondOp(
-                ir.BinaryOp('>=', args_length, ir.IntLiteral(i + 1, '')),
-                ir.ArrayAccess(args, ir.IntLiteral(i, '')),
+                ir.BinaryOp('>=', args_length, ir.IntLiteral(i + 1)),
+                ir.ArrayAccess(args, ir.IntLiteral(i)),
                 ir.Null(),
             ),
         ))
@@ -1740,10 +1740,10 @@ def build_arg_binding_ir(shape: SignatureShape, positional_name: str,
         statements.append(ir.IfStatement(kwargs_bool, [
             ir.VariableDecl('long', 'kwargsLen', ir.MethodCall(kwargs, 'len', [])),
             ir.IfStatement(
-                ir.BinaryOp('>', kwargs_len, ir.IntLiteral(max_total, '')),
+                ir.BinaryOp('>', kwargs_len, ir.IntLiteral(max_total)),
                 [runtime_throw('raiseAtMostKwArgs', [
                     ir.StrLiteral(kw_name),
-                    ir.IntLiteral(max_total, ''),
+                    ir.IntLiteral(max_total),
                     ir.Identifier(kw_overflow_args_length),
                     kwargs_len,
                 ])],
@@ -1759,10 +1759,10 @@ def build_arg_binding_ir(shape: SignatureShape, positional_name: str,
         ], []))
         if max_positional == 0:
             statements.append(ir.IfStatement(
-                ir.BinaryOp('>', args_length, ir.IntLiteral(max_total, '')),
-                [runtime_throw('raiseAtMostArgs', [ir.StrLiteral(positional_name), ir.IntLiteral(max_total, ''), args_length])],
+                ir.BinaryOp('>', args_length, ir.IntLiteral(max_total)),
+                [runtime_throw('raiseAtMostArgs', [ir.StrLiteral(positional_name), ir.IntLiteral(max_total), args_length])],
                 [ir.IfStatement(
-                    ir.BinaryOp('!=', args_length, ir.IntLiteral(0, '')),
+                    ir.BinaryOp('!=', args_length, ir.IntLiteral(0)),
                     [type_error_throw(f'{positional_name}() takes no positional arguments')],
                     [],
                 )],
@@ -1771,10 +1771,10 @@ def build_arg_binding_ir(shape: SignatureShape, positional_name: str,
         statements.append(ir.IfStatement(kwargs_bool, [
             ir.VariableDecl('long', 'kwargsLen', ir.MethodCall(kwargs, 'len', [])),
             ir.IfStatement(
-                ir.BinaryOp('>', ir.BinaryOp('+', args_length, kwargs_len), ir.IntLiteral(max_total, '')),
+                ir.BinaryOp('>', ir.BinaryOp('+', args_length, kwargs_len), ir.IntLiteral(max_total)),
                 [runtime_throw('raiseAtMostKwArgs', [
                     ir.StrLiteral(kw_name),
-                    ir.IntLiteral(max_total, ''),
+                    ir.IntLiteral(max_total),
                     args_length,
                     kwargs_len,
                 ])],
@@ -1788,7 +1788,7 @@ def build_arg_binding_ir(shape: SignatureShape, positional_name: str,
                     [runtime_throw('raiseMissingRequiredArg', [
                         ir.StrLiteral(positional_name),
                         ir.StrLiteral(param.name),
-                        ir.IntLiteral(i + 1, ''),
+                        ir.IntLiteral(i + 1),
                     ])],
                     [],
                 )
@@ -1803,18 +1803,18 @@ def build_arg_binding_ir(shape: SignatureShape, positional_name: str,
         ], []))
         if max_positional < max_total:
             statements.append(ir.IfStatement(
-                ir.BinaryOp('>', args_length, ir.IntLiteral(max_total, '')),
-                [runtime_throw('raiseAtMostArgs', [ir.StrLiteral(positional_name), ir.IntLiteral(max_total, ''), args_length])],
+                ir.BinaryOp('>', args_length, ir.IntLiteral(max_total)),
+                [runtime_throw('raiseAtMostArgs', [ir.StrLiteral(positional_name), ir.IntLiteral(max_total), args_length])],
                 [ir.IfStatement(
-                    ir.BinaryOp('>', args_length, ir.IntLiteral(max_positional, '')),
-                    [runtime_throw('raiseAtMostPosArgs', [ir.StrLiteral(positional_name), ir.IntLiteral(max_positional, ''), args_length])],
+                    ir.BinaryOp('>', args_length, ir.IntLiteral(max_positional)),
+                    [runtime_throw('raiseAtMostPosArgs', [ir.StrLiteral(positional_name), ir.IntLiteral(max_positional), args_length])],
                     [],
                 )],
             ))
         else:
             statements.append(ir.IfStatement(
-                ir.BinaryOp('>', args_length, ir.IntLiteral(max_total, '')),
-                [runtime_throw('raiseAtMostArgs', [ir.StrLiteral(positional_name), ir.IntLiteral(max_total, ''), args_length])],
+                ir.BinaryOp('>', args_length, ir.IntLiteral(max_total)),
+                [runtime_throw('raiseAtMostArgs', [ir.StrLiteral(positional_name), ir.IntLiteral(max_total), args_length])],
                 [],
             ))
         if missing_style == 'required_arg':
@@ -1825,7 +1825,7 @@ def build_arg_binding_ir(shape: SignatureShape, positional_name: str,
                         [runtime_throw('raiseMissingRequiredArg', [
                             ir.StrLiteral(positional_name),
                             ir.StrLiteral(param.name),
-                            ir.IntLiteral(i + 1, ''),
+                            ir.IntLiteral(i + 1),
                         ])],
                         [],
                     ))

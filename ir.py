@@ -135,7 +135,7 @@ class Expr(ABC):
 @dataclass(slots=True)
 class IntLiteral(Expr):
     value: int
-    suffix: str
+    suffix: str = ''
     def emit_java(self, pool: ConstantPool) -> str:
         return f'{self.value}{self.suffix}'
 
