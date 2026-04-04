@@ -178,7 +178,7 @@ class ScopeAnalyzer(ast.NodeVisitor):
 
 class Scope:
     __slots__ = ('parent', 'info', 'qualname', 'free_vars', 'locals_are_fields', 'n_temps', 'used_expr_discard',
-                 'expected_return_java_type')
+                 'expected_return_java_type', 'known_builtin_module_locals')
     parent: Optional['Scope']
     info: ScopeInfo
     qualname: Optional[str]
@@ -187,9 +187,11 @@ class Scope:
     n_temps: int
     used_expr_discard: bool
     expected_return_java_type: Optional[str]
+    known_builtin_module_locals: dict[str, str]
 
     def __init__(self, parent: Optional['Scope'], info: ScopeInfo, qualname: Optional[str] = None,
-                 expected_return_java_type: Optional[str] = None):
+                 expected_return_java_type: Optional[str] = None,
+                 known_builtin_module_locals: Optional[dict[str, str]] = None):
         self.parent = parent
         self.info = info
         self.qualname = qualname
@@ -198,6 +200,7 @@ class Scope:
         self.n_temps = 0
         self.used_expr_discard = False
         self.expected_return_java_type = expected_return_java_type
+        self.known_builtin_module_locals = {} if known_builtin_module_locals is None else known_builtin_module_locals.copy()
 
     def make_temp(self) -> str:
         """Assign and return a new temporary variable name."""
@@ -229,12 +232,13 @@ class LoweringVisitor(ast.NodeVisitor):
     python_helper_names: set[str]
     python_helper_class: Optional[str]
 
-    def __init__(self, path: str, scope_infos: dict[ast.AST, ScopeInfo], module_info: ScopeInfo):
+    def __init__(self, path: str, scope_infos: dict[ast.AST, ScopeInfo], module_info: ScopeInfo,
+                 known_builtin_module_locals: Optional[dict[str, str]] = None):
         self.path = path
         self.n_errors = 0
         self.n_functions = 0
         self.n_lambdas = 0
-        self.scope = Scope(None, module_info)
+        self.scope = Scope(None, module_info, known_builtin_module_locals=known_builtin_module_locals)
         self.global_code = [ir.LocalDecl('PyObject', 'expr_discard', None)] # XXX remove this variable if not needed
         self.code = self.global_code
         self.scope_infos = scope_infos
@@ -558,14 +562,29 @@ class LoweringVisitor(ast.NodeVisitor):
                 case '__pythonj_setattr__':
                     assert len(node.args) == 3 and not node.keywords, node.args
                     return ir.MethodCall(ir.Identifier('Runtime'), 'pythonjSetAttr', [self.visit(node.args[0]), self.visit(node.args[1]), self.visit(node.args[2])])
-        if (isinstance(node.func, ast.Name) and node.func.id in DIRECT_CALL_REQUIRED_POSONLY_BUILTINS and
+        if (isinstance(node.func, ast.Name) and node.func.id in DIRECT_CALL_FULL_POSITIONAL_BUILTINS and
             self.name_resolves_to_builtin_function(node.func.id) and
-            len(node.args) == DIRECT_CALL_REQUIRED_POSONLY_BUILTINS[node.func.id] and
+            len(node.args) == DIRECT_CALL_FULL_POSITIONAL_BUILTINS[node.func.id] and
             not node.keywords and
             not any(isinstance(arg, ast.Starred) for arg in node.args)):
             func_name = node.func.id
             call_target = 'PyBuiltinFunctionsPythonImpl' if func_name in PYTHON_AUTHORED_IMPLS['builtins'] else 'PyBuiltinFunctionsImpl'
             return ir.MethodCall(ir.Identifier(call_target), f'pyfunc_{func_name}', [self.visit(arg) for arg in node.args])
+        if (isinstance(node.func, ast.Attribute) and
+            isinstance(node.func.value, ast.Name) and
+            self.scope.info.kind == ScopeKind.FUNCTION and
+            node.func.value.id in self.scope.info.locals):
+            module_name = self.scope.known_builtin_module_locals.get(node.func.value.id)
+            if (module_name is not None and
+                node.func.attr in DIRECT_CALL_FULL_POSITIONAL_MODULE_FUNCTIONS.get(module_name, {}) and
+                len(node.args) == DIRECT_CALL_FULL_POSITIONAL_MODULE_FUNCTIONS[module_name][node.func.attr] and
+                not node.keywords and
+                not any(isinstance(arg, ast.Starred) for arg in node.args)):
+                return ir.MethodCall(
+                    ir.Identifier('PyBuiltinFunctionsImpl'),
+                    f'pyfunc_{module_name.removeprefix("_")}_{node.func.attr}',
+                    [self.visit(arg) for arg in node.args],
+                )
         if isinstance(node.func, ast.Name) and node.func.id in self.python_helper_names:
             if node.keywords or any(isinstance(arg, ast.Starred) for arg in node.args):
                 self.error(node.lineno, 'same-file helper calls only support plain positional args')
@@ -597,6 +616,16 @@ class LoweringVisitor(ast.NodeVisitor):
 
     def visit_Attribute(self, node) -> ir.Expr:
         attr_kind = None
+        if (isinstance(node.value, ast.Name) and
+            self.scope.info.kind == ScopeKind.FUNCTION and
+            node.value.id in self.scope.info.locals):
+            module_name = self.scope.known_builtin_module_locals.get(node.value.id)
+            if module_name is not None:
+                attr_kind = DIRECT_GETATTR_BUILTIN_MODULE_ATTRS.get(module_name, {}).get(node.attr)
+                if attr_kind is not None:
+                    return get_builtin_module_attr_expr(module_name, node.attr, attr_kind)
+                base = ir.Field(ir.Identifier(extract_spec.BUILTIN_MODULES[module_name]), 'singleton')
+                return ir.MethodCall(base, 'getAttr', [ir.StrLiteral(node.attr)])
         if isinstance(node.value, ast.Name):
             attr_kind = DIRECT_GETATTR_BUILTIN_TYPE_ATTRS.get(node.value.id, {}).get(node.attr)
         if (isinstance(node.value, ast.Name) and
@@ -913,9 +942,10 @@ class LoweringVisitor(ast.NodeVisitor):
 
     @contextmanager
     def new_function(self, scope_info: ScopeInfo, free_vars: set[str], qualname: str,
-                     expected_return_java_type: Optional[str] = None) -> Iterator[None]:
+                     expected_return_java_type: Optional[str] = None,
+                     known_builtin_module_locals: Optional[dict[str, str]] = None) -> Iterator[None]:
         saved_scope = self.scope
-        self.scope = Scope(self.scope, scope_info, qualname, expected_return_java_type)
+        self.scope = Scope(self.scope, scope_info, qualname, expected_return_java_type, known_builtin_module_locals)
         self.scope.free_vars = free_vars.copy()
         try:
             yield
@@ -1043,7 +1073,8 @@ class LoweringVisitor(ast.NodeVisitor):
         free_vars = self.resolve_free_vars(node.lineno, scope_info, 'nested function')
         self.code.append(ir.AssignStatement(self.ident_expr(node.name), ir.CreateObject(java_name, [ir.Identifier(f'pycell_{name}') for name in sorted(free_vars)])))
 
-        with self.new_function(scope_info, free_vars, qualname):
+        with self.new_function(scope_info, free_vars, qualname,
+                               known_builtin_module_locals=get_known_top_scope_builtin_module_locals(node)):
             body = self.visit_block(node.body)
             self.add_function(qualname, java_name, arg_names, arg_defaults, body)
 
@@ -1391,11 +1422,35 @@ def get_class_functions(node: ast.Module, class_name: str) -> dict[str, ast.Func
     classes = {x.name: x for x in node.body if isinstance(x, ast.ClassDef)}
     return {x.name: x for x in classes[class_name].body if isinstance(x, ast.FunctionDef)}
 
+def get_known_top_scope_builtin_module_locals(node: ast.AST) -> dict[str, str]:
+    if not isinstance(node, (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef)):
+        return {}
+    body = node.body
+    import_block_end = 0
+    out: dict[str, str] = {}
+    for statement in body:
+        if not isinstance(statement, ast.Import):
+            break
+        import_block_end += 1
+        for alias in statement.names:
+            if alias.name in extract_spec.BUILTIN_MODULES and '.' not in alias.name:
+                bind_name = alias.asname if alias.asname is not None else alias.name
+                out[bind_name] = alias.name
+    if not out:
+        return {}
+    later_writes: set[str] = set()
+    walker = ScopeAnalyzer()
+    for statement in body[import_block_end:]:
+        walker._walk_local(statement, set(), later_writes, set(), set(), [])
+    return {bind_name: module_name for (bind_name, module_name) in out.items() if bind_name not in later_writes}
+
 NULL = object()
 RAW_ARGS_KWARGS_BUILTINS = {'max', 'min'}
-DIRECT_CALL_REQUIRED_POSONLY_BUILTINS: dict[str, int] = {}
+DIRECT_CALL_FULL_POSITIONAL_BUILTINS: dict[str, int] = {}
 DIRECT_GETATTR_BUILTIN_TYPE_ATTRS: dict[str, dict[str, str]] = {}
 DIRECT_GETATTR_IDENTITY_KINDS = {'string', 'member', 'getset', 'method'}
+DIRECT_GETATTR_BUILTIN_MODULE_ATTRS: dict[str, dict[str, str]] = {}
+DIRECT_CALL_FULL_POSITIONAL_MODULE_FUNCTIONS: dict[str, dict[str, int]] = {}
 
 PYTHON_AUTHORED_IMPLS = {
     'builtins': {'abs', 'all', 'any', 'bin', 'delattr', 'format', 'getattr', 'hash', 'hasattr', 'isinstance', 'issubclass', 'len', 'next', 'oct', 'repr', 'setattr', 'sum'},
@@ -1558,7 +1613,8 @@ def translate_python_impl_node(node: ast.Module, func: ast.FunctionDef, emitted_
                                python_helper_class: Optional[str] = None) -> tuple[list[list[str]], ir.MethodDecl]:
     analyzer = ScopeAnalyzer()
     analyzer.visit(node)
-    visitor = LoweringVisitor(display_name, analyzer.scope_infos, analyzer.scope_infos[node])
+    visitor = LoweringVisitor(display_name, analyzer.scope_infos, analyzer.scope_infos[node],
+                              known_builtin_module_locals=get_known_top_scope_builtin_module_locals(node))
     visitor.pool = pool
     visitor.allow_intrinsics = True
     if python_helper_names is not None:
@@ -1576,7 +1632,8 @@ def translate_python_impl_node(node: ast.Module, func: ast.FunctionDef, emitted_
     scope_info = visitor.scope_infos[func]
     free_vars = visitor.resolve_free_vars(func.lineno, scope_info, role)
     assert not free_vars, (emitted_name, free_vars)
-    with visitor.new_function(scope_info, free_vars, func.name, return_java_type):
+    with visitor.new_function(scope_info, free_vars, func.name, return_java_type,
+                              known_builtin_module_locals=get_known_top_scope_builtin_module_locals(func)):
         body = visitor.visit_block(func.body)
         if return_java_type == 'NoReturn' and not ir.block_ends_control_flow(body):
             visitor.error(func.lineno, f'NoReturn helper function {func.name} may implicitly fall through')
@@ -1946,24 +2003,47 @@ def get_java_name(name: str) -> str:
     else:
         return extract_spec.BUILTIN_TYPES[name]
 
+def get_builtin_module_attr_expr(module_name: str, attr_name: str, kind: str) -> ir.Expr:
+    if kind == 'builtin_function':
+        module_java_name = extract_spec.BUILTIN_MODULES[module_name]
+        module_func_prefix = module_java_name.removesuffix('Module')
+        return ir.Field(ir.Identifier(f'{module_func_prefix}Function_{attr_name}'), 'singleton')
+    if kind == 'type':
+        return ir.Field(ir.Identifier(get_java_name(f'{module_name}.{attr_name}')), 'singleton')
+    assert False, (module_name, attr_name, kind)
+
+def get_full_positional_call_arity(params: Optional[list[inspect.Parameter]]) -> Optional[int]:
+    if params is None:
+        return None
+    if not all(param.kind in {inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD} for param in params):
+        return None
+    return len(params)
+
 def gen_runtime_java(spec_path: str, java_path: str) -> None:
     with open(spec_path) as f:
         spec = json.load(f)
     for func_name in extract_spec.BUILTIN_FUNCTIONS:
-        params = get_builtin_function_params(spec, func_name)
-        if params is None:
-            continue
-        if all(
-            param.kind is inspect.Parameter.POSITIONAL_ONLY and param.default is inspect.Parameter.empty
-            for param in params
-        ):
-            DIRECT_CALL_REQUIRED_POSONLY_BUILTINS[func_name] = len(params)
+        arity = get_full_positional_call_arity(get_builtin_function_params(spec, func_name))
+        if arity is not None:
+            DIRECT_CALL_FULL_POSITIONAL_BUILTINS[func_name] = arity
     for type_name in extract_spec.BUILTIN_TYPES:
         type_spec = cast(dict[str, object], spec[type_name])
         attrs = cast(dict[str, dict[str, object]], type_spec['attrs'])
         DIRECT_GETATTR_BUILTIN_TYPE_ATTRS[type_name] = {
             attr_name: cast(str, attr_spec['kind']) for (attr_name, attr_spec) in attrs.items()
         }
+    for module_name in extract_spec.BUILTIN_MODULES:
+        module_spec = cast(dict[str, object], spec[module_name])
+        attrs = cast(dict[str, dict[str, object]], module_spec['attrs'])
+        DIRECT_GETATTR_BUILTIN_MODULE_ATTRS[module_name] = {
+            attr_name: cast(str, attr_spec['kind']) for (attr_name, attr_spec) in attrs.items()
+        }
+    for module_name in extract_spec.BUILTIN_MODULES:
+        DIRECT_CALL_FULL_POSITIONAL_MODULE_FUNCTIONS[module_name] = {}
+        for func_name in cast(dict[str, dict[str, object]], cast(dict[str, object], spec[module_name])['attrs']):
+            arity = get_full_positional_call_arity(get_module_function_params(spec, module_name, func_name))
+            if arity is not None:
+                DIRECT_CALL_FULL_POSITIONAL_MODULE_FUNCTIONS[module_name][func_name] = arity
 
     pool = ir.ConstantPool('PyGeneratedConstants')
     with open(java_path, 'w') as f:
