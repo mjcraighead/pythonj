@@ -1033,27 +1033,37 @@ class LoweringVisitor(ast.NodeVisitor):
         type_class_name = f'{type_name}Class'
         class_code = []
         if slots is None:
-            class_code.extend([
-                f'private static final class {java_name} extends PyBagObject {{',
-                f'{java_name}() {{',
-                *ir.block_emit_java([ir.SuperConstructorCall([ir.Identifier(f'{type_class_name}.singleton')])], self.pool),
-                '}',
-                f'public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {{',
-                f'Runtime.requireNoKwArgs(kwargs, type.name());',
-                f'if (args.length != 0) {{',
-                f'throw PyTypeError.raise(type.name() + "() takes no arguments");',
-                f'}}',
-                f'return new {java_name}();',
-                '}',
-                '}',
-            ])
+            class_code.extend(ir.ClassDecl(
+                'private static final',
+                java_name,
+                'PyBagObject',
+                [
+                    ir.ConstructorDecl('', java_name, [], [
+                        ir.SuperConstructorCall([ir.Identifier(f'{type_class_name}.singleton')]),
+                    ]),
+                    ir.MethodDecl('public static', 'PyObject', 'newObj', ['PyConcreteType type', 'PyObject[] args', 'PyDict kwargs'], [
+                        ir.ExprStatement(ir.MethodCall(ir.Identifier('Runtime'), 'requireNoKwArgs', [
+                            ir.Identifier('kwargs'),
+                            ir.MethodCall(ir.Identifier('type'), 'name', []),
+                        ])),
+                        ir.IfStatement(
+                            ir.BinaryOp('!=', ir.Field(ir.Identifier('args'), 'length'), ir.IntLiteral(0)),
+                            [ir.ThrowStatement(ir.MethodCall(ir.Identifier('PyTypeError'), 'raise', [
+                                ir.BinaryOp('+', ir.MethodCall(ir.Identifier('type'), 'name', []), ir.StrLiteral('() takes no arguments')),
+                            ]))],
+                            [],
+                        ),
+                        ir.ReturnStatement(ir.CreateObject(java_name, [])),
+                    ]),
+                ],
+            ).emit_java(self.pool))
         else:
             class_code.extend([
                 f'private static final class {java_name} extends PySlottedObject {{',
                 *(line for name in slots for line in ir.FieldDecl('private', 'PyObject', f'pyslot_{name}', ir.Null()).emit_java(self.pool)),
-                f'{java_name}() {{',
-                *ir.block_emit_java([ir.SuperConstructorCall([ir.Identifier(f'{type_class_name}.singleton')])], self.pool),
-                '}',
+                *ir.ConstructorDecl('', java_name, [], [
+                    ir.SuperConstructorCall([ir.Identifier(f'{type_class_name}.singleton')]),
+                ]).emit_java(self.pool),
                 '@Override public PyObject getAttr(String key) {',
                 'switch (key) {',
             ])
@@ -1101,23 +1111,33 @@ class LoweringVisitor(ast.NodeVisitor):
                 'default: super.delAttr(key);',
                 '}',
                 '}',
-                f'public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {{',
-                f'Runtime.requireNoKwArgs(kwargs, type.name());',
-                f'if (args.length != 0) {{',
-                f'throw PyTypeError.raise(type.name() + "() takes no arguments");',
-                f'}}',
-                f'return new {java_name}();',
-                '}',
+                *ir.MethodDecl('public static', 'PyObject', 'newObj', ['PyConcreteType type', 'PyObject[] args', 'PyDict kwargs'], [
+                    ir.ExprStatement(ir.MethodCall(ir.Identifier('Runtime'), 'requireNoKwArgs', [
+                        ir.Identifier('kwargs'),
+                        ir.MethodCall(ir.Identifier('type'), 'name', []),
+                    ])),
+                    ir.IfStatement(
+                        ir.BinaryOp('!=', ir.Field(ir.Identifier('args'), 'length'), ir.IntLiteral(0)),
+                        [ir.ThrowStatement(ir.MethodCall(ir.Identifier('PyTypeError'), 'raise', [
+                            ir.BinaryOp('+', ir.MethodCall(ir.Identifier('type'), 'name', []), ir.StrLiteral('() takes no arguments')),
+                        ]))],
+                        [],
+                    ),
+                    ir.ReturnStatement(ir.CreateObject(java_name, [])),
+                ]).emit_java(self.pool),
                 '}',
             ])
-        class_code.extend([
-            f'private static final class {type_class_name} extends PyConcreteType {{',
-            *ir.FieldDecl('private static final', type_class_name, 'singleton', ir.CreateObject(type_class_name, [])).emit_java(self.pool),
-            f'private {type_class_name}() {{',
-            *ir.block_emit_java([ir.SuperConstructorCall([ir.StrLiteral(node.name), ir.Field(ir.Identifier(java_name), 'class'), ir.MethodRef(java_name, 'newObj')])], self.pool),
-            '}',
-            '}',
-        ])
+        class_code.extend(ir.ClassDecl(
+            'private static final',
+            type_class_name,
+            'PyConcreteType',
+            [
+                ir.FieldDecl('private static final', type_class_name, 'singleton', ir.CreateObject(type_class_name, [])),
+                ir.ConstructorDecl('private', type_class_name, [], [
+                    ir.SuperConstructorCall([ir.StrLiteral(node.name), ir.Field(ir.Identifier(java_name), 'class'), ir.MethodRef(java_name, 'newObj')]),
+                ]),
+            ],
+        ).emit_java(self.pool))
         assert java_name not in self.functions
         self.functions[java_name] = class_code
         self.code.append(ir.AssignStatement(self.ident_expr(node.name), ir.Identifier(f'{type_class_name}.singleton')))
@@ -1224,22 +1244,27 @@ class LoweringVisitor(ast.NodeVisitor):
                 next_body.extend(ir.while_statement(ir.Bool(True), body))
 
             free_var_names = sorted(self.scope.free_vars)
-            func_code = [
-                f'private static final class {java_name} extends PyIter {{',
-                *ir.FieldDecl('private static final', 'PyConcreteType', 'type_singleton', ir.CreateObject('PyConcreteType', [ir.StrLiteral('generator'), ir.Field(ir.Identifier(java_name), 'class')])).emit_java(self.pool),
-                *(line for name in free_var_names for line in ir.FieldDecl('private final', 'PyCell', f'pycell_{name}', None).emit_java(self.pool)),
-                *ir.FieldDecl('private final', 'PyIter', 'pyiter_iterable', None).emit_java(self.pool),
-                *(line for name in sorted(self.scope.info.cell_vars) for line in ir.FieldDecl('private final', 'PyCell', f'pycell_{name}', ir.CreateObject('PyCell', [ir.PyConstant(None)])).emit_java(self.pool)),
-                *(line for name in sorted(self.scope.info.locals - self.scope.info.cell_vars) for line in ir.FieldDecl('private', 'PyObject', f'pylocal_{name}', ir.PyConstant(None)).emit_java(self.pool)),
-                f'{java_name}({", ".join([*(f"PyCell pycell_{name}" for name in free_var_names), "PyObject iterable"])}) {{' if free_var_names else f'{java_name}(PyObject iterable) {{',
-                *(f'this.pycell_{name} = pycell_{name};' for name in free_var_names),
-                'this.pyiter_iterable = iterable.iter();',
-                '}',
-                *ir.MethodDecl('public', 'PyObject', 'next', [], next_body).emit_java(self.pool),
-                *ir.MethodDecl('public', 'String', 'repr', [], [ir.ReturnStatement(ir.StrLiteral(f'<generator object {qualname}>'))]).emit_java(self.pool),
-                *ir.MethodDecl('public', 'PyConcreteType', 'type', [], [ir.ReturnStatement(ir.Identifier('type_singleton'))]).emit_java(self.pool),
-                '}',
+            ctor_args = [*(f'PyCell _pycell_{name}' for name in free_var_names), 'PyObject iterable']
+            ctor_body: list[ir.Statement] = [
+                *(ir.AssignStatement(ir.Identifier(f'pycell_{name}'), ir.Identifier(f'_pycell_{name}')) for name in free_var_names),
+                ir.AssignStatement(ir.Identifier('pyiter_iterable'), ir.MethodCall(ir.Identifier('iterable'), 'iter', [])),
             ]
+            func_code = list(ir.ClassDecl(
+                'private static final',
+                java_name,
+                'PyIter',
+                [
+                    ir.FieldDecl('private static final', 'PyConcreteType', 'type_singleton', ir.CreateObject('PyConcreteType', [ir.StrLiteral('generator'), ir.Field(ir.Identifier(java_name), 'class')])),
+                    *(ir.FieldDecl('private final', 'PyCell', f'pycell_{name}', None) for name in free_var_names),
+                    ir.FieldDecl('private final', 'PyIter', 'pyiter_iterable', None),
+                    *(ir.FieldDecl('private final', 'PyCell', f'pycell_{name}', ir.CreateObject('PyCell', [ir.PyConstant(None)])) for name in sorted(self.scope.info.cell_vars)),
+                    *(ir.FieldDecl('private', 'PyObject', f'pylocal_{name}', ir.PyConstant(None)) for name in sorted(self.scope.info.locals - self.scope.info.cell_vars)),
+                    ir.ConstructorDecl('', java_name, ctor_args, ctor_body),
+                    ir.MethodDecl('public', 'PyObject', 'next', [], next_body),
+                    ir.MethodDecl('public', 'String', 'repr', [], [ir.ReturnStatement(ir.StrLiteral(f'<generator object {qualname}>'))]),
+                    ir.MethodDecl('public', 'PyConcreteType', 'type', [], [ir.ReturnStatement(ir.Identifier('type_singleton'))]),
+                ],
+            ).emit_java(self.pool))
             assert java_name not in self.functions
             self.functions[java_name] = func_code
 
@@ -1928,7 +1953,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                 else:
                     assert False, (name, k, v)
                 ir.emit_decl(writer, ir.FieldDecl('private static final', value.type, f'pyattr_{k}', value), pool)
-            ir.emit_decl(writer, ir.ClassDecl('private static final', 'AttrsHolder', [
+            ir.emit_decl(writer, ir.ClassDecl('private static final', 'AttrsHolder', None, [
                 ir.FieldDecl(
                     'static final',
                     'java.util.LinkedHashMap<PyObject, PyObject>',
@@ -1945,13 +1970,13 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                 ]),
             ]), pool)
             writer.write('')
-            writer.write(f'private {java_name}Type() {{')
-            ir.emit_statement(writer, ir.SuperConstructorCall([
-                ir.StrLiteral(py_name),
-                ir.Field(ir.Identifier(java_name), 'class'),
-                ir.MethodRef(java_name, 'newObj'),
+            ir.emit_decl(writer, ir.ConstructorDecl('private', f'{java_name}Type', [], [
+                ir.SuperConstructorCall([
+                    ir.StrLiteral(py_name),
+                    ir.Field(ir.Identifier(java_name), 'class'),
+                    ir.MethodRef(java_name, 'newObj'),
+                ]),
             ]), pool)
-            writer.write('}')
             ir.emit_decl(writer, ir.MethodDecl('public', 'java.util.Map<PyObject, PyObject>', 'getAttributes', [], [
                 ir.ReturnStatement(ir.Field(ir.Identifier('AttrsHolder'), 'attrs')),
             ]), pool)
@@ -1967,15 +1992,22 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
 
             if name == 'type':
                 for method_name in ['mro']:
-                    writer.write(f'final class {java_name}Method_{method_name} extends PyBuiltinMethod<{java_name}> {{')
-                    writer.write(f'{java_name}Method_{method_name}(PyObject _self) {{')
-                    ir.emit_statement(writer, ir.SuperConstructorCall([ir.CastExpr(java_name, ir.Identifier('_self'))]), pool)
-                    writer.write('}')
-                    ir.emit_decl(writer, ir.MethodDecl('public', 'String', 'methodName', [], [ir.ReturnStatement(ir.StrLiteral(method_name))]), pool)
-                    ir.emit_decl(writer, ir.MethodDecl('public', 'PyObject', 'call', ['PyObject[] args', 'PyDict kwargs'], [
-                        ir.ThrowStatement(ir.CreateObject('UnsupportedOperationException', [ir.StrLiteral(f'{name}.{method_name}() unimplemented')])),
-                    ]), pool)
-                    writer.write('}')
+                    ir.emit_decl(writer, ir.ClassDecl(
+                        'final',
+                        f'{java_name}Method_{method_name}',
+                        f'PyBuiltinMethod<{java_name}>',
+                        [
+                            ir.ConstructorDecl('', f'{java_name}Method_{method_name}', ['PyObject _self'], [
+                                ir.SuperConstructorCall([ir.CastExpr(java_name, ir.Identifier('_self'))]),
+                            ]),
+                            ir.MethodDecl('public', 'String', 'methodName', [], [
+                                ir.ReturnStatement(ir.StrLiteral(method_name)),
+                            ]),
+                            ir.MethodDecl('public', 'PyObject', 'call', ['PyObject[] args', 'PyDict kwargs'], [
+                                ir.ThrowStatement(ir.CreateObject('UnsupportedOperationException', [ir.StrLiteral(f'{name}.{method_name}() unimplemented')])),
+                            ]),
+                        ],
+                    ), pool)
                     writer.write('')
 
             gen_methods = {}
@@ -2024,11 +2056,12 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                         (helper_classes, helper_method) = translate_python_method_impl(name, method_name, pool)
                         python_method_helper_classes.extend(helper_classes)
                         python_method_helper_methods.append(helper_method)
-                    writer.write(f'final class {method_class_name} extends PyBuiltinMethod<{self_type}> {{')
-                    writer.write(f'{method_class_name}({ctor_arg}) {{')
-                    ir.emit_statement(writer, ir.SuperConstructorCall([ir.Identifier(super_arg) if super_arg == '_self' else ir.CastExpr(java_name, ir.Identifier('_self'))]), pool)
-                    writer.write('}')
-                    ir.emit_decl(writer, ir.MethodDecl('public', 'String', 'methodName', [], [ir.ReturnStatement(ir.StrLiteral(method_name))]), pool)
+                    decls: list[ir.Decl] = [
+                        ir.ConstructorDecl('', method_class_name, [ctor_arg], [
+                            ir.SuperConstructorCall([ir.Identifier(super_arg) if super_arg == '_self' else ir.CastExpr(java_name, ir.Identifier('_self'))]),
+                        ]),
+                        ir.MethodDecl('public', 'String', 'methodName', [], [ir.ReturnStatement(ir.StrLiteral(method_name))]),
+                    ]
                     call_body: list[ir.Statement] = []
                     if kwarg_params is None:
                         bind_args = [ir.Identifier('args'), ir.Identifier('kwargs')]
@@ -2052,8 +2085,8 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                     else:
                         call_expr = ir.MethodCall(ir.Identifier(method_target), f'pymethod_{method_name}', bind_args)
                     call_body.append(ir.ReturnStatement(call_expr))
-                    ir.emit_decl(writer, ir.MethodDecl('public', 'PyObject', 'call', ['PyObject[] args', 'PyDict kwargs'], call_body), pool)
-                    writer.write('}')
+                    decls.append(ir.MethodDecl('public', 'PyObject', 'call', ['PyObject[] args', 'PyDict kwargs'], call_body))
+                    ir.emit_decl(writer, ir.ClassDecl('final', method_class_name, f'PyBuiltinMethod<{self_type}>', decls), pool)
                 writer.write('')
 
         python_runtime_impls = get_top_level_function_names('pythonj_runtime.py')
@@ -2117,12 +2150,12 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                     kwarg_params = None
                 else:
                     kwarg_params = analyze_params(params)
-                writer.write(f'final class {module_func_prefix}Function_{func_name} extends PyBuiltinFunction {{')
-                ir.emit_decl(writer, ir.FieldDecl('public static final', f'{module_func_prefix}Function_{func_name}', 'singleton', ir.CreateObject(f'{module_func_prefix}Function_{func_name}', [])), pool)
-                writer.write('')
-                writer.write(f'private {module_func_prefix}Function_{func_name}() {{')
-                ir.emit_statement(writer, ir.SuperConstructorCall([ir.StrLiteral(func_name)]), pool)
-                writer.write('}')
+                decls: list[ir.Decl] = [
+                    ir.FieldDecl('public static final', f'{module_func_prefix}Function_{func_name}', 'singleton', ir.CreateObject(f'{module_func_prefix}Function_{func_name}', [])),
+                    ir.ConstructorDecl('private', f'{module_func_prefix}Function_{func_name}', [], [
+                        ir.SuperConstructorCall([ir.StrLiteral(func_name)]),
+                    ]),
+                ]
                 call_body: list[ir.Statement] = []
                 full_name = f'{module_name}.{func_name}'
                 if kwarg_params is None:
@@ -2138,8 +2171,8 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                 call_body.append(ir.ReturnStatement(
                     ir.MethodCall(ir.Identifier('PyBuiltinFunctionsImpl'), f'pyfunc_{module_name.removeprefix("_")}_{func_name}', bind_args)
                 ))
-                ir.emit_decl(writer, ir.MethodDecl('public', 'PyObject', 'call', ['PyObject[] args', 'PyDict kwargs'], call_body), pool)
-                writer.write('}')
+                decls.append(ir.MethodDecl('public', 'PyObject', 'call', ['PyObject[] args', 'PyDict kwargs'], call_body))
+                ir.emit_decl(writer, ir.ClassDecl('final', f'{module_func_prefix}Function_{func_name}', 'PyBuiltinFunction', decls), pool)
                 writer.write('')
 
         for func_name in sorted(extract_spec.BUILTIN_FUNCTIONS):
@@ -2148,12 +2181,12 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                 kwarg_params = None
             else:
                 kwarg_params = analyze_params(params)
-            writer.write(f'final class PyBuiltinFunction_{func_name} extends PyBuiltinFunction {{')
-            ir.emit_decl(writer, ir.FieldDecl('public static final', f'PyBuiltinFunction_{func_name}', 'singleton', ir.CreateObject(f'PyBuiltinFunction_{func_name}', [])), pool)
-            writer.write('')
-            writer.write(f'private PyBuiltinFunction_{func_name}() {{')
-            ir.emit_statement(writer, ir.SuperConstructorCall([ir.StrLiteral(func_name)]), pool)
-            writer.write('}')
+            decls: list[ir.Decl] = [
+                ir.FieldDecl('public static final', f'PyBuiltinFunction_{func_name}', 'singleton', ir.CreateObject(f'PyBuiltinFunction_{func_name}', [])),
+                ir.ConstructorDecl('private', f'PyBuiltinFunction_{func_name}', [], [
+                    ir.SuperConstructorCall([ir.StrLiteral(func_name)]),
+                ]),
+            ]
             call_body: list[ir.Statement] = []
             bind_args: list[ir.Expr]
             if kwarg_params is None:
@@ -2175,8 +2208,8 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
             call_body.append(ir.ReturnStatement(
                 ir.MethodCall(ir.Identifier(call_target), f'pyfunc_{func_name}', bind_args)
             ))
-            ir.emit_decl(writer, ir.MethodDecl('public', 'PyObject', 'call', ['PyObject[] args', 'PyDict kwargs'], call_body), pool)
-            writer.write('}')
+            decls.append(ir.MethodDecl('public', 'PyObject', 'call', ['PyObject[] args', 'PyDict kwargs'], call_body))
+            ir.emit_decl(writer, ir.ClassDecl('final', f'PyBuiltinFunction_{func_name}', 'PyBuiltinFunction', decls), pool)
             writer.write('')
 
         for line in pool.emit_pool():

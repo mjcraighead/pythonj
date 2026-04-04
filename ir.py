@@ -485,6 +485,20 @@ class MethodDecl(Decl):
         yield '}'
 
 @dataclass(slots=True)
+class ConstructorDecl(Decl):
+    modifiers: str
+    name: str
+    args: list[str]
+    body: list[Statement]
+    def emit_java(self, pool: ConstantPool) -> Iterator[str]:
+        if self.modifiers:
+            yield f"{self.modifiers} {self.name}({', '.join(self.args)}) {{"
+        else:
+            yield f"{self.name}({', '.join(self.args)}) {{"
+        yield from block_emit_java(block_simplify(self.body), pool)
+        yield '}'
+
+@dataclass(slots=True)
 class StaticBlock(Decl):
     body: list[Statement]
     def emit_java(self, pool: ConstantPool) -> Iterator[str]:
@@ -496,9 +510,11 @@ class StaticBlock(Decl):
 class ClassDecl(Decl):
     modifiers: str
     name: str
+    extends: Optional[str]
     decls: list[Decl]
     def emit_java(self, pool: ConstantPool) -> Iterator[str]:
-        yield f'{self.modifiers} class {self.name} {{'
+        extends = f' extends {self.extends}' if self.extends else ''
+        yield f'{self.modifiers} class {self.name}{extends} {{'
         for decl in self.decls:
             yield from decl.emit_java(pool)
         yield '}'
