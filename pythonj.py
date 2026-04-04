@@ -1928,7 +1928,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
             writer.write(f'static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>({len(attrs)});')
             writer.write('static {')
             for k in attrs:
-                ir.emit_java_statement(writer, ir.ExprStatement(
+                ir.emit_statement(writer, ir.ExprStatement(
                     ir.MethodCall(
                         ir.Identifier('attrs'),
                         'put',
@@ -1955,10 +1955,10 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                     writer.write(f'final class {java_name}Method_{method_name} extends PyBuiltinMethod<{java_name}> {{')
                     writer.write(f'{java_name}Method_{method_name}(PyObject _self) {{ super(({java_name})_self); }}')
                     writer.write('@Override public String methodName() {')
-                    ir.emit_java_statement(writer, ir.ReturnStatement(ir.StrLiteral(method_name)), pool)
+                    ir.emit_statement(writer, ir.ReturnStatement(ir.StrLiteral(method_name)), pool)
                     writer.write('}')
                     writer.write('@Override public PyObject call(PyObject[] args, PyDict kwargs) {')
-                    ir.emit_java_statement(writer, ir.ThrowStatement(
+                    ir.emit_statement(writer, ir.ThrowStatement(
                         ir.CreateObject('UnsupportedOperationException', [ir.StrLiteral(f'{name}.{method_name}() unimplemented')])
                     ), pool)
                     writer.write('}')
@@ -2014,7 +2014,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                     writer.write(f'final class {method_class_name} extends PyBuiltinMethod<{self_type}> {{')
                     writer.write(f'{method_class_name}({ctor_arg}) {{ super({super_arg}); }}')
                     writer.write('@Override public String methodName() {')
-                    ir.emit_java_statement(writer, ir.ReturnStatement(ir.StrLiteral(method_name)), pool)
+                    ir.emit_statement(writer, ir.ReturnStatement(ir.StrLiteral(method_name)), pool)
                     writer.write('}')
                     writer.write('@Override public PyObject call(PyObject[] args, PyDict kwargs) {')
                     if kwarg_params is None:
@@ -2026,7 +2026,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                             'argsLength',
                             f'{py_name}.{method_name}',
                         )
-                        ir.emit_java_statements(writer, bind_statements, pool)
+                        ir.emit_statements(writer, bind_statements, pool)
                     if kind == 'classmethod':
                         bind_args = [ir.Identifier('self')] + bind_args
                     if method_impl_target is not None:
@@ -2038,7 +2038,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                         )
                     else:
                         call_expr = ir.MethodCall(ir.Identifier(method_target), f'pymethod_{method_name}', bind_args)
-                    ir.emit_java_statement(writer, ir.ReturnStatement(call_expr), pool)
+                    ir.emit_statement(writer, ir.ReturnStatement(call_expr), pool)
                     writer.write('}')
                     writer.write('}')
                 writer.write('')
@@ -2119,8 +2119,8 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                         'argsLength',
                         full_name,
                     )
-                    ir.emit_java_statements(writer, bind_statements, pool)
-                ir.emit_java_statement(writer, ir.ReturnStatement(
+                    ir.emit_statements(writer, bind_statements, pool)
+                ir.emit_statement(writer, ir.ReturnStatement(
                     ir.MethodCall(ir.Identifier('PyBuiltinFunctionsImpl'), f'pyfunc_{module_name.removeprefix("_")}_{func_name}', bind_args)
                 ), pool)
                 writer.write('}')
@@ -2150,12 +2150,12 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                     kw_overflow_args_length,
                     func_name,
                 )
-                ir.emit_java_statements(writer, bind_statements, pool)
+                ir.emit_statements(writer, bind_statements, pool)
             if func_name in PYTHON_AUTHORED_IMPLS['builtins']:
                 call_target = 'PyBuiltinFunctionsPythonImpl'
             else:
                 call_target = 'PyBuiltinFunctionsImpl'
-            ir.emit_java_statement(writer, ir.ReturnStatement(
+            ir.emit_statement(writer, ir.ReturnStatement(
                 ir.MethodCall(ir.Identifier(call_target), f'pyfunc_{func_name}', bind_args)
             ), pool)
             writer.write('}')

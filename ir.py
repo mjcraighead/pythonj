@@ -516,9 +516,9 @@ class IndentedWriter:
         if line.endswith('{'):
             self.indent += 1
 
-def emit_java_statements(writer: IndentedWriter, statements: list[Statement], pool: ConstantPool) -> None:
+def emit_statements(writer: IndentedWriter, statements: list[Statement], pool: ConstantPool) -> None:
     for line in block_emit_java(statements, pool):
         writer.write(line)
 
-def emit_java_statement(writer: IndentedWriter, statement: Statement, pool: ConstantPool) -> None:
-    emit_java_statements(writer, [statement], pool)
+def emit_statement(writer: IndentedWriter, statement: Statement, pool: ConstantPool) -> None:
+    emit_statements(writer, [statement], pool)
