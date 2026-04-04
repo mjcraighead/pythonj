@@ -236,6 +236,13 @@ class MethodCall(Expr):
         return f"{self.obj.emit_java(pool)}.{self.method}({', '.join(arg.emit_java(pool) for arg in self.args)})"
 
 @dataclass(slots=True)
+class MethodRef(Expr):
+    obj: str
+    method: str
+    def emit_java(self, pool: ConstantPool) -> str:
+        return f'{self.obj}::{self.method}'
+
+@dataclass(slots=True)
 class AssignExpr(Expr):
     lhs: Expr
     rhs: Expr

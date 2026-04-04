@@ -1109,7 +1109,7 @@ class LoweringVisitor(ast.NodeVisitor):
         class_code.extend([
             f'private static final class {type_class_name} extends PyConcreteType {{',
             f'private static final {type_class_name} singleton = new {type_class_name}();',
-            f'private {type_class_name}() {{ super({ir.StrLiteral(node.name).emit_java(self.pool)}, {java_name}.class, {java_name}::newObj); }}',
+            f'private {type_class_name}() {{ super({ir.StrLiteral(node.name).emit_java(self.pool)}, {java_name}.class, {ir.MethodRef(java_name, "newObj").emit_java(self.pool)}); }}',
             '}',
         ])
         assert java_name not in self.functions
@@ -1890,23 +1890,23 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                 elif v['kind'] == 'member':
                     doc_value = v.get('doc')
                     doc = ir.Null().emit_java(pool) if doc_value is None else ir.StrLiteral(doc_value).emit_java(pool)
-                    writer.write(f"private static final PyMemberDescriptor pyattr_{k} = new PyMemberDescriptor(singleton, {ir.StrLiteral(k).emit_java(pool)}, {java_name}::pymember_{k}, {doc});")
+                    writer.write(f"private static final PyMemberDescriptor pyattr_{k} = new PyMemberDescriptor(singleton, {ir.StrLiteral(k).emit_java(pool)}, {ir.MethodRef(java_name, f'pymember_{k}').emit_java(pool)}, {doc});")
                 elif v['kind'] == 'getset':
                     doc_value = v.get('doc')
                     doc = ir.Null().emit_java(pool) if doc_value is None else ir.StrLiteral(doc_value).emit_java(pool)
-                    writer.write(f"private static final PyGetSetDescriptor pyattr_{k} = new PyGetSetDescriptor(singleton, {ir.StrLiteral(k).emit_java(pool)}, {java_name}::pygetset_{k}, {doc});")
+                    writer.write(f"private static final PyGetSetDescriptor pyattr_{k} = new PyGetSetDescriptor(singleton, {ir.StrLiteral(k).emit_java(pool)}, {ir.MethodRef(java_name, f'pygetset_{k}').emit_java(pool)}, {doc});")
                 elif v['kind'] == 'method':
                     doc_value = v.get('doc')
                     doc = ir.Null().emit_java(pool) if doc_value is None else ir.StrLiteral(doc_value).emit_java(pool)
                     if name in UNIMPLEMENTED_METHODS and k in UNIMPLEMENTED_METHODS[name]:
                         constructor = f'obj -> new {java_name}MethodUnimplemented(obj, {ir.StrLiteral(k).emit_java(pool)})'
                     else:
-                        constructor = f'{java_name}Method_{k}::new'
+                        constructor = ir.MethodRef(f'{java_name}Method_{k}', 'new').emit_java(pool)
                     writer.write(f"private static final PyMethodDescriptor pyattr_{k} = new PyMethodDescriptor(singleton, {ir.StrLiteral(k).emit_java(pool)}, {constructor}, {doc});")
                 elif v['kind'] == 'classmethod':
                     doc_value = v.get('doc')
                     doc = ir.Null().emit_java(pool) if doc_value is None else ir.StrLiteral(doc_value).emit_java(pool)
-                    constructor = f'{java_name}ClassMethod_{k}::new'
+                    constructor = ir.MethodRef(f'{java_name}ClassMethod_{k}', 'new').emit_java(pool)
                     writer.write(f"private static final PyClassMethodDescriptor pyattr_{k} = new PyClassMethodDescriptor(singleton, {ir.StrLiteral(k).emit_java(pool)}, {constructor}, {doc});")
                 elif v['kind'] == 'staticmethod':
                     constructor = f'new {java_name}StaticMethod_{k}(singleton)'
@@ -1921,7 +1921,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
             writer.write('}')
             writer.write('}')
             writer.write('')
-            writer.write(f'private {java_name}Type() {{ super({ir.StrLiteral(py_name).emit_java(pool)}, {java_name}.class, {java_name}::newObj); }}')
+            writer.write(f'private {java_name}Type() {{ super({ir.StrLiteral(py_name).emit_java(pool)}, {java_name}.class, {ir.MethodRef(java_name, "newObj").emit_java(pool)}); }}')
             writer.write('@Override public java.util.Map<PyObject, PyObject> getAttributes() { return AttrsHolder.attrs; }')
             writer.write('@Override public PyObject lookupAttr(String name) {')
             writer.write('switch (name) {')
