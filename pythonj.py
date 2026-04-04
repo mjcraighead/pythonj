@@ -888,7 +888,7 @@ class LoweringVisitor(ast.NodeVisitor):
         required_arg_names_java = ', '.join(ir.StrLiteral(arg).emit_java(self.pool) for arg in arg_names[:n_required])
         func_code = [
             f'private static final class {java_name} extends PyFunction {{',
-            *(f'private final PyCell pycell_{name};' for name in free_var_names),
+            *(ir.FieldDecl('private final', 'PyCell', f'pycell_{name}', None).emit_java(self.pool) for name in free_var_names),
             (f'{java_name}({", ".join(f"PyCell pycell_{name}" for name in free_var_names)}) {{' if free_var_names else f'{java_name}() {{'),
             *ir.block_emit_java([ir.SuperConstructorCall([ir.StrLiteral(py_name)])], self.pool),
             *(f'this.pycell_{name} = pycell_{name};' for name in free_var_names),
@@ -1050,7 +1050,7 @@ class LoweringVisitor(ast.NodeVisitor):
         else:
             class_code.extend([
                 f'private static final class {java_name} extends PySlottedObject {{',
-                *[f'private PyObject pyslot_{name} = null;' for name in slots],
+                *(ir.FieldDecl('private', 'PyObject', f'pyslot_{name}', ir.Null()).emit_java(self.pool) for name in slots),
                 f'{java_name}() {{',
                 *ir.block_emit_java([ir.SuperConstructorCall([ir.Identifier(f'{type_class_name}.singleton')])], self.pool),
                 '}',
@@ -1227,8 +1227,8 @@ class LoweringVisitor(ast.NodeVisitor):
             func_code = [
                 f'private static final class {java_name} extends PyIter {{',
                 ir.FieldDecl('private static final', 'PyConcreteType', 'type_singleton', ir.CreateObject('PyConcreteType', [ir.StrLiteral('generator'), ir.Field(ir.Identifier(java_name), 'class')])).emit_java(self.pool),
-                *(f'private final PyCell pycell_{name};' for name in free_var_names),
-                'private final PyIter pyiter_iterable;',
+                *(ir.FieldDecl('private final', 'PyCell', f'pycell_{name}', None).emit_java(self.pool) for name in free_var_names),
+                ir.FieldDecl('private final', 'PyIter', 'pyiter_iterable', None).emit_java(self.pool),
                 *(ir.FieldDecl('private final', 'PyCell', f'pycell_{name}', ir.CreateObject('PyCell', [ir.PyConstant(None)])).emit_java(self.pool) for name in sorted(self.scope.info.cell_vars)),
                 *(ir.FieldDecl('private', 'PyObject', f'pylocal_{name}', ir.PyConstant(None)).emit_java(self.pool) for name in sorted(self.scope.info.locals - self.scope.info.cell_vars)),
                 f'{java_name}({", ".join([*(f"PyCell pycell_{name}" for name in free_var_names), "PyObject iterable"])}) {{' if free_var_names else f'{java_name}(PyObject iterable) {{',

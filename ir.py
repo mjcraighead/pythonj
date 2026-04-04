@@ -268,9 +268,12 @@ class FieldDecl:
     modifiers: str
     type: str
     name: str
-    value: Expr
+    value: Optional[Expr]
     def emit_java(self, pool: ConstantPool) -> str:
-        return f'{self.modifiers} {self.type} {self.name} = {self.value.emit_java(pool)};'
+        if self.value:
+            return f'{self.modifiers} {self.type} {self.name} = {self.value.emit_java(pool)};'
+        else:
+            return f'{self.modifiers} {self.type} {self.name};'
 
 @dataclass(slots=True)
 class LocalDecl(Statement):
