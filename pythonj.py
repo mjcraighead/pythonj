@@ -562,29 +562,43 @@ class LoweringVisitor(ast.NodeVisitor):
                 case '__pythonj_setattr__':
                     assert len(node.args) == 3 and not node.keywords, node.args
                     return ir.MethodCall(ir.Identifier('Runtime'), 'pythonjSetAttr', [self.visit(node.args[0]), self.visit(node.args[1]), self.visit(node.args[2])])
-        if (isinstance(node.func, ast.Name) and node.func.id in DIRECT_CALL_FULL_POSITIONAL_BUILTINS and
+        if (isinstance(node.func, ast.Name) and node.func.id in DIRECT_CALL_POSITIONAL_BUILTINS and
             self.name_resolves_to_builtin_function(node.func.id) and
-            len(node.args) == DIRECT_CALL_FULL_POSITIONAL_BUILTINS[node.func.id] and
             not node.keywords and
             not any(isinstance(arg, ast.Starred) for arg in node.args)):
             func_name = node.func.id
-            call_target = 'PyBuiltinFunctionsPythonImpl' if func_name in PYTHON_AUTHORED_IMPLS['builtins'] else 'PyBuiltinFunctionsImpl'
-            return ir.MethodCall(ir.Identifier(call_target), f'pyfunc_{func_name}', [self.visit(arg) for arg in node.args])
+            (min_args, max_args) = DIRECT_CALL_POSITIONAL_BUILTINS[node.func.id]
+            if min_args <= len(node.args) <= max_args:
+                call_target = 'PyBuiltinFunctionsPythonImpl' if func_name in PYTHON_AUTHORED_IMPLS['builtins'] else 'PyBuiltinFunctionsImpl'
+                if len(node.args) == max_args:
+                    return ir.MethodCall(ir.Identifier(call_target), f'pyfunc_{func_name}', [self.visit(arg) for arg in node.args])
+                return ir.MethodCall(
+                    ir.Field(ir.Identifier(f'PyBuiltinFunction_{func_name}'), 'singleton'),
+                    'call_positional',
+                    [ir.CreateArray('PyObject', [self.visit(arg) for arg in node.args])],
+                )
         if (isinstance(node.func, ast.Attribute) and
             isinstance(node.func.value, ast.Name) and
             self.scope.info.kind == ScopeKind.FUNCTION and
             node.func.value.id in self.scope.info.locals):
             module_name = self.scope.known_builtin_module_locals.get(node.func.value.id)
             if (module_name is not None and
-                node.func.attr in DIRECT_CALL_FULL_POSITIONAL_MODULE_FUNCTIONS.get(module_name, {}) and
-                len(node.args) == DIRECT_CALL_FULL_POSITIONAL_MODULE_FUNCTIONS[module_name][node.func.attr] and
+                node.func.attr in DIRECT_CALL_POSITIONAL_MODULE_FUNCTIONS.get(module_name, {}) and
                 not node.keywords and
                 not any(isinstance(arg, ast.Starred) for arg in node.args)):
-                return ir.MethodCall(
-                    ir.Identifier('PyBuiltinFunctionsImpl'),
-                    f'pyfunc_{module_name.removeprefix("_")}_{node.func.attr}',
-                    [self.visit(arg) for arg in node.args],
-                )
+                (min_args, max_args) = DIRECT_CALL_POSITIONAL_MODULE_FUNCTIONS[module_name][node.func.attr]
+                if min_args <= len(node.args) <= max_args:
+                    if len(node.args) == max_args:
+                        return ir.MethodCall(
+                            ir.Identifier('PyBuiltinFunctionsImpl'),
+                            f'pyfunc_{module_name.removeprefix("_")}_{node.func.attr}',
+                            [self.visit(arg) for arg in node.args],
+                        )
+                    return ir.MethodCall(
+                        get_builtin_module_attr_expr(module_name, node.func.attr, 'builtin_function'),
+                        'call_positional',
+                        [ir.CreateArray('PyObject', [self.visit(arg) for arg in node.args])],
+                    )
         if isinstance(node.func, ast.Name) and node.func.id in self.python_helper_names:
             if node.keywords or any(isinstance(arg, ast.Starred) for arg in node.args):
                 self.error(node.lineno, 'same-file helper calls only support plain positional args')
@@ -1446,11 +1460,11 @@ def get_known_top_scope_builtin_module_locals(node: ast.AST) -> dict[str, str]:
 
 NULL = object()
 RAW_ARGS_KWARGS_BUILTINS = {'max', 'min'}
-DIRECT_CALL_FULL_POSITIONAL_BUILTINS: dict[str, int] = {}
+DIRECT_CALL_POSITIONAL_BUILTINS: dict[str, tuple[int, int]] = {}
 DIRECT_GETATTR_BUILTIN_TYPE_ATTRS: dict[str, dict[str, str]] = {}
 DIRECT_GETATTR_IDENTITY_KINDS = {'string', 'member', 'getset', 'method'}
 DIRECT_GETATTR_BUILTIN_MODULE_ATTRS: dict[str, dict[str, str]] = {}
-DIRECT_CALL_FULL_POSITIONAL_MODULE_FUNCTIONS: dict[str, dict[str, int]] = {}
+DIRECT_CALL_POSITIONAL_MODULE_FUNCTIONS: dict[str, dict[str, tuple[int, int]]] = {}
 
 PYTHON_AUTHORED_IMPLS = {
     'builtins': {'abs', 'all', 'any', 'bin', 'delattr', 'format', 'getattr', 'hash', 'hasattr', 'isinstance', 'issubclass', 'len', 'next', 'oct', 'repr', 'setattr', 'sum'},
@@ -2012,20 +2026,49 @@ def get_builtin_module_attr_expr(module_name: str, attr_name: str, kind: str) ->
         return ir.Field(ir.Identifier(get_java_name(f'{module_name}.{attr_name}')), 'singleton')
     assert False, (module_name, attr_name, kind)
 
-def get_full_positional_call_arity(params: Optional[list[inspect.Parameter]]) -> Optional[int]:
+def get_positional_call_range(params: Optional[list[inspect.Parameter]]) -> Optional[tuple[int, int]]:
     if params is None:
         return None
     if not all(param.kind in {inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD} for param in params):
         return None
-    return len(params)
+    min_args = sum(param.default is inspect.Parameter.empty for param in params)
+    return (min_args, len(params))
+
+def build_call_positional_ir(shape: SignatureShape) -> tuple[list[ir.Statement], list[ir.Expr]]:
+    assert not shape.kwonly_params, shape
+    assert shape.vararg_param is None, shape
+    assert shape.varkw_param is None, shape
+    min_args = sum(param.default is inspect.Parameter.empty for param in shape.params)
+    args = ir.Identifier('args')
+    args_length = ir.Identifier('argsLength')
+    statements: list[ir.Statement] = []
+    if len(shape.params) > min_args:
+        statements.append(ir.LocalDecl('int', 'argsLength', ir.Field(args, 'length')))
+    bind_args: list[ir.Expr] = []
+    for (i, param) in enumerate(shape.params):
+        if i < min_args:
+            bind_args.append(ir.ArrayAccess(args, ir.IntLiteral(i)))
+        else:
+            local = ir.Identifier(java_local_name(param.name))
+            statements.append(ir.LocalDecl(
+                'PyObject',
+                java_local_name(param.name),
+                ir.CondOp(
+                    ir.BinaryOp('>=', args_length, ir.IntLiteral(i + 1)),
+                    ir.ArrayAccess(args, ir.IntLiteral(i)),
+                    emit_default_java_expr(param.default),
+                ),
+            ))
+            bind_args.append(local)
+    return (statements, bind_args)
 
 def gen_runtime_java(spec_path: str, java_path: str) -> None:
     with open(spec_path) as f:
         spec = json.load(f)
     for func_name in extract_spec.BUILTIN_FUNCTIONS:
-        arity = get_full_positional_call_arity(get_builtin_function_params(spec, func_name))
-        if arity is not None:
-            DIRECT_CALL_FULL_POSITIONAL_BUILTINS[func_name] = arity
+        call_range = get_positional_call_range(get_builtin_function_params(spec, func_name))
+        if call_range is not None:
+            DIRECT_CALL_POSITIONAL_BUILTINS[func_name] = call_range
     for type_name in extract_spec.BUILTIN_TYPES:
         type_spec = cast(dict[str, object], spec[type_name])
         attrs = cast(dict[str, dict[str, object]], type_spec['attrs'])
@@ -2039,11 +2082,11 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
             attr_name: cast(str, attr_spec['kind']) for (attr_name, attr_spec) in attrs.items()
         }
     for module_name in extract_spec.BUILTIN_MODULES:
-        DIRECT_CALL_FULL_POSITIONAL_MODULE_FUNCTIONS[module_name] = {}
+        DIRECT_CALL_POSITIONAL_MODULE_FUNCTIONS[module_name] = {}
         for func_name in cast(dict[str, dict[str, object]], cast(dict[str, object], spec[module_name])['attrs']):
-            arity = get_full_positional_call_arity(get_module_function_params(spec, module_name, func_name))
-            if arity is not None:
-                DIRECT_CALL_FULL_POSITIONAL_MODULE_FUNCTIONS[module_name][func_name] = arity
+            call_range = get_positional_call_range(get_module_function_params(spec, module_name, func_name))
+            if call_range is not None:
+                DIRECT_CALL_POSITIONAL_MODULE_FUNCTIONS[module_name][func_name] = call_range
 
     pool = ir.ConstantPool('PyGeneratedConstants')
     with open(java_path, 'w') as f:
@@ -2221,6 +2264,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                         ]),
                         ir.MethodDecl('public', 'String', 'methodName', [], [ir.ReturnStatement(ir.StrLiteral(method_name))]),
                     ]
+                    call_positional_shape = kwarg_params if (kwarg_params is not None and get_positional_call_range(kwarg_params.params) is not None) else None
                     call_body: list[ir.Statement] = []
                     if kwarg_params is None:
                         bind_args = [ir.Identifier('args'), ir.Identifier('kwargs')]
@@ -2245,6 +2289,26 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                         call_expr = ir.MethodCall(ir.Identifier(method_target), f'pymethod_{method_name}', bind_args)
                     call_body.append(ir.ReturnStatement(call_expr))
                     decls.append(ir.MethodDecl('public', 'PyObject', 'call', ['PyObject[] args', 'PyDict kwargs'], call_body))
+                    if call_positional_shape is not None:
+                        (call_positional_statements, call_positional_args) = build_call_positional_ir(call_positional_shape)
+                        if kind == 'classmethod':
+                            call_positional_args = [ir.Identifier('self')] + call_positional_args
+                        if method_impl_target is not None:
+                            call_args = call_positional_args if kind == 'classmethod' else [ir.Identifier('self'), *call_positional_args]
+                            call_positional_expr = ir.MethodCall(
+                                ir.Identifier(method_impl_target.rsplit('.', 1)[0]),
+                                method_impl_target.rsplit('.', 1)[1],
+                                call_args,
+                            )
+                        else:
+                            call_positional_expr = ir.MethodCall(ir.Identifier(method_target), f'pymethod_{method_name}', call_positional_args)
+                        decls.append(ir.MethodDecl(
+                            'public',
+                            'PyObject',
+                            'call_positional',
+                            ['PyObject[] args'],
+                            [*call_positional_statements, ir.ReturnStatement(call_positional_expr)],
+                        ))
                     ir.emit_decl(writer, ir.ClassDecl('final', method_class_name, f'PyBuiltinMethod<{self_type}>', decls), pool)
                 writer.write('')
 
@@ -2294,6 +2358,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                     kwarg_params = None
                 else:
                     kwarg_params = analyze_params(params)
+                call_positional_shape = kwarg_params if (kwarg_params is not None and get_positional_call_range(kwarg_params.params) is not None) else None
                 decls: list[ir.Decl] = [
                     ir.FieldDecl('public static final', f'{module_func_prefix}Function_{func_name}', 'singleton', ir.CreateObject(f'{module_func_prefix}Function_{func_name}', [])),
                     ir.ConstructorDecl('private', f'{module_func_prefix}Function_{func_name}', [], [
@@ -2316,6 +2381,20 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                     ir.MethodCall(ir.Identifier('PyBuiltinFunctionsImpl'), f'pyfunc_{module_name.removeprefix("_")}_{func_name}', bind_args)
                 ))
                 decls.append(ir.MethodDecl('public', 'PyObject', 'call', ['PyObject[] args', 'PyDict kwargs'], call_body))
+                if call_positional_shape is not None:
+                    (call_positional_statements, call_positional_args) = build_call_positional_ir(call_positional_shape)
+                    decls.append(ir.MethodDecl(
+                        'public',
+                        'PyObject',
+                        'call_positional',
+                        ['PyObject[] args'],
+                        [
+                            *call_positional_statements,
+                            ir.ReturnStatement(
+                                ir.MethodCall(ir.Identifier('PyBuiltinFunctionsImpl'), f'pyfunc_{module_name.removeprefix("_")}_{func_name}', call_positional_args)
+                            ),
+                        ],
+                    ))
                 ir.emit_decl(writer, ir.ClassDecl('final', f'{module_func_prefix}Function_{func_name}', 'PyBuiltinFunction', decls), pool)
                 writer.write('')
 
@@ -2325,6 +2404,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                 kwarg_params = None
             else:
                 kwarg_params = analyze_params(params)
+            call_positional_shape = kwarg_params if (kwarg_params is not None and get_positional_call_range(kwarg_params.params) is not None) else None
             decls: list[ir.Decl] = [
                 ir.FieldDecl('public static final', f'PyBuiltinFunction_{func_name}', 'singleton', ir.CreateObject(f'PyBuiltinFunction_{func_name}', [])),
                 ir.ConstructorDecl('private', f'PyBuiltinFunction_{func_name}', [], [
@@ -2353,6 +2433,20 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                 ir.MethodCall(ir.Identifier(call_target), f'pyfunc_{func_name}', bind_args)
             ))
             decls.append(ir.MethodDecl('public', 'PyObject', 'call', ['PyObject[] args', 'PyDict kwargs'], call_body))
+            if call_positional_shape is not None:
+                (call_positional_statements, call_positional_args) = build_call_positional_ir(call_positional_shape)
+                decls.append(ir.MethodDecl(
+                    'public',
+                    'PyObject',
+                    'call_positional',
+                    ['PyObject[] args'],
+                    [
+                        *call_positional_statements,
+                        ir.ReturnStatement(
+                            ir.MethodCall(ir.Identifier(call_target), f'pyfunc_{func_name}', call_positional_args)
+                        ),
+                    ],
+                ))
             ir.emit_decl(writer, ir.ClassDecl('final', f'PyBuiltinFunction_{func_name}', 'PyBuiltinFunction', decls), pool)
             writer.write('')
 
