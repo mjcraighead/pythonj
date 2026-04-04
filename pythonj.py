@@ -1478,36 +1478,33 @@ def is_special_method_wrapper(type_name: str, method_name: str) -> bool:
     return type_name == 'type' and method_name == 'mro'
 
 def emit_python_function_static(visitor: LoweringVisitor, func_name: str, arg_names: list[str], body: list[ir.Statement],
-                                return_java_type: str) -> list[str]:
+                                return_java_type: str) -> ir.MethodDecl:
     java_return_type = 'PyNone' if return_java_type == 'NoReturn' else return_java_type
-    func_code = [
-        f'static {java_return_type} pyfunc_{func_name}({", ".join(f"PyObject pyarg_{arg}" for arg in arg_names)}) {{',
-    ]
+    func_code: list[ir.Statement] = []
     if visitor.scope.used_expr_discard:
-        func_code.append('PyObject expr_discard;')
+        func_code.append(ir.LocalDecl('PyObject', 'expr_discard', None))
     for arg_name in arg_names:
         if arg_name in visitor.scope.info.cell_vars:
-            func_code.append(f'PyCell pycell_{arg_name} = new PyCell(pyarg_{arg_name});')
+            func_code.append(ir.LocalDecl('PyCell', f'pycell_{arg_name}', ir.CreateObject('PyCell', [ir.Identifier(f'pyarg_{arg_name}')])))
         else:
-            func_code.append(f'PyObject pylocal_{arg_name} = pyarg_{arg_name};')
+            func_code.append(ir.LocalDecl('PyObject', f'pylocal_{arg_name}', ir.Identifier(f'pyarg_{arg_name}')))
     for name in sorted(visitor.scope.info.cell_vars - set(arg_names)):
-        func_code.append(f'PyCell pycell_{name} = new PyCell({ir.PyConstant(None).emit_java(visitor.pool)});')
+        func_code.append(ir.LocalDecl('PyCell', f'pycell_{name}', ir.CreateObject('PyCell', [ir.PyConstant(None)])))
     for name in sorted(visitor.scope.info.locals - visitor.scope.info.cell_vars - set(arg_names)):
-        func_code.append(f'PyObject pylocal_{name};')
+        func_code.append(ir.LocalDecl('PyObject', f'pylocal_{name}', None))
     if return_java_type == 'NoReturn':
-        func_code.extend(ir.block_emit_java(ir.block_simplify(body), visitor.pool))
+        func_code.extend(ir.block_simplify(body))
     else:
         implicit_return: ir.Statement = ir.ReturnStatement(ir.PyConstant(None))
         if return_java_type != 'PyObject':
             implicit_return = ir.ReturnStatement(ir.CastExpr(return_java_type, ir.PyConstant(None)))
-        func_code.extend(ir.block_emit_java(ir.block_simplify([*body, implicit_return]), visitor.pool))
-    func_code.append('}')
-    return func_code
+        func_code.extend(ir.block_simplify([*body, implicit_return]))
+    return ir.MethodDecl('static', java_return_type, f'pyfunc_{func_name}', [*(f'PyObject pyarg_{arg}' for arg in arg_names)], func_code)
 
 def translate_python_impl_node(node: ast.Module, func: ast.FunctionDef, emitted_name: str, display_name: str,
                                role: str, pool: ir.ConstantPool,
                                python_helper_names: Optional[set[str]] = None,
-                               python_helper_class: Optional[str] = None) -> tuple[list[list[str]], list[str]]:
+                               python_helper_class: Optional[str] = None) -> tuple[list[list[str]], ir.MethodDecl]:
     analyzer = ScopeAnalyzer()
     analyzer.visit(node)
     visitor = LoweringVisitor(display_name, analyzer.scope_infos, analyzer.scope_infos[node])
@@ -1538,18 +1535,18 @@ def translate_python_impl_node(node: ast.Module, func: ast.FunctionDef, emitted_
     assert visitor.n_errors == 0, (emitted_name, visitor.n_errors)
     return (list(visitor.functions.values()), helper_method)
 
-def translate_python_builtin_impl(func_name: str, pool: ir.ConstantPool) -> tuple[list[list[str]], list[str]]:
+def translate_python_builtin_impl(func_name: str, pool: ir.ConstantPool) -> tuple[list[list[str]], ir.MethodDecl]:
     node = parse_python_module('pythonj_builtins.py')
     func = get_top_level_functions(node)[func_name]
     return translate_python_impl_node(node, func, func_name, f'<builtin {func_name}>', 'builtin function', pool)
 
-def translate_python_method_impl(type_name: str, method_name: str, pool: ir.ConstantPool) -> tuple[list[list[str]], list[str]]:
+def translate_python_method_impl(type_name: str, method_name: str, pool: ir.ConstantPool) -> tuple[list[list[str]], ir.MethodDecl]:
     func_name = f'{type_name}__{method_name}'
     node = parse_python_module('pythonj_builtins.py')
     func = get_class_functions(node, type_name)[method_name]
     return translate_python_impl_node(node, func, func_name, f'<method {type_name}.{method_name}>', 'builtin method', pool)
 
-def translate_python_runtime_impl(func_name: str, pool: ir.ConstantPool) -> tuple[list[list[str]], list[str]]:
+def translate_python_runtime_impl(func_name: str, pool: ir.ConstantPool) -> tuple[list[list[str]], ir.MethodDecl]:
     node = parse_python_module('pythonj_runtime.py')
     funcs = get_top_level_functions(node)
     return translate_python_impl_node(
@@ -1906,11 +1903,11 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
     with open(java_path, 'w') as f:
         writer = ir.IndentedWriter(f, 0)
         python_runtime_helper_classes: list[list[str]] = []
-        python_runtime_helper_methods: list[list[str]] = []
+        python_runtime_helper_methods: list[ir.MethodDecl] = []
         python_builtin_helper_classes: list[list[str]] = []
-        python_builtin_helper_methods: list[list[str]] = []
+        python_builtin_helper_methods: list[ir.MethodDecl] = []
         python_method_helper_classes: list[list[str]] = []
-        python_method_helper_methods: list[list[str]] = []
+        python_method_helper_methods: list[ir.MethodDecl] = []
         for (name, obj_spec) in spec.items():
             if obj_spec['kind'] != 'type':
                 continue
@@ -2115,12 +2112,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                 for line in code:
                     writer.write(line)
                 writer.write('')
-            writer.write('final class PyRuntimePythonImpl {')
-            for method in python_runtime_helper_methods:
-                for line in method:
-                    writer.write(line)
-                writer.write('')
-            writer.write('}')
+            ir.emit_decl(writer, ir.ClassDecl('final', 'PyRuntimePythonImpl', None, python_runtime_helper_methods), pool)
             writer.write('')
 
         if any(PYTHON_AUTHORED_IMPLS.get(name, set()) for name in PYTHON_AUTHORED_IMPLS if name != 'builtins'):
@@ -2128,12 +2120,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                 for line in code:
                     writer.write(line)
                 writer.write('')
-            writer.write('final class PyBuiltinMethodsPythonImpl {')
-            for method in python_method_helper_methods:
-                for line in method:
-                    writer.write(line)
-                writer.write('')
-            writer.write('}')
+            ir.emit_decl(writer, ir.ClassDecl('final', 'PyBuiltinMethodsPythonImpl', None, python_method_helper_methods), pool)
             writer.write('')
 
         if PYTHON_AUTHORED_IMPLS['builtins']:
@@ -2145,12 +2132,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                 for line in code:
                     writer.write(line)
                 writer.write('')
-            writer.write('final class PyBuiltinFunctionsPythonImpl {')
-            for method in python_builtin_helper_methods:
-                for line in method:
-                    writer.write(line)
-                writer.write('')
-            writer.write('}')
+            ir.emit_decl(writer, ir.ClassDecl('final', 'PyBuiltinFunctionsPythonImpl', None, python_builtin_helper_methods), pool)
             writer.write('')
 
         for module_name in sorted(extract_spec.BUILTIN_MODULES):
