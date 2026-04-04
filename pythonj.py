@@ -1108,7 +1108,7 @@ class LoweringVisitor(ast.NodeVisitor):
             ])
         class_code.extend([
             f'private static final class {type_class_name} extends PyConcreteType {{',
-            f'private static final {type_class_name} singleton = new {type_class_name}();',
+            ir.FieldDecl('private static final', type_class_name, 'singleton', ir.CreateObject(type_class_name, [])).emit_java(self.pool),
             f'private {type_class_name}() {{ super({ir.StrLiteral(node.name).emit_java(self.pool)}, {java_name}.class, {ir.MethodRef(java_name, "newObj").emit_java(self.pool)}); }}',
             '}',
         ])
@@ -1220,11 +1220,11 @@ class LoweringVisitor(ast.NodeVisitor):
             free_var_names = sorted(self.scope.free_vars)
             func_code = [
                 f'private static final class {java_name} extends PyIter {{',
-                f'private static final PyConcreteType type_singleton = new PyConcreteType("generator", {java_name}.class);',
+                ir.FieldDecl('private static final', 'PyConcreteType', 'type_singleton', ir.CreateObject('PyConcreteType', [ir.StrLiteral('generator'), ir.Field(ir.Identifier(java_name), 'class')])).emit_java(self.pool),
                 *(f'private final PyCell pycell_{name};' for name in free_var_names),
                 'private final PyIter pyiter_iterable;',
-                *(f'private final PyCell pycell_{name} = new PyCell({ir.PyConstant(None).emit_java(self.pool)});' for name in sorted(self.scope.info.cell_vars)),
-                *(f'private PyObject pylocal_{name} = {ir.PyConstant(None).emit_java(self.pool)};' for name in sorted(self.scope.info.locals - self.scope.info.cell_vars)),
+                *(ir.FieldDecl('private final', 'PyCell', f'pycell_{name}', ir.CreateObject('PyCell', [ir.PyConstant(None)])).emit_java(self.pool) for name in sorted(self.scope.info.cell_vars)),
+                *(ir.FieldDecl('private', 'PyObject', f'pylocal_{name}', ir.PyConstant(None)).emit_java(self.pool) for name in sorted(self.scope.info.locals - self.scope.info.cell_vars)),
                 f'{java_name}({", ".join([*(f"PyCell pycell_{name}" for name in free_var_names), "PyObject iterable"])}) {{' if free_var_names else f'{java_name}(PyObject iterable) {{',
                 *(f'this.pycell_{name} = pycell_{name};' for name in free_var_names),
                 'this.pyiter_iterable = iterable.iter();',
@@ -1232,8 +1232,12 @@ class LoweringVisitor(ast.NodeVisitor):
                 '@Override public PyObject next() {',
                 *ir.block_emit_java(ir.block_simplify(next_body), self.pool),
                 '}',
-                f'@Override public String repr() {{ return "<generator object {qualname}>"; }}',
-                '@Override public PyConcreteType type() { return type_singleton; }',
+                '@Override public String repr() {',
+                *ir.block_emit_java([ir.ReturnStatement(ir.StrLiteral(f'<generator object {qualname}>'))], self.pool),
+                '}',
+                '@Override public PyConcreteType type() {',
+                *ir.block_emit_java([ir.ReturnStatement(ir.Identifier('type_singleton'))], self.pool),
+                '}',
                 '}',
             ]
             assert java_name not in self.functions
@@ -1267,7 +1271,7 @@ class LoweringVisitor(ast.NodeVisitor):
 
         # XXX Initializing all globals to None is weird, but we don't have a better option yet
         for name in sorted(self.scope.info.locals):
-            writer.write(f'private static PyObject pyglobal_{name} = {ir.PyConstant(None).emit_java(self.pool)};')
+            writer.write(ir.FieldDecl('private static', 'PyObject', f'pyglobal_{name}', ir.PyConstant(None)).emit_java(self.pool))
         writer.write('')
 
         writer.write('public static void main(String[] args) {')
@@ -1939,7 +1943,9 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
             writer.write('}')
             writer.write('')
             writer.write(f'private {java_name}Type() {{ super({ir.StrLiteral(py_name).emit_java(pool)}, {java_name}.class, {ir.MethodRef(java_name, "newObj").emit_java(pool)}); }}')
-            writer.write('@Override public java.util.Map<PyObject, PyObject> getAttributes() { return AttrsHolder.attrs; }')
+            writer.write('@Override public java.util.Map<PyObject, PyObject> getAttributes() {')
+            ir.emit_statement(writer, ir.ReturnStatement(ir.Field(ir.Identifier('AttrsHolder'), 'attrs')), pool)
+            writer.write('}')
             writer.write('@Override public PyObject lookupAttr(String name) {')
             writer.write('switch (name) {')
             for (k, v) in attrs.items():
@@ -2105,7 +2111,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                 else:
                     kwarg_params = analyze_params(params)
                 writer.write(f'final class {module_func_prefix}Function_{func_name} extends PyBuiltinFunction {{')
-                writer.write(f'public static final {module_func_prefix}Function_{func_name} singleton = new {module_func_prefix}Function_{func_name}();')
+                writer.write(ir.FieldDecl('public static final', f'{module_func_prefix}Function_{func_name}', 'singleton', ir.CreateObject(f'{module_func_prefix}Function_{func_name}', [])).emit_java(pool))
                 writer.write('')
                 writer.write(f'private {module_func_prefix}Function_{func_name}() {{ super("{func_name}"); }}')
                 writer.write('@Override public PyObject call(PyObject[] args, PyDict kwargs) {')
@@ -2134,7 +2140,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
             else:
                 kwarg_params = analyze_params(params)
             writer.write(f'final class PyBuiltinFunction_{func_name} extends PyBuiltinFunction {{')
-            writer.write(f'public static final PyBuiltinFunction_{func_name} singleton = new PyBuiltinFunction_{func_name}();')
+            writer.write(ir.FieldDecl('public static final', f'PyBuiltinFunction_{func_name}', 'singleton', ir.CreateObject(f'PyBuiltinFunction_{func_name}', [])).emit_java(pool))
             writer.write('')
             writer.write(f'private PyBuiltinFunction_{func_name}() {{ super("{func_name}"); }}')
             writer.write('@Override public PyObject call(PyObject[] args, PyDict kwargs) {')
