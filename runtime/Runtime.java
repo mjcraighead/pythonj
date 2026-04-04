@@ -350,6 +350,21 @@ final class PyMethodDescriptor extends PyGettableDescriptor {
         super(_owner, _name, _getter, _doc);
     }
 
+    @Override public final PyObject call(PyObject[] args, PyDict kwargs) {
+        if (args.length == 0) {
+            throw PyTypeError.raise("unbound method " + owner.name() + "." + name + "() needs an argument");
+        }
+        PyObject self = args[0];
+        if (!Runtime.pythonjIsInstance(self, owner).boolValue()) {
+            throw PyTypeError.raise(
+                "descriptor " + PyString.reprOf(name) + " for " + PyString.reprOf(owner.name()) +
+                " objects doesn't apply to a " + PyString.reprOf(self.type().name()) + " object"
+            );
+        }
+        PyObject[] rest = Arrays.copyOfRange(args, 1, args.length);
+        return getter.apply(self).call(rest, kwargs);
+    }
+
     @Override public final String repr() { return "<method " + PyString.reprOf(name) + " of " + PyString.reprOf(owner.name()) + " objects>"; }
     @Override public final PyConcreteType type() { return PyMethodDescriptorType.singleton; }
 }
