@@ -1928,19 +1928,22 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                 else:
                     assert False, (name, k, v)
                 ir.emit_decl(writer, ir.FieldDecl('private static final', value.type, f'pyattr_{k}', value), pool)
-            writer.write('private static final class AttrsHolder {')
-            writer.write(f'static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>({len(attrs)});')
-            writer.write('static {')
-            for k in attrs:
-                ir.emit_statement(writer, ir.ExprStatement(
-                    ir.MethodCall(
+            ir.emit_decl(writer, ir.ClassDecl('private static final', 'AttrsHolder', [
+                ir.FieldDecl(
+                    'static final',
+                    'java.util.LinkedHashMap<PyObject, PyObject>',
+                    'attrs',
+                    ir.CreateObject('java.util.LinkedHashMap<PyObject, PyObject>', [ir.IntLiteral(len(attrs))]),
+                ),
+                ir.StaticBlock([
+                    ir.ExprStatement(ir.MethodCall(
                         ir.Identifier('attrs'),
                         'put',
                         [ir.CreateObject('PyString', [ir.StrLiteral(k)]), ir.Identifier(f'pyattr_{k}')],
-                    )
-                ), pool)
-            writer.write('}')
-            writer.write('}')
+                    ))
+                    for k in attrs
+                ]),
+            ]), pool)
             writer.write('')
             writer.write(f'private {java_name}Type() {{')
             ir.emit_statement(writer, ir.SuperConstructorCall([

@@ -484,6 +484,25 @@ class MethodDecl(Decl):
         yield from block_emit_java(block_simplify(self.body), pool)
         yield '}'
 
+@dataclass(slots=True)
+class StaticBlock(Decl):
+    body: list[Statement]
+    def emit_java(self, pool: ConstantPool) -> Iterator[str]:
+        yield 'static {'
+        yield from block_emit_java(block_simplify(self.body), pool)
+        yield '}'
+
+@dataclass(slots=True)
+class ClassDecl(Decl):
+    modifiers: str
+    name: str
+    decls: list[Decl]
+    def emit_java(self, pool: ConstantPool) -> Iterator[str]:
+        yield f'{self.modifiers} class {self.name} {{'
+        for decl in self.decls:
+            yield from decl.emit_java(pool)
+        yield '}'
+
 def unary_op(op: str, operand: Expr) -> Expr:
     if op == '!' and isinstance(operand, Bool):
         return Bool(not operand.value)
