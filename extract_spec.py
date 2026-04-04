@@ -58,8 +58,12 @@ EXCEPTION_TYPES = {
 
 NULL = object()
 
-def make_param(name: str, default: object = inspect.Parameter.empty) -> inspect.Parameter:
-    return inspect.Parameter(name, inspect.Parameter.POSITIONAL_ONLY, default=default)
+def make_param(name: str, default: object = inspect.Parameter.empty,
+               kind: inspect._ParameterKind = inspect.Parameter.POSITIONAL_ONLY) -> inspect.Parameter:
+    return inspect.Parameter(name, kind, default=default)
+
+def make_poskw_param(name: str, default: object = inspect.Parameter.empty) -> inspect.Parameter:
+    return make_param(name, default, inspect.Parameter.POSITIONAL_OR_KEYWORD)
 
 SYNTHETIC_PARAMS = {
     'builtins': {
@@ -78,7 +82,7 @@ SYNTHETIC_PARAMS = {
         'count': [make_param('sub'), make_param('start', None), make_param('end', None)],
         'endswith': [make_param('suffix'), make_param('start', None), make_param('end', None)],
         'find': [make_param('sub'), make_param('start', None), make_param('end', None)],
-        'hex': [make_param('sep', NULL), make_param('bytes_per_sep', 1)],
+        'hex': [make_poskw_param('sep', NULL), make_poskw_param('bytes_per_sep', 1)],
         'index': [make_param('sub'), make_param('start', None), make_param('end', None)],
         'rfind': [make_param('sub'), make_param('start', None), make_param('end', None)],
         'rindex': [make_param('sub'), make_param('start', None), make_param('end', None)],
@@ -88,7 +92,7 @@ SYNTHETIC_PARAMS = {
         'count': [make_param('sub'), make_param('start', None), make_param('end', None)],
         'endswith': [make_param('suffix'), make_param('start', None), make_param('end', None)],
         'find': [make_param('sub'), make_param('start', None), make_param('end', None)],
-        'hex': [make_param('sep', NULL), make_param('bytes_per_sep', 1)],
+        'hex': [make_poskw_param('sep', NULL), make_poskw_param('bytes_per_sep', 1)],
         'index': [make_param('sub'), make_param('start', None), make_param('end', None)],
         'rfind': [make_param('sub'), make_param('start', None), make_param('end', None)],
         'rindex': [make_param('sub'), make_param('start', None), make_param('end', None)],
