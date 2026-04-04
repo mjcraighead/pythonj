@@ -264,18 +264,6 @@ class Statement(ABC):
         raise NotImplementedError()
 
 @dataclass(slots=True)
-class FieldDecl:
-    modifiers: str
-    type: str
-    name: str
-    value: Optional[Expr]
-    def emit_java(self, pool: ConstantPool) -> str:
-        if self.value:
-            return f'{self.modifiers} {self.type} {self.name} = {self.value.emit_java(pool)};'
-        else:
-            return f'{self.modifiers} {self.type} {self.name};'
-
-@dataclass(slots=True)
 class LocalDecl(Statement):
     type: str
     name: str
@@ -467,6 +455,35 @@ class LabeledBlock(Statement):
         yield from block_emit_java(self.body, pool)
         yield '}'
 
+class Decl(ABC):
+    @abstractmethod
+    def emit_java(self, pool: ConstantPool) -> Iterator[str]:
+        raise NotImplementedError()
+
+@dataclass(slots=True)
+class FieldDecl(Decl):
+    modifiers: str
+    type: str
+    name: str
+    value: Optional[Expr]
+    def emit_java(self, pool: ConstantPool) -> Iterator[str]:
+        if self.value:
+            yield f'{self.modifiers} {self.type} {self.name} = {self.value.emit_java(pool)};'
+        else:
+            yield f'{self.modifiers} {self.type} {self.name};'
+
+@dataclass(slots=True)
+class MethodDecl(Decl):
+    modifiers: str
+    return_type: str
+    name: str
+    args: list[str]
+    body: list[Statement]
+    def emit_java(self, pool: ConstantPool) -> Iterator[str]:
+        yield f"{self.modifiers} {self.return_type} {self.name}({', '.join(self.args)}) {{"
+        yield from block_emit_java(block_simplify(self.body), pool)
+        yield '}'
+
 def unary_op(op: str, operand: Expr) -> Expr:
     if op == '!' and isinstance(operand, Bool):
         return Bool(not operand.value)
@@ -531,3 +548,7 @@ def emit_statements(writer: IndentedWriter, statements: list[Statement], pool: C
 
 def emit_statement(writer: IndentedWriter, statement: Statement, pool: ConstantPool) -> None:
     emit_statements(writer, [statement], pool)
+
+def emit_decl(writer: IndentedWriter, decl: Decl, pool: ConstantPool) -> None:
+    for line in decl.emit_java(pool):
+        writer.write(line)

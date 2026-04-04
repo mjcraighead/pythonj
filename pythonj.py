@@ -888,7 +888,7 @@ class LoweringVisitor(ast.NodeVisitor):
         required_arg_names_java = ', '.join(ir.StrLiteral(arg).emit_java(self.pool) for arg in arg_names[:n_required])
         func_code = [
             f'private static final class {java_name} extends PyFunction {{',
-            *(ir.FieldDecl('private final', 'PyCell', f'pycell_{name}', None).emit_java(self.pool) for name in free_var_names),
+            *(line for name in free_var_names for line in ir.FieldDecl('private final', 'PyCell', f'pycell_{name}', None).emit_java(self.pool)),
             (f'{java_name}({", ".join(f"PyCell pycell_{name}" for name in free_var_names)}) {{' if free_var_names else f'{java_name}() {{'),
             *ir.block_emit_java([ir.SuperConstructorCall([ir.StrLiteral(py_name)])], self.pool),
             *(f'this.pycell_{name} = pycell_{name};' for name in free_var_names),
@@ -1050,7 +1050,7 @@ class LoweringVisitor(ast.NodeVisitor):
         else:
             class_code.extend([
                 f'private static final class {java_name} extends PySlottedObject {{',
-                *(ir.FieldDecl('private', 'PyObject', f'pyslot_{name}', ir.Null()).emit_java(self.pool) for name in slots),
+                *(line for name in slots for line in ir.FieldDecl('private', 'PyObject', f'pyslot_{name}', ir.Null()).emit_java(self.pool)),
                 f'{java_name}() {{',
                 *ir.block_emit_java([ir.SuperConstructorCall([ir.Identifier(f'{type_class_name}.singleton')])], self.pool),
                 '}',
@@ -1112,7 +1112,7 @@ class LoweringVisitor(ast.NodeVisitor):
             ])
         class_code.extend([
             f'private static final class {type_class_name} extends PyConcreteType {{',
-            ir.FieldDecl('private static final', type_class_name, 'singleton', ir.CreateObject(type_class_name, [])).emit_java(self.pool),
+            *ir.FieldDecl('private static final', type_class_name, 'singleton', ir.CreateObject(type_class_name, [])).emit_java(self.pool),
             f'private {type_class_name}() {{',
             *ir.block_emit_java([ir.SuperConstructorCall([ir.StrLiteral(node.name), ir.Field(ir.Identifier(java_name), 'class'), ir.MethodRef(java_name, 'newObj')])], self.pool),
             '}',
@@ -1226,11 +1226,11 @@ class LoweringVisitor(ast.NodeVisitor):
             free_var_names = sorted(self.scope.free_vars)
             func_code = [
                 f'private static final class {java_name} extends PyIter {{',
-                ir.FieldDecl('private static final', 'PyConcreteType', 'type_singleton', ir.CreateObject('PyConcreteType', [ir.StrLiteral('generator'), ir.Field(ir.Identifier(java_name), 'class')])).emit_java(self.pool),
-                *(ir.FieldDecl('private final', 'PyCell', f'pycell_{name}', None).emit_java(self.pool) for name in free_var_names),
-                ir.FieldDecl('private final', 'PyIter', 'pyiter_iterable', None).emit_java(self.pool),
-                *(ir.FieldDecl('private final', 'PyCell', f'pycell_{name}', ir.CreateObject('PyCell', [ir.PyConstant(None)])).emit_java(self.pool) for name in sorted(self.scope.info.cell_vars)),
-                *(ir.FieldDecl('private', 'PyObject', f'pylocal_{name}', ir.PyConstant(None)).emit_java(self.pool) for name in sorted(self.scope.info.locals - self.scope.info.cell_vars)),
+                *ir.FieldDecl('private static final', 'PyConcreteType', 'type_singleton', ir.CreateObject('PyConcreteType', [ir.StrLiteral('generator'), ir.Field(ir.Identifier(java_name), 'class')])).emit_java(self.pool),
+                *(line for name in free_var_names for line in ir.FieldDecl('private final', 'PyCell', f'pycell_{name}', None).emit_java(self.pool)),
+                *ir.FieldDecl('private final', 'PyIter', 'pyiter_iterable', None).emit_java(self.pool),
+                *(line for name in sorted(self.scope.info.cell_vars) for line in ir.FieldDecl('private final', 'PyCell', f'pycell_{name}', ir.CreateObject('PyCell', [ir.PyConstant(None)])).emit_java(self.pool)),
+                *(line for name in sorted(self.scope.info.locals - self.scope.info.cell_vars) for line in ir.FieldDecl('private', 'PyObject', f'pylocal_{name}', ir.PyConstant(None)).emit_java(self.pool)),
                 f'{java_name}({", ".join([*(f"PyCell pycell_{name}" for name in free_var_names), "PyObject iterable"])}) {{' if free_var_names else f'{java_name}(PyObject iterable) {{',
                 *(f'this.pycell_{name} = pycell_{name};' for name in free_var_names),
                 'this.pyiter_iterable = iterable.iter();',
@@ -1238,12 +1238,8 @@ class LoweringVisitor(ast.NodeVisitor):
                 '@Override public PyObject next() {',
                 *ir.block_emit_java(ir.block_simplify(next_body), self.pool),
                 '}',
-                '@Override public String repr() {',
-                *ir.block_emit_java([ir.ReturnStatement(ir.StrLiteral(f'<generator object {qualname}>'))], self.pool),
-                '}',
-                '@Override public PyConcreteType type() {',
-                *ir.block_emit_java([ir.ReturnStatement(ir.Identifier('type_singleton'))], self.pool),
-                '}',
+                *ir.MethodDecl('public', 'String', 'repr', [], [ir.ReturnStatement(ir.StrLiteral(f'<generator object {qualname}>'))]).emit_java(self.pool),
+                *ir.MethodDecl('public', 'PyConcreteType', 'type', [], [ir.ReturnStatement(ir.Identifier('type_singleton'))]).emit_java(self.pool),
                 '}',
             ]
             assert java_name not in self.functions
@@ -1277,7 +1273,7 @@ class LoweringVisitor(ast.NodeVisitor):
 
         # XXX Initializing all globals to None is weird, but we don't have a better option yet
         for name in sorted(self.scope.info.locals):
-            writer.write(ir.FieldDecl('private static', 'PyObject', f'pyglobal_{name}', ir.PyConstant(None)).emit_java(self.pool))
+            ir.emit_decl(writer, ir.FieldDecl('private static', 'PyObject', f'pyglobal_{name}', ir.PyConstant(None)), self.pool)
         writer.write('')
 
         writer.write('public static void main(String[] args) {')
@@ -1892,7 +1888,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                 case _: py_name = name
 
             writer.write(f'final class {java_name}Type extends PyConcreteType {{')
-            writer.write(ir.FieldDecl('public static final', f'{java_name}Type', 'singleton', ir.CreateObject(f'{java_name}Type', [])).emit_java(pool))
+            ir.emit_decl(writer, ir.FieldDecl('public static final', f'{java_name}Type', 'singleton', ir.CreateObject(f'{java_name}Type', [])), pool)
             for (k, v) in attrs.items():
                 doc_value = v.get('doc')
                 if v['kind'] == 'string':
@@ -1933,7 +1929,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                     ])
                 else:
                     assert False, (name, k, v)
-                writer.write(ir.FieldDecl('private static final', value.type, f'pyattr_{k}', value).emit_java(pool))
+                ir.emit_decl(writer, ir.FieldDecl('private static final', value.type, f'pyattr_{k}', value), pool)
             writer.write('private static final class AttrsHolder {')
             writer.write(f'static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>({len(attrs)});')
             writer.write('static {')
@@ -1955,9 +1951,9 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                 ir.MethodRef(java_name, 'newObj'),
             ]), pool)
             writer.write('}')
-            writer.write('@Override public java.util.Map<PyObject, PyObject> getAttributes() {')
-            ir.emit_statement(writer, ir.ReturnStatement(ir.Field(ir.Identifier('AttrsHolder'), 'attrs')), pool)
-            writer.write('}')
+            ir.emit_decl(writer, ir.MethodDecl('public', 'java.util.Map<PyObject, PyObject>', 'getAttributes', [], [
+                ir.ReturnStatement(ir.Field(ir.Identifier('AttrsHolder'), 'attrs')),
+            ]), pool)
             writer.write('@Override public PyObject lookupAttr(String name) {')
             writer.write('switch (name) {')
             for (k, v) in attrs.items():
@@ -1974,9 +1970,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                     writer.write(f'{java_name}Method_{method_name}(PyObject _self) {{')
                     ir.emit_statement(writer, ir.SuperConstructorCall([ir.CastExpr(java_name, ir.Identifier('_self'))]), pool)
                     writer.write('}')
-                    writer.write('@Override public String methodName() {')
-                    ir.emit_statement(writer, ir.ReturnStatement(ir.StrLiteral(method_name)), pool)
-                    writer.write('}')
+                    ir.emit_decl(writer, ir.MethodDecl('public', 'String', 'methodName', [], [ir.ReturnStatement(ir.StrLiteral(method_name))]), pool)
                     writer.write('@Override public PyObject call(PyObject[] args, PyDict kwargs) {')
                     ir.emit_statement(writer, ir.ThrowStatement(
                         ir.CreateObject('UnsupportedOperationException', [ir.StrLiteral(f'{name}.{method_name}() unimplemented')])
@@ -2035,9 +2029,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                     writer.write(f'{method_class_name}({ctor_arg}) {{')
                     ir.emit_statement(writer, ir.SuperConstructorCall([ir.Identifier(super_arg) if super_arg == '_self' else ir.CastExpr(java_name, ir.Identifier('_self'))]), pool)
                     writer.write('}')
-                    writer.write('@Override public String methodName() {')
-                    ir.emit_statement(writer, ir.ReturnStatement(ir.StrLiteral(method_name)), pool)
-                    writer.write('}')
+                    ir.emit_decl(writer, ir.MethodDecl('public', 'String', 'methodName', [], [ir.ReturnStatement(ir.StrLiteral(method_name))]), pool)
                     writer.write('@Override public PyObject call(PyObject[] args, PyDict kwargs) {')
                     if kwarg_params is None:
                         bind_args = [ir.Identifier('args'), ir.Identifier('kwargs')]
@@ -2127,7 +2119,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                 else:
                     kwarg_params = analyze_params(params)
                 writer.write(f'final class {module_func_prefix}Function_{func_name} extends PyBuiltinFunction {{')
-                writer.write(ir.FieldDecl('public static final', f'{module_func_prefix}Function_{func_name}', 'singleton', ir.CreateObject(f'{module_func_prefix}Function_{func_name}', [])).emit_java(pool))
+                ir.emit_decl(writer, ir.FieldDecl('public static final', f'{module_func_prefix}Function_{func_name}', 'singleton', ir.CreateObject(f'{module_func_prefix}Function_{func_name}', [])), pool)
                 writer.write('')
                 writer.write(f'private {module_func_prefix}Function_{func_name}() {{')
                 ir.emit_statement(writer, ir.SuperConstructorCall([ir.StrLiteral(func_name)]), pool)
@@ -2158,7 +2150,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
             else:
                 kwarg_params = analyze_params(params)
             writer.write(f'final class PyBuiltinFunction_{func_name} extends PyBuiltinFunction {{')
-            writer.write(ir.FieldDecl('public static final', f'PyBuiltinFunction_{func_name}', 'singleton', ir.CreateObject(f'PyBuiltinFunction_{func_name}', [])).emit_java(pool))
+            ir.emit_decl(writer, ir.FieldDecl('public static final', f'PyBuiltinFunction_{func_name}', 'singleton', ir.CreateObject(f'PyBuiltinFunction_{func_name}', [])), pool)
             writer.write('')
             writer.write(f'private PyBuiltinFunction_{func_name}() {{')
             ir.emit_statement(writer, ir.SuperConstructorCall([ir.StrLiteral(func_name)]), pool)
