@@ -1882,7 +1882,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                 case _: py_name = name
 
             writer.write(f'final class {java_name}Type extends PyConcreteType {{')
-            writer.write(f'public static final {java_name}Type singleton = new {java_name}Type();')
+            writer.write(ir.FieldDecl('public static final', f'{java_name}Type', 'singleton', ir.CreateObject(f'{java_name}Type', [])).emit_java(pool))
             for (k, v) in attrs.items():
                 doc_value = v.get('doc')
                 if v['kind'] == 'string':
@@ -1923,7 +1923,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                     ])
                 else:
                     assert False, (name, k, v)
-                writer.write(f'private static final {value.type} pyattr_{k} = {value.emit_java(pool)};')
+                writer.write(ir.FieldDecl('private static final', value.type, f'pyattr_{k}', value).emit_java(pool))
             writer.write('private static final class AttrsHolder {')
             writer.write(f'static final java.util.LinkedHashMap<PyObject, PyObject> attrs = new java.util.LinkedHashMap<>({len(attrs)});')
             writer.write('static {')

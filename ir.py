@@ -264,6 +264,15 @@ class Statement(ABC):
         raise NotImplementedError()
 
 @dataclass(slots=True)
+class FieldDecl:
+    modifiers: str
+    type: str
+    name: str
+    value: Expr
+    def emit_java(self, pool: ConstantPool) -> str:
+        return f'{self.modifiers} {self.type} {self.name} = {self.value.emit_java(pool)};'
+
+@dataclass(slots=True)
 class LocalDecl(Statement):
     type: str
     name: str
