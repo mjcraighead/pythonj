@@ -1752,19 +1752,19 @@ class LoweringVisitor(ast.NodeVisitor):
                         ir.Identifier('key'),
                     ])),
                 ]),
-                ir.MethodDecl('public', 'PyObject', 'getAttr', ['String key'], [
+                ir.MethodDecl('@Override public', 'PyObject', 'getAttr', ['String key'], [
                     ir.SwitchStatement(ir.Identifier('key'), [
                         *(ir.SwitchCase(ir.StrLiteral(name), ir.MethodCall(ir.This(), f'pygetslot_{name}', [])) for name in slots),
                         ir.SwitchCase(ir.StrLiteral('__dict__'), ir.MethodCall(ir.This(), 'pygetslot___dict__', [])),
                     ], ir.MethodCall(ir.Super(), 'getAttr', [ir.Identifier('key')])),
                 ]),
-                ir.MethodDecl('public', 'void', 'setAttr', ['String key', 'PyObject value'], [
+                ir.MethodDecl('@Override public', 'void', 'setAttr', ['String key', 'PyObject value'], [
                     ir.SwitchVoidStatement(ir.Identifier('key'), [
                         *(ir.SwitchCase(ir.StrLiteral(name), ir.MethodCall(ir.This(), f'pysetslot_{name}', [ir.Identifier('value')])) for name in slots),
                         ir.SwitchCase(ir.StrLiteral('__class__'), ir.MethodCall(ir.This(), 'pyraise_readonly___class__', [ir.Identifier('key')])),
                     ], ir.MethodCall(ir.Super(), 'setAttr', [ir.Identifier('key'), ir.Identifier('value')])),
                 ]),
-                ir.MethodDecl('public', 'void', 'delAttr', ['String key'], [
+                ir.MethodDecl('@Override public', 'void', 'delAttr', ['String key'], [
                     ir.SwitchVoidStatement(ir.Identifier('key'), [
                         *(ir.SwitchCase(ir.StrLiteral(name), ir.MethodCall(ir.This(), f'pydelslot_{name}', [])) for name in slots),
                         ir.SwitchCase(ir.StrLiteral('__class__'), ir.MethodCall(ir.This(), 'pyraise_readonly___class__', [ir.Identifier('key')])),
@@ -1926,9 +1926,9 @@ class LoweringVisitor(ast.NodeVisitor):
                 *(ir.FieldDecl('private final', 'PyCell', f'pycell_{name}', ir.CreateObject('PyCell', [ir.PyConstant(None)])) for name in sorted(self.scope.info.cell_vars)),
                 *(ir.FieldDecl('private', 'PyObject', f'pylocal_{name}', ir.PyConstant(None)) for name in sorted(self.scope.info.locals - self.scope.info.cell_vars)),
                 ir.ConstructorDecl('', java_name, ctor_args, ctor_body),
-                ir.MethodDecl('public', 'PyObject', 'next', [], next_body),
-                ir.MethodDecl('public', 'String', 'repr', [], [ir.ReturnStatement(ir.StrLiteral(f'<generator object {qualname}>'))]),
-                ir.MethodDecl('public', 'PyConcreteType', 'type', [], [ir.ReturnStatement(ir.Identifier('type_singleton'))]),
+                ir.MethodDecl('@Override public', 'PyObject', 'next', [], next_body),
+                ir.MethodDecl('@Override public', 'String', 'repr', [], [ir.ReturnStatement(ir.StrLiteral(f'<generator object {qualname}>'))]),
+                ir.MethodDecl('@Override public', 'PyConcreteType', 'type', [], [ir.ReturnStatement(ir.Identifier('type_singleton'))]),
             ])
 
         return ir.CreateObject(java_name, [*(ir.Identifier(f'pycell_{name}') for name in sorted(free_vars)), self.visit(generator.iter)])
@@ -2581,7 +2581,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                     )
                 ),
             ]))
-            type_decls.append(ir.MethodDecl('public', 'java.util.Map<PyObject, PyObject>', 'getAttributes', [], [
+            type_decls.append(ir.MethodDecl('@Override public', 'java.util.Map<PyObject, PyObject>', 'getAttributes', [], [
                 ir.ReturnStatement(ir.Field(ir.Identifier('AttrsHolder'), 'attrs')),
             ]))
             type_decls.append(ir.MethodDecl('@Override public', 'PyObject', 'lookupAttr', ['String name'], [
@@ -2602,10 +2602,10 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                             ir.ConstructorDecl('', f'{java_name}Method_{method_name}', ['PyObject _self'], [
                                 ir.SuperConstructorCall([ir.CastExpr(java_name, ir.Identifier('_self'))]),
                             ]),
-                            ir.MethodDecl('public', 'String', 'methodName', [], [
+                            ir.MethodDecl('@Override public', 'String', 'methodName', [], [
                                 ir.ReturnStatement(ir.StrLiteral(method_name)),
                             ]),
-                            ir.MethodDecl('public', 'PyObject', 'call', ['PyObject[] args', 'PyDict kwargs'], [
+                            ir.MethodDecl('@Override public', 'PyObject', 'call', ['PyObject[] args', 'PyDict kwargs'], [
                                 ir.ThrowStatement(ir.CreateObject('UnsupportedOperationException', [ir.StrLiteral(f'{name}.{method_name}() unimplemented')])),
                             ]),
                         ],
@@ -2661,7 +2661,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                         ir.ConstructorDecl('', method_class_name, [ctor_arg], [
                             ir.SuperConstructorCall([ir.Identifier(super_arg) if super_arg == '_self' else ir.CastExpr(java_name, ir.Identifier('_self'))]),
                         ]),
-                        ir.MethodDecl('public', 'String', 'methodName', [], [ir.ReturnStatement(ir.StrLiteral(method_name))]),
+                        ir.MethodDecl('@Override public', 'String', 'methodName', [], [ir.ReturnStatement(ir.StrLiteral(method_name))]),
                     ]
                     bind_name = f'{py_name}.{method_name}'
                     (call_body, bind_args, call_positional_shape) = build_wrapper_binding_ir(
@@ -2695,7 +2695,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                     else:
                         call_expr = ir.MethodCall(ir.Identifier(method_target), f'pymethod_{method_name}', bind_args)
                     call_body.append(ir.ReturnStatement(call_expr))
-                    decls.append(ir.MethodDecl('public', 'PyObject', 'call', ['PyObject[] args', 'PyDict kwargs'], call_body))
+                    decls.append(ir.MethodDecl('@Override public', 'PyObject', 'call', ['PyObject[] args', 'PyDict kwargs'], call_body))
                     if call_positional_shape is not None:
                         (call_positional_method_args, call_positional_statements, call_positional_args) = build_call_positional_ir(call_positional_shape)
                         call_positional_method_args = [f'{self_type} self', *call_positional_method_args]
@@ -2800,7 +2800,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                 else:
                     call_expr = ir.MethodCall(ir.Identifier('PyBuiltinFunctionsImpl'), f'pyfunc_{module_name.removeprefix("_")}_{func_name}', bind_args)
                 call_body.append(ir.ReturnStatement(call_expr))
-                decls.append(ir.MethodDecl('public', 'PyObject', 'call', ['PyObject[] args', 'PyDict kwargs'], call_body))
+                decls.append(ir.MethodDecl('@Override public', 'PyObject', 'call', ['PyObject[] args', 'PyDict kwargs'], call_body))
                 if call_positional_shape is not None:
                     (call_positional_method_args, call_positional_statements, call_positional_args) = build_call_positional_ir(call_positional_shape)
                     decls.append(ir.MethodDecl(
@@ -2853,7 +2853,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
             else:
                 call_expr = ir.MethodCall(ir.Identifier(call_target), f'pyfunc_{func_name}', bind_args)
             call_body.append(ir.ReturnStatement(call_expr))
-            decls.append(ir.MethodDecl('public', 'PyObject', 'call', ['PyObject[] args', 'PyDict kwargs'], call_body))
+            decls.append(ir.MethodDecl('@Override public', 'PyObject', 'call', ['PyObject[] args', 'PyDict kwargs'], call_body))
             if call_positional_shape is not None:
                 (call_positional_method_args, call_positional_statements, call_positional_args) = build_call_positional_ir(call_positional_shape)
                 decls.append(ir.MethodDecl(
