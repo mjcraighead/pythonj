@@ -1019,9 +1019,6 @@ class LoweringVisitor(ast.NodeVisitor):
         n_required = n_args - len(arg_defaults)
         bind_arg_names = [f'pyarg_{arg}' for arg in arg_names]
         free_var_names = sorted(self.scope.free_vars)
-        py_name_java = ir.StrLiteral(py_name).emit_java(self.pool)
-        arg_names_java = ', '.join(ir.StrLiteral(arg).emit_java(self.pool) for arg in arg_names)
-        required_arg_names_java = ', '.join(ir.StrLiteral(arg).emit_java(self.pool) for arg in arg_names[:n_required])
         constructor_args = [f'PyCell _pycell_{name}' for name in free_var_names]
         func_decls: list[ir.Decl] = [
             *(ir.FieldDecl('private final', 'PyCell', f'pycell_{name}', None) for name in free_var_names),
@@ -1889,13 +1886,6 @@ def infer_default_expr(default: object) -> Optional[str]:
     else:
         return None
 
-def emit_default_expr(default: object, pool: ir.ConstantPool) -> str:
-    inferred = infer_default_expr(default)
-    if inferred is not None:
-        return inferred
-    else:
-        return ir.PyConstant(default).emit_java(pool)
-
 def emit_default_java_expr(default: object) -> ir.Expr:
     inferred = infer_default_expr(default)
     if inferred == 'null':
@@ -1910,9 +1900,6 @@ def emit_default_java_expr(default: object) -> ir.Expr:
 
 def runtime_throw(method: str, args_: list[ir.Expr]) -> ir.ThrowStatement:
     return ir.ThrowStatement(ir.MethodCall(ir.Identifier('Runtime'), method, args_))
-
-def type_error_throw(msg: str) -> ir.ThrowStatement:
-    return ir.ThrowStatement(ir.MethodCall(ir.Identifier('PyTypeError'), 'raise', [ir.StrLiteral(msg)]))
 
 def build_arg_binding_ir(shape: SignatureShape, positional_name: str,
                          kw_name: str, kw_overflow_args_length: str,
