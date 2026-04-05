@@ -204,6 +204,12 @@ public final class PyInt extends PyObject {
     public static PyInt sub(long lhs, long rhs) {
         return new PyInt(Math.subtractExact(lhs, rhs));
     }
+    public static PyFloat trueDiv(long lhs, long rhs) {
+        if (rhs == 0) {
+            throw PyZeroDivisionError.raise("division by zero");
+        }
+        return new PyFloat(((double)lhs) / rhs);
+    }
     public static PyInt xor(long lhs, long rhs) {
         return new PyInt(lhs ^ rhs);
     }
@@ -305,8 +311,10 @@ public final class PyInt extends PyObject {
         }
     }
     @Override public PyObject trueDiv(PyObject rhs) {
-        if ((rhs instanceof PyInt) || (rhs instanceof PyBool)) {
-            throw unimplementedMethod("trueDiv");
+        if (rhs instanceof PyInt rhsInt) {
+            return trueDiv(value, rhsInt.value);
+        } else if (rhs instanceof PyBool rhsBool) {
+            return trueDiv(value, rhsBool.asInt());
         } else {
             return super.trueDiv(rhs);
         }
