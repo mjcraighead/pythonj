@@ -201,6 +201,31 @@ public final class PyString extends PyObject {
     }
     @Override public String repr() { return reprOf(value); }
 
+    public PyInt pymethod_count(PyObject sub, PyObject start, PyObject end) {
+        if (!(sub instanceof PyString subStr)) {
+            throw PyTypeError.raise("must be str, not " + sub.type().name());
+        }
+        int n = value.length();
+        int startIndex = Runtime.asSearchIndexAllowNone(start, 0, n);
+        int endIndex = Math.min(Runtime.asSearchIndexAllowNone(end, n, n), n);
+        if ((startIndex > endIndex) || (startIndex > n)) {
+            return PyInt.singleton_0;
+        }
+        String needle = subStr.value;
+        if (needle.isEmpty()) {
+            return new PyInt(endIndex - startIndex + 1);
+        }
+        int count = 0;
+        int i = startIndex;
+        while (true) {
+            i = value.indexOf(needle, i);
+            if ((i < 0) || (i + needle.length() > endIndex)) {
+                return new PyInt(count);
+            }
+            count++;
+            i += needle.length();
+        }
+    }
     public PyInt pymethod_find(PyObject sub, PyObject start, PyObject end) {
         if (!(sub instanceof PyString subStr)) {
             throw PyTypeError.raise("find() argument 1 must be str, not " + sub.type().name());
@@ -402,7 +427,6 @@ public final class PyString extends PyObject {
     public PyObject pymethod_capitalize() { throw new UnsupportedOperationException(); }
     public PyObject pymethod_casefold() { throw new UnsupportedOperationException(); }
     public PyObject pymethod_center(PyObject width, PyObject fillchar) { throw new UnsupportedOperationException(); }
-    public PyObject pymethod_count(PyObject sub, PyObject start, PyObject end) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_encode(PyObject encoding, PyObject errors) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_expandtabs(PyObject tabsize) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_format(PyObject[] args, PyDict kwargs) { throw new UnsupportedOperationException(); }

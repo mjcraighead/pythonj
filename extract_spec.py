@@ -13,7 +13,7 @@ from typing import Any
 import _io
 
 BUILTIN_FUNCTIONS = {
-    'abs', 'all', 'any', 'ascii', 'bin', 'chr', 'delattr', 'dir', 'format', 'getattr', 'hasattr', 'hash', 'hex',
+    'abs', 'all', 'any', 'ascii', 'bin', 'chr', 'delattr', 'dir', 'divmod', 'format', 'getattr', 'hasattr', 'hash', 'hex',
     'isinstance', 'issubclass', 'iter', 'len', 'max', 'min', 'next', 'open', 'ord', 'print', 'repr',
     'setattr', 'sorted', 'sum', 'oct',
 }

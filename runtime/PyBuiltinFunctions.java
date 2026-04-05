@@ -250,6 +250,9 @@ final class PyBuiltinFunctionsImpl {
         Collections.sort(list);
         return new PyList(list);
     }
+    static PyTuple pyfunc_divmod(PyObject a, PyObject b) {
+        return new PyTuple(new PyObject[] {a.floorDiv(b), a.mod(b)});
+    }
     static PyString pyfunc_hex(PyObject arg) {
         long index = arg.indexValue();
         if (index < 0) {
