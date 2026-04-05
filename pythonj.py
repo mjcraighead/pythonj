@@ -554,7 +554,7 @@ class LoweringVisitor(ast.NodeVisitor):
             if min_args <= len(node.args) <= max_args:
                 return ir.MethodCall(
                     self.final_top_level_function_expr(node.func.id),
-                    'call_positional',
+                    'callPositional',
                     [*([self.visit(arg) for arg in node.args]), *([ir.Null()] * (max_args - len(node.args)))],
                 )
         if self.allow_intrinsics and isinstance(node.func, ast.Name):
@@ -616,7 +616,7 @@ class LoweringVisitor(ast.NodeVisitor):
             if min_args <= len(node.args) <= max_args:
                 return ir.MethodCall(
                     ir.Field(ir.Identifier(f'PyBuiltinFunction_{func_name}'), 'singleton'),
-                    'call_positional',
+                    'callPositional',
                     [*([self.visit(arg) for arg in node.args]), *([ir.Null()] * (max_args - len(node.args)))],
                 )
         if (isinstance(node.func, ast.Attribute) and
@@ -632,7 +632,7 @@ class LoweringVisitor(ast.NodeVisitor):
                 if min_args <= len(node.args) <= max_args:
                     return ir.MethodCall(
                         get_builtin_module_attr_expr(module_name, node.func.attr, 'builtin_function'),
-                        'call_positional',
+                        'callPositional',
                         [*([self.visit(arg) for arg in node.args]), *([ir.Null()] * (max_args - len(node.args)))],
                     )
         if isinstance(node.func, ast.Name) and node.func.id in self.python_helper_names:
@@ -1056,7 +1056,7 @@ class LoweringVisitor(ast.NodeVisitor):
             ),
             ir.ReturnStatement(ir.MethodCall(
                 ir.This(),
-                'call_positional',
+                'callPositional',
                 [ir.MethodCall(ir.Field(ir.Identifier('boundArgs'), 'items'), 'get', [ir.IntLiteral(i)]) for i in range(n_args)],
             )),
         ]
@@ -1085,7 +1085,7 @@ class LoweringVisitor(ast.NodeVisitor):
         func_decls.append(ir.MethodDecl(
             'public',
             'PyObject',
-            'call_positional',
+            'callPositional',
             [f'PyObject {name}' for name in bind_arg_names],
             call_positional_body,
         ))
@@ -2270,7 +2270,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                     if kind == 'classmethod':
                         bind_args = [ir.Identifier('self')] + bind_args
                     if call_positional_shape is not None:
-                        call_expr = ir.MethodCall(ir.This(), 'call_positional', bind_args[1:] if kind == 'classmethod' else bind_args)
+                        call_expr = ir.MethodCall(ir.This(), 'callPositional', bind_args[1:] if kind == 'classmethod' else bind_args)
                     elif method_impl_target is not None:
                         call_args = bind_args if kind == 'classmethod' else [ir.Identifier('self'), *bind_args]
                         call_expr = ir.MethodCall(
@@ -2298,7 +2298,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                         decls.append(ir.MethodDecl(
                             'public',
                             'PyObject',
-                            'call_positional',
+                            'callPositional',
                             call_positional_method_args,
                             [*call_positional_statements, ir.ReturnStatement(call_positional_expr)],
                         ))
@@ -2356,7 +2356,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                     noarg_name=full_name,
                 )
                 if call_positional_shape is not None:
-                    call_expr = ir.MethodCall(ir.This(), 'call_positional', bind_args)
+                    call_expr = ir.MethodCall(ir.This(), 'callPositional', bind_args)
                 else:
                     call_expr = ir.MethodCall(ir.Identifier('PyBuiltinFunctionsImpl'), f'pyfunc_{module_name.removeprefix("_")}_{func_name}', bind_args)
                 call_body.append(ir.ReturnStatement(call_expr))
@@ -2366,7 +2366,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                     decls.append(ir.MethodDecl(
                         'public',
                         'PyObject',
-                        'call_positional',
+                        'callPositional',
                         call_positional_method_args,
                         [
                             *call_positional_statements,
@@ -2409,7 +2409,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
             else:
                 call_target = 'PyBuiltinFunctionsImpl'
             if call_positional_shape is not None:
-                call_expr = ir.MethodCall(ir.This(), 'call_positional', bind_args)
+                call_expr = ir.MethodCall(ir.This(), 'callPositional', bind_args)
             else:
                 call_expr = ir.MethodCall(ir.Identifier(call_target), f'pyfunc_{func_name}', bind_args)
             call_body.append(ir.ReturnStatement(call_expr))
@@ -2419,7 +2419,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                 decls.append(ir.MethodDecl(
                     'public',
                     'PyObject',
-                    'call_positional',
+                    'callPositional',
                     call_positional_method_args,
                     [
                         *call_positional_statements,
