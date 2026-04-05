@@ -205,9 +205,30 @@ public final class PyString extends PyObject {
         if (!(sub instanceof PyString subStr)) {
             throw PyTypeError.raise("find() argument 1 must be str, not " + sub.type().name());
         }
-        Runtime.unsupportedSearchIndexAllowNone(start, "str.find() does not yet support 'start' argument");
-        Runtime.unsupportedSearchIndexAllowNone(end, "str.find() does not yet support 'end' argument");
-        return new PyInt(value.indexOf(subStr.value));
+        int n = value.length();
+        int startIndex = Runtime.asSearchIndexAllowNone(start, 0, n);
+        int endIndex = Math.min(Runtime.asSearchIndexAllowNone(end, n, n), n);
+        if (subStr.value.isEmpty()) {
+            if ((startIndex > endIndex) || (startIndex > n)) {
+                return PyInt.singleton_neg1;
+            }
+            return new PyInt(startIndex);
+        }
+        if (startIndex > n) {
+            return PyInt.singleton_neg1;
+        }
+        int index = value.indexOf(subStr.value, startIndex);
+        if ((index < 0) || (index + subStr.value.length() > endIndex)) {
+            return PyInt.singleton_neg1;
+        }
+        return new PyInt(index);
+    }
+    public PyInt pymethod_index(PyObject sub, PyObject start, PyObject end) {
+        PyInt ret = pymethod_find(sub, start, end);
+        if (ret.value < 0) {
+            throw PyValueError.raise("substring not found");
+        }
+        return ret;
     }
     public PyString pymethod_join(PyObject arg) {
         // XXX consider special casing value.isEmpty() for performance
@@ -386,7 +407,6 @@ public final class PyString extends PyObject {
     public PyObject pymethod_expandtabs(PyObject tabsize) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_format(PyObject[] args, PyDict kwargs) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_format_map(PyObject mapping) { throw new UnsupportedOperationException(); }
-    public PyObject pymethod_index(PyObject sub, PyObject start, PyObject end) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_isalnum() { throw new UnsupportedOperationException(); }
     public PyObject pymethod_isalpha() { throw new UnsupportedOperationException(); }
     public PyObject pymethod_isascii() { throw new UnsupportedOperationException(); }
