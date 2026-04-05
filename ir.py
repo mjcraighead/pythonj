@@ -370,11 +370,19 @@ class IfStatement(Statement):
         return block_ends_control_flow(self.body) and block_ends_control_flow(self.orelse)
 
     def emit_java(self, pool: ConstantPool) -> Iterator[str]:
-        yield f'if ({self.cond.emit_java(pool)}) {{'
-        yield from block_emit_java(self.body, pool)
-        if self.orelse:
-            yield '} else {'
-            yield from block_emit_java(self.orelse, pool)
+        node = self
+        prefix = ''
+        while True:
+            yield f'{prefix}if ({node.cond.emit_java(pool)}) {{'
+            yield from block_emit_java(node.body, pool)
+            if node.orelse:
+                if len(node.orelse) == 1 and isinstance(node.orelse[0], IfStatement):
+                    node = node.orelse[0]
+                    prefix = '} else '
+                    continue
+                yield '} else {'
+                yield from block_emit_java(node.orelse, pool)
+            break
         yield '}'
 
 @dataclass(slots=True)
