@@ -844,6 +844,18 @@ class LoweringVisitor(ast.NodeVisitor):
         return ir.CreateObject('PyDict', [ir.Null() if x is None else self.visit(x) for x in kv_iter])
 
     def visit_Call(self, node) -> ir.Expr:
+        if (isinstance(node.func, ast.Lambda) and
+            not node.keywords and
+            not any(isinstance(arg, ast.Starred) for arg in node.args)):
+            (arg_names, arg_defaults) = self.check_args(node.lineno, node.func.args)
+            min_args = len(arg_names) - len(arg_defaults)
+            max_args = len(arg_names)
+            if min_args <= len(node.args) <= max_args:
+                return ir.MethodCall(
+                    self.visit(node.func),
+                    'callPositional',
+                    [*([self.visit(arg) for arg in node.args]), *([ir.Null()] * (max_args - len(node.args)))],
+                )
         if (isinstance(node.func, ast.Name) and
             self.name_resolves_to_final_top_level_function(node.func) and
             not node.keywords and
@@ -1650,7 +1662,11 @@ class LoweringVisitor(ast.NodeVisitor):
                 ]
             self.add_function(qualname, java_name, [arg_name], [], body, invisible_args=True)
 
-        return ir.MethodCall(ir.CreateObject(java_name, [ir.Identifier(f'pycell_{name}') for name in sorted(free_vars)]), 'call', [ir.CreateArray('PyObject', [self.visit(generators[0].iter)]), ir.Null()])
+        return ir.MethodCall(
+            ir.CreateObject(java_name, [ir.Identifier(f'pycell_{name}') for name in sorted(free_vars)]),
+            'callPositional',
+            [self.visit(generators[0].iter)],
+        )
 
     def _lower_genexpr(self, node: ast.GeneratorExp) -> ir.Expr:
         if len(node.generators) != 1:
