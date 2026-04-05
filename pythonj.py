@@ -1082,7 +1082,7 @@ class LoweringVisitor(ast.NodeVisitor):
             if type_name is not None and RUNTIME_SPEC is not None:
                 attr_kind = DIRECT_GETATTR_BUILTIN_TYPE_ATTRS.get(type_name, {}).get(node.func.attr)
                 if attr_kind == 'method':
-                    call_range = extract_spec.get_positional_call_range(extract_spec.get_method_params(RUNTIME_SPEC, type_name, node.func.attr))
+                    call_range = extract_spec.get_method_call_range(RUNTIME_SPEC, type_name, node.func.attr)
                     if call_range is not None:
                         (min_args, max_args) = call_range
                         if min_args <= len(node.args) <= max_args:
@@ -2464,33 +2464,21 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
         spec = json.load(f)
     RUNTIME_SPEC = spec
     for func_name in extract_spec.BUILTIN_FUNCTIONS:
-        call_range = extract_spec.get_positional_call_range(extract_spec.get_builtin_function_params(spec, func_name))
+        call_range = extract_spec.get_builtin_function_call_range(spec, func_name)
         if call_range is not None:
             DIRECT_CALL_POSITIONAL_BUILTINS[func_name] = call_range
     for type_name in extract_spec.BUILTIN_TYPES:
-        type_spec = cast(dict[str, object], spec[type_name])
-        attrs = cast(dict[str, dict[str, object]], type_spec['attrs'])
-        DIRECT_GETATTR_BUILTIN_TYPE_ATTRS[type_name] = {
-            attr_name: cast(str, attr_spec['kind']) for (attr_name, attr_spec) in attrs.items()
-        }
+        DIRECT_GETATTR_BUILTIN_TYPE_ATTRS[type_name] = extract_spec.get_type_attr_kinds(spec, type_name)
         if type_name in DIRECT_NEWOBJ_POSITIONAL_SUPPORTED_BUILTIN_TYPES:
-            type_signature = cast(Optional[dict[str, object]], type_spec.get('signature'))
-            if type_signature is not None:
-                params = extract_spec.decode_signature(type_signature)
-                if params is not None:
-                    call_range = extract_spec.get_positional_call_range(params)
-                    if call_range is not None:
-                        DIRECT_NEWOBJ_POSITIONAL_BUILTIN_TYPES[type_name] = call_range
+            call_range = extract_spec.get_type_newobj_call_range(spec, type_name)
+            if call_range is not None:
+                DIRECT_NEWOBJ_POSITIONAL_BUILTIN_TYPES[type_name] = call_range
     for module_name in extract_spec.BUILTIN_MODULES:
-        module_spec = cast(dict[str, object], spec[module_name])
-        attrs = cast(dict[str, dict[str, object]], module_spec['attrs'])
-        DIRECT_GETATTR_BUILTIN_MODULE_ATTRS[module_name] = {
-            attr_name: cast(str, attr_spec['kind']) for (attr_name, attr_spec) in attrs.items()
-        }
+        DIRECT_GETATTR_BUILTIN_MODULE_ATTRS[module_name] = extract_spec.get_module_attr_kinds(spec, module_name)
     for module_name in extract_spec.BUILTIN_MODULES:
         DIRECT_CALL_POSITIONAL_MODULE_FUNCTIONS[module_name] = {}
-        for func_name in cast(dict[str, dict[str, object]], cast(dict[str, object], spec[module_name])['attrs']):
-            call_range = extract_spec.get_positional_call_range(extract_spec.get_module_function_params(spec, module_name, func_name))
+        for (func_name, _) in extract_spec.iter_module_functions(spec, module_name):
+            call_range = extract_spec.get_module_function_call_range(spec, module_name, func_name)
             if call_range is not None:
                 DIRECT_CALL_POSITIONAL_MODULE_FUNCTIONS[module_name][func_name] = call_range
 
@@ -2521,7 +2509,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
         for (name, obj_spec) in spec.items():
             if obj_spec['kind'] != 'type':
                 continue
-            attrs = obj_spec['attrs']
+            attrs = extract_spec.get_type_attrs(spec, name)
             java_name = get_java_name(name)
             match name:
                 case 'types.BuiltinFunctionType': py_name = 'builtin_function_or_method'
@@ -2537,7 +2525,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
             type_decls: list[ir.Decl] = [
                 ir.FieldDecl('public static final', f'{java_name}Type', 'singleton', ir.CreateObject(f'{java_name}Type', [])),
             ]
-            for (k, v) in attrs.items():
+            for (k, v) in extract_spec.iter_type_attrs(spec, name):
                 doc_value = v.get('doc')
                 if v['kind'] == 'string':
                     value = ir.CreateObject('PyString', [ir.StrLiteral(v['value'])])
@@ -2632,12 +2620,9 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                     ))
 
             gen_methods = {}
-            for (method_name, v) in attrs.items():
-                if v['kind'] not in {'method', 'classmethod', 'staticmethod'}:
-                    continue
+            for (method_name, kind, params) in extract_spec.iter_type_methods(spec, name):
                 if is_special_method_wrapper(name, method_name):
                     continue
-                params = extract_spec.get_method_params(spec, name, method_name)
                 if params is None:
                     gen_methods[method_name] = None
                 else:
@@ -2798,14 +2783,10 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
         top_level_decls.append(ir.ClassDecl('final', 'PyBuiltinFunctionsPythonImpl', None, python_builtin_helper_methods))
 
         for module_name in sorted(extract_spec.BUILTIN_MODULES):
-            module_spec = cast(dict[str, object], spec[module_name])
-            attrs = cast(dict[str, dict[str, object]], module_spec['attrs'])
+            attrs = extract_spec.get_module_attrs(spec, module_name)
             module_java_name = extract_spec.BUILTIN_MODULES[module_name]
             module_func_prefix = module_java_name.removesuffix('Module')
-            for func_name in sorted(attrs):
-                if attrs[func_name]['kind'] != 'builtin_function':
-                    continue
-                params = extract_spec.get_module_function_params(spec, module_name, func_name)
+            for (func_name, params) in sorted(extract_spec.iter_module_functions(spec, module_name)):
                 if params is None:
                     kwarg_params = None
                 else:

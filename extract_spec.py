@@ -261,6 +261,28 @@ def get_module_function_params(spec: dict[str, object], module_name: str, func_n
     attrs = spec[module_name]['attrs']
     return decode_signature(attrs[func_name].get('signature'))
 
+def get_type_attr_kinds(spec: dict[str, object], name: str) -> dict[str, str]:
+    attrs = spec[name]['attrs']
+    return {attr_name: attr_spec['kind'] for (attr_name, attr_spec) in attrs.items()}
+
+def get_module_attr_kinds(spec: dict[str, object], module_name: str) -> dict[str, str]:
+    attrs = spec[module_name]['attrs']
+    return {attr_name: attr_spec['kind'] for (attr_name, attr_spec) in attrs.items()}
+
+def get_type_attr_kind(spec: dict[str, object], name: str, attr_name: str) -> str | None:
+    attrs = spec[name]['attrs']
+    attr = attrs.get(attr_name)
+    if attr is None:
+        return None
+    return attr['kind']
+
+def get_module_attr_kind(spec: dict[str, object], module_name: str, attr_name: str) -> str | None:
+    attrs = spec[module_name]['attrs']
+    attr = attrs.get(attr_name)
+    if attr is None:
+        return None
+    return attr['kind']
+
 def get_positional_call_range(params: list[inspect.Parameter] | None) -> tuple[int, int] | None:
     if params is None:
         return None
@@ -290,6 +312,47 @@ def get_posonly_min_max_call_range(params: list[inspect.Parameter] | None) -> tu
     if min_args == max_args:
         return None
     return (min_args, max_args)
+
+def get_method_call_range(spec: dict[str, object], name: str, method_name: str) -> tuple[int, int] | None:
+    return get_positional_call_range(get_method_params(spec, name, method_name))
+
+def get_builtin_function_call_range(spec: dict[str, object], name: str) -> tuple[int, int] | None:
+    return get_positional_call_range(get_builtin_function_params(spec, name))
+
+def get_module_function_call_range(spec: dict[str, object], module_name: str, func_name: str) -> tuple[int, int] | None:
+    return get_positional_call_range(get_module_function_params(spec, module_name, func_name))
+
+def get_type_newobj_call_range(spec: dict[str, object], name: str) -> tuple[int, int] | None:
+    type_signature = spec[name].get('signature')
+    if type_signature is None:
+        return None
+    return get_positional_call_range(decode_signature(type_signature))
+
+def get_type_attrs(spec: dict[str, object], name: str) -> dict[str, dict[str, object]]:
+    return spec[name]['attrs']
+
+def iter_type_attrs(spec: dict[str, object], name: str) -> list[tuple[str, dict[str, object]]]:
+    return list(get_type_attrs(spec, name).items())
+
+def iter_type_methods(spec: dict[str, object], name: str) -> list[tuple[str, str, list[inspect.Parameter] | None]]:
+    attrs = get_type_attrs(spec, name)
+    out = []
+    for (attr_name, attr_spec) in attrs.items():
+        kind = attr_spec['kind']
+        if kind in {'method', 'classmethod', 'staticmethod'}:
+            out.append((attr_name, kind, decode_signature(attr_spec.get('signature'))))
+    return out
+
+def get_module_attrs(spec: dict[str, object], module_name: str) -> dict[str, dict[str, object]]:
+    return spec[module_name]['attrs']
+
+def iter_module_functions(spec: dict[str, object], module_name: str) -> list[tuple[str, list[inspect.Parameter] | None]]:
+    attrs = get_module_attrs(spec, module_name)
+    out = []
+    for (attr_name, attr_spec) in attrs.items():
+        if attr_spec['kind'] == 'builtin_function':
+            out.append((attr_name, decode_signature(attr_spec.get('signature'))))
+    return out
 
 def get_method_signature(name: str, method_name: str) -> dict[str, object] | None:
     if (synthetic := SYNTHETIC_PARAMS.get(name, {}).get(method_name)) is not None:
