@@ -556,6 +556,7 @@ def _pyj_float_sign_prefix(value, sign, z, magnitude_text) -> str:
     return ''
 
 def _pyj_float_apply_zero_fill(text, grouping, width) -> str:
+    magnitude: str
     sign, magnitude = _pyj_format_split_sign(text)
     if grouping is None:
         return sign + ('0' * (width - len(sign) - len(magnitude))) + magnitude

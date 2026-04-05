@@ -90,6 +90,8 @@ class ScopeInfo:
     initial_final_bindings: set[str]
     initial_builtin_module_locals: dict[str, str]
     initial_final_function_call_ranges: dict[str, tuple[int, int]]
+    exact_local_types: dict[str, str]
+    annotation_errors: list[tuple[int, str]]
 
 @dataclass(frozen=True)
 class WrapperBindingPlan:
@@ -279,6 +281,42 @@ def _collect_statement_store_del_names(node: ast.stmt) -> tuple[set[str], set[st
         stores.add(node.name)
     return (stores, dels)
 
+def _collect_exact_local_annotations(node: ast.AST) -> tuple[dict[str, str], list[tuple[int, str]]]:
+    if isinstance(node, ast.Module):
+        body = node.body
+        arg_names: set[str] = set()
+    elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+        body = node.body
+        arg_names = set(_param_names(node.args))
+    elif isinstance(node, ast.ClassDef):
+        body = node.body
+        arg_names = set()
+    else:
+        return ({}, [])
+
+    exact_local_types: dict[str, str] = {}
+    errors: list[tuple[int, str]] = []
+    for statement in body:
+        if not isinstance(statement, ast.AnnAssign):
+            continue
+        if statement.value is not None:
+            errors.append((statement.lineno, 'annotated assignments are unsupported; annotate and assign separately'))
+            continue
+        if not isinstance(statement.target, ast.Name):
+            errors.append((statement.lineno, 'only simple local variable annotations are supported'))
+            continue
+        if statement.target.id in arg_names:
+            errors.append((statement.lineno, f"local annotation for {statement.target.id!r} collides with an argument name"))
+            continue
+        if statement.target.id in exact_local_types:
+            errors.append((statement.lineno, f"duplicate local annotation for {statement.target.id!r}"))
+            continue
+        if not isinstance(statement.annotation, ast.Name) or statement.annotation.id not in extract_spec.BUILTIN_TYPES:
+            errors.append((statement.lineno, 'only exact builtin-type local annotations are supported'))
+            continue
+        exact_local_types[statement.target.id] = statement.annotation.id
+    return (exact_local_types, errors)
+
 class ScopeAnalyzer(ast.NodeVisitor):
     __slots__ = ('scope_infos',)
     scope_infos: dict[ast.AST, ScopeInfo]
@@ -333,6 +371,10 @@ class ScopeAnalyzer(ast.NodeVisitor):
                 elif name not in explicit_globals:
                     needs_from_outer.add(name)
         kind = ScopeKind.MODULE if isinstance(node, ast.Module) else ScopeKind.FUNCTION
+        (exact_local_types, annotation_errors) = _collect_exact_local_annotations(node)
+        for name in exact_local_types:
+            if name in cell_vars:
+                annotation_errors.append((getattr(node, 'lineno', 0), f"annotated local {name!r} may not be captured by an inner scope"))
         (initial_final_bindings,
          initial_builtin_module_locals,
          initial_final_function_call_ranges) = _collect_initial_final_bindings(node)
@@ -346,6 +388,8 @@ class ScopeAnalyzer(ast.NodeVisitor):
             initial_final_bindings,
             initial_builtin_module_locals,
             initial_final_function_call_ranges,
+            exact_local_types,
+            annotation_errors,
         )
         self.scope_infos[node] = scope_info
         return scope_info
@@ -443,6 +487,7 @@ class ScopeAnalyzer(ast.NodeVisitor):
 
 class Scope:
     __slots__ = ('parent', 'info', 'qualname', 'free_vars', 'locals_are_fields', 'n_temps', 'used_expr_discard',
+                 'reported_annotation_errors',
                  'expected_return_java_type')
     parent: Optional['Scope']
     info: ScopeInfo
@@ -451,6 +496,7 @@ class Scope:
     locals_are_fields: bool
     n_temps: int
     used_expr_discard: bool
+    reported_annotation_errors: bool
     expected_return_java_type: Optional[str]
 
     def __init__(self, parent: Optional['Scope'], info: ScopeInfo, qualname: Optional[str] = None,
@@ -462,6 +508,7 @@ class Scope:
         self.locals_are_fields = False
         self.n_temps = 0
         self.used_expr_discard = False
+        self.reported_annotation_errors = False
         self.expected_return_java_type = expected_return_java_type
 
     def make_temp(self) -> str:
@@ -591,6 +638,35 @@ class LoweringVisitor(ast.NodeVisitor):
         if resolution is NameResolution.GLOBAL:
             return self.module_scope().info.initial_builtin_module_locals.get(node.id)
         return None
+
+    def report_annotation_errors(self) -> None:
+        if self.scope.reported_annotation_errors:
+            return
+        for (lineno, msg) in self.scope.info.annotation_errors:
+            self.error(lineno, msg)
+        self.scope.reported_annotation_errors = True
+
+    def local_exact_builtin_type(self, name: str) -> Optional[str]:
+        return self.scope.info.exact_local_types.get(name)
+
+    def java_local_type(self, name: str) -> str:
+        type_name = self.local_exact_builtin_type(name)
+        if type_name is None:
+            return 'PyObject'
+        return extract_spec.BUILTIN_TYPES[type_name]
+
+    def cast_local_assignment(self, name: str, value: ir.Expr) -> ir.Expr:
+        type_name = self.local_exact_builtin_type(name)
+        if type_name is None:
+            return value
+        return ir.CastExpr(extract_spec.BUILTIN_TYPES[type_name], value)
+
+    def infer_exact_builtin_type_expr(self, node: ast.expr) -> Optional[str]:
+        if isinstance(node, ast.Name) and get_name_resolution(node) is NameResolution.LOCAL:
+            type_name = self.local_exact_builtin_type(node.id)
+            if type_name is not None:
+                return type_name
+        return infer_exact_builtin_type(node)
 
     def resolve_free_vars(self, lineno: int, scope_info: ScopeInfo, func_type: str) -> set[str]:
         free_vars = set()
@@ -912,7 +988,7 @@ class LoweringVisitor(ast.NodeVisitor):
         if (isinstance(node.func, ast.Attribute) and
             not node.keywords and
             not any(isinstance(arg, ast.Starred) for arg in node.args)):
-            type_name = infer_exact_builtin_type(node.func.value)
+            type_name = self.infer_exact_builtin_type_expr(node.func.value)
             if type_name is not None and RUNTIME_SPEC is not None:
                 attr_kind = DIRECT_GETATTR_BUILTIN_TYPE_ATTRS.get(type_name, {}).get(node.func.attr)
                 if attr_kind == 'method':
@@ -996,7 +1072,7 @@ class LoweringVisitor(ast.NodeVisitor):
             self.name_resolves_to_builtin_type(node.value) and
             attr_kind is not None):
             return get_builtin_type_attr_expr(node.value.id, node.attr, attr_kind, None)
-        type_name = infer_exact_builtin_type(node.value)
+        type_name = self.infer_exact_builtin_type_expr(node.value)
         if type_name is not None:
             attr_kind = DIRECT_GETATTR_BUILTIN_TYPE_ATTRS.get(type_name, {}).get(node.attr)
             if attr_kind is not None:
@@ -1042,6 +1118,8 @@ class LoweringVisitor(ast.NodeVisitor):
 
     def emit_bind(self, target: ast.expr, value: ir.Expr) -> Iterator[ir.Statement]:
         if isinstance(target, ast.Name):
+            if get_name_resolution(target) is NameResolution.LOCAL:
+                value = self.cast_local_assignment(target.id, value)
             yield ir.AssignStatement(self.visit(target), value)
         elif isinstance(target, ast.Attribute):
             temp_name = self.scope.make_temp()
@@ -1066,6 +1144,28 @@ class LoweringVisitor(ast.NodeVisitor):
             self.error(node.lineno, 'chained assignment (a = b = c) is unsupported')
         target = node.targets[0]
         self.code.extend(self.emit_bind(target, self.visit(node.value)))
+
+    def visit_AnnAssign(self, node) -> None:
+        self.report_annotation_errors()
+        if not self.allow_intrinsics:
+            self.error(node.lineno, 'local type annotations are unsupported')
+            if node.value is not None:
+                self.visit(node.value)
+            return
+        if node.value is not None:
+            self.error(node.lineno, 'annotated assignments are unsupported; annotate and assign separately')
+            self.visit(node.value)
+            return
+        if not isinstance(node.target, ast.Name):
+            self.error(node.lineno, 'only simple local variable annotations are supported')
+            return
+        if not isinstance(node.annotation, ast.Name) or node.annotation.id not in extract_spec.BUILTIN_TYPES:
+            self.error(node.lineno, 'only exact builtin-type local annotations are supported')
+            return
+        if any(lineno == node.lineno for (lineno, _) in self.scope.info.annotation_errors):
+            return
+        if node.target.id not in self.scope.info.exact_local_types:
+            self.error(node.lineno, 'unsupported local annotation')
 
     def visit_AugAssign(self, node) -> None:
         op = f'{self.visit(node.op)}InPlace'
@@ -1454,7 +1554,7 @@ class LoweringVisitor(ast.NodeVisitor):
             call_positional_body.append(ir.LocalDecl('PyCell', f'pycell_{name}', ir.CreateObject('PyCell', [ir.PyConstant(None)])))
         for name in sorted(self.scope.info.locals - self.scope.info.cell_vars - set(arg_names) - set(self.scope.info.initial_builtin_module_locals)):
             if invisible_args or name not in arg_names:
-                call_positional_body.append(ir.LocalDecl('PyObject', f'pylocal_{name}', None))
+                call_positional_body.append(ir.LocalDecl(self.java_local_type(name), f'pylocal_{name}', None))
         call_positional_body.extend(ir.block_simplify([*body, ir.ReturnStatement(ir.PyConstant(None))]))
         func_decls.append(ir.MethodDecl(
             'public',
@@ -2082,7 +2182,7 @@ def emit_python_function_static(visitor: LoweringVisitor, func_name: str, arg_na
     for name in sorted(visitor.scope.info.cell_vars - set(arg_names)):
         func_code.append(ir.LocalDecl('PyCell', f'pycell_{name}', ir.CreateObject('PyCell', [ir.PyConstant(None)])))
     for name in sorted(visitor.scope.info.locals - visitor.scope.info.cell_vars - set(arg_names) - set(visitor.scope.info.initial_builtin_module_locals)):
-        func_code.append(ir.LocalDecl('PyObject', f'pylocal_{name}', None))
+        func_code.append(ir.LocalDecl(visitor.java_local_type(name), f'pylocal_{name}', None))
     if return_java_type == 'NoReturn':
         func_code.extend(ir.block_simplify(body))
     else:
