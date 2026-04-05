@@ -1603,70 +1603,56 @@ class LoweringVisitor(ast.NodeVisitor):
         ]
         call_body: list[ir.Statement]
         if shape.posonly_params and not shape.poskw_params:
-            tuple_expr = ir.CreateObject('PyTuple', [ir.Identifier('args')])
             if n_required == n_args:
                 call_body = [
-                    ir.LocalDecl(
-                        'PyTuple',
-                        'boundArgs',
-                        ir.MethodCall(
-                            ir.Identifier('PyRuntime'),
-                            'pyfunc_bind_user_exact_positional',
-                            [tuple_expr, ir.Identifier('kwargs'), ir.PyConstant(py_name), ir.PyConstant(tuple(arg_names))],
-                        ),
-                    ),
+                    ir.ExprStatement(ir.MethodCall(ir.Identifier('PyRuntime'), 'pyfunc_require_user_exact_positional', [
+                        ir.CreateObject('PyInt', [ir.Field(ir.Identifier('args'), 'length')]),
+                        ir.Identifier('kwargs'),
+                        ir.PyConstant(py_name),
+                        ir.PyConstant(tuple(arg_names)),
+                    ])),
                     ir.ReturnStatement(ir.MethodCall(
                         ir.This(),
                         'callPositional',
-                        [ir.ArrayAccess(ir.Field(ir.Identifier('boundArgs'), 'items'), ir.IntLiteral(i)) for i in range(n_args)],
+                        [ir.ArrayAccess(ir.Identifier('args'), ir.IntLiteral(i)) for i in range(n_args)],
                     )),
                 ]
             else:
-                call_args: list[ir.Expr] = []
-                for i in range(n_required):
-                    call_args.append(ir.ArrayAccess(ir.Field(ir.Identifier('boundArgs'), 'items'), ir.IntLiteral(i)))
-                for i in range(n_required, n_args):
-                    call_args.append(
-                        ir.CondOp(
-                            ir.BinaryOp('>', ir.Field(ir.Field(ir.Identifier('boundArgs'), 'items'), 'length'), ir.IntLiteral(i)),
-                            ir.ArrayAccess(ir.Field(ir.Identifier('boundArgs'), 'items'), ir.IntLiteral(i)),
-                            ir.Null(),
-                        )
-                    )
                 call_body = [
-                    ir.LocalDecl(
-                        'PyTuple',
-                        'boundArgs',
-                        ir.MethodCall(
-                            ir.Identifier('PyRuntime'),
-                            'pyfunc_bind_user_min_max_positional',
-                            [tuple_expr, ir.Identifier('kwargs'), ir.PyConstant(py_name), ir.PyConstant(tuple(arg_names)), ir.PyConstant(n_required)],
+                    ir.LocalDecl('int', 'argsLength', ir.Field(ir.Identifier('args'), 'length')),
+                    ir.ExprStatement(ir.MethodCall(ir.Identifier('PyRuntime'), 'pyfunc_require_user_min_max_positional', [
+                        ir.CreateObject('PyInt', [ir.Identifier('argsLength')]),
+                        ir.Identifier('kwargs'),
+                        ir.PyConstant(py_name),
+                        ir.PyConstant(tuple(arg_names)),
+                        ir.PyConstant(n_required),
+                    ])),
+                    ir.ReturnStatement(ir.MethodCall(ir.This(), 'callPositional', [
+                        *(ir.ArrayAccess(ir.Identifier('args'), ir.IntLiteral(i)) for i in range(n_required)),
+                        *(
+                            ir.CondOp(
+                                ir.BinaryOp('>', ir.Identifier('argsLength'), ir.IntLiteral(i)),
+                                ir.ArrayAccess(ir.Identifier('args'), ir.IntLiteral(i)),
+                                ir.Null(),
+                            )
+                            for i in range(n_required, n_args)
                         ),
-                    ),
-                    ir.ReturnStatement(ir.MethodCall(ir.This(), 'callPositional', call_args)),
+                    ])),
                 ]
         else:
             call_body = [
-                ir.LocalDecl(
-                    'PyList',
-                    'boundArgs',
-                    ir.MethodCall(
-                        ir.Identifier('PyRuntime'),
-                        'pyfunc_bind_user_function',
-                        [
-                            ir.CreateObject('PyTuple', [ir.Identifier('args')]),
-                            ir.Identifier('kwargs'),
-                            ir.PyConstant(py_name),
-                            ir.PyConstant(tuple(arg_names)),
-                            ir.PyConstant(n_required),
-                            ir.PyConstant(len(shape.posonly_params)),
-                        ],
-                    ),
-                ),
+                ir.LocalDecl('var', 'boundArgs', ir.Field(ir.MethodCall(ir.Identifier('PyRuntime'), 'pyfunc_bind_user_function', [
+                    ir.CreateObject('PyTuple', [ir.Identifier('args')]),
+                    ir.Identifier('kwargs'),
+                    ir.PyConstant(py_name),
+                    ir.PyConstant(tuple(arg_names)),
+                    ir.PyConstant(n_required),
+                    ir.PyConstant(len(shape.posonly_params)),
+                ]), 'items')),
                 ir.ReturnStatement(ir.MethodCall(
                     ir.This(),
                     'callPositional',
-                    [ir.MethodCall(ir.Field(ir.Identifier('boundArgs'), 'items'), 'get', [ir.IntLiteral(i)]) for i in range(n_args)],
+                    [ir.MethodCall(ir.Identifier('boundArgs'), 'get', [ir.IntLiteral(i)]) for i in range(n_args)],
                 )),
             ]
         func_decls.append(ir.MethodDecl('@Override public', 'PyObject', 'call', ['PyObject[] args', 'PyDict kwargs'], call_body))

@@ -149,8 +149,7 @@ def bind_varargs_and_kwonly(kwargs: dict, kw_name, kwonly_names) -> list:
 
     return bound_args
 
-def bind_user_exact_positional(args, kwargs, name, arg_names) -> tuple:
-    args_len: int = len(args)
+def require_user_exact_positional(args_len: int, kwargs, name, arg_names) -> None:
     n_args: int = len(arg_names)
 
     if kwargs is not __pythonj_null__ and kwargs:
@@ -172,10 +171,8 @@ def bind_user_exact_positional(args, kwargs, name, arg_names) -> tuple:
             was_were = 'was' if args_len == 1 else 'were'
             raise TypeError(f'{name}() takes {n_args} positional argument{arg_s} but {args_len} {was_were} given')
         raise _type_error_user_missing_args(name, arg_names[args_len:n_args])
-    return args
 
-def bind_user_min_max_positional(args, kwargs, name, arg_names, n_required: int) -> tuple:
-    args_len: int = len(args)
+def require_user_min_max_positional(args_len: int, kwargs, name, arg_names, n_required: int) -> None:
     n_args: int = len(arg_names)
 
     if kwargs is not __pythonj_null__ and kwargs:
@@ -196,7 +193,6 @@ def bind_user_min_max_positional(args, kwargs, name, arg_names, n_required: int)
     if args_len > n_args:
         was_were = 'was' if args_len == 1 else 'were'
         raise TypeError(f'{name}() takes from {n_required} to {n_args} positional arguments but {args_len} {was_were} given')
-    return args
 
 def bind_user_function(args, kwargs: dict, name, arg_names, n_required: int, posonly_count: int) -> list:
     args_len: int = len(args)
