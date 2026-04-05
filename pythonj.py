@@ -670,6 +670,8 @@ class LoweringVisitor(ast.NodeVisitor):
             return True
         if get_name_resolution(node) is not NameResolution.GLOBAL:
             return False
+        if hasattr(node, BINDING_STATE_ATTR):
+            return get_name_binding_state(node) is NameBindingState.DEFINITELY_UNBOUND
         return not self.module_binds_name(node.id)
 
     def name_resolves_to_final_top_level_function(self, node: ast.Name) -> bool:
@@ -900,6 +902,19 @@ class LoweringVisitor(ast.NodeVisitor):
                 return ir.MethodCall(
                     self.final_top_level_function_expr(node.func.id),
                     'callPositional',
+                    [*([self.visit(arg) for arg in node.args]), *([ir.Null()] * (max_args - len(node.args)))],
+                )
+        if (isinstance(node.func, ast.Name) and
+            node.func.id in DIRECT_NEWOBJ_POSITIONAL_BUILTIN_TYPES and
+            self.name_resolves_to_builtin_type(node.func) and
+            not node.keywords and
+            not any(isinstance(arg, ast.Starred) for arg in node.args)):
+            (min_args, max_args) = DIRECT_NEWOBJ_POSITIONAL_BUILTIN_TYPES[node.func.id]
+            if min_args <= len(node.args) <= max_args:
+                java_name = extract_spec.BUILTIN_TYPES[node.func.id]
+                return ir.MethodCall(
+                    ir.Identifier(java_name),
+                    'newObjPositional',
                     [*([self.visit(arg) for arg in node.args]), *([ir.Null()] * (max_args - len(node.args)))],
                 )
         if self.allow_intrinsics and isinstance(node.func, ast.Name):
@@ -1813,6 +1828,20 @@ def get_class_functions(node: ast.Module, class_name: str) -> dict[str, ast.Func
 NULL = object()
 RAW_ARGS_KWARGS_BUILTINS = {'max', 'min'}
 DIRECT_CALL_POSITIONAL_BUILTINS: dict[str, tuple[int, int]] = {}
+DIRECT_NEWOBJ_POSITIONAL_BUILTIN_TYPES: dict[str, tuple[int, int]] = {
+    'bool': (0, 1),
+    'bytearray': (0, 3),
+    'bytes': (0, 3),
+    'float': (0, 1),
+    'int': (0, 2),
+    'list': (0, 1),
+    'range': (1, 3),
+    'reversed': (1, 1),
+    'set': (0, 1),
+    'slice': (1, 3),
+    'str': (0, 3),
+    'tuple': (0, 1),
+}
 DIRECT_GETATTR_BUILTIN_TYPE_ATTRS: dict[str, dict[str, str]] = {}
 DIRECT_GETATTR_IDENTITY_KINDS = {'string', 'member', 'getset', 'method'}
 DIRECT_GETATTR_BUILTIN_MODULE_ATTRS: dict[str, dict[str, str]] = {}
