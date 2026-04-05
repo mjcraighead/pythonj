@@ -654,22 +654,22 @@ def pyj_str_format(value, spec) -> str:
     return _pyj_format_apply_width(text, fill, align, width, '<')
 
 def _pyj_percent_arg_seq(args) -> tuple:
-    if isinstance(args, tuple):
+    if __pythonj_isinstance__(args, tuple):
         return args
     return (args,)
 
 def _pyj_percent_real_arg(arg, conv) -> float:
-    if isinstance(arg, (bool, int, float)):
+    if __pythonj_isinstance__(arg, (bool, int, float)):
         return float(arg)
     raise TypeError(f'must be real number, not {type(arg).__name__}')
 
 def _pyj_percent_signed_int_arg(arg, conv) -> int:
-    if isinstance(arg, (bool, int, float)):
+    if __pythonj_isinstance__(arg, (bool, int, float)):
         return int(arg)
     raise TypeError(f'%{conv} format: a real number is required, not {type(arg).__name__}')
 
 def _pyj_percent_index_arg(arg, conv) -> int:
-    if isinstance(arg, (int, bool)):
+    if __pythonj_isinstance__(arg, (int, bool)):
         return int(arg)
     raise TypeError(f'%{conv} format: an integer is required, not {type(arg).__name__}')
 
@@ -749,11 +749,11 @@ def _pyj_percent_float_text(flags, width, precision, conv, arg) -> str:
     return format(_pyj_percent_real_arg(arg, conv), spec)
 
 def _pyj_percent_char_text(arg) -> str:
-    if isinstance(arg, str):
+    if __pythonj_isinstance__(arg, str):
         if len(arg) != 1:
             raise TypeError(f'%c requires an int or a unicode character, not a string of length {len(arg)}')
         return arg
-    if not isinstance(arg, (int, bool)):
+    if not __pythonj_isinstance__(arg, (int, bool)):
         raise TypeError(f'%c requires an int or a unicode character, not {type(arg).__name__}')
     code = int(arg)
     if code < 0 or code > 0x10FFFF:
@@ -793,7 +793,7 @@ def _pyj_percent_take_star_value(arg_seq, arg_index) -> tuple:
         raise TypeError('not enough arguments for format string')
     value = arg_seq[arg_index]
     arg_index += 1
-    if not isinstance(value, int):
+    if not __pythonj_isinstance__(value, (int, bool)):
         raise TypeError('* wants int')
     return (int(value), arg_index)
 

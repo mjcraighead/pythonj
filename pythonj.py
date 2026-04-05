@@ -17,7 +17,7 @@ import ir
 
 # Keep this explicit and narrow; widen it only for builtin types we have actually
 # exercised and are comfortable lowering directly to JVM instanceof checks.
-ISINSTANCE_SINGLE_FASTPATH_BUILTIN_TYPES = {'bytearray', 'bytes', 'str', 'tuple'}
+ISINSTANCE_SINGLE_FASTPATH_BUILTIN_TYPES = {'bool', 'bytearray', 'bytes', 'float', 'int', 'str', 'tuple'}
 
 RUNTIME_JAVA_FILES = (
     'PyBool.java',
@@ -731,6 +731,22 @@ class LoweringVisitor(ast.NodeVisitor):
             return ir.chained_binary_op(op, [self.emit_condition(value) for value in node.values])
         return ir.bool_value(self.visit(node))
 
+    def emit_isinstance_condition(self, obj: ast.expr, class_or_tuple: ast.expr) -> ir.Expr:
+        obj_expr = self.visit(obj)
+        if isinstance(class_or_tuple, ast.Name) and class_or_tuple.id in ISINSTANCE_SINGLE_FASTPATH_BUILTIN_TYPES:
+            builtin_type = class_or_tuple.id
+            assert builtin_type in extract_spec.BUILTIN_TYPES, builtin_type
+            return ir.MethodCall(ir.Identifier('PyBool'), 'create', [
+                ir.BinaryOp('instanceof', obj_expr, ir.Identifier(extract_spec.BUILTIN_TYPES[builtin_type]))
+            ])
+        if isinstance(class_or_tuple, ast.Tuple):
+            if not class_or_tuple.elts:
+                return ir.PyConstant(False)
+            return ir.MethodCall(ir.Identifier('PyBool'), 'create', [
+                ir.chained_binary_op('||', [ir.bool_value(self.emit_isinstance_condition(obj, elt)) for elt in class_or_tuple.elts])
+            ])
+        return ir.MethodCall(ir.Identifier('Runtime'), 'pythonjIsInstance', [obj_expr, self.visit(class_or_tuple)])
+
     def visit_Constant(self, node) -> ir.Expr:
         if isinstance(node.value, (types.NoneType, bool, int, float, str, bytes)):
             return ir.PyConstant(node.value)
@@ -880,13 +896,7 @@ class LoweringVisitor(ast.NodeVisitor):
                     return ir.MethodCall(ir.Identifier('Runtime'), 'pythonjIndex', [self.visit(node.args[0])])
                 case '__pythonj_isinstance__':
                     assert len(node.args) == 2 and not node.keywords, node.args
-                    if isinstance(node.args[1], ast.Name) and node.args[1].id in ISINSTANCE_SINGLE_FASTPATH_BUILTIN_TYPES:
-                        builtin_type = node.args[1].id
-                        assert builtin_type in extract_spec.BUILTIN_TYPES, builtin_type
-                        return ir.MethodCall(ir.Identifier('PyBool'), 'create', [
-                            ir.BinaryOp('instanceof', self.visit(node.args[0]), ir.Identifier(extract_spec.BUILTIN_TYPES[builtin_type]))
-                        ])
-                    return ir.MethodCall(ir.Identifier('Runtime'), 'pythonjIsInstance', [self.visit(node.args[0]), self.visit(node.args[1])])
+                    return self.emit_isinstance_condition(node.args[0], node.args[1])
                 case '__pythonj_issubclass__':
                     assert len(node.args) == 2 and not node.keywords, node.args
                     return ir.MethodCall(ir.Identifier('Runtime'), 'pythonjIsSubclass', [self.visit(node.args[0]), self.visit(node.args[1])])

@@ -140,7 +140,7 @@ class bytes:
                 if self[i] == sub:
                     ret += 1
             return ret
-        if not (__pythonj_isinstance__(sub, bytes) or __pythonj_isinstance__(sub, bytearray)):
+        if not __pythonj_isinstance__(sub, (bytes, bytearray)):
             raise TypeError('argument should be integer or bytes-like object, not ' + repr(type(sub).__name__))
         sub_len = len(sub)
         if sub_len == 0:
@@ -162,7 +162,7 @@ class bytes:
                 if self.endswith(item, start, end):
                     return True
             return False
-        if not (__pythonj_isinstance__(suffix, bytes) or __pythonj_isinstance__(suffix, bytearray)):
+        if not __pythonj_isinstance__(suffix, (bytes, bytearray)):
             raise TypeError('endswith first arg must be bytes or a tuple of bytes, not ' + type(suffix).__name__)
         if len(suffix) == 0 and start is not None and start > len(self):
             return False
@@ -185,7 +185,7 @@ class bytes:
                 if self[i] == sub:
                     return i
             return -1
-        if not (__pythonj_isinstance__(sub, bytes) or __pythonj_isinstance__(sub, bytearray)):
+        if not __pythonj_isinstance__(sub, (bytes, bytearray)):
             raise TypeError('argument should be integer or bytes-like object, not ' + repr(type(sub).__name__))
         sub_len = len(sub)
         if sub_len == 0:
@@ -370,7 +370,7 @@ class bytes:
     def lstrip(self, bytes_arg):
         if bytes_arg is None:
             strip_set = b' \t\n\r\x0b\x0c'
-        elif __pythonj_isinstance__(bytes_arg, bytes) or __pythonj_isinstance__(bytes_arg, bytearray):
+        elif __pythonj_isinstance__(bytes_arg, (bytes, bytearray)):
             strip_set = bytes_arg
         else:
             raise TypeError('a bytes-like object is required, not ' + repr(type(bytes_arg).__name__))
@@ -381,7 +381,7 @@ class bytes:
         return self[i:]
 
     def partition(self, sep):
-        if not (__pythonj_isinstance__(sep, bytes) or __pythonj_isinstance__(sep, bytearray)):
+        if not __pythonj_isinstance__(sep, (bytes, bytearray)):
             raise TypeError('a bytes-like object is required, not ' + repr(type(sep).__name__))
         if len(sep) == 0:
             raise ValueError('empty separator')
@@ -411,7 +411,7 @@ class bytes:
                 if self[i] == sub:
                     return i
             return -1
-        if not (__pythonj_isinstance__(sub, bytes) or __pythonj_isinstance__(sub, bytearray)):
+        if not __pythonj_isinstance__(sub, (bytes, bytearray)):
             raise TypeError('argument should be integer or bytes-like object, not ' + repr(type(sub).__name__))
         sub_len = len(sub)
         if sub_len == 0:
@@ -429,7 +429,7 @@ class bytes:
         return ret
 
     def rpartition(self, sep):
-        if not (__pythonj_isinstance__(sep, bytes) or __pythonj_isinstance__(sep, bytearray)):
+        if not __pythonj_isinstance__(sep, (bytes, bytearray)):
             raise TypeError('a bytes-like object is required, not ' + repr(type(sep).__name__))
         if len(sep) == 0:
             raise ValueError('empty separator')
@@ -441,7 +441,7 @@ class bytes:
     def rstrip(self, bytes_arg):
         if bytes_arg is None:
             strip_set = b' \t\n\r\x0b\x0c'
-        elif __pythonj_isinstance__(bytes_arg, bytes) or __pythonj_isinstance__(bytes_arg, bytearray):
+        elif __pythonj_isinstance__(bytes_arg, (bytes, bytearray)):
             strip_set = bytes_arg
         else:
             raise TypeError('a bytes-like object is required, not ' + repr(type(bytes_arg).__name__))
@@ -456,7 +456,7 @@ class bytes:
                 if self.startswith(item, start, end):
                     return True
             return False
-        if not (__pythonj_isinstance__(prefix, bytes) or __pythonj_isinstance__(prefix, bytearray)):
+        if not __pythonj_isinstance__(prefix, (bytes, bytearray)):
             raise TypeError('startswith first arg must be bytes or a tuple of bytes, not ' + type(prefix).__name__)
         if len(prefix) == 0 and start is not None and start > len(self):
             return False
