@@ -636,6 +636,14 @@ class LoweringVisitor(ast.NodeVisitor):
         assert name in self.final_global_function_classes, name
         return self.ident_expr(name)
 
+    def builtin_module_name_for_name(self, node: ast.Name) -> Optional[str]:
+        resolution = get_name_resolution(node)
+        if resolution is NameResolution.LOCAL:
+            return self.scope.info.initial_builtin_module_locals.get(node.id)
+        if resolution is NameResolution.GLOBAL:
+            return self.module_scope().info.initial_builtin_module_locals.get(node.id)
+        return None
+
     def resolve_free_vars(self, lineno: int, scope_info: ScopeInfo, func_type: str) -> set[str]:
         free_vars = set()
         for name in scope_info.needs_from_outer:
@@ -969,10 +977,8 @@ class LoweringVisitor(ast.NodeVisitor):
                     'callPositional',
                     [*([self.visit(arg) for arg in node.args]), *([ir.Null()] * (max_args - len(node.args)))],
                 )
-        if (isinstance(node.func, ast.Attribute) and
-            isinstance(node.func.value, ast.Name) and
-            get_name_resolution(node.func.value) is NameResolution.LOCAL):
-            module_name = self.scope.info.initial_builtin_module_locals.get(node.func.value.id)
+        if isinstance(node.func, ast.Attribute) and isinstance(node.func.value, ast.Name):
+            module_name = self.builtin_module_name_for_name(node.func.value)
             if (module_name is not None and
                 node.func.attr in DIRECT_CALL_POSITIONAL_MODULE_FUNCTIONS.get(module_name, {}) and
                 not node.keywords and
@@ -1015,9 +1021,8 @@ class LoweringVisitor(ast.NodeVisitor):
 
     def visit_Attribute(self, node) -> ir.Expr:
         attr_kind = None
-        if (isinstance(node.value, ast.Name) and
-            get_name_resolution(node.value) is NameResolution.LOCAL):
-            module_name = self.scope.info.initial_builtin_module_locals.get(node.value.id)
+        if isinstance(node.value, ast.Name):
+            module_name = self.builtin_module_name_for_name(node.value)
             if module_name is not None:
                 attr_kind = DIRECT_GETATTR_BUILTIN_MODULE_ATTRS.get(module_name, {}).get(node.attr)
                 if attr_kind is not None:
@@ -2127,7 +2132,7 @@ def get_builtin_module_attr_expr(module_name: str, attr_name: str, kind: str) ->
         module_func_prefix = module_java_name.removesuffix('Module')
         return ir.Field(ir.Identifier(f'{module_func_prefix}Function_{attr_name}'), 'singleton')
     if kind == 'type':
-        return ir.Field(ir.Identifier(get_java_name(f'{module_name}.{attr_name}')), 'singleton')
+        return ir.Field(ir.Identifier(f'{get_java_name(f"{module_name}.{attr_name}")}Type'), 'singleton')
     assert False, (module_name, attr_name, kind)
 
 def get_positional_call_range(params: Optional[list[inspect.Parameter]]) -> Optional[tuple[int, int]]:
