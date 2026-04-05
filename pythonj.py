@@ -2954,10 +2954,11 @@ def run_python_script(spec_path: str, runtime_jar_path: str, source_name: str, p
     build_jar_script = os.path.join(repo_root, 'tools', 'build_jar.py')
 
     temp_dir = tempfile.mkdtemp(prefix='.pythonj-run.', dir=os.path.join(repo_root, '_out'))
+    py_path = os.path.join(temp_dir, f'{py_name}.py')
+    java_path = os.path.join(temp_dir, f'{py_name}.java')
+    jar_path = os.path.join(temp_dir, f'{py_name}.jar')
+    keep_temp_on_exit = keep_temp
     try:
-        py_path = os.path.join(temp_dir, f'{py_name}.py')
-        java_path = os.path.join(temp_dir, f'{py_name}.java')
-        jar_path = os.path.join(temp_dir, f'{py_name}.jar')
         with open(py_path, 'w', encoding='utf-8') as f:
             f.write(py_source)
         translate_python_source_to_java(spec_path, py_source, source_name, java_path, argv0=argv0)
@@ -2981,9 +2982,16 @@ def run_python_script(spec_path: str, runtime_jar_path: str, source_name: str, p
         ], cwd=run_cwd)
         if java_result.returncode != 0:
             raise SystemExit(java_result.returncode)
+    except BaseException:
+        keep_temp_on_exit = True
+        raise
     finally:
-        if keep_temp:
-            print(f'pythonj temp dir kept at {temp_dir}', file=sys.stderr)
+        if keep_temp_on_exit:
+            if os.path.exists(java_path):
+                print(f'pythonj temp dir kept at {temp_dir}', file=sys.stderr)
+                print(f'generated Java: {java_path}', file=sys.stderr)
+            else:
+                print(f'pythonj temp dir kept at {temp_dir}', file=sys.stderr)
         else:
             shutil.rmtree(temp_dir)
 
