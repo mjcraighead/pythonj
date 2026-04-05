@@ -1038,6 +1038,9 @@ class LoweringVisitor(ast.NodeVisitor):
                 func_code.append(f'throw Runtime.raiseUserMissingKwArgs({py_name_java}, new PyObject[] {{{", ".join(bind_arg_names[:n_required])}}}, {required_arg_names_java});')
                 func_code.append('}')
         func_code.append('}')
+        func_code.append(f'return this.call_positional({", ".join(bind_arg_names)});' if bind_arg_names else 'return this.call_positional();')
+        func_code.append('}')
+        func_code.append(f'public PyObject call_positional({", ".join(f"PyObject {name}" for name in bind_arg_names)}) {{')
         for (i, name) in enumerate(bind_arg_names[n_required:]):
             func_code.append(f'if ({name} == null) {{ {name} = {emit_default_expr(arg_defaults[i], self.pool)}; }}')
         if self.scope.used_expr_discard:
