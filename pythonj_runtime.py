@@ -81,8 +81,11 @@ def bind_min_max_positional_or_keyword(args, kwargs, kw_name, positional_name, p
 
     return tuple(bound_args)
 
-def bind_positional_and_kwonly(args, kwargs, kw_name, positional_name, positional_names, posonly_count, kwonly_names, min_args, max_positional, max_total, min_positional_style):
+def bind_positional_and_kwonly(args, kwargs, kw_name, positional_name, positional_names, posonly_count, kwonly_names, min_args, max_positional, max_total, min_positional_style, exact_args_style):
     args_len = __pythonj_len__(args)
+    if exact_args_style and args_len != min_args:
+        suffix = '' if min_args == 1 else 's'
+        raise TypeError(f'{positional_name} expected {min_args} argument{suffix}, got {args_len}')
     if min_positional_style and args_len < min_args:
         suffix = '' if min_args == 1 else 's'
         raise TypeError(f'{positional_name}() takes at least {min_args} positional argument{suffix} ({args_len} given)')

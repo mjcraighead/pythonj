@@ -2216,6 +2216,7 @@ def build_wrapper_binding_ir(
                         ir.PyConstant(len(kwarg_params.posonly_params) + len(kwarg_params.poskw_params)),
                         ir.PyConstant(len(kwarg_params.params)),
                         ir.PyConstant(kwarg_params.missing_style == 'min_positional'),
+                        ir.PyConstant(kwarg_params.missing_style == 'exact_args'),
                     ],
                 ),
             ),
@@ -2612,7 +2613,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
             else:
                 kwarg_params = analyze_params(params)
             poskw_min_max_python_bind = supports_python_bind_min_max_positional_or_keyword(kwarg_params)
-            pos_kwonly_python_bind = False
+            pos_kwonly_python_bind = supports_python_bind_positional_and_kwonly(kwarg_params)
             decls: list[ir.Decl] = [
                 ir.FieldDecl('public static final', f'PyBuiltinFunction_{func_name}', 'singleton', ir.CreateObject(f'PyBuiltinFunction_{func_name}', [])),
                 ir.ConstructorDecl('private', f'PyBuiltinFunction_{func_name}', [], [
@@ -2627,7 +2628,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                 exact_positional_name_many=func_name,
                 posonly_kw_name=func_name,
                 posonly_positional_name=func_name,
-                poskw_kw_name=func_name,
+                poskw_kw_name=kw_name,
                 poskw_positional_name=func_name,
                 general_positional_name=func_name,
                 general_kw_name=kw_name,
