@@ -18,17 +18,6 @@ import ir
 # Keep this explicit and narrow; widen it only for builtin types we have actually
 # exercised and are comfortable lowering directly to JVM instanceof checks.
 ISINSTANCE_SINGLE_FASTPATH_BUILTIN_TYPES = {'bool', 'bytearray', 'bytes', 'float', 'int', 'str', 'tuple'}
-DIRECT_CALL_KNOWN_RECEIVER_METHODS = {
-    ('bytes', 'endswith'): (1, 3),
-    ('bytes', 'find'): (1, 3),
-    ('bytes', 'startswith'): (1, 3),
-    ('list', 'append'): (1, 1),
-    ('slice', 'indices'): (1, 1),
-    ('str', 'endswith'): (1, 3),
-    ('str', 'find'): (1, 3),
-    ('str', 'join'): (1, 1),
-    ('str', 'startswith'): (1, 3),
-}
 
 RUNTIME_JAVA_FILES = (
     'PyBool.java',
@@ -924,16 +913,19 @@ class LoweringVisitor(ast.NodeVisitor):
             not node.keywords and
             not any(isinstance(arg, ast.Starred) for arg in node.args)):
             type_name = infer_exact_builtin_type(node.func.value)
-            call_range = DIRECT_CALL_KNOWN_RECEIVER_METHODS.get((type_name, node.func.attr)) if type_name is not None else None
-            if call_range is not None:
-                (min_args, max_args) = call_range
-                if min_args <= len(node.args) <= max_args:
-                    java_name = extract_spec.BUILTIN_TYPES[type_name]
-                    return ir.MethodCall(
-                        ir.Identifier(f'{java_name}Method_{node.func.attr}'),
-                        'callPositional',
-                        [self.visit(node.func.value), *([self.visit(arg) for arg in node.args]), *([ir.Null()] * (max_args - len(node.args)))],
-                    )
+            if type_name is not None and RUNTIME_SPEC is not None:
+                attr_kind = DIRECT_GETATTR_BUILTIN_TYPE_ATTRS.get(type_name, {}).get(node.func.attr)
+                if attr_kind == 'method':
+                    call_range = get_positional_call_range(get_method_params(RUNTIME_SPEC, type_name, node.func.attr))
+                    if call_range is not None:
+                        (min_args, max_args) = call_range
+                        if min_args <= len(node.args) <= max_args:
+                            java_name = extract_spec.BUILTIN_TYPES[type_name]
+                            return ir.MethodCall(
+                                ir.Identifier(f'{java_name}Method_{node.func.attr}'),
+                                'callPositional',
+                                [self.visit(node.func.value), *([self.visit(arg) for arg in node.args]), *([ir.Null()] * (max_args - len(node.args)))],
+                            )
         if (isinstance(node.func, ast.Name) and node.func.id in DIRECT_CALL_POSITIONAL_BUILTINS and
             self.name_resolves_to_builtin_function(node.func) and
             not node.keywords and
@@ -1891,6 +1883,7 @@ def get_class_functions(node: ast.Module, class_name: str) -> dict[str, ast.Func
 
 NULL = object()
 RAW_ARGS_KWARGS_BUILTINS = {'max', 'min'}
+RUNTIME_SPEC: Optional[dict[str, object]] = None
 DIRECT_CALL_POSITIONAL_BUILTINS: dict[str, tuple[int, int]] = {}
 DIRECT_NEWOBJ_POSITIONAL_BUILTIN_TYPES: dict[str, tuple[int, int]] = {}
 DIRECT_NEWOBJ_POSITIONAL_SUPPORTED_BUILTIN_TYPES = {
@@ -2441,8 +2434,10 @@ def build_call_positional_ir(shape: SignatureShape) -> tuple[list[str], list[ir.
     return (call_args, statements, bind_args)
 
 def gen_runtime_java(spec_path: str, java_path: str) -> None:
+    global RUNTIME_SPEC
     with open(spec_path) as f:
         spec = json.load(f)
+    RUNTIME_SPEC = spec
     for func_name in extract_spec.BUILTIN_FUNCTIONS:
         call_range = get_positional_call_range(get_builtin_function_params(spec, func_name))
         if call_range is not None:
