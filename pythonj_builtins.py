@@ -2,6 +2,8 @@
 # Copyright (c) 2012-2026 Matt Craighead
 # SPDX-License-Identifier: MIT
 
+import operator
+
 def abs(arg):
     return __pythonj_abs__(arg)
 
@@ -18,7 +20,7 @@ def any(iterable):
     return False
 
 def bin(arg):
-    value = __pythonj_index__(arg)
+    value = operator.index(arg)
     if value < 0:
         return '-0b' + format(-value, 'b')
     return '0b' + format(value, 'b')
@@ -81,7 +83,7 @@ def next(iterator, default):
     return ret
 
 def oct(arg):
-    value = __pythonj_index__(arg)
+    value = operator.index(arg)
     if value < 0:
         return '-0o' + format(-value, 'o')
     return '0o' + format(value, 'o')
@@ -251,7 +253,7 @@ class bytes:
         else:
             len(sep)
             raise AssertionError(sep)
-        bytes_per_sep = __pythonj_index__(bytes_per_sep)
+        bytes_per_sep = operator.index(bytes_per_sep)
         ret = []
         for c in self:
             __pythonj_list_append__(ret, format(c, '02x'))

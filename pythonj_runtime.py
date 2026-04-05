@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 def _init_bound_args(args, max_total):
-    args_len = __pythonj_len__(args)
+    args_len = len(args)
     bound_args = []
     i = 0
     while i < max_total:
@@ -15,7 +15,7 @@ def _init_bound_args(args, max_total):
     return bound_args
 
 def _find_name(names, kw, start):
-    names_len = __pythonj_len__(names)
+    names_len = len(names)
     i = start
     while i < names_len:
         if kw == names[i]:
@@ -35,7 +35,7 @@ def _type_error_unexpected_kw_arg(kw_name, unknown_kw) -> TypeError:
     return TypeError(f'{kw_name}() got an unexpected keyword argument {unknown_kw!r}')
 
 def _type_error_user_missing_args(name, missing_arg_names) -> TypeError:
-    missing = __pythonj_len__(missing_arg_names)
+    missing = len(missing_arg_names)
     ret = f'{name}() missing {missing} required positional argument'
     if missing != 1:
         ret += 's'
@@ -53,7 +53,7 @@ def _type_error_user_missing_args(name, missing_arg_names) -> TypeError:
 def _type_error_user_posonly_as_keyword(name, arg_names) -> TypeError:
     joined = ''
     i = 0
-    while i < __pythonj_len__(arg_names):
+    while i < len(arg_names):
         if i != 0:
             joined += ', '
         joined += arg_names[i]
@@ -63,7 +63,7 @@ def _type_error_user_posonly_as_keyword(name, arg_names) -> TypeError:
 def bind_exact_positional(args, kwargs, kw_name, positional_name, n, generic_exact_args_style) -> tuple:
     if kwargs is not __pythonj_null__ and kwargs:
         raise TypeError(kw_name + '() takes no keyword arguments')
-    args_len = __pythonj_len__(args)
+    args_len = len(args)
     if args_len != n:
         if n == 0:
             raise TypeError(f'{positional_name}() takes no arguments ({args_len} given)')
@@ -76,7 +76,7 @@ def bind_exact_positional(args, kwargs, kw_name, positional_name, n, generic_exa
 def bind_min_max_positional(args, kwargs, kw_name, positional_name, min_args, max_args) -> tuple:
     if kwargs is not __pythonj_null__ and kwargs:
         raise TypeError(kw_name + '() takes no keyword arguments')
-    args_len = __pythonj_len__(args)
+    args_len = len(args)
     if args_len < min_args:
         suffix = '' if min_args == 1 else 's'
         raise TypeError(f'{positional_name} expected at least {min_args} argument{suffix}, got {args_len}')
@@ -86,7 +86,7 @@ def bind_min_max_positional(args, kwargs, kw_name, positional_name, min_args, ma
     return args
 
 def bind_min_max_positional_or_keyword(args, kwargs, kw_name, positional_name, positional_names, posonly_count, kwonly_names, min_args, max_positional, max_total, min_positional_style, exact_args_style) -> list:
-    args_len = __pythonj_len__(args)
+    args_len = len(args)
     if exact_args_style and args_len != min_args:
         suffix = '' if min_args == 1 else 's'
         raise TypeError(f'{positional_name} expected {min_args} argument{suffix}, got {args_len}')
@@ -100,8 +100,8 @@ def bind_min_max_positional_or_keyword(args, kwargs, kw_name, positional_name, p
 
     unknown_kw = None
     if kwargs is not __pythonj_null__ and kwargs:
-        kwargs_len = __pythonj_len__(kwargs)
-        positional_names_len = __pythonj_len__(positional_names)
+        kwargs_len = len(kwargs)
+        positional_names_len = len(positional_names)
         if args_len + kwargs_len > max_total:
             if args_len == 0:
                 raise _type_error_at_most_keyword_args(kw_name, max_total, kwargs_len)
@@ -137,7 +137,7 @@ def bind_min_max_positional_or_keyword(args, kwargs, kw_name, positional_name, p
     return bound_args
 
 def bind_varargs_and_kwonly(kwargs, kw_name, kwonly_names) -> list:
-    bound_args = [__pythonj_null__] * __pythonj_len__(kwonly_names)
+    bound_args = [__pythonj_null__] * len(kwonly_names)
 
     if kwargs is not __pythonj_null__ and kwargs:
         for (kw, value) in kwargs.items():
@@ -150,8 +150,8 @@ def bind_varargs_and_kwonly(kwargs, kw_name, kwonly_names) -> list:
     return bound_args
 
 def bind_user_exact_positional(args, kwargs, name, arg_names) -> tuple:
-    args_len = __pythonj_len__(args)
-    n_args = __pythonj_len__(arg_names)
+    args_len = len(args)
+    n_args = len(arg_names)
 
     if kwargs is not __pythonj_null__ and kwargs:
         posonly_kw_arg_names = []
@@ -175,8 +175,8 @@ def bind_user_exact_positional(args, kwargs, name, arg_names) -> tuple:
     return args
 
 def bind_user_min_max_positional(args, kwargs, name, arg_names, n_required) -> tuple:
-    args_len = __pythonj_len__(args)
-    n_args = __pythonj_len__(arg_names)
+    args_len = len(args)
+    n_args = len(arg_names)
 
     if kwargs is not __pythonj_null__ and kwargs:
         posonly_kw_arg_names = []
@@ -199,8 +199,8 @@ def bind_user_min_max_positional(args, kwargs, name, arg_names, n_required) -> t
     return args
 
 def bind_user_function(args, kwargs, name, arg_names, n_required, posonly_count) -> list:
-    args_len = __pythonj_len__(args)
-    n_args = __pythonj_len__(arg_names)
+    args_len = len(args)
+    n_args = len(arg_names)
     bound_args = _init_bound_args(args, n_args)
 
     if kwargs is __pythonj_null__ or not kwargs:
