@@ -415,8 +415,8 @@ class bytes:
             strip_set = bytes_arg
         else:
             raise TypeError('a bytes-like object is required, not ' + repr(type(bytes_arg).__name__))
-        i = 0
-        n = len(self)
+        i: int = 0
+        n: int = len(self)
         while i < n and self[i] in strip_set:
             i += 1
         return self[i:]
@@ -486,7 +486,7 @@ class bytes:
             strip_set = bytes_arg
         else:
             raise TypeError('a bytes-like object is required, not ' + repr(type(bytes_arg).__name__))
-        i = len(self)
+        i: int = len(self)
         while i > 0 and self[i - 1] in strip_set:
             i -= 1
         return self[:i]

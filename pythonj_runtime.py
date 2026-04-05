@@ -300,8 +300,8 @@ def min_iterable(iterable, default_obj, key_func):
     return ret
 
 def _pyj_format_parse_common(spec) -> tuple:
-    i = 0
-    n = len(spec)
+    i: int = 0
+    n: int = len(spec)
     fill = ' '
     align = None
 
@@ -807,11 +807,11 @@ def _pyj_percent_take_star_value(arg_seq, arg_index) -> tuple:
 
 def pyj_percent_format(fmt, args) -> str:
     arg_seq = _pyj_percent_arg_seq(args)
-    arg_index = 0
+    arg_index: int = 0
     used_mapping = False
     out: list = []
-    i = 0
-    n = len(fmt)
+    i: int = 0
+    n: int = len(fmt)
     while i < n:
         c = fmt[i]
         if c != '%':
