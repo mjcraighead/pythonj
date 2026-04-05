@@ -1749,37 +1749,9 @@ def translate_python_runtime_impl(func_name: str, pool: ir.ConstantPool) -> tupl
         python_helper_names=set(funcs), python_helper_class='PyRuntimePythonImpl',
     )
 
-def infer_default_expr(default: object) -> Optional[str]:
-    if default is None:
-        return 'PyNone.singleton'
-    elif default is NULL:
-        return 'null'
-    elif default is False or default is True:
-        return f'PyBool.{str(default).lower()}_singleton'
-    elif type(default) is int:
-        if default == -1:
-            return 'PyInt.singleton_neg1'
-        elif default == 0:
-            return 'PyInt.singleton_0'
-        elif default == 1:
-            return 'PyInt.singleton_1'
-        else:
-            return None
-    elif default == '':
-        return 'PyString.empty_singleton'
-    else:
-        return None
-
 def emit_default_java_expr(default: object) -> ir.Expr:
-    inferred = infer_default_expr(default)
-    if inferred == 'null':
+    if default is NULL:
         return ir.Null()
-    if inferred == 'true':
-        return ir.Bool(True)
-    if inferred == 'false':
-        return ir.Bool(False)
-    if inferred is not None:
-        return ir.Identifier(inferred)
     return ir.PyConstant(default)
 
 def runtime_throw(method: str, args_: list[ir.Expr]) -> ir.ThrowStatement:
