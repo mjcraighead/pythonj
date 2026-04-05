@@ -508,12 +508,6 @@ public final class Runtime {
     public static PyRaise raiseExactArgs(PyObject[] args, int n, String name) {
         return PyTypeError.raiseFormat("%s expected %d argument%s, got %d", name, n, (n == 1) ? "" : "s", args.length);
     }
-    public static PyRaise raiseNoArgs(PyObject[] args, String name) {
-        return PyTypeError.raiseFormat("%s() takes no arguments (%d given)", name, args.length);
-    }
-    public static PyRaise raiseOneArg(PyObject[] args, String name) {
-        return PyTypeError.raiseFormat("%s() takes exactly one argument (%d given)", name, args.length);
-    }
     public static void requireNoKwArgs(PyDict kwargs, String name) {
         if ((kwargs != null) && kwargs.boolValue()) {
             throw raiseNoKwArgs(name);
@@ -567,21 +561,12 @@ public final class Runtime {
     public static PyRaise raiseAtMostArgs(String name, long max, long given) {
         return PyTypeError.raiseFormat("%s() takes at most %d arguments (%d given)", name, max, given);
     }
-    public static PyRaise raiseAtMostPosArgs(String name, long max, long given) {
-        return PyTypeError.raiseFormat("%s() takes at most %d positional arguments (%d given)", name, max, given);
-    }
     public static PyRaise raiseAtMostKwArgs(String name, long max, long argsLength, long kwargsLen) {
         if (argsLength == 0) {
             return PyTypeError.raiseFormat("%s() takes at most %d keyword arguments (%d given)", name, max, kwargsLen);
         } else {
             return raiseAtMostArgs(name, max, argsLength + kwargsLen);
         }
-    }
-    public static PyRaise raiseMissingRequiredArg(String name, String argName, int position) {
-        return PyTypeError.raiseFormat("%s() missing required argument %s (pos %d)", name, PyString.reprOf(argName), position);
-    }
-    public static PyRaise raiseArgGivenByNameAndPosition(String name, String argName, int position) {
-        return PyTypeError.raiseFormat("argument for %s() given by name (%s) and position (%d)", name, PyString.reprOf(argName), position);
     }
     public static PyRaise raiseUnexpectedKwArg(String name, String kwName) {
         return PyTypeError.raiseFormat("%s() got an unexpected keyword argument %s", name, PyString.reprOf(kwName));
