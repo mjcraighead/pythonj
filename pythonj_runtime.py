@@ -85,7 +85,7 @@ def bind_min_max_positional(args, kwargs, kw_name, positional_name, min_args, ma
         raise TypeError(f'{positional_name} expected at most {max_args} argument{suffix}, got {args_len}')
     return args
 
-def bind_min_max_positional_or_keyword(args, kwargs, kw_name, positional_name, positional_names, posonly_count, kwonly_names, min_args, max_positional, max_total, min_positional_style, exact_args_style) -> list:
+def bind_min_max_positional_or_keyword(args, kwargs: dict, kw_name, positional_name, positional_names, posonly_count, kwonly_names, min_args, max_positional, max_total, min_positional_style, exact_args_style) -> list:
     args_len = len(args)
     if exact_args_style and args_len != min_args:
         suffix = '' if min_args == 1 else 's'
@@ -136,7 +136,7 @@ def bind_min_max_positional_or_keyword(args, kwargs, kw_name, positional_name, p
 
     return bound_args
 
-def bind_varargs_and_kwonly(kwargs, kw_name, kwonly_names) -> list:
+def bind_varargs_and_kwonly(kwargs: dict, kw_name, kwonly_names) -> list:
     bound_args = [__pythonj_null__] * len(kwonly_names)
 
     if kwargs is not __pythonj_null__ and kwargs:
@@ -198,7 +198,7 @@ def bind_user_min_max_positional(args, kwargs, name, arg_names, n_required) -> t
         raise TypeError(f'{name}() takes from {n_required} to {n_args} positional arguments but {args_len} {was_were} given')
     return args
 
-def bind_user_function(args, kwargs, name, arg_names, n_required, posonly_count) -> list:
+def bind_user_function(args, kwargs: dict, name, arg_names, n_required, posonly_count) -> list:
     args_len = len(args)
     n_args = len(arg_names)
     bound_args = _init_bound_args(args, n_args)

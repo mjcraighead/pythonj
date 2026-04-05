@@ -90,6 +90,7 @@ class ScopeInfo:
     initial_final_bindings: set[str]
     initial_builtin_module_locals: dict[str, str]
     initial_final_function_call_ranges: dict[str, tuple[int, int]]
+    exact_arg_types: dict[str, str]
     exact_local_types: dict[str, str]
     annotation_errors: list[tuple[int, str]]
 
@@ -315,6 +316,29 @@ def _collect_exact_local_annotations(node: ast.AST) -> tuple[dict[str, str], lis
             exact_local_types[local_node.target.id] = local_node.annotation.id
     return (exact_local_types, errors)
 
+def _collect_exact_arg_annotations(node: ast.AST) -> tuple[dict[str, str], list[tuple[int, str]]]:
+    if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+        return ({}, [])
+
+    exact_arg_types: dict[str, str] = {}
+    errors: list[tuple[int, str]] = []
+    positional_args = [*node.args.posonlyargs, *node.args.args]
+    first_default = len(positional_args) - len(node.args.defaults)
+    for (i, arg) in enumerate(positional_args):
+        if arg.annotation is None:
+            continue
+        if i >= first_default:
+            errors.append((arg.lineno, 'annotated arguments with defaults are unsupported'))
+            continue
+        if not isinstance(arg.annotation, ast.Name) or arg.annotation.id not in extract_spec.BUILTIN_TYPES:
+            errors.append((arg.lineno, 'only exact builtin-type argument annotations are supported'))
+            continue
+        exact_arg_types[arg.arg] = arg.annotation.id
+    for arg in [*node.args.kwonlyargs, node.args.vararg, node.args.kwarg]:
+        if arg is not None and arg.annotation is not None:
+            errors.append((arg.lineno, 'only required positional argument annotations are supported'))
+    return (exact_arg_types, errors)
+
 class ScopeAnalyzer(ast.NodeVisitor):
     __slots__ = ('scope_infos',)
     scope_infos: dict[ast.AST, ScopeInfo]
@@ -369,7 +393,12 @@ class ScopeAnalyzer(ast.NodeVisitor):
                 elif name not in explicit_globals:
                     needs_from_outer.add(name)
         kind = ScopeKind.MODULE if isinstance(node, ast.Module) else ScopeKind.FUNCTION
-        (exact_local_types, annotation_errors) = _collect_exact_local_annotations(node)
+        (exact_arg_types, annotation_errors) = _collect_exact_arg_annotations(node)
+        (exact_local_types, local_annotation_errors) = _collect_exact_local_annotations(node)
+        annotation_errors.extend(local_annotation_errors)
+        for name in exact_arg_types:
+            if name in cell_vars:
+                annotation_errors.append((getattr(node, 'lineno', 0), f"annotated argument {name!r} may not be captured by an inner scope"))
         for name in exact_local_types:
             if name in cell_vars:
                 annotation_errors.append((getattr(node, 'lineno', 0), f"annotated local {name!r} may not be captured by an inner scope"))
@@ -386,6 +415,7 @@ class ScopeAnalyzer(ast.NodeVisitor):
             initial_final_bindings,
             initial_builtin_module_locals,
             initial_final_function_call_ranges,
+            exact_arg_types,
             exact_local_types,
             annotation_errors,
         )
@@ -645,7 +675,10 @@ class LoweringVisitor(ast.NodeVisitor):
         self.scope.reported_annotation_errors = True
 
     def local_exact_builtin_type(self, name: str) -> Optional[str]:
-        return self.scope.info.exact_local_types.get(name)
+        type_name = self.scope.info.exact_local_types.get(name)
+        if type_name is not None:
+            return type_name
+        return self.scope.info.exact_arg_types.get(name)
 
     def java_local_type(self, name: str) -> str:
         type_name = self.local_exact_builtin_type(name)
@@ -1420,7 +1453,10 @@ class LoweringVisitor(ast.NodeVisitor):
         for arg in positional_args:
             # arg.type_comment is ignored; we only plan to support "real" type annotations.
             if arg.annotation:
-                self.error(lineno, 'argument type annotations are unsupported')
+                if not self.allow_intrinsics:
+                    self.error(lineno, 'argument type annotations are unsupported')
+                elif not isinstance(arg.annotation, ast.Name) or arg.annotation.id not in extract_spec.BUILTIN_TYPES:
+                    self.error(lineno, 'only exact builtin-type argument annotations are supported')
         params: list[inspect.Parameter] = []
         n_args = len(positional_args)
         n_defaults = len(defaults)
@@ -1561,7 +1597,7 @@ class LoweringVisitor(ast.NodeVisitor):
                 call_positional_body.append(ir.LocalDecl('PyCell', f'pycell_{arg_name}', ir.CreateObject('PyCell', [ir.Identifier(bind_arg_name)])))
             else:
                 local_arg_name = arg_name if invisible_args else f'pylocal_{arg_name}'
-                call_positional_body.append(ir.LocalDecl('PyObject', local_arg_name, ir.Identifier(bind_arg_name)))
+                call_positional_body.append(ir.LocalDecl(self.java_local_type(arg_name), local_arg_name, self.cast_local_assignment(arg_name, ir.Identifier(bind_arg_name))))
         for name in sorted(self.scope.info.cell_vars - set(arg_names)):
             call_positional_body.append(ir.LocalDecl('PyCell', f'pycell_{name}', ir.CreateObject('PyCell', [ir.PyConstant(None)])))
         for name in sorted(self.scope.info.locals - self.scope.info.cell_vars - set(arg_names) - set(self.scope.info.initial_builtin_module_locals)):
@@ -1602,6 +1638,7 @@ class LoweringVisitor(ast.NodeVisitor):
             self.code.append(ir.AssignStatement(self.ident_expr(node.name), ir.CreateObject(java_name, [ir.Identifier(f'pycell_{name}') for name in sorted(free_vars)])))
 
         with self.new_function(scope_info, free_vars, qualname):
+            self.report_annotation_errors()
             body = self.visit_block(node.body)
             self.add_function(qualname, java_name, params, body)
 
@@ -2190,7 +2227,7 @@ def emit_python_function_static(visitor: LoweringVisitor, func_name: str, arg_na
         if arg_name in visitor.scope.info.cell_vars:
             func_code.append(ir.LocalDecl('PyCell', f'pycell_{arg_name}', ir.CreateObject('PyCell', [ir.Identifier(f'pyarg_{arg_name}')])))
         else:
-            func_code.append(ir.LocalDecl('PyObject', f'pylocal_{arg_name}', ir.Identifier(f'pyarg_{arg_name}')))
+            func_code.append(ir.LocalDecl(visitor.java_local_type(arg_name), f'pylocal_{arg_name}', visitor.cast_local_assignment(arg_name, ir.Identifier(f'pyarg_{arg_name}'))))
     for name in sorted(visitor.scope.info.cell_vars - set(arg_names)):
         func_code.append(ir.LocalDecl('PyCell', f'pycell_{name}', ir.CreateObject('PyCell', [ir.PyConstant(None)])))
     for name in sorted(visitor.scope.info.locals - visitor.scope.info.cell_vars - set(arg_names) - set(visitor.scope.info.initial_builtin_module_locals)):
@@ -2232,6 +2269,7 @@ def translate_python_impl_node(node: ast.Module, func: ast.FunctionDef, emitted_
     free_vars = visitor.resolve_free_vars(func.lineno, scope_info, role)
     assert not free_vars, (emitted_name, free_vars)
     with visitor.new_function(scope_info, free_vars, func.name, return_java_type):
+        visitor.report_annotation_errors()
         body = visitor.visit_block(func.body)
         if return_java_type == 'NoReturn' and not ir.block_ends_control_flow(body):
             visitor.error(func.lineno, f'NoReturn helper function {func.name} may implicitly fall through')
