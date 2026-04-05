@@ -2298,28 +2298,6 @@ def emit_default_java_expr(default: object) -> ir.Expr:
         return ir.Null()
     return ir.PyConstant(default)
 
-def runtime_throw(method: str, args_: list[ir.Expr]) -> ir.ThrowStatement:
-    return ir.ThrowStatement(ir.MethodCall(ir.Identifier('Runtime'), method, args_))
-
-def build_arg_binding_ir(shape: SignatureShape, positional_name: str,
-                         kw_name: str, kw_overflow_args_length: str,
-                         noarg_name: str, preserve_optional_nulls: bool = False) -> tuple[list[ir.Statement], list[ir.Expr]]:
-    args = ir.Identifier('args')
-    kwargs = ir.Identifier('kwargs')
-    kwargs_bool = ir.BinaryOp('&&',
-        ir.BinaryOp('!=', kwargs, ir.Null()),
-        ir.MethodCall(kwargs, 'boolValue', []),
-    )
-
-    if not shape.posonly_params and not shape.poskw_params and not shape.kwonly_params and \
-        shape.vararg_param is not None and shape.varkw_param is not None:
-        return ([], [args, kwargs])
-    if not shape.posonly_params and not shape.poskw_params and not shape.kwonly_params and shape.vararg_param is not None:
-        return ([
-            ir.IfStatement(kwargs_bool, [runtime_throw('raiseNoKwArgs', [ir.StrLiteral(noarg_name)])], []),
-        ], [args])
-    assert False, (shape, positional_name, kw_name, kw_overflow_args_length, noarg_name, preserve_optional_nulls)
-
 def get_java_name(name: str) -> str:
     if name.startswith('_io.'):
         return f"Py{name.split('.', 1)[1]}" # _io.Foo -> PyFoo + PyFooType
@@ -2529,13 +2507,17 @@ def build_wrapper_binding_ir(
         bind_args = [ir.Identifier('args'), ir.Identifier('kwargs')]
     else:
         assert kwarg_params is not None
-        (statements, bind_args) = build_arg_binding_ir(
-            kwarg_params, general_positional_name,
-            general_kw_name,
-            kw_overflow_args_length,
-            noarg_name,
-            preserve_optional_nulls=plan.call_positional_shape is not None,
-        )
+        if not kwarg_params.posonly_params and not kwarg_params.poskw_params and not kwarg_params.kwonly_params and \
+            kwarg_params.vararg_param is not None and kwarg_params.varkw_param is not None:
+            bind_args = [ir.Identifier('args'), ir.Identifier('kwargs')]
+        elif not kwarg_params.posonly_params and not kwarg_params.poskw_params and not kwarg_params.kwonly_params and kwarg_params.vararg_param is not None:
+            statements.append(ir.method_call_statement(ir.Identifier('Runtime'), 'requireNoKwArgs', [
+                ir.Identifier('kwargs'),
+                ir.StrLiteral(noarg_name),
+            ]))
+            bind_args = [ir.Identifier('args')]
+        else:
+            assert False, (kwarg_params, noarg_name)
 
     return (statements, bind_args, plan.call_positional_shape)
 

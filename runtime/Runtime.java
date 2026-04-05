@@ -512,15 +512,12 @@ public final class Runtime {
     public static PyObject pythonjZipNew(PyTuple args, PyObject strict) {
         return PyZip.newObjPositional(args.items, strict);
     }
-    public static PyRaise raiseNoKwArgs(String name) {
-        return PyTypeError.raise(name + "() takes no keyword arguments");
-    }
     public static PyRaise raiseExactArgs(PyObject[] args, int n, String name) {
         return PyTypeError.raiseFormat("%s expected %d argument%s, got %d", name, n, (n == 1) ? "" : "s", args.length);
     }
     public static void requireNoKwArgs(PyDict kwargs, String name) {
         if ((kwargs != null) && kwargs.boolValue()) {
-            throw raiseNoKwArgs(name);
+            throw PyTypeError.raise(name + "() takes no keyword arguments");
         }
     }
     public static PyRaise raiseAtMostArgs(String name, long max, long given) {
