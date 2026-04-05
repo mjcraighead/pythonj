@@ -22,6 +22,7 @@ BUILTIN_MODULES = {
     '_operator': 'PyOperatorModule',
     '_types': 'PyTypesModule',
     'math': 'PyMathModule',
+    'sys': 'PySysModule',
     'zlib': 'PyZlibModule',
 }
 BUILTIN_MODULE_ATTRS = {
@@ -29,6 +30,7 @@ BUILTIN_MODULE_ATTRS = {
     '_operator': {'contains', 'delitem', 'getitem', 'index', 'setitem'},
     '_types': {'BuiltinFunctionType', 'ClassMethodDescriptorType', 'FunctionType', 'GetSetDescriptorType', 'MappingProxyType', 'MemberDescriptorType', 'MethodDescriptorType', 'NoneType'},
     'math': {'copysign', 'isfinite', 'isinf', 'isnan'},
+    'sys': set(),
     'zlib': {'compress', 'decompress', 'error'},
 }
 BUILTIN_TYPES = {

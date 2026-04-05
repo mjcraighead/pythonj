@@ -1949,7 +1949,7 @@ class LoweringVisitor(ast.NodeVisitor):
         for statement in node.body:
             self.visit(statement)
 
-    def write_java(self, f: TextIO, py_name: str) -> None:
+    def write_java(self, f: TextIO, py_name: str, argv0: Optional[str] = None) -> None:
         final_import_fields = {
             bind_name: module_name for (bind_name, module_name) in self.scope.info.initial_builtin_module_locals.items()
             if bind_name in self.scope.info.locals
@@ -1967,6 +1967,8 @@ class LoweringVisitor(ast.NodeVisitor):
             predefined_global_fields.append(
                 ir.FieldDecl('private static final', 'PyString', 'pyglobal___file__', ir.PyConstant(self.path))
             )
+        if argv0 is None:
+            argv0 = self.path
         body_decls: list[ir.Decl] = [
             *self.classes.values(),
             *predefined_global_fields,
@@ -1977,7 +1979,16 @@ class LoweringVisitor(ast.NodeVisitor):
               for (name, java_name) in sorted(final_function_fields.items())),
             *(ir.FieldDecl('private static', 'PyObject', f'pyglobal_{name}', ir.PyConstant(None))
               for name in sorted(self.scope.info.locals - set(final_import_fields) - set(final_function_fields))),
-            ir.MethodDecl('public static', 'void', 'main', ['String[] args'], ir.block_simplify(self.global_code)),
+            ir.MethodDecl(
+                'public static',
+                'void',
+                'main',
+                ['String[] args'],
+                ir.block_simplify([
+                    ir.ExprStatement(ir.MethodCall(ir.Identifier('Runtime'), 'setArgv', [ir.StrLiteral(argv0), ir.Identifier('args')])),
+                    *self.global_code,
+                ]),
+            ),
         ]
         ir.write_decls(
             f,
@@ -2892,9 +2903,10 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
 
 def translate_python_to_java(spec_path: str, py_path: str, java_path: str) -> None:
     with open(py_path, encoding='utf-8') as f:
-        translate_python_source_to_java(spec_path, f.read(), py_path, java_path)
+        translate_python_source_to_java(spec_path, f.read(), py_path, java_path, argv0=py_path)
 
-def translate_python_source_to_java(spec_path: str, py_source: str, source_name: str, java_path: str) -> None:
+def translate_python_source_to_java(spec_path: str, py_source: str, source_name: str, java_path: str,
+                                    argv0: Optional[str] = None) -> None:
     load_runtime_spec(spec_path)
     node = ast.parse(py_source, filename=source_name)
     analyzer = ScopeAnalyzer()
@@ -2909,7 +2921,7 @@ def translate_python_source_to_java(spec_path: str, py_source: str, source_name:
         raise SystemExit(f'Translation failed: {visitor.n_errors} errors')
     py_name = get_java_main_class_name(source_name)
     with open(java_path, 'w', encoding='utf-8') as f:
-        visitor.write_java(f, py_name)
+        visitor.write_java(f, py_name, argv0=argv0)
 
 def get_java_main_class_name(source_name: str) -> str:
     base = os.path.basename(source_name)
@@ -2926,7 +2938,8 @@ def get_java_main_class_name(source_name: str) -> str:
         py_name = f'_{py_name}'
     return py_name
 
-def run_python_script(spec_path: str, runtime_jar_path: str, source_name: str, py_source: str) -> None:
+def run_python_script(spec_path: str, runtime_jar_path: str, source_name: str, py_source: str,
+                      script_args: list[str], argv0: str) -> None:
     repo_root = os.path.dirname(os.path.abspath(__file__))
     py_name = get_java_main_class_name(source_name)
     build_python = 'py' if os.name == 'nt' else 'python3'
@@ -2939,7 +2952,7 @@ def run_python_script(spec_path: str, runtime_jar_path: str, source_name: str, p
         jar_path = os.path.join(temp_dir, f'{py_name}.jar')
         with open(py_path, 'w', encoding='utf-8') as f:
             f.write(py_source)
-        translate_python_source_to_java(spec_path, py_source, source_name, java_path)
+        translate_python_source_to_java(spec_path, py_source, source_name, java_path, argv0=argv0)
         build_result = subprocess.run([
             build_python,
             build_jar_script,
@@ -2956,6 +2969,7 @@ def run_python_script(spec_path: str, runtime_jar_path: str, source_name: str, p
             '-cp',
             f'{runtime_jar_path}{sep}{jar_path}',
             py_name,
+            *script_args,
         ], cwd=temp_dir)
         if java_result.returncode != 0:
             raise SystemExit(java_result.returncode)
@@ -2967,16 +2981,17 @@ def main() -> None:
     runtime_jar_path = os.path.join(repo_root, '_out', 'pythonj.jar')
     if len(sys.argv) >= 2 and sys.argv[1] not in {'gen-runtime', 'translate'}:
         py_path = sys.argv[1]
-        if len(sys.argv) != 2:
-            raise SystemExit('usage: pythonj.py [gen-runtime|translate|script.py|-] ...')
+        script_args = sys.argv[2:]
+        if len(sys.argv) < 2:
+            raise SystemExit('usage: pythonj.py [gen-runtime|translate|script.py|-] [script args ...]')
         make_result = subprocess.run([python, 'make.py', '_out/pythonj.jar'], cwd=repo_root)
         if make_result.returncode != 0:
             raise SystemExit(make_result.returncode)
         if py_path == '-':
-            run_python_script(spec_path, runtime_jar_path, '<stdin>', sys.stdin.read())
+            run_python_script(spec_path, runtime_jar_path, '<stdin>', sys.stdin.read(), script_args, '-')
         else:
             with open(py_path, encoding='utf-8') as f:
-                run_python_script(spec_path, runtime_jar_path, py_path, f.read())
+                run_python_script(spec_path, runtime_jar_path, py_path, f.read(), script_args, py_path)
         return
 
     parser = argparse.ArgumentParser()

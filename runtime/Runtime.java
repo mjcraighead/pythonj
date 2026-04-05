@@ -130,6 +130,19 @@ final class PyMathModule extends PyModule {
     }
 }
 
+final class PySysModule extends PyModule {
+    public static final PySysModule singleton = new PySysModule();
+
+    private PySysModule() { super("sys"); }
+
+    @Override public PyObject getAttr(String key) {
+        switch (key) {
+            case "argv": return Runtime.sysArgv;
+            default: return super.getAttr(key);
+        }
+    }
+}
+
 final class PyOperatorModule extends PyModule {
     public static final PyOperatorModule singleton = new PyOperatorModule();
 
@@ -434,6 +447,17 @@ abstract class PyFunction extends PyTruthyObject {
 
 // Helper functions used by the builtins and code generator
 public final class Runtime {
+    public static PyList sysArgv = new PyList(new PyObject[] {new PyString("")});
+
+    public static void setArgv(String argv0, String[] args) {
+        PyObject[] argv = new PyObject[args.length + 1];
+        argv[0] = new PyString(argv0);
+        for (int i = 0; i < args.length; i++) {
+            argv[i + 1] = new PyString(args[i]);
+        }
+        sysArgv = new PyList(argv);
+    }
+
     public static int hashRational(long numerator, long denominator) {
         if (denominator <= 0) {
             throw new IllegalArgumentException("denominator must be positive");
