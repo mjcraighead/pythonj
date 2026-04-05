@@ -60,6 +60,22 @@ final class PyBytesBuilder extends PyTruthyObject {
     @Override public PyType type() { throw new UnsupportedOperationException("PyBytesBuilder is internal-only"); }
 }
 
+final class PySysImplementation extends PyTruthyObject {
+    public static final PySysImplementation singleton = new PySysImplementation();
+
+    private PySysImplementation() {}
+
+    @Override public PyObject getAttr(String key) {
+        switch (key) {
+            case "name": return new PyString("pythonj");
+            default: return super.getAttr(key);
+        }
+    }
+    @Override public int hashCode() { return defaultHashCode(); }
+    @Override public String repr() { return defaultRepr(); }
+    @Override public PyType type() { return PyObjectType.singleton; }
+}
+
 abstract class PyBagObject extends PyTruthyObject {
     private final PyType bagType;
     private final PyDict attrs = new PyDict();
@@ -184,6 +200,7 @@ final class PySysModule extends PyModule {
         switch (key) {
             case "argv": return Runtime.sysArgv;
             case "exit": return PySysFunction_exit.singleton;
+            case "implementation": return PySysImplementation.singleton;
             default: return super.getAttr(key);
         }
     }

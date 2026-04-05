@@ -32,7 +32,7 @@ BUILTIN_MODULE_ATTRS = {
     '_operator': {'contains', 'delitem', 'getitem', 'index', 'setitem'},
     '_types': {'BuiltinFunctionType', 'ClassMethodDescriptorType', 'FunctionType', 'GetSetDescriptorType', 'MappingProxyType', 'MemberDescriptorType', 'MethodDescriptorType', 'NoneType'},
     'math': {'copysign', 'isfinite', 'isinf', 'isnan'},
-    'sys': {'exit'},
+    'sys': {'exit', 'implementation'},
     'zlib': {'compress', 'decompress', 'error'},
 }
 BUILTIN_TYPES = {
@@ -465,6 +465,8 @@ def _build_module_entry(name: str) -> dict[str, Any]:
             attrs[k] = _encode_attr('builtin_function', doc=v.__doc__, signature=_get_module_function_signature(name, k))
         elif isinstance(v, type):
             attrs[k] = _encode_attr('type', target=v.__name__)
+        else:
+            attrs[k] = _encode_attr('member')
     return {'kind': 'module', 'attrs': attrs}
 
 def _is_scalar_json_value(value: object) -> bool:

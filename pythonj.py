@@ -2293,6 +2293,8 @@ def get_builtin_module_attr_expr(module_name: str, attr_name: str, kind: str) ->
         module_java_name = extract_spec.BUILTIN_MODULES[module_name]
         module_func_prefix = module_java_name.removesuffix('Module')
         return ir.PyBuiltinFunction(f'{module_name}.{attr_name}', java_name=f'{module_func_prefix}Function_{attr_name}')
+    if kind == 'member':
+        return ir.MethodCall(ir.PyBuiltinModule(module_name, extract_spec.BUILTIN_MODULES[module_name]), 'getAttr', [ir.StrLiteral(attr_name)])
     if kind == 'type':
         java_name = get_java_name(f'{module_name}.{attr_name}')
         return ir.PyBuiltinType(f'{module_name}.{attr_name}', java_name)
