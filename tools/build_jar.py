@@ -23,7 +23,7 @@ def main() -> None:
     classes_dir = tempfile.mkdtemp(prefix='.java-classes.', dir=jar_dir)
     java_paths = [os.path.abspath(path) for path in args.java_paths]
 
-    javac_cmd = ['javac']
+    javac_cmd = ['javac', '-proc:none']
     if args.classpath is not None:
         javac_cmd.extend(['-cp', os.path.abspath(args.classpath)])
     javac_cmd.extend(['-d', classes_dir, *java_paths])
