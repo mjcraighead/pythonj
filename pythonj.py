@@ -1002,11 +1002,12 @@ class LoweringVisitor(ast.NodeVisitor):
         if (isinstance(node.value, ast.Name) and
             self.name_resolves_to_builtin_type(node.value) and
             attr_kind is not None):
-            java_name = extract_spec.BUILTIN_TYPES[node.value.id]
-            attr_expr = ir.Field(ir.Identifier(f'{java_name}Type'), f'pyattr_{node.attr}')
-            if attr_kind in DIRECT_GETATTR_IDENTITY_KINDS:
-                return attr_expr
-            return ir.MethodCall(attr_expr, 'get', [ir.Null()])
+            return get_builtin_type_attr_expr(node.value.id, node.attr, attr_kind, None)
+        type_name = infer_exact_builtin_type(node.value)
+        if type_name is not None:
+            attr_kind = DIRECT_GETATTR_BUILTIN_TYPE_ATTRS.get(type_name, {}).get(node.attr)
+            if attr_kind is not None:
+                return get_builtin_type_attr_expr(type_name, node.attr, attr_kind, self.visit(node.value))
         return ir.MethodCall(self.visit(node.value), 'getAttr', [ir.StrLiteral(node.attr)])
 
     def visit_Import(self, node) -> None:
@@ -1978,6 +1979,35 @@ def decode_signature(spec: Optional[dict[str, object]]) -> Optional[list[inspect
             default=default,
         ))
     return params
+
+def get_builtin_type_attr_expr(type_name: str, attr_name: str, attr_kind: str, receiver: Optional[ir.Expr]) -> ir.Expr:
+    assert type_name in extract_spec.BUILTIN_TYPES, type_name
+    java_name = extract_spec.BUILTIN_TYPES[type_name]
+    attr_expr = ir.Field(ir.Identifier(f'{java_name}Type'), f'pyattr_{attr_name}')
+    if receiver is None:
+        if attr_kind in DIRECT_GETATTR_IDENTITY_KINDS:
+            return attr_expr
+        return ir.MethodCall(attr_expr, 'get', [ir.Null()])
+    if attr_kind == 'string':
+        return attr_expr
+    return ir.MethodCall(attr_expr, 'get', [receiver])
+
+def infer_exact_builtin_type(node: ast.expr) -> Optional[str]:
+    if isinstance(node, ast.Constant):
+        type_name = type(node.value).__name__
+    elif isinstance(node, (ast.List, ast.ListComp)):
+        type_name = 'list'
+    elif isinstance(node, ast.Tuple):
+        type_name = 'tuple'
+    elif isinstance(node, (ast.Set, ast.SetComp)):
+        type_name = 'set'
+    elif isinstance(node, (ast.Dict, ast.DictComp)):
+        type_name = 'dict'
+    elif isinstance(node, ast.JoinedStr):
+        type_name = 'str'
+    else:
+        return None
+    return type_name if type_name in extract_spec.BUILTIN_TYPES else None
 
 SUPPORTED_HELPER_RETURN_TYPES = {'bool', 'bytes', 'float', 'int', 'list', 'str', 'tuple'}
 
