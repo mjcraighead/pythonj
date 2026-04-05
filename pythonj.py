@@ -28,28 +28,33 @@ ISINSTANCE_SINGLE_FASTPATH_BUILTIN_TYPES = {'bool', 'bytearray', 'bytes', 'float
 EXACT_INT_BINOPS = {'add', 'and', 'floorDiv', 'lshift', 'mod', 'mul', 'or', 'pow', 'rshift', 'sub', 'xor'}
 
 INTRINSIC_SIGNATURES = {
-    '__pythonj_abs__': (1, 'pythonjAbs'),
-    '__pythonj_bytes_builder__': (1, 'pythonjBytesBuilder'),
-    '__pythonj_bytes_builder_append__': (2, 'pythonjBytesBuilderAppend'),
-    '__pythonj_bytes_builder_append_byte__': (2, 'pythonjBytesBuilderAppendByte'),
-    '__pythonj_bytes_builder_finish__': (1, 'pythonjBytesBuilderFinish'),
-    '__pythonj_delattr__': (2, 'pythonjDelAttr'),
-    '__pythonj_dict_get__': (2, 'pythonjDictGet'),
-    '__pythonj_format__': (2, 'pythonjFormat'),
-    '__pythonj_getattr__': (2, 'pythonjGetAttr'),
-    '__pythonj_hash__': (1, 'pythonjHash'),
-    '__pythonj_hasiter__': (1, 'pythonjHasIter'),
-    '__pythonj_isinstance__': (2, 'pythonjIsInstance'),
-    '__pythonj_issubclass__': (2, 'pythonjIsSubclass'),
-    '__pythonj_iter__': (1, 'pythonjIter'),
-    '__pythonj_len__': (1, 'pythonjLen'),
-    '__pythonj_next__': (1, 'pythonjNext'),
-    '__pythonj_repr__': (1, 'pythonjRepr'),
-    '__pythonj_setattr__': (3, 'pythonjSetAttr'),
-    '__pythonj_str_builder__': (1, 'pythonjStrBuilder'),
-    '__pythonj_str_builder_append__': (2, 'pythonjStrBuilderAppend'),
-    '__pythonj_str_builder_finish__': (1, 'pythonjStrBuilderFinish'),
-    '__pythonj_zip_new__': (2, 'pythonjZipNew'),
+    '__pythonj_abs__': ('pythonjAbs', 1, None),
+    '__pythonj_bytes_builder__': ('pythonjBytesBuilder', 1, None),
+    '__pythonj_bytes_builder_append__': ('pythonjBytesBuilderAppend', 2, None),
+    '__pythonj_bytes_builder_append_byte__': ('pythonjBytesBuilderAppendByte', 2, None),
+    '__pythonj_bytes_builder_finish__': ('pythonjBytesBuilderFinish', 1, 'bytes'),
+    '__pythonj_delattr__': ('pythonjDelAttr', 2, None),
+    '__pythonj_dict_get__': ('pythonjDictGet', 2, None),
+    '__pythonj_format__': ('pythonjFormat', 2, 'str'),
+    '__pythonj_getattr__': ('pythonjGetAttr', 2, None),
+    '__pythonj_hash__': ('pythonjHash', 1, 'int'),
+    '__pythonj_hasiter__': ('pythonjHasIter', 1, 'bool'),
+    '__pythonj_isinstance__': ('pythonjIsInstance', 2, 'bool'),
+    '__pythonj_issubclass__': ('pythonjIsSubclass', 2, 'bool'),
+    '__pythonj_iter__': ('pythonjIter', 1, None),
+    '__pythonj_len__': ('pythonjLen', 1, 'int'),
+    '__pythonj_next__': ('pythonjNext', 1, None),
+    '__pythonj_repr__': ('pythonjRepr', 1, 'str'),
+    '__pythonj_setattr__': ('pythonjSetAttr', 3, None),
+    '__pythonj_str_builder__': ('pythonjStrBuilder', 1, None),
+    '__pythonj_str_builder_append__': ('pythonjStrBuilderAppend', 2, None),
+    '__pythonj_str_builder_finish__': ('pythonjStrBuilderFinish', 1, 'str'),
+    '__pythonj_zip_new__': ('pythonjZipNew', 2, None),
+}
+
+EXACT_BUILTIN_FUNCTION_RETURN_TYPES = {
+    'hash': 'int',
+    'len': 'int',
 }
 
 class ScopeKind(Enum):
@@ -757,6 +762,17 @@ class LoweringVisitor(ast.NodeVisitor):
                 self.infer_exact_builtin_type_expr(node.left) == 'int' and
                 self.infer_exact_builtin_type_expr(node.right) == 'int'):
                 return 'int'
+        if (isinstance(node, ast.Call) and
+            isinstance(node.func, ast.Name) and
+            not node.keywords and
+            not any(isinstance(arg, ast.Starred) for arg in node.args)):
+            if self.allow_intrinsics and node.func.id in INTRINSIC_SIGNATURES:
+                (_, _, return_type) = INTRINSIC_SIGNATURES[node.func.id]
+                if return_type is not None:
+                    return return_type
+            if (self.name_resolves_to_builtin_function(node.func) and
+                (type_name := EXACT_BUILTIN_FUNCTION_RETURN_TYPES.get(node.func.id)) is not None):
+                return type_name
         if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
             if self.name_resolves_to_final_top_level_function(node.func):
                 type_name = self.module_scope().info.initial_final_function_return_types.get(node.func.id)
@@ -1060,7 +1076,7 @@ class LoweringVisitor(ast.NodeVisitor):
                         [*([self.visit(arg) for arg in node.args]), *([ir.Null()] * (max_args - len(node.args)))],
                     )
         if self.allow_intrinsics and isinstance(node.func, ast.Name) and node.func.id in INTRINSIC_SIGNATURES:
-            (n_args, method_name) = INTRINSIC_SIGNATURES[node.func.id]
+            (method_name, n_args, _) = INTRINSIC_SIGNATURES[node.func.id]
             assert len(node.args) == n_args and not node.keywords, (node.func.id, n_args, node.args, node.keywords)
             if node.func.id == '__pythonj_isinstance__':
                 return self.emit_isinstance_condition(node.args[0], node.args[1])

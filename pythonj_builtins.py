@@ -53,7 +53,7 @@ def hasattr(obj, name):
         return False
     return True
 
-def hash(arg):
+def hash(arg) -> int:
     return __pythonj_hash__(arg)
 
 def isinstance(obj, class_or_tuple):
@@ -72,7 +72,7 @@ def issubclass(obj, class_or_tuple):
         return False
     return __pythonj_issubclass__(obj, class_or_tuple)
 
-def len(arg):
+def len(arg) -> int:
     return __pythonj_len__(arg)
 
 def next(iterator, default):
