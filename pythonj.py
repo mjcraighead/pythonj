@@ -2564,7 +2564,7 @@ def build_wrapper_binding_ir(
     elif plan.mode == 'poskw_min_max_python':
         assert kwarg_params is not None
         (min_args, max_args) = cast(tuple[int, int], get_positional_call_range(kwarg_params.params))
-        statements.append(ir.LocalDecl('PyList', 'boundArgs',
+        statements.append(ir.LocalDecl('var', 'boundArgs',
             ir.MethodCall(ir.Identifier('Runtime'), 'bindMinMaxPositionalOrKeyword', [
                 ir.Identifier('args'),
                 ir.Identifier('kwargs'),
@@ -2580,10 +2580,10 @@ def build_wrapper_binding_ir(
                 ir.PyConstant(False),
             ]),
         ))
-        bind_args = [ir.MethodCall(ir.Field(ir.Identifier('boundArgs'), 'items'), 'get', [ir.IntLiteral(i)]) for i in range(max_args)]
+        bind_args = [ir.MethodCall(ir.Identifier('boundArgs'), 'get', [ir.IntLiteral(i)]) for i in range(max_args)]
     elif plan.mode == 'pos_kwonly_python':
         assert kwarg_params is not None
-        statements.append(ir.LocalDecl('PyList', 'boundArgs',
+        statements.append(ir.LocalDecl('var', 'boundArgs',
             ir.MethodCall(ir.Identifier('Runtime'), 'bindMinMaxPositionalOrKeyword', [
                 ir.Identifier('args'),
                 ir.Identifier('kwargs'),
@@ -2599,7 +2599,7 @@ def build_wrapper_binding_ir(
                 ir.PyConstant(kwarg_params.missing_style == 'exact_args'),
             ]),
         ))
-        bind_args = [ir.MethodCall(ir.Field(ir.Identifier('boundArgs'), 'items'), 'get', [ir.IntLiteral(i)]) for i in range(len(kwarg_params.params))]
+        bind_args = [ir.MethodCall(ir.Identifier('boundArgs'), 'get', [ir.IntLiteral(i)]) for i in range(len(kwarg_params.params))]
     elif plan.mode == 'vararg_kwonly_python':
         assert kwarg_params is not None
         statements.append(ir.LocalDecl('PyList', 'boundArgs',

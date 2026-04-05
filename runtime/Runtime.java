@@ -550,10 +550,10 @@ public final class Runtime {
         PyString pyName = new PyString(name);
         PyRuntime.pyfunc_require_min_max_positional(new PyInt(args.length), kwargs, pyName, pyName, new PyInt(minArgs), new PyInt(maxArgs));
     }
-    public static PyList bindMinMaxPositionalOrKeyword(PyObject[] args, PyDict kwargs, PyString kwName, PyString positionalName, PyTuple positionalNames, PyInt posonlyCount, PyTuple kwonlyNames, PyInt minArgs, PyInt maxPositional, PyInt maxTotal, PyBool minPositionalStyle, PyBool exactArgsStyle) {
-        return PyRuntime.pyfunc_bind_min_max_positional_or_keyword(new PyTuple(args), kwargs, kwName, positionalName, positionalNames, posonlyCount, kwonlyNames, minArgs, maxPositional, maxTotal, minPositionalStyle, exactArgsStyle);
+    public static ArrayList<PyObject> bindMinMaxPositionalOrKeyword(PyObject[] args, PyDict kwargs, PyString kwName, PyString positionalName, PyTuple positionalNames, PyInt posonlyCount, PyTuple kwonlyNames, PyInt minArgs, PyInt maxPositional, PyInt maxTotal, PyBool minPositionalStyle, PyBool exactArgsStyle) {
+        return PyRuntime.pyfunc_bind_min_max_positional_or_keyword(new PyTuple(args), kwargs, kwName, positionalName, positionalNames, posonlyCount, kwonlyNames, minArgs, maxPositional, maxTotal, minPositionalStyle, exactArgsStyle).items;
     }
-    public static PyList bindMinMaxPositionalOrKeyword(PyObject[] args, PyDict kwargs, String name, PyTuple positionalNames, int posonlyCount, PyTuple kwonlyNames, int minArgs, int maxPositional, int maxTotal, boolean minPositionalStyle, boolean exactArgsStyle) {
+    public static ArrayList<PyObject> bindMinMaxPositionalOrKeyword(PyObject[] args, PyDict kwargs, String name, PyTuple positionalNames, int posonlyCount, PyTuple kwonlyNames, int minArgs, int maxPositional, int maxTotal, boolean minPositionalStyle, boolean exactArgsStyle) {
         PyString pyName = new PyString(name);
         return bindMinMaxPositionalOrKeyword(args, kwargs, pyName, pyName, positionalNames, new PyInt(posonlyCount), kwonlyNames, new PyInt(minArgs), new PyInt(maxPositional), new PyInt(maxTotal), PyBool.create(minPositionalStyle), PyBool.create(exactArgsStyle));
     }
