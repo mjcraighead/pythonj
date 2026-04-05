@@ -2036,7 +2036,7 @@ def is_constant_default(default: object) -> bool:
 def get_builtin_type_attr_expr(type_name: str, attr_name: str, attr_kind: str, receiver: Optional[ir.Expr]) -> ir.Expr:
     assert type_name in extract_spec.BUILTIN_TYPES, type_name
     java_name = extract_spec.BUILTIN_TYPES[type_name]
-    attr_expr = ir.Field(ir.Identifier(f'{java_name}Type'), f'pyattr_{attr_name}')
+    attr_expr = ir.Field(ir.Identifier(f'{java_name}Type.AttrsHolder'), f'pyattr_{attr_name}')
     if receiver is None:
         if attr_kind in DIRECT_GETATTR_IDENTITY_KINDS:
             return attr_expr
@@ -2509,6 +2509,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
             type_decls: list[ir.Decl] = [
                 ir.FieldDecl('public static final', f'{java_name}Type', 'singleton', ir.CreateObject(f'{java_name}Type', [])),
             ]
+            attr_holder_decls: list[ir.Decl] = []
             for (k, v) in extract_spec.iter_type_attrs(spec, name):
                 doc_value = v.get('doc')
                 if v['kind'] == 'string':
@@ -2549,23 +2550,22 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                     ])
                 else:
                     assert False, (name, k, v)
-                type_decls.append(ir.FieldDecl('static final', value.type, f'pyattr_{k}', value))
-            type_decls.append(ir.ClassDecl('private static final', 'AttrsHolder', None, [
-                ir.FieldDecl(
-                    'static final',
-                    'java.util.LinkedHashMap<PyObject, PyObject>',
-                    'attrs',
-                    ir.CreateObject('java.util.LinkedHashMap<PyObject, PyObject>', [ir.IntLiteral(len(attrs))]),
-                ),
-                ir.StaticBlock([
-                    ir.method_call_statement(
-                        ir.Identifier('attrs'),
-                        'put',
-                        [ir.CreateObject('PyString', [ir.StrLiteral(k)]), ir.Identifier(f'pyattr_{k}')],
-                    )
-                    for k in attrs
-                ]),
+                attr_holder_decls.append(ir.FieldDecl('static final', value.type, f'pyattr_{k}', value))
+            attr_holder_decls.append(ir.FieldDecl(
+                'static final',
+                'java.util.LinkedHashMap<PyObject, PyObject>',
+                'attrs',
+                ir.CreateObject('java.util.LinkedHashMap<PyObject, PyObject>', [ir.IntLiteral(len(attrs))]),
+            ))
+            attr_holder_decls.append(ir.StaticBlock([
+                ir.method_call_statement(
+                    ir.Identifier('attrs'),
+                    'put',
+                    [ir.CreateObject('PyString', [ir.StrLiteral(k)]), ir.Identifier(f'pyattr_{k}')],
+                )
+                for k in attrs
             ]))
+            type_decls.append(ir.ClassDecl('static final', 'AttrsHolder', None, attr_holder_decls))
             type_decls.append(ir.ConstructorDecl('private', f'{java_name}Type', [], [
                 ir.SuperConstructorCall([
                     ir.StrLiteral(py_name),
@@ -2586,7 +2586,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
             ]))
             type_decls.append(ir.MethodDecl('@Override public', 'PyObject', 'lookupAttr', ['String name'], [
                 ir.SwitchStatement(ir.Identifier('name'), [
-                    ir.SwitchCase(ir.StrLiteral(k), ir.Identifier(f'pyattr_{k}'))
+                    ir.SwitchCase(ir.StrLiteral(k), ir.Field(ir.Identifier('AttrsHolder'), f'pyattr_{k}'))
                     for k in attrs
                 ], ir.Null()),
             ]))
