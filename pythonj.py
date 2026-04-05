@@ -1090,6 +1090,9 @@ class LoweringVisitor(ast.NodeVisitor):
                 case '__pythonj_setattr__':
                     assert len(node.args) == 3 and not node.keywords, node.args
                     return ir.MethodCall(ir.Identifier('Runtime'), 'pythonjSetAttr', [self.visit(node.args[0]), self.visit(node.args[1]), self.visit(node.args[2])])
+                case '__pythonj_zip_new__':
+                    assert len(node.args) == 2 and not node.keywords, node.args
+                    return ir.MethodCall(ir.Identifier('Runtime'), 'pythonjZipNew', [self.visit(node.args[0]), self.visit(node.args[1])])
         if (isinstance(node.func, ast.Attribute) and
             not node.keywords and
             not any(isinstance(arg, ast.Starred) for arg in node.args)):
@@ -2136,6 +2139,7 @@ PYTHON_AUTHORED_IMPLS = {
     'range': {'count'},
     'str': {'removeprefix', 'removesuffix'},
 }
+PYTHON_AUTHORED_CONSTRUCTOR_IMPLS = {'enumerate', 'zip'}
 
 def make_param(name: str, default: object = inspect.Parameter.empty) -> inspect.Parameter:
     return inspect.Parameter(name, inspect.Parameter.POSITIONAL_ONLY, default=default)
@@ -2368,6 +2372,16 @@ def translate_python_method_impl(node: ast.Module, type_name: str, method_name: 
     else:
         func = class_funcs[type_name][method_name]
     return translate_python_impl_node(node, func, func_name, f'<method {type_name}.{method_name}>', 'builtin method', pool, scope_infos=scope_infos)
+
+def translate_python_constructor_impl(node: ast.Module, type_name: str, pool: ir.ConstantPool,
+                                      funcs: Optional[dict[str, ast.FunctionDef]] = None,
+                                      scope_infos: Optional[dict[ast.AST, ScopeInfo]] = None) -> tuple[list[ir.ClassDecl], ir.MethodDecl]:
+    if funcs is None:
+        funcs = get_top_level_functions(node)
+    func_name = f'{type_name}__newobj'
+    func = funcs[func_name]
+    emitted_name = f'{func_name}_impl'
+    return translate_python_impl_node(node, func, emitted_name, f'<constructor {type_name}>', 'builtin constructor', pool, scope_infos=scope_infos)
 
 def translate_python_runtime_impl(node: ast.Module, func_name: str, pool: ir.ConstantPool,
                                   funcs: Optional[dict[str, ast.FunctionDef]] = None,
@@ -2711,6 +2725,8 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
         python_runtime_helper_methods: list[ir.Decl] = []
         python_builtin_helper_classes: list[ir.ClassDecl] = []
         python_builtin_helper_methods: list[ir.Decl] = []
+        python_constructor_helper_classes: list[ir.ClassDecl] = []
+        python_constructor_helper_methods: list[ir.Decl] = []
         python_method_helper_classes: list[ir.ClassDecl] = []
         python_method_helper_methods: list[ir.Decl] = []
         for (name, obj_spec) in spec.items():
@@ -2793,7 +2809,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                 ir.SuperConstructorCall([
                     ir.StrLiteral(py_name),
                     ir.Field(ir.Identifier(java_name), 'class'),
-                    ir.MethodRef(java_name, 'newObj'),
+                    ir.MethodRef('PyBuiltinConstructorsPythonImpl', f'pyfunc_{name}__newobj') if name in PYTHON_AUTHORED_CONSTRUCTOR_IMPLS else ir.MethodRef(java_name, 'newObj'),
                 ]),
             ]))
             type_decls.append(ir.MethodDecl('public', 'java.util.Map<PyObject, PyObject>', 'getAttributes', [], [
@@ -2951,6 +2967,37 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
 
         top_level_decls.extend(python_method_helper_classes)
         top_level_decls.append(ir.ClassDecl('final', 'PyBuiltinMethodsPythonImpl', None, python_method_helper_methods))
+
+        for type_name in sorted(PYTHON_AUTHORED_CONSTRUCTOR_IMPLS):
+            (helper_classes, helper_method) = translate_python_constructor_impl(
+                pythonj_builtins_node, type_name, pool, funcs=pythonj_builtins_funcs, scope_infos=builtins_analyzer.scope_infos,
+            )
+            python_constructor_helper_classes.extend(helper_classes)
+            emitted_name = f'{type_name}__newobj_impl'
+            python_constructor_helper_methods.append(ir.MethodDecl(
+                'static',
+                'PyObject',
+                f'pyfunc_{type_name}__newobj',
+                ['PyConcreteType type', 'PyObject[] args', 'PyDict kwargs'],
+                [
+                    ir.ReturnStatement(ir.MethodCall(
+                        ir.Identifier('PyBuiltinConstructorsPythonImpl'),
+                        f'pyfunc_{emitted_name}',
+                        [
+                            ir.Identifier('type'),
+                            ir.CreateObject('PyTuple', [ir.Identifier('args')]),
+                            ir.CondOp(
+                                ir.BinaryOp('!=', ir.Identifier('kwargs'), ir.Null()),
+                                ir.Identifier('kwargs'),
+                                ir.CreateObject('PyDict', []),
+                            ),
+                        ],
+                    )),
+                ],
+            ))
+            python_constructor_helper_methods.append(helper_method)
+        top_level_decls.extend(python_constructor_helper_classes)
+        top_level_decls.append(ir.ClassDecl('final', 'PyBuiltinConstructorsPythonImpl', None, python_constructor_helper_methods))
 
         for func_name in sorted(PYTHON_AUTHORED_IMPLS['builtins']):
             (helper_classes, helper_method) = translate_python_builtin_impl(

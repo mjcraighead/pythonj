@@ -4,6 +4,7 @@
 
 import operator
 
+# Builtin functions
 def abs(arg):
     return __pythonj_abs__(arg)
 
@@ -107,6 +108,45 @@ def sum(iterable, start):
         start = start + item
     return start
 
+# Builtin class constructors
+def enumerate__newobj(type, args: tuple, kwargs: dict):
+    total_args: int = len(args)
+    if kwargs:
+        total_args += len(kwargs)
+    if total_args == 1 or total_args == 2:
+        iterable = args[0] if len(args) >= 1 else None
+        start = args[1] if len(args) >= 2 else None
+        if kwargs:
+            for (kw, value) in kwargs.items():
+                if kw == 'iterable' and iterable is None:
+                    iterable = value
+                elif total_args == 2 and kw == 'start' and start is None:
+                    start = value
+                else:
+                    raise TypeError(f'{kw!r} is an invalid keyword argument for enumerate()')
+        if iterable is None:
+            raise TypeError("enumerate() missing required argument 'iterable'")
+        return enumerate(iterable) if start is None else enumerate(iterable, start)
+    if len(args) == 0:
+        raise TypeError("enumerate() missing required argument 'iterable'")
+    raise TypeError(f'enumerate() takes at most 2 arguments ({total_args} given)')
+
+def zip__newobj(type, args: tuple, kwargs: dict):
+    strict = None
+    if kwargs:
+        kwargs_len: int = len(kwargs)
+        args_len: int = len(args)
+        if kwargs_len > 1:
+            if args_len == 0:
+                raise TypeError(f'zip() takes at most 1 keyword argument ({kwargs_len} given)')
+            raise TypeError(f'zip() takes at most 1 arguments ({args_len + kwargs_len} given)')
+        for (kw, value) in kwargs.items():
+            if kw != 'strict':
+                raise TypeError(f'zip() got an unexpected keyword argument {kw!r}')
+            strict = value
+    return __pythonj_zip_new__(args, strict)
+
+# Builtin classes
 class bytes:
     def capitalize(self: bytes):
         ret: list = []

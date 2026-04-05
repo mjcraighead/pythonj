@@ -503,6 +503,9 @@ public final class Runtime {
     public static PyString pythonjRepr(PyObject obj) {
         return new PyString(obj.repr());
     }
+    public static PyObject pythonjZipNew(PyTuple args, PyObject strict) {
+        return PyZip.newObjPositional(args.items, strict);
+    }
     public static PyRaise raiseNoKwArgs(String name) {
         return PyTypeError.raise(name + "() takes no keyword arguments");
     }

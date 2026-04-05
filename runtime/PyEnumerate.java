@@ -12,35 +12,7 @@ public final class PyEnumerate extends PyIter {
     }
 
     public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
-        // This is quirky, but is intended to match corner cases in CPython enumerate()
-        long totalArgs = args.length;
-        if (kwargs != null) {
-            totalArgs += kwargs.items.size();
-        }
-        if ((totalArgs == 1) || (totalArgs == 2)) {
-            PyObject iterable = (args.length >= 1) ? args[0] : null;
-            PyObject start = (args.length >= 2) ? args[1] : null;
-            if (kwargs != null) {
-                for (var x: kwargs.items.entrySet()) {
-                    PyString kw = (PyString)x.getKey(); // PyString validated at call site
-                    if ((kw.value.equals("iterable")) && (iterable == null)) {
-                        iterable = x.getValue();
-                    } else if ((totalArgs == 2) && (kw.value.equals("start")) && (start == null)) {
-                        start = x.getValue();
-                    } else {
-                        throw PyTypeError.raiseFormat("%s is an invalid keyword argument for enumerate()", kw.repr());
-                    }
-                }
-            }
-            if (iterable == null) {
-                throw PyTypeError.raise("enumerate() missing required argument 'iterable'");
-            }
-            return newObjPositional(iterable, start);
-        } else if (args.length == 0) {
-            throw PyTypeError.raise("enumerate() missing required argument 'iterable'");
-        } else {
-            throw Runtime.raiseAtMostArgs("enumerate", 2, totalArgs);
-        }
+        return PyBuiltinConstructorsPythonImpl.pyfunc_enumerate__newobj(type, args, kwargs);
     }
     public static PyObject newObjPositional(PyObject iterable, PyObject start) {
         long startIndex = (start != null) ? start.indexValue() : 0;

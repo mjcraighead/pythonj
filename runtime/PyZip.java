@@ -14,21 +14,7 @@ public final class PyZip extends PyIter {
     }
 
     public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
-        PyObject strict = null;
-        if ((kwargs != null) && kwargs.boolValue()) {
-            long kwargsLen = kwargs.items.size();
-            if (kwargsLen > 1) {
-                throw Runtime.raiseAtMostKwArgs(type.name(), 1, args.length, kwargsLen);
-            }
-            for (var x: kwargs.items.entrySet()) {
-                PyString kw = (PyString)x.getKey();
-                if (!kw.value.equals("strict")) {
-                    throw Runtime.raiseUnexpectedKwArg(type.name(), kw.value);
-                }
-                strict = x.getValue();
-            }
-        }
-        return newObjPositional(args, strict);
+        return PyBuiltinConstructorsPythonImpl.pyfunc_zip__newobj(type, args, kwargs);
     }
     public static PyObject newObjPositional(PyObject[] args, PyObject strict) {
         boolean strictBool = (strict != null) && strict.boolValue();
