@@ -675,7 +675,14 @@ class LoweringVisitor(ast.NodeVisitor):
                 self.error(node.lineno, f"package imports are unsupported (got import {alias.name!r})")
                 continue
             bind_name = alias.asname if alias.asname is not None else alias.name
-            self.code.extend(self.emit_bind(ast.Name(id=bind_name), ir.Field(ir.Identifier(extract_spec.BUILTIN_MODULES[alias.name]), 'singleton')))
+            value = ir.Field(ir.Identifier(extract_spec.BUILTIN_MODULES[alias.name]), 'singleton')
+            if self.scope.known_builtin_module_locals.get(bind_name) == alias.name:
+                if self.scope.info.kind == ScopeKind.FUNCTION:
+                    self.code.append(ir.LocalDecl('final PyObject', f'pylocal_{bind_name}', value))
+                else:
+                    assert self.scope.info.kind == ScopeKind.MODULE, self.scope.info.kind
+                continue
+            self.code.extend(self.emit_bind(ast.Name(id=bind_name), value))
 
     def visit_ImportFrom(self, node) -> None:
         self.error(node.lineno, 'from ... import ... is unsupported')
@@ -1178,7 +1185,7 @@ class LoweringVisitor(ast.NodeVisitor):
                 call_positional_body.append(ir.LocalDecl('PyObject', local_arg_name, ir.Identifier(bind_arg_name)))
         for name in sorted(self.scope.info.cell_vars - set(arg_names)):
             call_positional_body.append(ir.LocalDecl('PyCell', f'pycell_{name}', ir.CreateObject('PyCell', [ir.PyConstant(None)])))
-        for name in sorted(self.scope.info.locals - self.scope.info.cell_vars - set(arg_names)):
+        for name in sorted(self.scope.info.locals - self.scope.info.cell_vars - set(arg_names) - set(self.scope.known_builtin_module_locals)):
             if invisible_args or name not in arg_names:
                 call_positional_body.append(ir.LocalDecl('PyObject', f'pylocal_{name}', None))
         call_positional_body.extend(ir.block_simplify([*body, ir.ReturnStatement(ir.PyConstant(None))]))
@@ -1527,10 +1534,17 @@ class LoweringVisitor(ast.NodeVisitor):
             self.visit(statement)
 
     def write_java(self, f: TextIO, py_name: str) -> None:
+        final_import_fields = {
+            bind_name: module_name for (bind_name, module_name) in self.scope.known_builtin_module_locals.items()
+            if bind_name in self.scope.info.locals
+        }
         body_decls: list[ir.Decl] = [
             *self.classes.values(),
             # XXX Initializing all globals to None is weird, but we don't have a better option yet
-            *(ir.FieldDecl('private static', 'PyObject', f'pyglobal_{name}', ir.PyConstant(None)) for name in sorted(self.scope.info.locals)),
+            *(ir.FieldDecl('private static final', 'PyObject', f'pyglobal_{name}', ir.Field(ir.Identifier(extract_spec.BUILTIN_MODULES[module_name]), 'singleton'))
+              for (name, module_name) in sorted(final_import_fields.items())),
+            *(ir.FieldDecl('private static', 'PyObject', f'pyglobal_{name}', ir.PyConstant(None))
+              for name in sorted(self.scope.info.locals - set(final_import_fields))),
             ir.MethodDecl('public static', 'void', 'main', ['String[] args'], ir.block_simplify(self.global_code)),
         ]
         ir.write_decls(
@@ -1731,7 +1745,7 @@ def emit_python_function_static(visitor: LoweringVisitor, func_name: str, arg_na
             func_code.append(ir.LocalDecl('PyObject', f'pylocal_{arg_name}', ir.Identifier(f'pyarg_{arg_name}')))
     for name in sorted(visitor.scope.info.cell_vars - set(arg_names)):
         func_code.append(ir.LocalDecl('PyCell', f'pycell_{name}', ir.CreateObject('PyCell', [ir.PyConstant(None)])))
-    for name in sorted(visitor.scope.info.locals - visitor.scope.info.cell_vars - set(arg_names)):
+    for name in sorted(visitor.scope.info.locals - visitor.scope.info.cell_vars - set(arg_names) - set(visitor.scope.known_builtin_module_locals)):
         func_code.append(ir.LocalDecl('PyObject', f'pylocal_{name}', None))
     if return_java_type == 'NoReturn':
         func_code.extend(ir.block_simplify(body))

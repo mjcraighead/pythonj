@@ -49,7 +49,12 @@ def main() -> None:
             node = ast.parse(f.read())
         analyzer = pythonj.ScopeAnalyzer()
         analyzer.visit(node)
-        visitor = pythonj.LoweringVisitor(py_path, analyzer.scope_infos, analyzer.scope_infos[node])
+        visitor = pythonj.LoweringVisitor(
+            py_path,
+            analyzer.scope_infos,
+            analyzer.scope_infos[node],
+            known_builtin_module_locals=pythonj.get_known_top_scope_builtin_module_locals(node),
+        )
         visitor.visit(node)
         if visitor.n_errors:
             print(f'Translation failed: {visitor.n_errors} errors')
