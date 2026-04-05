@@ -305,7 +305,7 @@ class LocalDecl(Statement):
     name: str
     value: Optional[Expr]
     def emit_java(self, pool: ConstantPool) -> Iterator[str]:
-        if self.value:
+        if self.value is not None:
             yield f'{self.type} {self.name} = {self.value.emit_java(pool)};'
         else:
             yield f'{self.type} {self.name};'
@@ -555,7 +555,7 @@ class FieldDecl(Decl):
     name: str
     value: Optional[Expr]
     def emit_java(self, pool: ConstantPool) -> Iterator[str]:
-        if self.value:
+        if self.value is not None:
             yield f'{self.modifiers} {self.type} {self.name} = {self.value.emit_java(pool)};'
         else:
             yield f'{self.modifiers} {self.type} {self.name};'

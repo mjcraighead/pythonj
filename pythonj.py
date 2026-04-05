@@ -18,6 +18,7 @@ import ir
 # Keep this explicit and narrow; widen it only for builtin types we have actually
 # exercised and are comfortable lowering directly to JVM instanceof checks.
 ISINSTANCE_SINGLE_FASTPATH_BUILTIN_TYPES = {'bool', 'bytearray', 'bytes', 'float', 'int', 'str', 'tuple'}
+EXACT_INT_BINOPS = {'add', 'and', 'floorDiv', 'lshift', 'mod', 'mul', 'or', 'pow', 'rshift', 'sub', 'xor'}
 
 RUNTIME_JAVA_FILES = (
     'PyBool.java',
@@ -686,9 +687,6 @@ class LoweringVisitor(ast.NodeVisitor):
             scope = scope.parent
         return scope
 
-    def module_binds_name(self, name: str) -> bool:
-        return name in self.module_scope().info.locals
-
     def name_resolves_to_builtin_function(self, node: ast.Name) -> bool:
         if node.id not in extract_spec.BUILTIN_FUNCTIONS:
             return False
@@ -707,7 +705,7 @@ class LoweringVisitor(ast.NodeVisitor):
             return False
         if hasattr(node, BINDING_STATE_ATTR):
             return get_name_binding_state(node) is NameBindingState.DEFINITELY_UNBOUND
-        return not self.module_binds_name(node.id)
+        return node.id not in self.module_scope().info.locals
 
     def name_resolves_to_final_top_level_function(self, node: ast.Name) -> bool:
         if node.id not in self.module_scope().info.initial_final_function_call_ranges:
@@ -728,10 +726,7 @@ class LoweringVisitor(ast.NodeVisitor):
         self.scope.reported_annotation_errors = True
 
     def local_exact_builtin_type(self, name: str) -> Optional[str]:
-        type_name = self.scope.info.exact_local_types.get(name)
-        if type_name is not None:
-            return type_name
-        return self.scope.info.exact_arg_types.get(name)
+        return self.scope.info.exact_local_types.get(name) or self.scope.info.exact_arg_types.get(name)
 
     def java_local_type(self, name: str) -> str:
         type_name = self.local_exact_builtin_type(name)
@@ -760,7 +755,7 @@ class LoweringVisitor(ast.NodeVisitor):
         rhs_int = self.emit_exact_int_value(rhs_node)
         if lhs_int is None or rhs_int is None:
             return None
-        if op not in {'add', 'and', 'floorDiv', 'lshift', 'mod', 'mul', 'or', 'pow', 'rshift', 'sub', 'xor'}:
+        if op not in EXACT_INT_BINOPS:
             return None
         return ir.MethodCall(ir.Identifier('PyInt'), op, [lhs_int, rhs_int])
 
@@ -771,7 +766,7 @@ class LoweringVisitor(ast.NodeVisitor):
                 return type_name
         if isinstance(node, ast.BinOp):
             op = self.visit(node.op)
-            if (op in {'add', 'and', 'floorDiv', 'lshift', 'mod', 'mul', 'or', 'pow', 'rshift', 'sub', 'xor'} and
+            if (op in EXACT_INT_BINOPS and
                 self.infer_exact_builtin_type_expr(node.left) == 'int' and
                 self.infer_exact_builtin_type_expr(node.right) == 'int'):
                 return 'int'
@@ -1263,10 +1258,11 @@ class LoweringVisitor(ast.NodeVisitor):
             self.code.extend(self.emit_bind(node.target, self.visit(node.value)))
 
     def visit_AugAssign(self, node) -> None:
-        op = f'{self.visit(node.op)}InPlace'
+        base_op = self.visit(node.op)
+        op = f'{base_op}InPlace'
 
         if isinstance(node.target, ast.Name):
-            exact_int_expr = self.emit_exact_int_binop(self.visit(node.op), node.target, node.value)
+            exact_int_expr = self.emit_exact_int_binop(base_op, node.target, node.value)
             if exact_int_expr is not None:
                 value = exact_int_expr
             else:
