@@ -68,33 +68,6 @@ public final class PyFloat extends PyObject {
         return sign + mantissa + "e" + ((exponent >= 0) ? "+" : "-") + expDigits;
     }
 
-    private static long[] finiteIntegerRatio(double value) {
-        long bits = Double.doubleToRawLongBits(value);
-        boolean negative = bits < 0;
-        int exponentBits = (int)((bits >>> 52) & 0x7FF);
-        long numerator = bits & ((1L << 52) - 1);
-        int exponent;
-        if (exponentBits == 0) {
-            exponent = -1022 - 52;
-        } else {
-            numerator |= (1L << 52);
-            exponent = exponentBits - 1023 - 52;
-        }
-        while (((numerator & 1) == 0) && (exponent < 0)) {
-            numerator >>= 1;
-            exponent++;
-        }
-        long denominator = 1;
-        if (exponent > 0) {
-            numerator = PyInt.lshift(numerator, exponent).value;
-        } else if (exponent < 0) {
-            denominator = PyInt.lshift(1, -exponent).value;
-        }
-        if (negative) {
-            numerator = Math.negateExact(numerator);
-        }
-        return new long[]{numerator, denominator};
-    }
     private static PyFloat parseString(String s, String repr) {
         String sl = s.toLowerCase();
         if (sl.equals("inf") || sl.equals("+inf") || sl.equals("infinity") || sl.equals("+infinity")) {
@@ -465,8 +438,31 @@ public final class PyFloat extends PyObject {
         } else if (Double.isInfinite(value)) {
             throw PyOverflowError.raise("cannot convert Infinity to integer ratio");
         }
-        long[] ratio = finiteIntegerRatio(value);
-        return new PyTuple(new PyObject[]{new PyInt(ratio[0]), new PyInt(ratio[1])});
+        long bits = Double.doubleToRawLongBits(value);
+        boolean negative = bits < 0;
+        int exponentBits = (int)((bits >>> 52) & 0x7FF);
+        long numerator = bits & ((1L << 52) - 1);
+        int exponent;
+        if (exponentBits == 0) {
+            exponent = -1022 - 52;
+        } else {
+            numerator |= (1L << 52);
+            exponent = exponentBits - 1023 - 52;
+        }
+        while (((numerator & 1) == 0) && (exponent < 0)) {
+            numerator >>= 1;
+            exponent++;
+        }
+        PyInt denominator = PyInt.singleton_1;
+        if (exponent > 0) {
+            numerator = PyInt.lshift(numerator, exponent).value;
+        } else if (exponent < 0) {
+            denominator = PyInt.lshift(1, -exponent);
+        }
+        if (negative) {
+            numerator = Math.negateExact(numerator);
+        }
+        return new PyTuple(new PyObject[]{new PyInt(numerator), denominator});
     }
     public static PyObject pymethod_from_number(PyType self, PyObject number) {
         if ((number instanceof PyFloat) || (number instanceof PyInt) || (number instanceof PyBool)) {
