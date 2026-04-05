@@ -1773,7 +1773,7 @@ class LoweringVisitor(ast.NodeVisitor):
                 *(
                     ir.MethodDecl('private', 'void', f'pysetslot_{name}', ['PyObject value'], [
                         ir.AssignStatement(ir.Identifier(f'pyslot_{name}'), ir.Identifier('value')),
-                        ir.ReturnStatement(None),
+                        ir.ReturnStatement(),
                     ])
                     for name in slots
                 ),
@@ -1785,7 +1785,7 @@ class LoweringVisitor(ast.NodeVisitor):
                             [],
                         ),
                         ir.AssignStatement(ir.Identifier(f'pyslot_{name}'), ir.Null()),
-                        ir.ReturnStatement(None),
+                        ir.ReturnStatement(),
                     ])
                     for name in slots
                 ),

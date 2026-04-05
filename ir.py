@@ -324,7 +324,7 @@ class ContinueStatement(Statement):
 
 @dataclass(slots=True)
 class ReturnStatement(Statement):
-    expr: Optional[Expr]
+    expr: Optional[Expr] = None
     def ends_control_flow(self) -> bool:
         return True
     def emit_java(self, pool: ConstantPool) -> Iterator[str]:
