@@ -1487,19 +1487,17 @@ class LoweringVisitor(ast.NodeVisitor):
             self.visit(statement)
 
     def write_java(self, f: TextIO, py_name: str) -> None:
-        writer = ir.IndentedWriter(f, 0)
         body_decls: list[ir.Decl] = [
             *self.classes.values(),
             # XXX Initializing all globals to None is weird, but we don't have a better option yet
             *(ir.FieldDecl('private static', 'PyObject', f'pyglobal_{name}', ir.PyConstant(None)) for name in sorted(self.scope.info.locals)),
             ir.MethodDecl('public static', 'void', 'main', ['String[] args'], ir.block_simplify(self.global_code)),
         ]
-        for decl in body_decls:
-            for _ in decl.emit_java(self.pool):
-                pass
-        decls = [*body_decls, *self.pool.build_pool_decls()]
-        writer.emit_decl(ir.ClassDecl('public final', py_name, None, decls), self.pool)
-        assert writer.indent == 0, writer.indent
+        ir.write_decls(
+            f,
+            [ir.ClassDecl('public final', py_name, None, ir.with_pool_decls(body_decls, self.pool))],
+            self.pool,
+        )
 
 def get_top_level_function_names(path: str) -> set[str]:
     with open(path, encoding='utf-8') as f:
@@ -2165,7 +2163,6 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
 
     pool = ir.ConstantPool('PyGeneratedConstants')
     with open(java_path, 'w') as f:
-        writer = ir.IndentedWriter(f, 0)
         top_level_decls: list[ir.Decl] = []
         python_runtime_helper_classes: list[ir.ClassDecl] = []
         python_runtime_helper_methods: list[ir.Decl] = []
@@ -2536,8 +2533,4 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                 ))
             top_level_decls.append(ir.ClassDecl('final', f'PyBuiltinFunction_{func_name}', 'PyBuiltinFunction', decls))
 
-        for decl in top_level_decls:
-            for _ in decl.emit_java(pool):
-                pass
-        for decl in [*top_level_decls, *pool.build_pool_decls()]:
-            writer.emit_decl(decl, pool)
+        ir.write_decls(f, top_level_decls, pool, include_pool_decls=True)

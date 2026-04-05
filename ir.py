@@ -616,20 +616,27 @@ def while_statement(cond: Expr, body: list[Statement]) -> Iterator[Statement]:
     else:
         yield WhileStatement(cond, body)
 
-@dataclass(slots=True)
-class IndentedWriter:
-    f: TextIO
-    indent: int
+def with_pool_decls(decls: list[Decl], pool: ConstantPool) -> list[Decl]:
+    for decl in decls:
+        for _ in decl.emit_java(pool):
+            pass
+    return [*decls, *pool.build_pool_decls()]
 
-    def _write(self, line: str) -> None:
-        if line.startswith('}'):
-            self.indent -= 1
-        self.f.write('    ' * self.indent)
-        self.f.write(line)
-        self.f.write('\n')
-        if line.endswith('{'):
-            self.indent += 1
-
-    def emit_decl(self, decl: Decl, pool: ConstantPool) -> None:
+def write_decls(f: TextIO, decls: list[Decl], pool: ConstantPool, include_pool_decls: bool = False) -> None:
+    if include_pool_decls:
+        decls = with_pool_decls(decls, pool)
+    else:
+        for decl in decls:
+            for _ in decl.emit_java(pool):
+                pass
+    indent = 0
+    for decl in decls:
         for line in decl.emit_java(pool):
-            self._write(line)
+            if line.startswith('}'):
+                indent -= 1
+            f.write('    ' * indent)
+            f.write(line)
+            f.write('\n')
+            if line.endswith('{'):
+                indent += 1
+    assert indent == 0, indent
