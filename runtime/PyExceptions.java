@@ -3,39 +3,58 @@
 // SPDX-License-Identifier: MIT
 
 class PyBaseException extends PyTruthyObject {
-    protected final PyObject[] args;
-    PyBaseException(PyObject[] _args) { args = _args; }
+    protected final PyTuple args;
+    PyBaseException(PyObject[] _args) { args = new PyTuple(_args); }
     @Override public PyConcreteType type() { return PyBaseExceptionType.singleton; }
+
+    @Override public PyObject getAttr(String key) {
+        if (key.equals("args")) {
+            return args;
+        }
+        return super.getAttr(key);
+    }
+    @Override public void setAttr(String key, PyObject value) {
+        if (key.equals("args")) {
+            throw Runtime.raiseNamedReadOnlyAttr(type(), key);
+        }
+        super.setAttr(key, value);
+    }
+    @Override public void delAttr(String key) {
+        if (key.equals("args")) {
+            throw Runtime.raiseNamedReadOnlyAttr(type(), key);
+        }
+        super.delAttr(key);
+    }
 
     @Override public boolean contains(PyObject rhs) { return defaultContains(rhs); }
     @Override public String str() {
-        if (args.length == 0) {
+        if (args.items.length == 0) {
             return "";
         }
-        if (args.length == 1) {
-            return args[0].str();
+        if (args.items.length == 1) {
+            return args.items[0].str();
         }
         StringBuilder s = new StringBuilder("(");
-        for (int i = 0; i < args.length; i++) {
+        for (int i = 0; i < args.items.length; i++) {
             if (i != 0) {
                 s.append(", ");
             }
-            s.append(args[i].repr());
+            s.append(args.items[i].repr());
         }
         return s.append(")").toString();
     }
     @Override public String repr() {
         StringBuilder s = new StringBuilder(type().name()).append("(");
-        for (int i = 0; i < args.length; i++) {
+        for (int i = 0; i < args.items.length; i++) {
             if (i != 0) {
                 s.append(", ");
             }
-            s.append(args[i].repr());
+            s.append(args.items[i].repr());
         }
         return s.append(")").toString();
     }
 
-    static PyObject pygetset_args(PyObject obj) { throw new UnsupportedOperationException(); }
+    static PyObject pygetset_args(PyObject obj) { return ((PyBaseException)obj).args; }
 
     public PyObject pymethod_add_note(PyObject note) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_with_traceback(PyObject tb) { throw new UnsupportedOperationException(); }
@@ -163,8 +182,8 @@ final class PyKeyError extends PyLookupError {
     PyKeyError(PyObject... _args) { super(_args); }
     @Override public PyConcreteType type() { return PyKeyErrorType.singleton; }
     @Override public String str() { // special case for KeyError
-        if (args.length == 1) {
-            return args[0].repr();
+        if (args.items.length == 1) {
+            return args.items[0].repr();
         } else {
             return super.str();
         }
@@ -264,14 +283,14 @@ final class PySystemExit extends PyBaseException {
     }
 
     static PyObject pymember_code(PyObject obj) {
-        PyObject[] args = ((PySystemExit)obj).args;
-        if (args.length == 0) {
+        PyTuple args = ((PySystemExit)obj).args;
+        if (args.items.length == 0) {
             return PyNone.singleton;
         }
-        if (args.length == 1) {
-            return args[0];
+        if (args.items.length == 1) {
+            return args.items[0];
         }
-        return new PyTuple(args);
+        return args;
     }
 }
 
