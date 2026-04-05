@@ -223,7 +223,8 @@ class Scope:
 class LoweringVisitor(ast.NodeVisitor):
     __slots__ = ('path', 'n_errors', 'n_functions', 'n_lambdas', 'scope', 'global_code', 'code',
                  'scope_infos', 'pool', 'break_name', 'classes', 'allow_intrinsics',
-                 'python_helper_names', 'python_helper_class')
+                 'python_helper_names', 'python_helper_class', 'known_final_top_level_functions',
+                 'final_global_function_classes')
     path: str
     n_errors: int
     n_functions: int
@@ -238,9 +239,12 @@ class LoweringVisitor(ast.NodeVisitor):
     allow_intrinsics: bool # enables special internal-only codegen features for builtins
     python_helper_names: set[str]
     python_helper_class: Optional[str]
+    known_final_top_level_functions: set[str]
+    final_global_function_classes: dict[str, str]
 
     def __init__(self, path: str, scope_infos: dict[ast.AST, ScopeInfo], module_info: ScopeInfo,
-                 known_builtin_module_locals: Optional[dict[str, str]] = None):
+                 known_builtin_module_locals: Optional[dict[str, str]] = None,
+                 known_final_top_level_functions: Optional[set[str]] = None):
         self.path = path
         self.n_errors = 0
         self.n_functions = 0
@@ -255,6 +259,8 @@ class LoweringVisitor(ast.NodeVisitor):
         self.allow_intrinsics = False
         self.python_helper_names = set()
         self.python_helper_class = None
+        self.known_final_top_level_functions = set() if known_final_top_level_functions is None else known_final_top_level_functions.copy()
+        self.final_global_function_classes = {}
 
     # Note: if n_errors > 0, the generated Java code is not expected to be valid or executable.
     def error(self, lineno: Optional[int], msg: str) -> None:
@@ -1214,7 +1220,11 @@ class LoweringVisitor(ast.NodeVisitor):
         self.n_functions += 1
         scope_info = self.scope_infos[node]
         free_vars = self.resolve_free_vars(node.lineno, scope_info, 'nested function')
-        self.code.append(ir.AssignStatement(self.ident_expr(node.name), ir.CreateObject(java_name, [ir.Identifier(f'pycell_{name}') for name in sorted(free_vars)])))
+        if self.scope.info.kind == ScopeKind.MODULE and node.name in self.known_final_top_level_functions:
+            assert not free_vars, (node.name, free_vars)
+            self.final_global_function_classes[node.name] = java_name
+        else:
+            self.code.append(ir.AssignStatement(self.ident_expr(node.name), ir.CreateObject(java_name, [ir.Identifier(f'pycell_{name}') for name in sorted(free_vars)])))
 
         is_top_level_function = self.scope.info.kind == ScopeKind.MODULE
         with self.new_function(
@@ -1538,13 +1548,19 @@ class LoweringVisitor(ast.NodeVisitor):
             bind_name: module_name for (bind_name, module_name) in self.scope.known_builtin_module_locals.items()
             if bind_name in self.scope.info.locals
         }
+        final_function_fields = {
+            name: java_name for (name, java_name) in self.final_global_function_classes.items()
+            if name in self.scope.info.locals
+        }
         body_decls: list[ir.Decl] = [
             *self.classes.values(),
             # XXX Initializing all globals to None is weird, but we don't have a better option yet
             *(ir.FieldDecl('private static final', 'PyObject', f'pyglobal_{name}', ir.Field(ir.Identifier(extract_spec.BUILTIN_MODULES[module_name]), 'singleton'))
               for (name, module_name) in sorted(final_import_fields.items())),
+            *(ir.FieldDecl('private static final', 'PyObject', f'pyglobal_{name}', ir.CreateObject(java_name, []))
+              for (name, java_name) in sorted(final_function_fields.items())),
             *(ir.FieldDecl('private static', 'PyObject', f'pyglobal_{name}', ir.PyConstant(None))
-              for name in sorted(self.scope.info.locals - set(final_import_fields))),
+              for name in sorted(self.scope.info.locals - set(final_import_fields) - set(final_function_fields))),
             ir.MethodDecl('public static', 'void', 'main', ['String[] args'], ir.block_simplify(self.global_code)),
         ]
         ir.write_decls(
@@ -1590,6 +1606,28 @@ def get_known_top_scope_builtin_module_locals(node: ast.AST) -> dict[str, str]:
     for statement in body[import_block_end:]:
         walker._walk_local(statement, set(), later_writes, set(), set(), [])
     return {bind_name: module_name for (bind_name, module_name) in out.items() if bind_name not in later_writes}
+
+def get_known_top_level_final_function_names(node: ast.AST) -> set[str]:
+    if not isinstance(node, ast.Module):
+        return set()
+    prefix_end = 0
+    out: set[str] = set()
+    for statement in node.body:
+        if isinstance(statement, ast.Import):
+            prefix_end += 1
+            continue
+        if isinstance(statement, ast.FunctionDef):
+            prefix_end += 1
+            out.add(statement.name)
+            continue
+        break
+    if not out:
+        return set()
+    later_writes: set[str] = set()
+    walker = ScopeAnalyzer()
+    for statement in node.body[prefix_end:]:
+        walker._walk_local(statement, set(), later_writes, set(), set(), [])
+    return {name for name in out if name not in later_writes}
 
 NULL = object()
 RAW_ARGS_KWARGS_BUILTINS = {'max', 'min'}
@@ -1762,8 +1800,13 @@ def translate_python_impl_node(node: ast.Module, func: ast.FunctionDef, emitted_
                                python_helper_class: Optional[str] = None) -> tuple[list[ir.ClassDecl], ir.MethodDecl]:
     analyzer = ScopeAnalyzer()
     analyzer.visit(node)
-    visitor = LoweringVisitor(display_name, analyzer.scope_infos, analyzer.scope_infos[node],
-                              known_builtin_module_locals=get_known_top_scope_builtin_module_locals(node))
+    visitor = LoweringVisitor(
+        display_name,
+        analyzer.scope_infos,
+        analyzer.scope_infos[node],
+        known_builtin_module_locals=get_known_top_scope_builtin_module_locals(node),
+        known_final_top_level_functions=get_known_top_level_final_function_names(node),
+    )
     visitor.pool = pool
     visitor.allow_intrinsics = True
     if python_helper_names is not None:
