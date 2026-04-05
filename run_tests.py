@@ -40,7 +40,7 @@ def main() -> None:
     os.makedirs('tests/_out', exist_ok=True)
     subprocess.check_call(['jar', '--create', '--file', 'tests/_out/pythonj.jar', '--date=1980-01-01T00:00:02Z', '-C', 'runtime/_out', '.'])
     initial_javac_time = time.perf_counter() - start
-    print(f'initial_javac_time={initial_javac_time:.3f}')
+    print(f'{initial_javac_time=:.3f}')
 
     start = time.perf_counter()
     for py_name in py_names:
@@ -61,12 +61,12 @@ def main() -> None:
         with open(f'tests/_out/{py_name}.java', 'w') as f:
             visitor.write_java(f, py_name)
     translate_time = time.perf_counter() - start
-    print(f'translate_time={translate_time:5.3f}')
+    print(f'{translate_time=:5.3f}')
 
     start = time.perf_counter()
     subprocess.check_call(['javac', '-cp', 'pythonj.jar', *(f'{py_name}.java' for py_name in py_names)], cwd='tests/_out')
     javac_time = time.perf_counter() - start
-    print(f'javac_time={javac_time:5.3f}')
+    print(f'{javac_time=:5.3f}')
 
     for py_name in py_names:
         start = time.perf_counter()
@@ -78,14 +78,14 @@ def main() -> None:
         c_output = subprocess.check_output([sys.executable, f'{py_name}.py'], cwd='tests')
         pyexec_time = time.perf_counter() - start
 
-        if j_output == c_output:
+        if c_output == j_output:
             print(f'{py_name:>15}: jexec_time={jexec_time:5.3f} pyexec_time={pyexec_time:5.3f} ({pyexec_time / jexec_time:5.2f}x)')
         else:
             print()
             print(f'ERROR: output mismatched on test {py_name!r}:')
-            j_output_lines = j_output.decode(errors='surrogateescape').splitlines()
             c_output_lines = c_output.decode(errors='surrogateescape').splitlines()
-            for line in difflib.unified_diff(j_output_lines, c_output_lines, 'pythonj output', 'cpython output', lineterm=''):
+            j_output_lines = j_output.decode(errors='surrogateescape').splitlines()
+            for line in difflib.unified_diff(c_output_lines, j_output_lines, 'cpython output', 'pythonj output', lineterm=''):
                 print(line)
             raise SystemExit(1)
 
