@@ -212,6 +212,85 @@ def encode_signature(params: list[inspect.Parameter]) -> dict[str, object] | Non
         out.append(encoded)
     return {'params': out}
 
+def decode_default(spec: dict[str, object]) -> object:
+    kind = spec['kind']
+    if kind == '__pythonj_null__':
+        return NULL
+    if kind == 'none':
+        return None
+    if kind in {'bool', 'int', 'float', 'str'}:
+        return spec['value']
+    if kind == 'bytes':
+        return spec['value'].encode('latin1')
+    if kind == 'tuple':
+        return tuple(decode_default(x) for x in spec['items'])
+    assert False, spec
+
+PARAM_KINDS = {
+    'posonly': inspect.Parameter.POSITIONAL_ONLY,
+    'poskw': inspect.Parameter.POSITIONAL_OR_KEYWORD,
+    'kwonly': inspect.Parameter.KEYWORD_ONLY,
+    'vararg': inspect.Parameter.VAR_POSITIONAL,
+    'varkw': inspect.Parameter.VAR_KEYWORD,
+}
+
+def decode_signature(spec: dict[str, object] | None) -> list[inspect.Parameter] | None:
+    if spec is None:
+        return None
+    params = []
+    for raw_param in spec['params']:
+        default = inspect.Parameter.empty
+        if 'default' in raw_param:
+            default = decode_default(raw_param['default'])
+        params.append(inspect.Parameter(
+            raw_param['name'],
+            PARAM_KINDS[raw_param['kind']],
+            default=default,
+        ))
+    return params
+
+def get_method_params(spec: dict[str, object], name: str, method_name: str) -> list[inspect.Parameter] | None:
+    attrs = spec[name]['attrs']
+    return decode_signature(attrs[method_name].get('signature'))
+
+def get_builtin_function_params(spec: dict[str, object], name: str) -> list[inspect.Parameter] | None:
+    attrs = spec['builtins']['attrs']
+    return decode_signature(attrs[name].get('signature'))
+
+def get_module_function_params(spec: dict[str, object], module_name: str, func_name: str) -> list[inspect.Parameter] | None:
+    attrs = spec[module_name]['attrs']
+    return decode_signature(attrs[func_name].get('signature'))
+
+def get_positional_call_range(params: list[inspect.Parameter] | None) -> tuple[int, int] | None:
+    if params is None:
+        return None
+    if not all(param.kind in {inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD} for param in params):
+        return None
+    min_args = sum(param.default is inspect.Parameter.empty for param in params)
+    return (min_args, len(params))
+
+def get_exact_positional_call_arity(params: list[inspect.Parameter] | None) -> int | None:
+    if (call_range := get_positional_call_range(params)) is None:
+        return None
+    (min_args, max_args) = call_range
+    if min_args != max_args:
+        return None
+    return max_args
+
+def get_posonly_min_max_call_range(params: list[inspect.Parameter] | None) -> tuple[int, int] | None:
+    if params is None:
+        return None
+    if not params:
+        return None
+    if not all(param.kind is inspect.Parameter.POSITIONAL_ONLY for param in params):
+        return None
+    call_range = get_positional_call_range(params)
+    assert call_range is not None
+    (min_args, max_args) = call_range
+    if min_args == max_args:
+        return None
+    return (min_args, max_args)
+
 def get_method_signature(name: str, method_name: str) -> dict[str, object] | None:
     if (synthetic := SYNTHETIC_PARAMS.get(name, {}).get(method_name)) is not None:
         return encode_signature(synthetic)

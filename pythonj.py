@@ -1038,7 +1038,7 @@ class LoweringVisitor(ast.NodeVisitor):
             not node.keywords and
             not any(isinstance(arg, ast.Starred) for arg in node.args)):
             params = self.get_supported_params(node.lineno, node.func.args)
-            (min_args, max_args) = cast(tuple[int, int], get_positional_call_range(params))
+            (min_args, max_args) = cast(tuple[int, int], extract_spec.get_positional_call_range(params))
             if min_args <= len(node.args) <= max_args:
                 return ir.MethodCall(
                     self.visit(node.func),
@@ -1082,7 +1082,7 @@ class LoweringVisitor(ast.NodeVisitor):
             if type_name is not None and RUNTIME_SPEC is not None:
                 attr_kind = DIRECT_GETATTR_BUILTIN_TYPE_ATTRS.get(type_name, {}).get(node.func.attr)
                 if attr_kind == 'method':
-                    call_range = get_positional_call_range(get_method_params(RUNTIME_SPEC, type_name, node.func.attr))
+                    call_range = extract_spec.get_positional_call_range(extract_spec.get_method_params(RUNTIME_SPEC, type_name, node.func.attr))
                     if call_range is not None:
                         (min_args, max_args) = call_range
                         if min_args <= len(node.args) <= max_args:
@@ -2002,7 +2002,7 @@ def get_class_functions(node: ast.Module, class_name: str) -> dict[str, ast.Func
     classes = {x.name: x for x in node.body if isinstance(x, ast.ClassDef)}
     return {x.name: x for x in classes[class_name].body if isinstance(x, ast.FunctionDef)}
 
-NULL = object()
+NULL = extract_spec.NULL
 RAW_ARGS_KWARGS_BUILTINS = {'max', 'min'}
 RUNTIME_SPEC: Optional[dict[str, object]] = None
 DIRECT_CALL_POSITIONAL_BUILTINS: dict[str, tuple[int, int]] = {}
@@ -2052,44 +2052,6 @@ def is_constant_default(default: object) -> bool:
     if isinstance(default, tuple):
         return all(is_constant_default(x) for x in default)
     return False
-
-def decode_default(spec: dict[str, object]) -> object:
-    kind = spec['kind']
-    if kind == '__pythonj_null__':
-        return NULL
-    if kind == 'none':
-        return None
-    if kind in {'bool', 'int', 'float', 'str'}:
-        return spec['value']
-    if kind == 'bytes':
-        return cast(str, spec['value']).encode('latin1')
-    if kind == 'tuple':
-        return tuple(decode_default(cast(dict[str, object], x)) for x in cast(list[object], spec['items']))
-    assert False, spec
-
-PARAM_KINDS = {
-    'posonly': inspect.Parameter.POSITIONAL_ONLY,
-    'poskw': inspect.Parameter.POSITIONAL_OR_KEYWORD,
-    'kwonly': inspect.Parameter.KEYWORD_ONLY,
-    'vararg': inspect.Parameter.VAR_POSITIONAL,
-    'varkw': inspect.Parameter.VAR_KEYWORD,
-}
-
-def decode_signature(spec: Optional[dict[str, object]]) -> Optional[list[inspect.Parameter]]:
-    if spec is None:
-        return None
-    params = []
-    for raw_param in cast(list[object], spec['params']):
-        param = cast(dict[str, object], raw_param)
-        default = inspect.Parameter.empty
-        if 'default' in param:
-            default = decode_default(cast(dict[str, object], param['default']))
-        params.append(inspect.Parameter(
-            cast(str, param['name']),
-            PARAM_KINDS[cast(str, param['kind'])],
-            default=default,
-        ))
-    return params
 
 def get_builtin_type_attr_expr(type_name: str, attr_name: str, attr_kind: str, receiver: Optional[ir.Expr]) -> ir.Expr:
     assert type_name in extract_spec.BUILTIN_TYPES, type_name
@@ -2169,18 +2131,6 @@ def analyze_params(params: list[inspect.Parameter]) -> SignatureShape:
     else:
         missing_style = None
     return SignatureShape(params, posonly_params, poskw_params, kwonly_params, vararg_param, varkw_param, max_total, max_positional, missing_style)
-
-def get_method_params(spec: dict[str, object], name: str, method_name: str) -> Optional[list[inspect.Parameter]]:
-    attrs = cast(dict[str, dict[str, object]], cast(dict[str, object], spec[name])['attrs'])
-    return decode_signature(cast(Optional[dict[str, object]], attrs[method_name].get('signature')))
-
-def get_builtin_function_params(spec: dict[str, object], name: str) -> Optional[list[inspect.Parameter]]:
-    attrs = cast(dict[str, dict[str, object]], cast(dict[str, object], spec['builtins'])['attrs'])
-    return decode_signature(cast(Optional[dict[str, object]], attrs[name].get('signature')))
-
-def get_module_function_params(spec: dict[str, object], module_name: str, func_name: str) -> Optional[list[inspect.Parameter]]:
-    attrs = cast(dict[str, dict[str, object]], cast(dict[str, object], spec[module_name])['attrs'])
-    return decode_signature(cast(Optional[dict[str, object]], attrs[func_name].get('signature')))
 
 def is_special_method_wrapper(type_name: str, method_name: str) -> bool:
     return type_name == 'type' and method_name == 'mro'
@@ -2313,53 +2263,23 @@ def get_builtin_module_attr_expr(module_name: str, attr_name: str, kind: str) ->
         return ir.PyBuiltinType(f'{module_name}.{attr_name}', java_name)
     assert False, (module_name, attr_name, kind)
 
-def get_positional_call_range(params: Optional[list[inspect.Parameter]]) -> Optional[tuple[int, int]]:
-    if params is None:
-        return None
-    if not all(param.kind in {inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD} for param in params):
-        return None
-    min_args = sum(param.default is inspect.Parameter.empty for param in params)
-    return (min_args, len(params))
-
-def get_exact_positional_call_arity(params: Optional[list[inspect.Parameter]]) -> Optional[int]:
-    if (call_range := get_positional_call_range(params)) is None:
-        return None
-    (min_args, max_args) = call_range
-    if min_args != max_args:
-        return None
-    return max_args
-
-def get_posonly_min_max_call_range(params: Optional[list[inspect.Parameter]]) -> Optional[tuple[int, int]]:
-    if params is None:
-        return None
-    if not params:
-        return None
-    if not all(param.kind is inspect.Parameter.POSITIONAL_ONLY for param in params):
-        return None
-    call_range = get_positional_call_range(params)
-    assert call_range is not None
-    (min_args, max_args) = call_range
-    if min_args == max_args:
-        return None
-    return (min_args, max_args)
-
 def get_wrapper_binding_plan(shape: Optional[SignatureShape]) -> WrapperBindingPlan:
     call_positional_shape = None
     if shape is not None and shape.varkw_param is None and (shape.vararg_param is None or (not shape.posonly_params and not shape.poskw_params)):
         call_positional_shape = shape
 
-    exact_positional_arity = None if shape is None else get_exact_positional_call_arity(shape.params)
+    exact_positional_arity = None if shape is None else extract_spec.get_exact_positional_call_arity(shape.params)
     if exact_positional_arity is not None:
         return WrapperBindingPlan('exact_positional', call_positional_shape, exact_positional_arity=exact_positional_arity)
 
-    posonly_min_max_range = None if shape is None else get_posonly_min_max_call_range(shape.params)
+    posonly_min_max_range = None if shape is None else extract_spec.get_posonly_min_max_call_range(shape.params)
     if posonly_min_max_range is not None:
         return WrapperBindingPlan('posonly_min_max', call_positional_shape, posonly_min_max_range=posonly_min_max_range)
 
     if shape is None:
         return WrapperBindingPlan('fallback_raw', call_positional_shape)
 
-    call_range = get_positional_call_range(shape.params)
+    call_range = extract_spec.get_positional_call_range(shape.params)
     if (
         shape.poskw_params and
         not shape.kwonly_params and
@@ -2445,7 +2365,7 @@ def build_wrapper_binding_ir(
         )
     elif plan.mode == 'poskw_min_max_python':
         assert kwarg_params is not None
-        (min_args, max_args) = cast(tuple[int, int], get_positional_call_range(kwarg_params.params))
+        (min_args, max_args) = cast(tuple[int, int], extract_spec.get_positional_call_range(kwarg_params.params))
         statements.append(ir.LocalDecl('var', 'boundArgs',
             ir.MethodCall(ir.Identifier('Runtime'), 'bindMinMaxPositionalOrKeyword', [
                 ir.Identifier('args'),
@@ -2545,7 +2465,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
         spec = json.load(f)
     RUNTIME_SPEC = spec
     for func_name in extract_spec.BUILTIN_FUNCTIONS:
-        call_range = get_positional_call_range(get_builtin_function_params(spec, func_name))
+        call_range = extract_spec.get_positional_call_range(extract_spec.get_builtin_function_params(spec, func_name))
         if call_range is not None:
             DIRECT_CALL_POSITIONAL_BUILTINS[func_name] = call_range
     for type_name in extract_spec.BUILTIN_TYPES:
@@ -2557,9 +2477,9 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
         if type_name in DIRECT_NEWOBJ_POSITIONAL_SUPPORTED_BUILTIN_TYPES:
             type_signature = cast(Optional[dict[str, object]], type_spec.get('signature'))
             if type_signature is not None:
-                params = decode_signature(type_signature)
+                params = extract_spec.decode_signature(type_signature)
                 if params is not None:
-                    call_range = get_positional_call_range(params)
+                    call_range = extract_spec.get_positional_call_range(params)
                     if call_range is not None:
                         DIRECT_NEWOBJ_POSITIONAL_BUILTIN_TYPES[type_name] = call_range
     for module_name in extract_spec.BUILTIN_MODULES:
@@ -2571,7 +2491,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
     for module_name in extract_spec.BUILTIN_MODULES:
         DIRECT_CALL_POSITIONAL_MODULE_FUNCTIONS[module_name] = {}
         for func_name in cast(dict[str, dict[str, object]], cast(dict[str, object], spec[module_name])['attrs']):
-            call_range = get_positional_call_range(get_module_function_params(spec, module_name, func_name))
+            call_range = extract_spec.get_positional_call_range(extract_spec.get_module_function_params(spec, module_name, func_name))
             if call_range is not None:
                 DIRECT_CALL_POSITIONAL_MODULE_FUNCTIONS[module_name][func_name] = call_range
 
@@ -2718,7 +2638,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                     continue
                 if is_special_method_wrapper(name, method_name):
                     continue
-                params = get_method_params(spec, name, method_name)
+                params = extract_spec.get_method_params(spec, name, method_name)
                 if params is None:
                     gen_methods[method_name] = None
                 else:
@@ -2886,7 +2806,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
             for func_name in sorted(attrs):
                 if attrs[func_name]['kind'] != 'builtin_function':
                     continue
-                params = get_module_function_params(spec, module_name, func_name)
+                params = extract_spec.get_module_function_params(spec, module_name, func_name)
                 if params is None:
                     kwarg_params = None
                 else:
@@ -2934,7 +2854,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                 top_level_decls.append(ir.ClassDecl('final', f'{module_func_prefix}Function_{func_name}', 'PyBuiltinFunction', decls))
 
         for func_name in sorted(extract_spec.BUILTIN_FUNCTIONS):
-            params = get_builtin_function_params(spec, func_name)
+            params = extract_spec.get_builtin_function_params(spec, func_name)
             if params is None or func_name in RAW_ARGS_KWARGS_BUILTINS:
                 kwarg_params = None
             else:
