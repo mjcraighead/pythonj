@@ -1464,11 +1464,6 @@ class LoweringVisitor(ast.NodeVisitor):
             self.pool,
         )
 
-def get_top_level_function_names(path: str) -> set[str]:
-    with open(path, encoding='utf-8') as f:
-        node = ast.parse(f.read(), path)
-    return {x.name for x in node.body if isinstance(x, ast.FunctionDef)}
-
 def parse_python_module(path: str) -> ast.Module:
     with open(path, encoding='utf-8') as f:
         return ast.parse(f.read(), path)
@@ -1729,19 +1724,16 @@ def translate_python_impl_node(node: ast.Module, func: ast.FunctionDef, emitted_
     assert visitor.n_errors == 0, (emitted_name, visitor.n_errors)
     return (list(visitor.classes.values()), helper_method)
 
-def translate_python_builtin_impl(func_name: str, pool: ir.ConstantPool) -> tuple[list[ir.ClassDecl], ir.MethodDecl]:
-    node = parse_python_module('pythonj_builtins.py')
+def translate_python_builtin_impl(node: ast.Module, func_name: str, pool: ir.ConstantPool) -> tuple[list[ir.ClassDecl], ir.MethodDecl]:
     func = get_top_level_functions(node)[func_name]
     return translate_python_impl_node(node, func, func_name, f'<builtin {func_name}>', 'builtin function', pool)
 
-def translate_python_method_impl(type_name: str, method_name: str, pool: ir.ConstantPool) -> tuple[list[ir.ClassDecl], ir.MethodDecl]:
+def translate_python_method_impl(node: ast.Module, type_name: str, method_name: str, pool: ir.ConstantPool) -> tuple[list[ir.ClassDecl], ir.MethodDecl]:
     func_name = f'{type_name}__{method_name}'
-    node = parse_python_module('pythonj_builtins.py')
     func = get_class_functions(node, type_name)[method_name]
     return translate_python_impl_node(node, func, func_name, f'<method {type_name}.{method_name}>', 'builtin method', pool)
 
-def translate_python_runtime_impl(func_name: str, pool: ir.ConstantPool) -> tuple[list[ir.ClassDecl], ir.MethodDecl]:
-    node = parse_python_module('pythonj_runtime.py')
+def translate_python_runtime_impl(node: ast.Module, func_name: str, pool: ir.ConstantPool) -> tuple[list[ir.ClassDecl], ir.MethodDecl]:
     funcs = get_top_level_functions(node)
     return translate_python_impl_node(
         node, funcs[func_name], func_name, f'<runtime {func_name}>', 'runtime helper', pool,
@@ -2084,6 +2076,9 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
             if call_range is not None:
                 DIRECT_CALL_POSITIONAL_MODULE_FUNCTIONS[module_name][func_name] = call_range
 
+    pythonj_builtins_node = parse_python_module('pythonj_builtins.py')
+    pythonj_runtime_node = parse_python_module('pythonj_runtime.py')
+
     pool = ir.ConstantPool('PyGeneratedConstants')
     with open(java_path, 'w') as f:
         top_level_decls: list[ir.Decl] = []
@@ -2249,7 +2244,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                     if kind in {'method', 'classmethod'} and method_name in PYTHON_AUTHORED_IMPLS.get(name, set()):
                         helper_name = f'{name.replace(".", "_")}__{method_name}'
                         method_impl_target = f'PyBuiltinMethodsPythonImpl.pyfunc_{helper_name}'
-                        (helper_classes, helper_method) = translate_python_method_impl(name, method_name, pool)
+                        (helper_classes, helper_method) = translate_python_method_impl(pythonj_builtins_node, name, method_name, pool)
                         python_method_helper_classes.extend(helper_classes)
                         python_method_helper_methods.append(helper_method)
                     decls: list[ir.Decl] = [
@@ -2309,26 +2304,23 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                         ))
                     top_level_decls.append(ir.ClassDecl('final', method_class_name, f'PyBuiltinMethod<{self_type}>', decls))
 
-        python_runtime_impls = get_top_level_function_names('pythonj_runtime.py')
-        if python_runtime_impls:
-            for func_name in sorted(python_runtime_impls):
-                (helper_classes, helper_method) = translate_python_runtime_impl(func_name, pool)
-                python_runtime_helper_classes.extend(helper_classes)
-                python_runtime_helper_methods.append(helper_method)
-            top_level_decls.extend(python_runtime_helper_classes)
-            top_level_decls.append(ir.ClassDecl('final', 'PyRuntimePythonImpl', None, python_runtime_helper_methods))
+        python_runtime_impls = get_top_level_functions(pythonj_runtime_node)
+        for func_name in sorted(python_runtime_impls):
+            (helper_classes, helper_method) = translate_python_runtime_impl(pythonj_runtime_node, func_name, pool)
+            python_runtime_helper_classes.extend(helper_classes)
+            python_runtime_helper_methods.append(helper_method)
+        top_level_decls.extend(python_runtime_helper_classes)
+        top_level_decls.append(ir.ClassDecl('final', 'PyRuntimePythonImpl', None, python_runtime_helper_methods))
 
-        if any(PYTHON_AUTHORED_IMPLS.get(name, set()) for name in PYTHON_AUTHORED_IMPLS if name != 'builtins'):
-            top_level_decls.extend(python_method_helper_classes)
-            top_level_decls.append(ir.ClassDecl('final', 'PyBuiltinMethodsPythonImpl', None, python_method_helper_methods))
+        top_level_decls.extend(python_method_helper_classes)
+        top_level_decls.append(ir.ClassDecl('final', 'PyBuiltinMethodsPythonImpl', None, python_method_helper_methods))
 
-        if PYTHON_AUTHORED_IMPLS['builtins']:
-            for func_name in sorted(PYTHON_AUTHORED_IMPLS['builtins']):
-                (helper_classes, helper_method) = translate_python_builtin_impl(func_name, pool)
-                python_builtin_helper_classes.extend(helper_classes)
-                python_builtin_helper_methods.append(helper_method)
-            top_level_decls.extend(python_builtin_helper_classes)
-            top_level_decls.append(ir.ClassDecl('final', 'PyBuiltinFunctionsPythonImpl', None, python_builtin_helper_methods))
+        for func_name in sorted(PYTHON_AUTHORED_IMPLS['builtins']):
+            (helper_classes, helper_method) = translate_python_builtin_impl(pythonj_builtins_node, func_name, pool)
+            python_builtin_helper_classes.extend(helper_classes)
+            python_builtin_helper_methods.append(helper_method)
+        top_level_decls.extend(python_builtin_helper_classes)
+        top_level_decls.append(ir.ClassDecl('final', 'PyBuiltinFunctionsPythonImpl', None, python_builtin_helper_methods))
 
         for module_name in sorted(extract_spec.BUILTIN_MODULES):
             module_spec = cast(dict[str, object], spec[module_name])
