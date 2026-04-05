@@ -367,7 +367,7 @@ class ScopeAnalyzer(ast.NodeVisitor):
 
     def _resolve_name(self, scope_stack: list[ScopeInfo], name: str) -> NameResolution:
         current = scope_stack[-1]
-        if current.kind == ScopeKind.MODULE:
+        if current.kind is ScopeKind.MODULE:
             return NameResolution.GLOBAL
         if name in current.explicit_globals:
             return NameResolution.GLOBAL
@@ -376,7 +376,7 @@ class ScopeAnalyzer(ast.NodeVisitor):
                 return NameResolution.CELL
             return NameResolution.LOCAL
         for parent in reversed(scope_stack[:-1]):
-            if parent.kind == ScopeKind.FUNCTION and name in (parent.locals | parent.cell_vars):
+            if parent.kind is ScopeKind.FUNCTION and name in (parent.locals | parent.cell_vars):
                 return NameResolution.CELL
         return NameResolution.GLOBAL
 
@@ -512,9 +512,9 @@ class LoweringVisitor(ast.NodeVisitor):
         return ir.Identifier(f'pyglobal_{name}')
 
     def ident_expr(self, name: str) -> ir.Expr:
-        if self.scope.info.kind == ScopeKind.FUNCTION and (name in self.scope.info.cell_vars or name in self.scope.free_vars):
+        if self.scope.info.kind is ScopeKind.FUNCTION and (name in self.scope.info.cell_vars or name in self.scope.free_vars):
             return self.ident_expr_by_resolution(name, NameResolution.CELL)
-        if self.scope.info.kind == ScopeKind.FUNCTION and name in self.scope.info.locals:
+        if self.scope.info.kind is ScopeKind.FUNCTION and name in self.scope.info.locals:
             return self.ident_expr_by_resolution(name, NameResolution.LOCAL)
         return self.ident_expr_by_resolution(name, NameResolution.GLOBAL)
 
@@ -564,7 +564,7 @@ class LoweringVisitor(ast.NodeVisitor):
             while parent_scope:
                 if name in parent_scope.info.explicit_globals:
                     break
-                if parent_scope.info.kind == ScopeKind.FUNCTION and name in (parent_scope.info.locals | parent_scope.info.cell_vars | parent_scope.free_vars):
+                if parent_scope.info.kind is ScopeKind.FUNCTION and name in (parent_scope.info.locals | parent_scope.info.cell_vars | parent_scope.free_vars):
                     free_vars.add(name)
                     found = True
                     break
@@ -915,10 +915,10 @@ class LoweringVisitor(ast.NodeVisitor):
             bind_name = alias.asname if alias.asname is not None else alias.name
             value = ir.Field(ir.Identifier(extract_spec.BUILTIN_MODULES[alias.name]), 'singleton')
             if self.scope.info.initial_builtin_module_locals.get(bind_name) == alias.name:
-                if self.scope.info.kind == ScopeKind.FUNCTION:
+                if self.scope.info.kind is ScopeKind.FUNCTION:
                     self.code.append(ir.LocalDecl('final PyObject', f'pylocal_{bind_name}', value))
                 else:
-                    assert self.scope.info.kind == ScopeKind.MODULE, self.scope.info.kind
+                    assert self.scope.info.kind is ScopeKind.MODULE, self.scope.info.kind
                 continue
             self.code.append(ir.AssignStatement(self.ident_expr(bind_name), value))
 
@@ -1024,7 +1024,7 @@ class LoweringVisitor(ast.NodeVisitor):
             self.code.append(code)
 
     def visit_Return(self, node) -> None:
-        assert self.scope.info.kind == ScopeKind.FUNCTION, node
+        assert self.scope.info.kind is ScopeKind.FUNCTION, node
         if self.scope.expected_return_java_type == 'NoReturn':
             self.error(node.lineno, 'NoReturn helper functions may not contain return statements')
         value = self.visit(node.value) if node.value else ir.PyConstant(None)
@@ -1322,7 +1322,7 @@ class LoweringVisitor(ast.NodeVisitor):
             self.n_functions += 1
         scope_info = self.scope_infos[node]
         free_vars = self.resolve_free_vars(node.lineno, scope_info, 'nested function')
-        if self.scope.info.kind == ScopeKind.MODULE and node.name in self.scope.info.initial_final_function_call_ranges:
+        if self.scope.info.kind is ScopeKind.MODULE and node.name in self.scope.info.initial_final_function_call_ranges:
             assert not free_vars, (node.name, free_vars)
             self.final_global_function_classes[node.name] = java_name
         else:
@@ -1333,7 +1333,7 @@ class LoweringVisitor(ast.NodeVisitor):
             self.add_function(qualname, java_name, arg_names, arg_defaults, body)
 
     def visit_ClassDef(self, node) -> None:
-        if self.scope.info.kind != ScopeKind.MODULE:
+        if self.scope.info.kind is not ScopeKind.MODULE:
             self.error(node.lineno, "only module-level class definitions are supported")
         if node.decorator_list:
             self.error(node.lineno, 'class decorators are unsupported')
