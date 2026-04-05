@@ -6,6 +6,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 
 public final class PyFloat extends PyObject {
+    public static final PyFloat nan_singleton = new PyFloat(Double.NaN);
+
     public final double value;
 
     PyFloat(double _value) { value = _value; }
@@ -100,7 +102,7 @@ public final class PyFloat extends PyObject {
         } else if (sl.equals("-inf") || sl.equals("-infinity")) {
             return new PyFloat(Double.NEGATIVE_INFINITY);
         } else if (sl.equals("nan") || sl.equals("+nan") || sl.equals("-nan")) {
-            return new PyFloat(Double.NaN);
+            return nan_singleton;
         }
         try {
             return new PyFloat(Double.parseDouble(s));

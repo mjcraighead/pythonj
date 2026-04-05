@@ -4,6 +4,7 @@
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+import math
 from typing import Iterator, Optional, TextIO
 
 JAVA_FORBIDDEN_IDENTIFIERS = {
@@ -87,6 +88,8 @@ class ConstantPool:
                 self.all_strings[value] = len(self.all_strings)
             return self.qualify(f'str_singleton_{self.all_strings[value]}')
         elif isinstance(value, float):
+            if math.isnan(value):
+                return 'PyFloat.nan_singleton'
             if value not in self.all_floats:
                 self.all_floats[value] = len(self.all_floats)
             return self.qualify(f'float_singleton_{self.all_floats[value]}')
