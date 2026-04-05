@@ -464,14 +464,14 @@ public final class Runtime {
         obj.setAttr(((PyString)nameObj).value, value);
         return PyNone.singleton;
     }
-    public static PyBool pythonjBytesEndswith(PyObject obj, PyObject suffix, PyObject start, PyObject end) {
-        return (PyBool)new PyBytesMethod_endswith(obj).callPositional(suffix, start, end);
+    public static PyBool pythonjBytesStartswith(PyObject obj, PyObject prefix, PyObject start, PyObject end) {
+        return (PyBool)PyBuiltinMethodsPythonImpl.pyfunc_bytes__startswith(obj, prefix, start, end);
     }
     public static PyInt pythonjBytesFind(PyObject obj, PyObject sub, PyObject start, PyObject end) {
-        return (PyInt)new PyBytesMethod_find(obj).callPositional(sub, start, end);
+        return (PyInt)PyBuiltinMethodsPythonImpl.pyfunc_bytes__find(obj, sub, start, end);
     }
-    public static PyBool pythonjBytesStartswith(PyObject obj, PyObject prefix, PyObject start, PyObject end) {
-        return (PyBool)new PyBytesMethod_startswith(obj).callPositional(prefix, start, end);
+    public static PyBool pythonjBytesEndswith(PyObject obj, PyObject suffix, PyObject start, PyObject end) {
+        return (PyBool)PyBuiltinMethodsPythonImpl.pyfunc_bytes__endswith(obj, suffix, start, end);
     }
     public static PyNone pythonjDelAttr(PyObject obj, PyObject nameObj) {
         obj.delAttr(((PyString)nameObj).value);

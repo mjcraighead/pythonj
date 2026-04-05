@@ -954,9 +954,9 @@ class LoweringVisitor(ast.NodeVisitor):
                 if min_args <= len(node.args) <= max_args:
                     java_name = extract_spec.BUILTIN_TYPES[type_name]
                     return ir.MethodCall(
-                        ir.CreateObject(f'{java_name}Method_{node.func.attr}', [self.visit(node.func.value)]),
+                        ir.Identifier(f'{java_name}Method_{node.func.attr}'),
                         'callPositional',
-                        [*([self.visit(arg) for arg in node.args]), *([ir.Null()] * (max_args - len(node.args)))],
+                        [self.visit(node.func.value), *([self.visit(arg) for arg in node.args]), *([ir.Null()] * (max_args - len(node.args)))],
                     )
         if (isinstance(node.func, ast.Name) and node.func.id in DIRECT_CALL_POSITIONAL_BUILTINS and
             self.name_resolves_to_builtin_function(node.func) and
@@ -2705,7 +2705,11 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                     if kind == 'classmethod':
                         bind_args = [ir.Identifier('self')] + bind_args
                     if call_positional_shape is not None:
-                        call_expr = ir.MethodCall(ir.This(), 'callPositional', bind_args[1:] if kind == 'classmethod' else bind_args)
+                        call_expr = ir.MethodCall(
+                            ir.Identifier(method_class_name),
+                            'callPositional',
+                            bind_args if kind == 'classmethod' else [ir.Identifier('self'), *bind_args],
+                        )
                     elif method_impl_target is not None:
                         call_args = bind_args if kind == 'classmethod' else [ir.Identifier('self'), *bind_args]
                         call_expr = ir.MethodCall(
@@ -2719,19 +2723,23 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                     decls.append(ir.MethodDecl('public', 'PyObject', 'call', ['PyObject[] args', 'PyDict kwargs'], call_body))
                     if call_positional_shape is not None:
                         (call_positional_method_args, call_positional_statements, call_positional_args) = build_call_positional_ir(call_positional_shape)
-                        if kind == 'classmethod':
-                            call_positional_args = [ir.Identifier('self')] + call_positional_args
+                        call_positional_method_args = [f'{self_type} self', *call_positional_method_args]
                         if method_impl_target is not None:
-                            call_args = call_positional_args if kind == 'classmethod' else [ir.Identifier('self'), *call_positional_args]
+                            call_args = [ir.Identifier('self'), *call_positional_args]
                             call_positional_expr = ir.MethodCall(
                                 ir.Identifier(method_impl_target.rsplit('.', 1)[0]),
                                 method_impl_target.rsplit('.', 1)[1],
                                 call_args,
                             )
                         else:
-                            call_positional_expr = ir.MethodCall(ir.Identifier(method_target), f'pymethod_{method_name}', call_positional_args)
+                            if kind == 'method':
+                                call_positional_expr = ir.MethodCall(ir.Identifier('self'), f'pymethod_{method_name}', call_positional_args)
+                            elif kind == 'classmethod':
+                                call_positional_expr = ir.MethodCall(ir.Identifier(method_target), f'pymethod_{method_name}', [ir.Identifier('self'), *call_positional_args])
+                            else:
+                                call_positional_expr = ir.MethodCall(ir.Identifier(method_target), f'pymethod_{method_name}', call_positional_args)
                         decls.append(ir.MethodDecl(
-                            'public',
+                            'public static',
                             'PyObject',
                             'callPositional',
                             call_positional_method_args,
