@@ -147,6 +147,32 @@ def bind_positional_and_kwonly(args, kwargs, kw_name, positional_name, positiona
 
     return bound_args
 
+def bind_varargs_and_kwonly(args, kwargs, kw_name, kwonly_names):
+    bound_args = [args]
+    i = 0
+    while i < __pythonj_len__(kwonly_names):
+        bound_args.append(__pythonj_null__)
+        i += 1
+
+    unknown_kw = None
+    if kwargs is not __pythonj_null__ and kwargs:
+        for (kw, value) in kwargs.items():
+            i = 0
+            matched = False
+            while i < __pythonj_len__(kwonly_names):
+                if kw == kwonly_names[i]:
+                    bound_args[i + 1] = value
+                    matched = True
+                    break
+                i += 1
+            if not matched and unknown_kw is None:
+                unknown_kw = kw
+
+    if unknown_kw is not None:
+        raise TypeError(f'{kw_name}() got an unexpected keyword argument {unknown_kw!r}')
+
+    return bound_args
+
 def max_iterable(iterable, default_obj, key_func):
     it = __pythonj_iter__(iterable)
     ret = __pythonj_next__(it)

@@ -2084,10 +2084,29 @@ def supports_python_bind_positional_and_kwonly(shape: Optional[SignatureShape]) 
         return False
     return True
 
+def supports_python_bind_varargs_and_kwonly(shape: Optional[SignatureShape]) -> bool:
+    if shape is None:
+        return False
+    if shape.vararg_param is None:
+        return False
+    if not shape.kwonly_params:
+        return False
+    if shape.varkw_param is not None:
+        return False
+    if shape.posonly_params or shape.poskw_params:
+        return False
+    if any(param.default is inspect.Parameter.empty for param in shape.kwonly_params):
+        return False
+    return True
+
 def supports_call_positional(shape: Optional[SignatureShape]) -> bool:
     if shape is None:
         return False
-    return shape.vararg_param is None and shape.varkw_param is None
+    if shape.varkw_param is not None:
+        return False
+    if shape.vararg_param is None:
+        return True
+    return not shape.posonly_params and not shape.poskw_params
 
 def build_wrapper_binding_ir(
         kwarg_params: Optional[SignatureShape], *,
@@ -2103,6 +2122,7 @@ def build_wrapper_binding_ir(
         noarg_name: str,
         enable_poskw_minmax_python_bind: bool,
         enable_pos_kwonly_python_bind: bool,
+        enable_vararg_kwonly_python_bind: bool,
 ) -> tuple[list[ir.Statement], list[ir.Expr], Optional[SignatureShape]]:
     exact_positional_arity = None if kwarg_params is None else get_exact_positional_call_arity(kwarg_params.params)
     posonly_min_max_range = None if kwarg_params is None else get_posonly_min_max_call_range(kwarg_params.params)
@@ -2222,6 +2242,32 @@ def build_wrapper_binding_ir(
             ),
         ))
         bind_args = [ir.MethodCall(ir.Field(ir.Identifier('boundArgs'), 'items'), 'get', [ir.IntLiteral(i)]) for i in range(len(kwarg_params.params))]
+    elif enable_vararg_kwonly_python_bind:
+        assert kwarg_params is not None
+        statements.append(ir.LocalDecl(
+            'PyList',
+            'boundArgs',
+            ir.CastExpr(
+                'PyList',
+                ir.MethodCall(
+                    ir.Identifier('PyRuntimePythonImpl'),
+                    'pyfunc_bind_varargs_and_kwonly',
+                    [
+                        ir.CreateObject('PyTuple', [ir.Identifier('args')]),
+                        ir.Identifier('kwargs'),
+                        ir.PyConstant(general_kw_name),
+                        ir.PyConstant(tuple(param.name for param in kwarg_params.kwonly_params)),
+                    ],
+                ),
+            ),
+        ))
+        bind_args = [
+            ir.Field(
+                ir.CastExpr('PyTuple', ir.MethodCall(ir.Field(ir.Identifier('boundArgs'), 'items'), 'get', [ir.IntLiteral(0)])),
+                'items',
+            ),
+            *[ir.MethodCall(ir.Field(ir.Identifier('boundArgs'), 'items'), 'get', [ir.IntLiteral(i)]) for i in range(1, len(kwarg_params.kwonly_params) + 1)],
+        ]
     elif kwarg_params is None:
         bind_args = [ir.Identifier('args'), ir.Identifier('kwargs')]
     else:
@@ -2236,12 +2282,18 @@ def build_wrapper_binding_ir(
     return (statements, bind_args, call_positional_shape)
 
 def build_call_positional_ir(shape: SignatureShape) -> tuple[list[str], list[ir.Statement], list[ir.Expr]]:
-    assert shape.vararg_param is None, shape
     assert shape.varkw_param is None, shape
-    call_args = [f'PyObject arg{i}' for i in range(len(shape.params))]
+    if shape.vararg_param is not None:
+        assert not shape.posonly_params and not shape.poskw_params, shape
+    call_args: list[str] = []
     statements: list[ir.Statement] = []
     bind_args: list[ir.Expr] = []
     for (i, param) in enumerate(shape.params):
+        if param.kind is inspect.Parameter.VAR_POSITIONAL:
+            call_args.append(f'PyObject[] arg{i}')
+            bind_args.append(ir.Identifier(f'arg{i}'))
+            continue
+        call_args.append(f'PyObject arg{i}')
         if param.default is not inspect.Parameter.empty:
             local = ir.Identifier(java_local_name(shape.params[i].name))
             statements.append(ir.LocalDecl('PyObject', java_local_name(shape.params[i].name), ir.Identifier(f'arg{i}')))
@@ -2460,6 +2512,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                     bind_name = f'{py_name}.{method_name}'
                     poskw_min_max_python_bind = supports_python_bind_min_max_positional_or_keyword(kwarg_params)
                     pos_kwonly_python_bind = supports_python_bind_positional_and_kwonly(kwarg_params)
+                    vararg_kwonly_python_bind = supports_python_bind_varargs_and_kwonly(kwarg_params)
                     (call_body, bind_args, call_positional_shape) = build_wrapper_binding_ir(
                         kwarg_params,
                         exact_kw_name=bind_name,
@@ -2474,6 +2527,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                         noarg_name=bind_name,
                         enable_poskw_minmax_python_bind=poskw_min_max_python_bind,
                         enable_pos_kwonly_python_bind=pos_kwonly_python_bind,
+                        enable_vararg_kwonly_python_bind=vararg_kwonly_python_bind,
                     )
                     if kind == 'classmethod':
                         bind_args = [ir.Identifier('self')] + bind_args
@@ -2561,6 +2615,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                     kwarg_params = analyze_params(params)
                 poskw_min_max_python_bind = supports_python_bind_min_max_positional_or_keyword(kwarg_params)
                 pos_kwonly_python_bind = False
+                vararg_kwonly_python_bind = False
                 decls: list[ir.Decl] = [
                     ir.FieldDecl('public static final', f'{module_func_prefix}Function_{func_name}', 'singleton', ir.CreateObject(f'{module_func_prefix}Function_{func_name}', [])),
                     ir.ConstructorDecl('private', f'{module_func_prefix}Function_{func_name}', [], [
@@ -2582,6 +2637,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                     noarg_name=full_name,
                     enable_poskw_minmax_python_bind=poskw_min_max_python_bind,
                     enable_pos_kwonly_python_bind=pos_kwonly_python_bind,
+                    enable_vararg_kwonly_python_bind=vararg_kwonly_python_bind,
                 )
                 if call_positional_shape is not None:
                     call_expr = ir.MethodCall(ir.This(), 'call_positional', bind_args)
@@ -2614,6 +2670,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                 kwarg_params = analyze_params(params)
             poskw_min_max_python_bind = supports_python_bind_min_max_positional_or_keyword(kwarg_params)
             pos_kwonly_python_bind = supports_python_bind_positional_and_kwonly(kwarg_params)
+            vararg_kwonly_python_bind = supports_python_bind_varargs_and_kwonly(kwarg_params)
             decls: list[ir.Decl] = [
                 ir.FieldDecl('public static final', f'PyBuiltinFunction_{func_name}', 'singleton', ir.CreateObject(f'PyBuiltinFunction_{func_name}', [])),
                 ir.ConstructorDecl('private', f'PyBuiltinFunction_{func_name}', [], [
@@ -2636,6 +2693,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                 noarg_name=func_name,
                 enable_poskw_minmax_python_bind=poskw_min_max_python_bind,
                 enable_pos_kwonly_python_bind=pos_kwonly_python_bind,
+                enable_vararg_kwonly_python_bind=vararg_kwonly_python_bind,
             )
             if func_name in PYTHON_AUTHORED_IMPLS['builtins']:
                 call_target = 'PyBuiltinFunctionsPythonImpl'
