@@ -127,7 +127,7 @@ class bytes:
         return bytes(ret)
 
     def count(self, sub, start, end):
-        indices = slice(start, end).indices(len(self))
+        indices = __pythonj_slice_indices__(slice(start, end), len(self))
         start = indices[0]
         end = indices[1]
         if __pythonj_isinstance__(sub, int):
@@ -164,7 +164,7 @@ class bytes:
             raise TypeError('endswith first arg must be bytes or a tuple of bytes, not ' + type(suffix).__name__)
         if len(suffix) == 0 and start is not None and start > len(self):
             return False
-        indices = slice(start, end).indices(len(self))
+        indices = __pythonj_slice_indices__(slice(start, end), len(self))
         start = indices[0]
         end = indices[1]
         suffix_len = len(suffix)
@@ -173,7 +173,7 @@ class bytes:
         return self[end - suffix_len:end] == suffix
 
     def find(self, sub, start, end):
-        indices = slice(start, end).indices(len(self))
+        indices = __pythonj_slice_indices__(slice(start, end), len(self))
         start = indices[0]
         end = indices[1]
         if __pythonj_isinstance__(sub, int):
@@ -264,21 +264,21 @@ class bytes:
                 if first_group == 0:
                     first_group = group_size
                 i = 0
-                __pythonj_list_append__(grouped, ''.join(ret[:first_group]))
+                __pythonj_list_append__(grouped, __pythonj_str_join__('', ret[:first_group]))
                 i = first_group
                 while i < n:
-                    __pythonj_list_append__(grouped, ''.join(ret[i:i + group_size]))
+                    __pythonj_list_append__(grouped, __pythonj_str_join__('', ret[i:i + group_size]))
                     i += group_size
             else:
                 i = 0
                 while i < n:
-                    __pythonj_list_append__(grouped, ''.join(ret[i:i + group_size]))
+                    __pythonj_list_append__(grouped, __pythonj_str_join__('', ret[i:i + group_size]))
                     i += group_size
-            return sep.join(grouped)
-        return ''.join(ret)
+            return __pythonj_str_join__(sep, grouped)
+        return __pythonj_str_join__('', ret)
 
     def index(self, sub, start, end):
-        ret = self.find(sub, start, end)
+        ret = __pythonj_bytes_find__(self, sub, start, end)
         if ret == -1:
             raise ValueError('subsection not found')
         return ret
@@ -383,23 +383,23 @@ class bytes:
             raise TypeError('a bytes-like object is required, not ' + repr(type(sep).__name__))
         if len(sep) == 0:
             raise ValueError('empty separator')
-        i = self.find(sep, None, None)
+        i = __pythonj_bytes_find__(self, sep, None, None)
         if i == -1:
             return (self, b'', b'')
         return (self[:i], sep, self[i + len(sep):])
 
     def removeprefix(self, prefix):
-        if self.startswith(prefix, None, None):
+        if __pythonj_bytes_startswith__(self, prefix, None, None):
             return self[len(prefix):]
         return self
 
     def removesuffix(self, suffix):
-        if suffix and self.endswith(suffix, None, None):
+        if suffix and __pythonj_bytes_endswith__(self, suffix, None, None):
             return self[:-len(suffix)]
         return self
 
     def rfind(self, sub, start, end):
-        indices = slice(start, end).indices(len(self))
+        indices = __pythonj_slice_indices__(slice(start, end), len(self))
         start = indices[0]
         end = indices[1]
         if __pythonj_isinstance__(sub, int):
@@ -546,13 +546,13 @@ class str:
     def removeprefix(self, prefix):
         if not __pythonj_isinstance__(prefix, str):
             raise TypeError("removeprefix() argument must be str, not " + type(prefix).__name__)
-        if self.startswith(prefix):
+        if __pythonj_str_startswith__(self, prefix, None, None):
             return self[len(prefix):]
         return self
 
     def removesuffix(self, suffix):
         if not __pythonj_isinstance__(suffix, str):
             raise TypeError("removesuffix() argument must be str, not " + type(suffix).__name__)
-        if suffix and self.endswith(suffix):
+        if suffix and __pythonj_str_endswith__(self, suffix, None, None):
             return self[:-len(suffix)]
         return self

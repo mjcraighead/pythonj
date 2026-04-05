@@ -885,6 +885,15 @@ class LoweringVisitor(ast.NodeVisitor):
                 case '__pythonj_abs__':
                     assert len(node.args) == 1 and not node.keywords, node.args
                     return ir.MethodCall(self.visit(node.args[0]), 'abs', [])
+                case '__pythonj_bytes_endswith__':
+                    assert len(node.args) == 4 and not node.keywords, node.args
+                    return ir.MethodCall(ir.Identifier('Runtime'), 'pythonjBytesEndswith', [self.visit(node.args[0]), self.visit(node.args[1]), self.visit(node.args[2]), self.visit(node.args[3])])
+                case '__pythonj_bytes_find__':
+                    assert len(node.args) == 4 and not node.keywords, node.args
+                    return ir.MethodCall(ir.Identifier('Runtime'), 'pythonjBytesFind', [self.visit(node.args[0]), self.visit(node.args[1]), self.visit(node.args[2]), self.visit(node.args[3])])
+                case '__pythonj_bytes_startswith__':
+                    assert len(node.args) == 4 and not node.keywords, node.args
+                    return ir.MethodCall(ir.Identifier('Runtime'), 'pythonjBytesStartswith', [self.visit(node.args[0]), self.visit(node.args[1]), self.visit(node.args[2]), self.visit(node.args[3])])
                 case '__pythonj_delattr__':
                     assert len(node.args) == 2 and not node.keywords, node.args
                     return ir.MethodCall(ir.Identifier('Runtime'), 'pythonjDelAttr', [self.visit(node.args[0]), self.visit(node.args[1])])
@@ -933,6 +942,21 @@ class LoweringVisitor(ast.NodeVisitor):
                 case '__pythonj_setattr__':
                     assert len(node.args) == 3 and not node.keywords, node.args
                     return ir.MethodCall(ir.Identifier('Runtime'), 'pythonjSetAttr', [self.visit(node.args[0]), self.visit(node.args[1]), self.visit(node.args[2])])
+                case '__pythonj_slice_indices__':
+                    assert len(node.args) == 2 and not node.keywords, node.args
+                    return ir.MethodCall(ir.Identifier('Runtime'), 'pythonjSliceIndices', [self.visit(node.args[0]), self.visit(node.args[1])])
+                case '__pythonj_str_endswith__':
+                    assert len(node.args) == 4 and not node.keywords, node.args
+                    return ir.MethodCall(ir.Identifier('Runtime'), 'pythonjStrEndswith', [self.visit(node.args[0]), self.visit(node.args[1]), self.visit(node.args[2]), self.visit(node.args[3])])
+                case '__pythonj_str_find__':
+                    assert len(node.args) == 4 and not node.keywords, node.args
+                    return ir.MethodCall(ir.Identifier('Runtime'), 'pythonjStrFind', [self.visit(node.args[0]), self.visit(node.args[1]), self.visit(node.args[2]), self.visit(node.args[3])])
+                case '__pythonj_str_join__':
+                    assert len(node.args) == 2 and not node.keywords, node.args
+                    return ir.MethodCall(ir.Identifier('Runtime'), 'pythonjStrJoin', [self.visit(node.args[0]), self.visit(node.args[1])])
+                case '__pythonj_str_startswith__':
+                    assert len(node.args) == 4 and not node.keywords, node.args
+                    return ir.MethodCall(ir.Identifier('Runtime'), 'pythonjStrStartswith', [self.visit(node.args[0]), self.visit(node.args[1]), self.visit(node.args[2]), self.visit(node.args[3])])
         if (isinstance(node.func, ast.Name) and node.func.id in DIRECT_CALL_POSITIONAL_BUILTINS and
             self.name_resolves_to_builtin_function(node.func) and
             not node.keywords and
