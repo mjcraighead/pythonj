@@ -392,49 +392,6 @@ class ScopeAnalyzer(ast.NodeVisitor):
                 return NameResolution.CELL
         return NameResolution.GLOBAL
 
-    def _expr_may_observe(self, node: ast.AST) -> bool:
-        if isinstance(node, ast.Constant):
-            return False
-        if isinstance(node, ast.Name):
-            return False
-        if isinstance(node, ast.Tuple):
-            return any(self._expr_may_observe(elt) for elt in node.elts)
-        if isinstance(node, ast.List):
-            return any(self._expr_may_observe(elt) for elt in node.elts)
-        if isinstance(node, ast.Set):
-            return any(self._expr_may_observe(elt) for elt in node.elts)
-        if isinstance(node, ast.Dict):
-            return any(self._expr_may_observe(key) for key in node.keys if key is not None) or \
-                   any(self._expr_may_observe(value) for value in node.values)
-        if isinstance(node, ast.Slice):
-            return any(expr is not None and self._expr_may_observe(expr) for expr in (node.lower, node.upper, node.step))
-        return True
-
-    def _statement_may_observe_external_namespace(self, node: ast.stmt) -> bool:
-        if isinstance(node, ast.Import):
-            return any(alias.name not in extract_spec.BUILTIN_MODULES or '.' in alias.name for alias in node.names)
-        if isinstance(node, ast.FunctionDef):
-            return bool(node.decorator_list or node.args.defaults or any(default is not None for default in node.args.kw_defaults) or node.returns is not None)
-        if isinstance(node, ast.Assign):
-            return self._expr_may_observe(node.value)
-        if isinstance(node, ast.AnnAssign):
-            return (node.value is not None and self._expr_may_observe(node.value)) or node.annotation is not None
-        if isinstance(node, ast.AugAssign):
-            return True
-        if isinstance(node, ast.Expr):
-            return self._expr_may_observe(node.value)
-        if isinstance(node, ast.Return):
-            return node.value is not None and self._expr_may_observe(node.value)
-        if isinstance(node, ast.Assert):
-            return self._expr_may_observe(node.test) or (node.msg is not None and self._expr_may_observe(node.msg))
-        if isinstance(node, ast.Raise):
-            return True
-        if isinstance(node, ast.Delete):
-            return any(not isinstance(target, ast.Name) for target in node.targets)
-        if isinstance(node, (ast.ClassDef, ast.For, ast.AsyncFor, ast.While, ast.If, ast.Try, ast.With, ast.AsyncWith, ast.Match)):
-            return True
-        return False
-
     def _collect_statement_store_del_names(self, node: ast.stmt) -> tuple[set[str], set[str]]:
         stores: set[str] = set()
         dels: set[str] = set()
@@ -495,12 +452,6 @@ class ScopeAnalyzer(ast.NodeVisitor):
 
             if isinstance(statement, ast.stmt):
                 (stores, dels) = self._collect_statement_store_del_names(statement)
-                if self._statement_may_observe_external_namespace(statement):
-                    default_global_state = NameBindingState.UNKNOWN
-                    for name in list(states):
-                        if name not in stores and name not in dels and name not in scope_info.initial_final_bindings:
-                            if scope_info.kind is ScopeKind.MODULE or name in scope_info.explicit_globals:
-                                states[name] = NameBindingState.UNKNOWN
                 for name in stores:
                     states[name] = NameBindingState.DEFINITELY_BOUND
                 for name in dels:
