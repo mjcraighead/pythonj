@@ -18,6 +18,7 @@ BUILTIN_FUNCTIONS = {
     'setattr', 'sorted', 'sum', 'oct',
 }
 BUILTIN_MODULES = {
+    '_io': 'PyIoModule',
     '_json': 'PyJsonModule',
     '_operator': 'PyOperatorModule',
     '_types': 'PyTypesModule',
@@ -26,6 +27,7 @@ BUILTIN_MODULES = {
     'zlib': 'PyZlibModule',
 }
 BUILTIN_MODULE_ATTRS = {
+    '_io': {'BufferedReader', 'TextIOWrapper'},
     '_json': {'encode_basestring_ascii', 'scanstring'},
     '_operator': {'contains', 'delitem', 'getitem', 'index', 'setitem'},
     '_types': {'BuiltinFunctionType', 'ClassMethodDescriptorType', 'FunctionType', 'GetSetDescriptorType', 'MappingProxyType', 'MemberDescriptorType', 'MethodDescriptorType', 'NoneType'},

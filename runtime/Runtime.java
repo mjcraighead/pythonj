@@ -145,6 +145,20 @@ final class PyJsonModule extends PyModule {
     }
 }
 
+final class PyIoModule extends PyModule {
+    public static final PyIoModule singleton = new PyIoModule();
+
+    private PyIoModule() { super("_io"); }
+
+    @Override public PyObject getAttr(String key) {
+        switch (key) {
+            case "BufferedReader": return PyBufferedReaderType.singleton;
+            case "TextIOWrapper": return PyTextIOWrapperType.singleton;
+            default: return super.getAttr(key);
+        }
+    }
+}
+
 final class PyMathModule extends PyModule {
     public static final PyMathModule singleton = new PyMathModule();
 
