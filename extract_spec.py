@@ -9,6 +9,7 @@ import inspect
 import json
 import os
 import types
+from typing import Any
 import _io
 
 BUILTIN_FUNCTIONS = {
@@ -136,7 +137,7 @@ def _get_runtime_obj(name: str) -> object:
     else:
         return getattr(builtins, name)
 
-def _get_signature_params(target: object, implicit_name: str | None) -> list[inspect.Parameter] | None:
+def _get_signature_params(target: Any, implicit_name: str | None) -> list[inspect.Parameter] | None:
     try:
         params = list(inspect.signature(target).parameters.values())
     except (TypeError, ValueError):
@@ -158,7 +159,7 @@ def _is_supported_default(default: object) -> bool:
         return all(_is_supported_default(x) for x in default)
     return False
 
-def _encode_default(default: object) -> dict[str, object]:
+def _encode_default(default: object) -> dict[str, Any]:
     if default is NULL:
         return {'kind': '__pythonj_null__'}
     if default is None:
@@ -190,7 +191,7 @@ def _encode_param_kind(kind: inspect._ParameterKind) -> str:
         return 'varkw'
     assert False, kind
 
-def _encode_signature(params: list[inspect.Parameter]) -> dict[str, object] | None:
+def _encode_signature(params: list[inspect.Parameter]) -> dict[str, Any] | None:
     out = []
     for param in params:
         if param.kind not in {
@@ -203,7 +204,7 @@ def _encode_signature(params: list[inspect.Parameter]) -> dict[str, object] | No
             return None
         if not _is_supported_default(param.default):
             return None
-        encoded = {
+        encoded: dict[str, Any] = {
             'name': param.name,
             'kind': _encode_param_kind(param.kind),
         }
@@ -212,7 +213,7 @@ def _encode_signature(params: list[inspect.Parameter]) -> dict[str, object] | No
         out.append(encoded)
     return {'params': out}
 
-def decode_default(spec: dict[str, object]) -> object:
+def decode_default(spec: dict[str, Any]) -> object:
     kind = spec['kind']
     if kind == '__pythonj_null__':
         return NULL
@@ -234,7 +235,7 @@ PARAM_KINDS = {
     'varkw': inspect.Parameter.VAR_KEYWORD,
 }
 
-def decode_signature(spec: dict[str, object] | None) -> list[inspect.Parameter] | None:
+def decode_signature(spec: dict[str, Any] | None) -> list[inspect.Parameter] | None:
     if spec is None:
         return None
     params = []
@@ -249,34 +250,34 @@ def decode_signature(spec: dict[str, object] | None) -> list[inspect.Parameter] 
         ))
     return params
 
-def get_method_params(spec: dict[str, object], name: str, method_name: str) -> list[inspect.Parameter] | None:
+def get_method_params(spec: dict[str, Any], name: str, method_name: str) -> list[inspect.Parameter] | None:
     attrs = spec[name]['attrs']
     return decode_signature(attrs[method_name].get('signature'))
 
-def get_builtin_function_params(spec: dict[str, object], name: str) -> list[inspect.Parameter] | None:
+def get_builtin_function_params(spec: dict[str, Any], name: str) -> list[inspect.Parameter] | None:
     attrs = spec['builtins']['attrs']
     return decode_signature(attrs[name].get('signature'))
 
-def get_module_function_params(spec: dict[str, object], module_name: str, func_name: str) -> list[inspect.Parameter] | None:
+def get_module_function_params(spec: dict[str, Any], module_name: str, func_name: str) -> list[inspect.Parameter] | None:
     attrs = spec[module_name]['attrs']
     return decode_signature(attrs[func_name].get('signature'))
 
-def get_type_attr_kinds(spec: dict[str, object], name: str) -> dict[str, str]:
+def get_type_attr_kinds(spec: dict[str, Any], name: str) -> dict[str, str]:
     attrs = spec[name]['attrs']
     return {attr_name: attr_spec['kind'] for (attr_name, attr_spec) in attrs.items()}
 
-def get_module_attr_kinds(spec: dict[str, object], module_name: str) -> dict[str, str]:
+def get_module_attr_kinds(spec: dict[str, Any], module_name: str) -> dict[str, str]:
     attrs = spec[module_name]['attrs']
     return {attr_name: attr_spec['kind'] for (attr_name, attr_spec) in attrs.items()}
 
-def get_type_attr_kind(spec: dict[str, object], name: str, attr_name: str) -> str | None:
+def get_type_attr_kind(spec: dict[str, Any], name: str, attr_name: str) -> str | None:
     attrs = spec[name]['attrs']
     attr = attrs.get(attr_name)
     if attr is None:
         return None
     return attr['kind']
 
-def get_module_attr_kind(spec: dict[str, object], module_name: str, attr_name: str) -> str | None:
+def get_module_attr_kind(spec: dict[str, Any], module_name: str, attr_name: str) -> str | None:
     attrs = spec[module_name]['attrs']
     attr = attrs.get(attr_name)
     if attr is None:
@@ -313,28 +314,28 @@ def get_posonly_min_max_call_range(params: list[inspect.Parameter] | None) -> tu
         return None
     return (min_args, max_args)
 
-def get_method_call_range(spec: dict[str, object], name: str, method_name: str) -> tuple[int, int] | None:
+def get_method_call_range(spec: dict[str, Any], name: str, method_name: str) -> tuple[int, int] | None:
     return get_positional_call_range(get_method_params(spec, name, method_name))
 
-def get_builtin_function_call_range(spec: dict[str, object], name: str) -> tuple[int, int] | None:
+def get_builtin_function_call_range(spec: dict[str, Any], name: str) -> tuple[int, int] | None:
     return get_positional_call_range(get_builtin_function_params(spec, name))
 
-def get_module_function_call_range(spec: dict[str, object], module_name: str, func_name: str) -> tuple[int, int] | None:
+def get_module_function_call_range(spec: dict[str, Any], module_name: str, func_name: str) -> tuple[int, int] | None:
     return get_positional_call_range(get_module_function_params(spec, module_name, func_name))
 
-def get_type_newobj_call_range(spec: dict[str, object], name: str) -> tuple[int, int] | None:
+def get_type_newobj_call_range(spec: dict[str, Any], name: str) -> tuple[int, int] | None:
     type_signature = spec[name].get('signature')
     if type_signature is None:
         return None
     return get_positional_call_range(decode_signature(type_signature))
 
-def get_type_attrs(spec: dict[str, object], name: str) -> dict[str, dict[str, object]]:
+def get_type_attrs(spec: dict[str, Any], name: str) -> dict[str, dict[str, Any]]:
     return spec[name]['attrs']
 
-def iter_type_attrs(spec: dict[str, object], name: str) -> list[tuple[str, dict[str, object]]]:
+def iter_type_attrs(spec: dict[str, Any], name: str) -> list[tuple[str, dict[str, Any]]]:
     return list(get_type_attrs(spec, name).items())
 
-def iter_type_methods(spec: dict[str, object], name: str) -> list[tuple[str, str, list[inspect.Parameter] | None]]:
+def iter_type_methods(spec: dict[str, Any], name: str) -> list[tuple[str, str, list[inspect.Parameter] | None]]:
     attrs = get_type_attrs(spec, name)
     out = []
     for (attr_name, attr_spec) in attrs.items():
@@ -343,10 +344,10 @@ def iter_type_methods(spec: dict[str, object], name: str) -> list[tuple[str, str
             out.append((attr_name, kind, decode_signature(attr_spec.get('signature'))))
     return out
 
-def get_module_attrs(spec: dict[str, object], module_name: str) -> dict[str, dict[str, object]]:
+def get_module_attrs(spec: dict[str, Any], module_name: str) -> dict[str, dict[str, Any]]:
     return spec[module_name]['attrs']
 
-def iter_module_functions(spec: dict[str, object], module_name: str) -> list[tuple[str, list[inspect.Parameter] | None]]:
+def iter_module_functions(spec: dict[str, Any], module_name: str) -> list[tuple[str, list[inspect.Parameter] | None]]:
     attrs = get_module_attrs(spec, module_name)
     out = []
     for (attr_name, attr_spec) in attrs.items():
@@ -354,7 +355,7 @@ def iter_module_functions(spec: dict[str, object], module_name: str) -> list[tup
             out.append((attr_name, decode_signature(attr_spec.get('signature'))))
     return out
 
-def _get_method_signature(name: str, method_name: str) -> dict[str, object] | None:
+def _get_method_signature(name: str, method_name: str) -> dict[str, Any] | None:
     if (synthetic := SYNTHETIC_PARAMS.get(name, {}).get(method_name)) is not None:
         return _encode_signature(synthetic)
     obj = _get_runtime_obj(name)
@@ -374,7 +375,7 @@ def _get_method_signature(name: str, method_name: str) -> dict[str, object] | No
         return None
     return _encode_signature(params)
 
-def _get_type_signature(name: str) -> dict[str, object] | None:
+def _get_type_signature(name: str) -> dict[str, Any] | None:
     if (synthetic := SYNTHETIC_PARAMS.get(name, {}).get('__newobj__')) is not None:
         return _encode_signature(synthetic)
     obj = _get_runtime_obj(name)
@@ -383,7 +384,7 @@ def _get_type_signature(name: str) -> dict[str, object] | None:
         return None
     return _encode_signature(params)
 
-def _get_builtin_function_signature(name: str) -> dict[str, object] | None:
+def _get_builtin_function_signature(name: str) -> dict[str, Any] | None:
     if (synthetic := SYNTHETIC_PARAMS['builtins'].get(name)) is not None:
         return _encode_signature(synthetic)
     desc = builtins.__dict__.get(name)
@@ -394,7 +395,7 @@ def _get_builtin_function_signature(name: str) -> dict[str, object] | None:
         return None
     return _encode_signature(params)
 
-def _get_module_function_signature(module_name: str, func_name: str) -> dict[str, object] | None:
+def _get_module_function_signature(module_name: str, func_name: str) -> dict[str, Any] | None:
     if (synthetic := SYNTHETIC_PARAMS.get(module_name, {}).get(func_name)) is not None:
         return _encode_signature(synthetic)
     module = _get_runtime_obj(module_name)
@@ -404,9 +405,9 @@ def _get_module_function_signature(module_name: str, func_name: str) -> dict[str
         return None
     return _encode_signature(params)
 
-def _encode_attr(kind: str, doc: str | None = None, signature: dict[str, object] | None = None,
-                 value: object | None = None, target: str | None = None) -> dict[str, object]:
-    out = {'kind': kind}
+def _encode_attr(kind: str, doc: str | None = None, signature: dict[str, Any] | None = None,
+                 value: object | None = None, target: str | None = None) -> dict[str, Any]:
+    out: dict[str, Any] = {'kind': kind}
     if doc is not None:
         out['doc'] = doc
     if signature is not None:
@@ -417,7 +418,7 @@ def _encode_attr(kind: str, doc: str | None = None, signature: dict[str, object]
         out['target'] = target
     return out
 
-def _build_type_entry(name: str) -> dict[str, object]:
+def _build_type_entry(name: str) -> dict[str, Any]:
     obj = _get_runtime_obj(name)
     attrs = {}
     for (k, v) in list(obj.__dict__.items()):
@@ -440,7 +441,7 @@ def _build_type_entry(name: str) -> dict[str, object]:
             assert False, (name, k, v, v_type)
     return {'kind': 'type', 'signature': _get_type_signature(name), 'attrs': attrs}
 
-def _build_builtin_module_entry() -> dict[str, object]:
+def _build_builtin_module_entry() -> dict[str, Any]:
     attrs = {}
     for name in sorted(BUILTIN_FUNCTIONS):
         desc = builtins.__dict__.get(name)
@@ -448,7 +449,7 @@ def _build_builtin_module_entry() -> dict[str, object]:
             attrs[name] = _encode_attr('builtin_function', doc=desc.__doc__, signature=_get_builtin_function_signature(name))
     return {'kind': 'module', 'attrs': attrs}
 
-def _build_module_entry(name: str) -> dict[str, object]:
+def _build_module_entry(name: str) -> dict[str, Any]:
     obj = _get_runtime_obj(name)
     attrs = {}
     for (k, v) in list(obj.__dict__.items()):
