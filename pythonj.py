@@ -186,44 +186,105 @@ def _get_initial_bindings(node: ast.stmt) -> Optional[list[InitialBinding]]:
         return [InitialBinding(node.name, function_call_range=(n_required, n_total))]
     return None
 
+def _collect_initial_final_bindings(node: ast.AST) -> tuple[set[str], dict[str, str], dict[str, tuple[int, int]]]:
+    if not isinstance(node, (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef)):
+        return (set(), {}, {})
+    prefix_bindings: dict[str, InitialBinding] = {}
+    prefix_end = 0
+    for statement in node.body:
+        bindings = _get_initial_bindings(statement)
+        if bindings is None:
+            break
+        prefix_end += 1
+        for binding in bindings:
+            prefix_bindings[binding.name] = binding
+    if not prefix_bindings:
+        return (set(), {}, {})
+    later_writes: set[str] = set()
+    for statement in node.body[prefix_end:]:
+        _walk_local(statement, set(), later_writes, set(), set(), [])
+    final_bindings = {name for name in prefix_bindings if name not in later_writes}
+    return (
+        final_bindings,
+        {
+            name: binding.builtin_module
+            for (name, binding) in prefix_bindings.items()
+            if name in final_bindings and binding.builtin_module is not None
+        },
+        {
+            name: binding.function_call_range
+            for (name, binding) in prefix_bindings.items()
+            if name in final_bindings and binding.function_call_range is not None
+        },
+    )
+
+def _collect_child_scopes(node: ast.AST) -> list[ast.AST]:
+    reads: set[str] = set()
+    writes: set[str] = set()
+    explicit_globals: set[str] = set()
+    nonlocals: set[str] = set()
+    children: list[ast.AST] = []
+    if isinstance(node, ast.Module):
+        for statement in node.body:
+            _walk_local(statement, reads, writes, explicit_globals, nonlocals, children)
+    elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+        for statement in node.body:
+            _walk_local(statement, reads, writes, explicit_globals, nonlocals, children)
+    elif isinstance(node, ast.ClassDef):
+        for statement in node.body:
+            _walk_local(statement, reads, writes, explicit_globals, nonlocals, children)
+    elif isinstance(node, ast.Lambda):
+        _walk_local(node.body, reads, writes, explicit_globals, nonlocals, children)
+    else:
+        assert isinstance(node, (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)), node
+        generators = node.generators
+        elts: list[ast.expr] = [node.elt] if not isinstance(node, ast.DictComp) else [node.key, node.value]
+        for (i, generator) in enumerate(generators):
+            if i != 0:
+                _walk_local(generator.iter, reads, writes, explicit_globals, nonlocals, children)
+            _walk_local(generator.target, reads, writes, explicit_globals, nonlocals, children)
+            for _if in generator.ifs:
+                _walk_local(_if, reads, writes, explicit_globals, nonlocals, children)
+        for elt in elts:
+            _walk_local(elt, reads, writes, explicit_globals, nonlocals, children)
+    return children
+
+def _resolve_name(scope_stack: list[ScopeInfo], name: str) -> NameResolution:
+    current = scope_stack[-1]
+    if current.kind is ScopeKind.MODULE:
+        return NameResolution.GLOBAL
+    if name in current.explicit_globals:
+        return NameResolution.GLOBAL
+    if name in current.locals:
+        if name in current.cell_vars:
+            return NameResolution.CELL
+        return NameResolution.LOCAL
+    for parent in reversed(scope_stack[:-1]):
+        if parent.kind is ScopeKind.FUNCTION and name in (parent.locals | parent.cell_vars):
+            return NameResolution.CELL
+    return NameResolution.GLOBAL
+
+def _collect_statement_store_del_names(node: ast.stmt) -> tuple[set[str], set[str]]:
+    stores: set[str] = set()
+    dels: set[str] = set()
+    for local_node in _iter_scope_local_nodes(node):
+        if isinstance(local_node, ast.Name):
+            if isinstance(local_node.ctx, ast.Store):
+                stores.add(local_node.id)
+            elif isinstance(local_node.ctx, ast.Del):
+                dels.add(local_node.id)
+    if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+        stores.add(node.name)
+    if isinstance(node, ast.ExceptHandler) and node.name is not None:
+        stores.add(node.name)
+    return (stores, dels)
+
 class ScopeAnalyzer(ast.NodeVisitor):
     __slots__ = ('scope_infos',)
     scope_infos: dict[ast.AST, ScopeInfo]
 
     def __init__(self):
         self.scope_infos = {}
-
-    def _collect_initial_final_bindings(self, node: ast.AST) -> tuple[set[str], dict[str, str], dict[str, tuple[int, int]]]:
-        if not isinstance(node, (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef)):
-            return (set(), {}, {})
-        prefix_bindings: dict[str, InitialBinding] = {}
-        prefix_end = 0
-        for statement in node.body:
-            bindings = _get_initial_bindings(statement)
-            if bindings is None:
-                break
-            prefix_end += 1
-            for binding in bindings:
-                prefix_bindings[binding.name] = binding
-        if not prefix_bindings:
-            return (set(), {}, {})
-        later_writes: set[str] = set()
-        for statement in node.body[prefix_end:]:
-            _walk_local(statement, set(), later_writes, set(), set(), [])
-        final_bindings = {name for name in prefix_bindings if name not in later_writes}
-        return (
-            final_bindings,
-            {
-                name: binding.builtin_module
-                for (name, binding) in prefix_bindings.items()
-                if name in final_bindings and binding.builtin_module is not None
-            },
-            {
-                name: binding.function_call_range
-                for (name, binding) in prefix_bindings.items()
-                if name in final_bindings and binding.function_call_range is not None
-            },
-        )
 
     def _analyze_scope_node(self, node: ast.AST) -> ScopeInfo:
         if node in self.scope_infos:
@@ -274,7 +335,7 @@ class ScopeAnalyzer(ast.NodeVisitor):
         kind = ScopeKind.MODULE if isinstance(node, ast.Module) else ScopeKind.FUNCTION
         (initial_final_bindings,
          initial_builtin_module_locals,
-         initial_final_function_call_ranges) = self._collect_initial_final_bindings(node)
+         initial_final_function_call_ranges) = _collect_initial_final_bindings(node)
         scope_info = ScopeInfo(
             kind,
             locals,
@@ -289,71 +350,10 @@ class ScopeAnalyzer(ast.NodeVisitor):
         self.scope_infos[node] = scope_info
         return scope_info
 
-    def _collect_child_scopes(self, node: ast.AST) -> list[ast.AST]:
-        reads: set[str] = set()
-        writes: set[str] = set()
-        explicit_globals: set[str] = set()
-        nonlocals: set[str] = set()
-        children: list[ast.AST] = []
-        if isinstance(node, ast.Module):
-            for statement in node.body:
-                _walk_local(statement, reads, writes, explicit_globals, nonlocals, children)
-        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            for statement in node.body:
-                _walk_local(statement, reads, writes, explicit_globals, nonlocals, children)
-        elif isinstance(node, ast.ClassDef):
-            for statement in node.body:
-                _walk_local(statement, reads, writes, explicit_globals, nonlocals, children)
-        elif isinstance(node, ast.Lambda):
-            _walk_local(node.body, reads, writes, explicit_globals, nonlocals, children)
-        else:
-            assert isinstance(node, (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)), node
-            generators = node.generators
-            elts: list[ast.expr] = [node.elt] if not isinstance(node, ast.DictComp) else [node.key, node.value]
-            for (i, generator) in enumerate(generators):
-                if i != 0:
-                    _walk_local(generator.iter, reads, writes, explicit_globals, nonlocals, children)
-                _walk_local(generator.target, reads, writes, explicit_globals, nonlocals, children)
-                for _if in generator.ifs:
-                    _walk_local(_if, reads, writes, explicit_globals, nonlocals, children)
-            for elt in elts:
-                _walk_local(elt, reads, writes, explicit_globals, nonlocals, children)
-        return children
-
     def _analyze_scope_tree(self, node: ast.AST) -> None:
         self._analyze_scope_node(node)
-        for child in self._collect_child_scopes(node):
+        for child in _collect_child_scopes(node):
             self._analyze_scope_tree(child)
-
-    def _resolve_name(self, scope_stack: list[ScopeInfo], name: str) -> NameResolution:
-        current = scope_stack[-1]
-        if current.kind is ScopeKind.MODULE:
-            return NameResolution.GLOBAL
-        if name in current.explicit_globals:
-            return NameResolution.GLOBAL
-        if name in current.locals:
-            if name in current.cell_vars:
-                return NameResolution.CELL
-            return NameResolution.LOCAL
-        for parent in reversed(scope_stack[:-1]):
-            if parent.kind is ScopeKind.FUNCTION and name in (parent.locals | parent.cell_vars):
-                return NameResolution.CELL
-        return NameResolution.GLOBAL
-
-    def _collect_statement_store_del_names(self, node: ast.stmt) -> tuple[set[str], set[str]]:
-        stores: set[str] = set()
-        dels: set[str] = set()
-        for local_node in _iter_scope_local_nodes(node):
-            if isinstance(local_node, ast.Name):
-                if isinstance(local_node.ctx, ast.Store):
-                    stores.add(local_node.id)
-                elif isinstance(local_node.ctx, ast.Del):
-                    dels.add(local_node.id)
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
-            stores.add(node.name)
-        if isinstance(node, ast.ExceptHandler) and node.name is not None:
-            stores.add(node.name)
-        return (stores, dels)
 
     def _tag_load_binding_states(self, node: ast.AST, scope_info: ScopeInfo) -> None:
         if isinstance(node, ast.Module):
@@ -399,7 +399,7 @@ class ScopeAnalyzer(ast.NodeVisitor):
                 self._tag_load_binding_states(statement, self.scope_infos[statement])
 
             if isinstance(statement, ast.stmt):
-                (stores, dels) = self._collect_statement_store_del_names(statement)
+                (stores, dels) = _collect_statement_store_del_names(statement)
                 for name in stores:
                     states[name] = NameBindingState.DEFINITELY_BOUND
                 for name in dels:
@@ -408,7 +408,7 @@ class ScopeAnalyzer(ast.NodeVisitor):
     def _tag_names(self, node: ast.AST, scope_stack: list[ScopeInfo]) -> None:
         for subnode in _iter_scope_local_nodes(node):
             if isinstance(subnode, ast.Name):
-                set_name_resolution(subnode, self._resolve_name(scope_stack, subnode.id))
+                set_name_resolution(subnode, _resolve_name(scope_stack, subnode.id))
             elif subnode is not node and isinstance(subnode, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda,
                                                              ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)):
                 self._tag_names(subnode, [*scope_stack, self.scope_infos[subnode]])
