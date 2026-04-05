@@ -1885,6 +1885,7 @@ DIRECT_NEWOBJ_POSITIONAL_SUPPORTED_BUILTIN_TYPES = {
     'bool',
     'bytearray',
     'bytes',
+    'enumerate',
     'float',
     'int',
     'list',
