@@ -663,14 +663,21 @@ public final class Runtime {
         }
         throw new UnsupportedOperationException(msg);
     }
-    public static byte[] requireBytesLikeBuffer(PyObject arg) {
+    public static byte[] getBytesLikeBuffer(PyObject arg) {
         if (arg instanceof PyBytes argBytes) {
             return argBytes.value;
         } else if (arg instanceof PyByteArray argByteArray) {
             return argByteArray.value;
         } else {
+            return null;
+        }
+    }
+    public static byte[] requireBytesLikeBuffer(PyObject arg) {
+        byte[] buffer = getBytesLikeBuffer(arg);
+        if (buffer == null) {
             throw PyTypeError.raise("a bytes-like object is required, not " + PyString.reprOf(arg.type().name()));
         }
+        return buffer;
     }
     public static String requireEncodingArg(PyObject encodingObj, String name) {
         if (!(encodingObj instanceof PyString encodingStr)) {

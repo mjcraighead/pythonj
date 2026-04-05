@@ -121,19 +121,13 @@ public final class PyInt extends PyObject {
             }
             return parseStringLike(arg0Str.value, PyString.reprOf(arg0Str.value), base);
         }
-        if (arg0 instanceof PyBytes arg0Bytes) {
+        byte[] arg0Buffer = Runtime.getBytesLikeBuffer(arg0);
+        if (arg0Buffer != null) {
             long base = (arg1 != null) ? arg1.indexValue() : 10;
             if ((base < 0) || (base == 1) || (base > 36)) {
                 throw PyValueError.raise("int() base must be >= 2 and <= 36, or 0");
             }
-            return parseStringLike(new String(arg0Bytes.value), arg0.repr(), base);
-        }
-        if (arg0 instanceof PyByteArray arg0ByteArray) {
-            long base = (arg1 != null) ? arg1.indexValue() : 10;
-            if ((base < 0) || (base == 1) || (base > 36)) {
-                throw PyValueError.raise("int() base must be >= 2 and <= 36, or 0");
-            }
-            return parseStringLike(new String(arg0ByteArray.value), arg0.repr(), base);
+            return parseStringLike(new String(arg0Buffer), arg0.repr(), base);
         }
         throw PyTypeError.raise("int() argument must be a string, a bytes-like object or a number, not " + PyString.reprOf(arg0.type().name()));
     }
@@ -484,12 +478,8 @@ public final class PyInt extends PyObject {
             }
         }
 
-        byte[] data;
-        if (bytes instanceof PyBytes bytesBytes) {
-            data = bytesBytes.value;
-        } else if (bytes instanceof PyByteArray bytesByteArray) {
-            data = bytesByteArray.value;
-        } else {
+        byte[] data = Runtime.getBytesLikeBuffer(bytes);
+        if (data == null) {
             if (!bytes.hasIter()) {
                 throw PyTypeError.raise("cannot convert " + PyString.reprOf(bytes.type().name()) + " object to bytes");
             }

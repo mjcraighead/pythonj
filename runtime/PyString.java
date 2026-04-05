@@ -53,13 +53,13 @@ public final class PyString extends PyObject {
         if ((encoding == null) && (errors != null)) {
             throw PyTypeError.raise("decoding to str: need a bytes-like object, " + object.type().name() + " found");
         }
-        if ((object instanceof PyBytes objectBytes) || (object instanceof PyByteArray)) {
-            byte[] buffer = Runtime.requireBytesLikeBuffer(object);
-            String encodingStr = Runtime.requireEncodingArg(encoding, "str");
-            Charset charset = Runtime.lookupCharset(encodingStr);
-            return new PyString(new String(buffer, charset));
+        byte[] objectBuffer = Runtime.getBytesLikeBuffer(object);
+        if (objectBuffer == null) {
+            throw PyTypeError.raise("decoding to str: need a bytes-like object, " + object.type().name() + " found");
         }
-        throw PyTypeError.raise("decoding to str: need a bytes-like object, " + object.type().name() + " found");
+        String encodingStr = Runtime.requireEncodingArg(encoding, "str");
+        Charset charset = Runtime.lookupCharset(encodingStr);
+        return new PyString(new String(objectBuffer, charset));
     }
 
     @Override public PyString add(PyObject rhs) {

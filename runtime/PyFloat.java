@@ -242,14 +242,13 @@ public final class PyFloat extends PyObject {
             return new PyFloat(arg.indexValue());
         } else if (arg instanceof PyString argStr) {
             return parseString(argStr.value, PyString.reprOf(argStr.value));
-        } else if (arg instanceof PyBytes argBytes) {
-            String s = new String(argBytes.value, StandardCharsets.ISO_8859_1);
-            return parseString(s, arg.repr());
-        } else if (arg instanceof PyByteArray argByteArray) {
-            String s = new String(argByteArray.value, StandardCharsets.ISO_8859_1);
-            return parseString(s, arg.repr());
         } else {
-            throw PyTypeError.raise("float() argument must be a string or a real number, not " + PyString.reprOf(arg.type().name()));
+            byte[] argBuffer = Runtime.getBytesLikeBuffer(arg);
+            if (argBuffer == null) {
+                throw PyTypeError.raise("float() argument must be a string or a real number, not " + PyString.reprOf(arg.type().name()));
+            }
+            String s = new String(argBuffer, StandardCharsets.ISO_8859_1);
+            return parseString(s, arg.repr());
         }
     }
 

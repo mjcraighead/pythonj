@@ -70,22 +70,18 @@ public final class PyByteArray extends PyObject {
     }
 
     @Override public PyByteArray add(PyObject rhs) {
-        if (rhs instanceof PyBytes rhsBytes) {
-            return new PyByteArray(PyBytes.add(value, rhsBytes.value));
-        } else if (rhs instanceof PyByteArray rhsByteArray) {
-            return new PyByteArray(PyBytes.add(value, rhsByteArray.value));
-        } else {
+        byte[] rhsBuffer = Runtime.getBytesLikeBuffer(rhs);
+        if (rhsBuffer == null) {
             throw PyTypeError.raise("can't concat " + rhs.type().name() + " to bytearray");
         }
+        return new PyByteArray(PyBytes.add(value, rhsBuffer));
     }
     @Override public PyByteArray addInPlace(PyObject rhs) {
-        if (rhs instanceof PyBytes rhsBytes) {
-            value = PyBytes.add(value, rhsBytes.value);
-        } else if (rhs instanceof PyByteArray rhsByteArray) {
-            value = PyBytes.add(value, rhsByteArray.value);
-        } else {
+        byte[] rhsBuffer = Runtime.getBytesLikeBuffer(rhs);
+        if (rhsBuffer == null) {
             throw PyTypeError.raise("can't concat " + rhs.type().name() + " to bytearray");
         }
+        value = PyBytes.add(value, rhsBuffer);
         return this;
     }
     @Override public PyString mod(PyObject rhs) { throw unimplementedMethod("mod"); }
@@ -105,40 +101,32 @@ public final class PyByteArray extends PyObject {
     @Override public PyByteArray rmul(PyObject rhs) { return mul(rhs); }
 
     @Override public boolean ge(PyObject rhs) {
-        if (rhs instanceof PyBytes rhsBytes) {
-            return Arrays.compareUnsigned(value, rhsBytes.value) >= 0;
-        } else if (rhs instanceof PyByteArray rhsByteArray) {
-            return Arrays.compareUnsigned(value, rhsByteArray.value) >= 0;
-        } else {
+        byte[] rhsBuffer = Runtime.getBytesLikeBuffer(rhs);
+        if (rhsBuffer == null) {
             return super.ge(rhs);
         }
+        return Arrays.compareUnsigned(value, rhsBuffer) >= 0;
     }
     @Override public boolean gt(PyObject rhs) {
-        if (rhs instanceof PyBytes rhsBytes) {
-            return Arrays.compareUnsigned(value, rhsBytes.value) > 0;
-        } else if (rhs instanceof PyByteArray rhsByteArray) {
-            return Arrays.compareUnsigned(value, rhsByteArray.value) > 0;
-        } else {
+        byte[] rhsBuffer = Runtime.getBytesLikeBuffer(rhs);
+        if (rhsBuffer == null) {
             return super.gt(rhs);
         }
+        return Arrays.compareUnsigned(value, rhsBuffer) > 0;
     }
     @Override public boolean le(PyObject rhs) {
-        if (rhs instanceof PyBytes rhsBytes) {
-            return Arrays.compareUnsigned(value, rhsBytes.value) <= 0;
-        } else if (rhs instanceof PyByteArray rhsByteArray) {
-            return Arrays.compareUnsigned(value, rhsByteArray.value) <= 0;
-        } else {
+        byte[] rhsBuffer = Runtime.getBytesLikeBuffer(rhs);
+        if (rhsBuffer == null) {
             return super.le(rhs);
         }
+        return Arrays.compareUnsigned(value, rhsBuffer) <= 0;
     }
     @Override public boolean lt(PyObject rhs) {
-        if (rhs instanceof PyBytes rhsBytes) {
-            return Arrays.compareUnsigned(value, rhsBytes.value) < 0;
-        } else if (rhs instanceof PyByteArray rhsByteArray) {
-            return Arrays.compareUnsigned(value, rhsByteArray.value) < 0;
-        } else {
+        byte[] rhsBuffer = Runtime.getBytesLikeBuffer(rhs);
+        if (rhsBuffer == null) {
             return super.lt(rhs);
         }
+        return Arrays.compareUnsigned(value, rhsBuffer) < 0;
     }
 
     @Override public PyObject getItem(PyObject key) {
