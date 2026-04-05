@@ -2002,7 +2002,6 @@ def get_class_functions(node: ast.Module, class_name: str) -> dict[str, ast.Func
     classes = {x.name: x for x in node.body if isinstance(x, ast.ClassDef)}
     return {x.name: x for x in classes[class_name].body if isinstance(x, ast.FunctionDef)}
 
-NULL = extract_spec.NULL
 RAW_ARGS_KWARGS_BUILTINS = {'max', 'min'}
 RUNTIME_SPEC: Optional[dict[str, object]] = None
 DIRECT_CALL_POSITIONAL_BUILTINS: dict[str, tuple[int, int]] = {}
@@ -2237,7 +2236,7 @@ def translate_python_runtime_impl(node: ast.Module, func_name: str, pool: ir.Con
     )
 
 def emit_default_java_expr(default: object) -> ir.Expr:
-    if default is NULL:
+    if default is extract_spec.NULL:
         return ir.Null()
     return ir.PyConstant(default)
 
