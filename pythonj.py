@@ -672,7 +672,7 @@ class LoweringVisitor(ast.NodeVisitor):
     def visit_USub(self, node): return 'neg'
     def visit_UnaryOp(self, node) -> ir.Expr:
         if isinstance(node.op, ast.Not):
-            return ir.MethodCall(ir.Identifier('PyBool'), 'create', [ir.unary_op('!', ir.bool_value(self.visit(node.operand)))])
+            return ir.MethodCall(ir.Identifier('PyBool'), 'create', [ir.unary_op('!', self.emit_condition(node.operand))])
         op = self.visit(node.op)
         operand = self.visit(node.operand)
         if isinstance(operand, ir.PyConstant) and isinstance(operand.value, int):
@@ -775,7 +775,13 @@ class LoweringVisitor(ast.NodeVisitor):
         return self.emit_bool_op(node.op, node.values)
 
     def visit_IfExp(self, node) -> ir.Expr:
-        return ir.CondOp(ir.bool_value(self.visit(node.test)), self.visit(node.body), self.visit(node.orelse))
+        return ir.CondOp(self.emit_condition(node.test), self.visit(node.body), self.visit(node.orelse))
+
+    def emit_condition(self, node: ast.expr) -> ir.Expr:
+        if isinstance(node, ast.BoolOp):
+            op = '&&' if isinstance(node.op, ast.And) else '||'
+            return ir.chained_binary_op(op, [self.emit_condition(value) for value in node.values])
+        return ir.bool_value(self.visit(node))
 
     def visit_Constant(self, node) -> ir.Expr:
         if isinstance(node.value, (types.NoneType, bool, int, float, str, bytes)):
@@ -1140,7 +1146,7 @@ class LoweringVisitor(ast.NodeVisitor):
         self.code.append(code)
 
     def visit_Assert(self, node) -> None:
-        cond = ir.unary_op('!', ir.bool_value(self.visit(node.test)))
+        cond = ir.unary_op('!', self.emit_condition(node.test))
         msg = ir.StrLiteral(self.path + f':{node.lineno}: assertion failure')
         if node.msg:
             msg.s += ': '
@@ -1200,13 +1206,13 @@ class LoweringVisitor(ast.NodeVisitor):
         return body
 
     def visit_If(self, node) -> None:
-        cond = ir.bool_value(self.visit(node.test))
+        cond = self.emit_condition(node.test)
         body = self.visit_block(node.body)
         orelse = self.visit_block(node.orelse)
         self.code.extend(ir.if_statement(cond, body, orelse))
 
     def visit_While(self, node) -> None:
-        cond = ir.bool_value(self.visit(node.test))
+        cond = self.emit_condition(node.test)
 
         block_name = self.scope.make_temp() if node.orelse else None
         with self.push_break_name(block_name):
@@ -1712,7 +1718,7 @@ class LoweringVisitor(ast.NodeVisitor):
 
     def _lower_comp_generator(self, generator: ast.comprehension, iterable: ir.Expr, statements: list[ir.Statement]) -> list[ir.Statement]:
         for _if in reversed(generator.ifs):
-            statements = list(ir.if_statement(ir.bool_value(self.visit(_if)), statements, []))
+            statements = list(ir.if_statement(self.emit_condition(_if), statements, []))
 
         temp_iter = self.scope.make_temp()
         temp_element = self.scope.make_temp()
@@ -1821,7 +1827,7 @@ class LoweringVisitor(ast.NodeVisitor):
                 next_body.append(ir.LocalDecl('PyObject', temp_item, None))
                 body: list[ir.Statement] = [ir.ReturnStatement(self.visit(node.elt))]
                 for _if in reversed(generator.ifs):
-                    body = list(ir.if_statement(ir.bool_value(self.visit(_if)), body, [ir.ContinueStatement()]))
+                    body = list(ir.if_statement(self.emit_condition(_if), body, [ir.ContinueStatement()]))
                 body = [
                     ir.AssignStatement(temp_item_expr, ir.MethodCall(ir.Identifier('pyiter_iterable'), 'next', [])),
                     *ir.if_statement(ir.BinaryOp('==', temp_item_expr, ir.Null()), [ir.ReturnStatement(ir.Null())], []),
