@@ -53,13 +53,25 @@ class NameResolution(Enum):
     CELL = 2
     GLOBAL = 3
 
+class NameBindingState(Enum):
+    DEFINITELY_BOUND = 1
+    DEFINITELY_UNBOUND = 2
+    UNKNOWN = 3
+
 NAME_RESOLUTION_ATTR = '_pythonj_resolution'
+BINDING_STATE_ATTR = '_pythonj_binding_state'
 
 def set_name_resolution(node: ast.Name, resolution: NameResolution) -> None:
     setattr(node, NAME_RESOLUTION_ATTR, resolution)
 
 def get_name_resolution(node: ast.Name) -> NameResolution:
     return cast(NameResolution, getattr(node, NAME_RESOLUTION_ATTR))
+
+def set_name_binding_state(node: ast.Name, state: NameBindingState) -> None:
+    setattr(node, BINDING_STATE_ATTR, state)
+
+def get_name_binding_state(node: ast.Name) -> NameBindingState:
+    return cast(NameBindingState, getattr(node, BINDING_STATE_ATTR))
 
 @dataclass(frozen=True)
 class InitialBinding:
@@ -380,6 +392,120 @@ class ScopeAnalyzer(ast.NodeVisitor):
                 return NameResolution.CELL
         return NameResolution.GLOBAL
 
+    def _expr_may_observe(self, node: ast.AST) -> bool:
+        if isinstance(node, ast.Constant):
+            return False
+        if isinstance(node, ast.Name):
+            return False
+        if isinstance(node, ast.Tuple):
+            return any(self._expr_may_observe(elt) for elt in node.elts)
+        if isinstance(node, ast.List):
+            return any(self._expr_may_observe(elt) for elt in node.elts)
+        if isinstance(node, ast.Set):
+            return any(self._expr_may_observe(elt) for elt in node.elts)
+        if isinstance(node, ast.Dict):
+            return any(self._expr_may_observe(key) for key in node.keys if key is not None) or \
+                   any(self._expr_may_observe(value) for value in node.values)
+        if isinstance(node, ast.Slice):
+            return any(expr is not None and self._expr_may_observe(expr) for expr in (node.lower, node.upper, node.step))
+        return True
+
+    def _statement_may_observe_external_namespace(self, node: ast.stmt) -> bool:
+        if isinstance(node, ast.Import):
+            return any(alias.name not in extract_spec.BUILTIN_MODULES or '.' in alias.name for alias in node.names)
+        if isinstance(node, ast.FunctionDef):
+            return bool(node.decorator_list or node.args.defaults or any(default is not None for default in node.args.kw_defaults) or node.returns is not None)
+        if isinstance(node, ast.Assign):
+            return self._expr_may_observe(node.value)
+        if isinstance(node, ast.AnnAssign):
+            return (node.value is not None and self._expr_may_observe(node.value)) or node.annotation is not None
+        if isinstance(node, ast.AugAssign):
+            return True
+        if isinstance(node, ast.Expr):
+            return self._expr_may_observe(node.value)
+        if isinstance(node, ast.Return):
+            return node.value is not None and self._expr_may_observe(node.value)
+        if isinstance(node, ast.Assert):
+            return self._expr_may_observe(node.test) or (node.msg is not None and self._expr_may_observe(node.msg))
+        if isinstance(node, ast.Raise):
+            return True
+        if isinstance(node, ast.Delete):
+            return any(not isinstance(target, ast.Name) for target in node.targets)
+        if isinstance(node, (ast.ClassDef, ast.For, ast.AsyncFor, ast.While, ast.If, ast.Try, ast.With, ast.AsyncWith, ast.Match)):
+            return True
+        return False
+
+    def _collect_statement_store_del_names(self, node: ast.stmt) -> tuple[set[str], set[str]]:
+        stores: set[str] = set()
+        dels: set[str] = set()
+        for local_node in self._iter_scope_local_nodes(node):
+            if isinstance(local_node, ast.Name):
+                if isinstance(local_node.ctx, ast.Store):
+                    stores.add(local_node.id)
+                elif isinstance(local_node.ctx, ast.Del):
+                    dels.add(local_node.id)
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            stores.add(node.name)
+        if isinstance(node, ast.ExceptHandler) and node.name is not None:
+            stores.add(node.name)
+        return (stores, dels)
+
+    def _tag_load_binding_states(self, node: ast.AST, scope_info: ScopeInfo) -> None:
+        if isinstance(node, ast.Module):
+            ordered_nodes: list[ast.AST] = list(node.body)
+        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            ordered_nodes = list(node.body)
+        elif isinstance(node, ast.Lambda):
+            ordered_nodes = [node.body]
+        else:
+            assert isinstance(node, (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)), node
+            ordered_nodes = []
+            for generator in node.generators:
+                ordered_nodes.append(generator.target)
+                for _if in generator.ifs:
+                    ordered_nodes.append(_if)
+            if isinstance(node, ast.DictComp):
+                ordered_nodes.extend([node.key, node.value])
+            else:
+                ordered_nodes.append(node.elt)
+
+        states: dict[str, NameBindingState] = {}
+        for name in scope_info.locals | scope_info.cell_vars | scope_info.explicit_globals:
+            states[name] = NameBindingState.DEFINITELY_UNBOUND
+        default_global_state = NameBindingState.DEFINITELY_UNBOUND
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)):
+            for name in self._param_names(node.args):
+                states[name] = NameBindingState.DEFINITELY_BOUND
+
+        for statement in ordered_nodes:
+            for local_node in self._iter_scope_local_nodes(statement):
+                if isinstance(local_node, ast.Name) and isinstance(local_node.ctx, ast.Load):
+                    resolution = get_name_resolution(local_node)
+                    if resolution is NameResolution.GLOBAL:
+                        state = states.get(local_node.id, default_global_state)
+                    else:
+                        state = states.get(local_node.id, NameBindingState.DEFINITELY_UNBOUND)
+                    set_name_binding_state(local_node, state)
+                elif local_node is not statement and isinstance(local_node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda,
+                                                                            ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)):
+                    self._tag_load_binding_states(local_node, self.scope_infos[local_node])
+            if isinstance(statement, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda,
+                                      ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)):
+                self._tag_load_binding_states(statement, self.scope_infos[statement])
+
+            if isinstance(statement, ast.stmt):
+                (stores, dels) = self._collect_statement_store_del_names(statement)
+                if self._statement_may_observe_external_namespace(statement):
+                    default_global_state = NameBindingState.UNKNOWN
+                    for name in list(states):
+                        if name not in stores and name not in dels and name not in scope_info.initial_final_bindings:
+                            if scope_info.kind is ScopeKind.MODULE or name in scope_info.explicit_globals:
+                                states[name] = NameBindingState.UNKNOWN
+                for name in stores:
+                    states[name] = NameBindingState.DEFINITELY_BOUND
+                for name in dels:
+                    states[name] = NameBindingState.DEFINITELY_UNBOUND
+
     def _tag_names(self, node: ast.AST, scope_stack: list[ScopeInfo]) -> None:
         for subnode in self._iter_scope_local_nodes(node):
             if isinstance(subnode, ast.Name):
@@ -414,6 +540,7 @@ class ScopeAnalyzer(ast.NodeVisitor):
     def visit_Module(self, node) -> None:
         self._analyze_scope_tree(node)
         self._tag_names(node, [self.scope_infos[node]])
+        self._tag_load_binding_states(node, self.scope_infos[node])
 
 class Scope:
     __slots__ = ('parent', 'info', 'qualname', 'free_vars', 'locals_are_fields', 'n_temps', 'used_expr_discard',
@@ -534,7 +661,7 @@ class LoweringVisitor(ast.NodeVisitor):
             return True
         if get_name_resolution(node) is not NameResolution.GLOBAL:
             return False
-        return not self.module_binds_name(node.id)
+        return get_name_binding_state(node) is NameBindingState.DEFINITELY_UNBOUND
 
     def name_resolves_to_builtin_type(self, node: ast.Name) -> bool:
         if node.id not in extract_spec.BUILTIN_TYPES:
