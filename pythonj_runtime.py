@@ -4,6 +4,34 @@
 
 import typing
 
+def _init_bound_args(args, max_total):
+    bound_args = []
+    i = 0
+    while i < max_total:
+        if i < __pythonj_len__(args):
+            bound_args.append(args[i])
+        else:
+            bound_args.append(__pythonj_null__)
+        i += 1
+    return bound_args
+
+def _find_name(names, kw, start):
+    i = start
+    while i < __pythonj_len__(names):
+        if kw == names[i]:
+            return i
+        i += 1
+    return __pythonj_null__
+
+def _raise_at_most_args(positional_name, max_total, given) -> typing.NoReturn:
+    raise TypeError(f'{positional_name}() takes at most {max_total} arguments ({given} given)')
+
+def _raise_at_most_keyword_args(kw_name, max_total, kwargs_len) -> typing.NoReturn:
+    raise TypeError(f'{kw_name}() takes at most {max_total} keyword arguments ({kwargs_len} given)')
+
+def _raise_unexpected_kw_arg(kw_name, unknown_kw) -> typing.NoReturn:
+    raise TypeError(f'{kw_name}() got an unexpected keyword argument {unknown_kw!r}')
+
 def bind_exact_positional(args, kwargs, kw_name, positional_name, n) -> tuple:
     if kwargs is not __pythonj_null__ and kwargs:
         raise TypeError(kw_name + '() takes no keyword arguments')
@@ -37,45 +65,29 @@ def bind_min_max_positional_or_keyword(args, kwargs, kw_name, positional_name, p
         suffix = '' if min_args == 1 else 's'
         raise TypeError(f'{positional_name}() takes at least {min_args} positional argument{suffix} ({args_len} given)')
     if args_len > max_total:
-        raise TypeError(f'{positional_name}() takes at most {max_total} arguments ({args_len} given)')
+        _raise_at_most_args(positional_name, max_total, args_len)
 
-    bound_args = []
-    i = 0
-    while i < max_total:
-        if i < args_len:
-            bound_args.append(args[i])
-        else:
-            bound_args.append(__pythonj_null__)
-        i += 1
+    bound_args = _init_bound_args(args, max_total)
 
     unknown_kw = None
     if kwargs is not __pythonj_null__ and kwargs:
         kwargs_len = __pythonj_len__(kwargs)
         if args_len + kwargs_len > max_total:
             if args_len == 0:
-                raise TypeError(f'{kw_name}() takes at most {max_total} keyword arguments ({kwargs_len} given)')
-            raise TypeError(f'{positional_name}() takes at most {max_total} arguments ({args_len + kwargs_len} given)')
+                _raise_at_most_keyword_args(kw_name, max_total, kwargs_len)
+            _raise_at_most_args(positional_name, max_total, args_len + kwargs_len)
         for (kw, value) in kwargs.items():
-            i = posonly_count
-            matched = False
-            while i < __pythonj_len__(positional_names):
-                if kw == positional_names[i]:
-                    if bound_args[i] is not __pythonj_null__:
-                        raise TypeError(f'argument for {kw_name}() given by name ({positional_names[i]!r}) and position ({i + 1})')
-                    bound_args[i] = value
-                    matched = True
-                    break
-                i += 1
-            if not matched:
-                i = 0
-                while i < __pythonj_len__(kwonly_names):
-                    if kw == kwonly_names[i]:
-                        bound_args[__pythonj_len__(positional_names) + i] = value
-                        matched = True
-                        break
-                    i += 1
-            if not matched and unknown_kw is None:
-                unknown_kw = kw
+            matched_index = _find_name(positional_names, kw, posonly_count)
+            if matched_index is not __pythonj_null__:
+                if bound_args[matched_index] is not __pythonj_null__:
+                    raise TypeError(f'argument for {kw_name}() given by name ({positional_names[matched_index]!r}) and position ({matched_index + 1})')
+                bound_args[matched_index] = value
+            else:
+                kwonly_index = _find_name(kwonly_names, kw, 0)
+                if kwonly_index is not __pythonj_null__:
+                    bound_args[__pythonj_len__(positional_names) + kwonly_index] = value
+                elif unknown_kw is None:
+                    unknown_kw = kw
 
     if args_len > max_positional:
         if max_positional == 0:
@@ -90,7 +102,7 @@ def bind_min_max_positional_or_keyword(args, kwargs, kw_name, positional_name, p
             i += 1
 
     if unknown_kw is not None:
-        raise TypeError(f'{kw_name}() got an unexpected keyword argument {unknown_kw!r}')
+        _raise_unexpected_kw_arg(kw_name, unknown_kw)
 
     if kwonly_names:
         return bound_args
@@ -106,19 +118,14 @@ def bind_varargs_and_kwonly(args, kwargs, kw_name, kwonly_names):
     unknown_kw = None
     if kwargs is not __pythonj_null__ and kwargs:
         for (kw, value) in kwargs.items():
-            i = 0
-            matched = False
-            while i < __pythonj_len__(kwonly_names):
-                if kw == kwonly_names[i]:
-                    bound_args[i + 1] = value
-                    matched = True
-                    break
-                i += 1
-            if not matched and unknown_kw is None:
+            kwonly_index = _find_name(kwonly_names, kw, 0)
+            if kwonly_index is not __pythonj_null__:
+                bound_args[kwonly_index + 1] = value
+            elif unknown_kw is None:
                 unknown_kw = kw
 
     if unknown_kw is not None:
-        raise TypeError(f'{kw_name}() got an unexpected keyword argument {unknown_kw!r}')
+        _raise_unexpected_kw_arg(kw_name, unknown_kw)
 
     return bound_args
 
