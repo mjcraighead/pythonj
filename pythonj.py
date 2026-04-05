@@ -1779,19 +1779,20 @@ def get_class_functions(node: ast.Module, class_name: str) -> dict[str, ast.Func
 NULL = object()
 RAW_ARGS_KWARGS_BUILTINS = {'max', 'min'}
 DIRECT_CALL_POSITIONAL_BUILTINS: dict[str, tuple[int, int]] = {}
-DIRECT_NEWOBJ_POSITIONAL_BUILTIN_TYPES: dict[str, tuple[int, int]] = {
-    'bool': (0, 1),
-    'bytearray': (0, 3),
-    'bytes': (0, 3),
-    'float': (0, 1),
-    'int': (0, 2),
-    'list': (0, 1),
-    'range': (1, 3),
-    'reversed': (1, 1),
-    'set': (0, 1),
-    'slice': (1, 3),
-    'str': (0, 3),
-    'tuple': (0, 1),
+DIRECT_NEWOBJ_POSITIONAL_BUILTIN_TYPES: dict[str, tuple[int, int]] = {}
+DIRECT_NEWOBJ_POSITIONAL_SUPPORTED_BUILTIN_TYPES = {
+    'bool',
+    'bytearray',
+    'bytes',
+    'float',
+    'int',
+    'list',
+    'range',
+    'reversed',
+    'set',
+    'slice',
+    'str',
+    'tuple',
 }
 DIRECT_GETATTR_BUILTIN_TYPE_ATTRS: dict[str, dict[str, str]] = {}
 DIRECT_GETATTR_IDENTITY_KINDS = {'string', 'member', 'getset', 'method'}
@@ -2329,6 +2330,14 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
         DIRECT_GETATTR_BUILTIN_TYPE_ATTRS[type_name] = {
             attr_name: cast(str, attr_spec['kind']) for (attr_name, attr_spec) in attrs.items()
         }
+        if type_name in DIRECT_NEWOBJ_POSITIONAL_SUPPORTED_BUILTIN_TYPES:
+            type_signature = cast(Optional[dict[str, object]], type_spec.get('signature'))
+            if type_signature is not None:
+                params = decode_signature(type_signature)
+                if params is not None:
+                    call_range = get_positional_call_range(params)
+                    if call_range is not None:
+                        DIRECT_NEWOBJ_POSITIONAL_BUILTIN_TYPES[type_name] = call_range
     for module_name in extract_spec.BUILTIN_MODULES:
         module_spec = cast(dict[str, object], spec[module_name])
         attrs = cast(dict[str, dict[str, object]], module_spec['attrs'])

@@ -79,6 +79,7 @@ SYNTHETIC_PARAMS = {
         'scanstring': [make_param('string'), make_param('end')],
     },
     'bytearray': {
+        '__newobj__': [make_param('source', NULL), make_param('encoding', NULL), make_param('errors', NULL)],
         'count': [make_param('sub'), make_param('start', None), make_param('end', None)],
         'endswith': [make_param('suffix'), make_param('start', None), make_param('end', None)],
         'find': [make_param('sub'), make_param('start', None), make_param('end', None)],
@@ -89,6 +90,7 @@ SYNTHETIC_PARAMS = {
         'startswith': [make_param('prefix'), make_param('start', None), make_param('end', None)],
     },
     'bytes': {
+        '__newobj__': [make_param('source', NULL), make_param('encoding', NULL), make_param('errors', NULL)],
         'count': [make_param('sub'), make_param('start', None), make_param('end', None)],
         'endswith': [make_param('suffix'), make_param('start', None), make_param('end', None)],
         'find': [make_param('sub'), make_param('start', None), make_param('end', None)],
@@ -99,12 +101,23 @@ SYNTHETIC_PARAMS = {
         'startswith': [make_param('prefix'), make_param('start', None), make_param('end', None)],
     },
     'dict': {
+        '__newobj__': [make_param('mapping_or_iterable', NULL)],
         'pop': [make_param('key'), make_param('defaultValue', NULL)],
+    },
+    'int': {
+        '__newobj__': [make_param('x', 0), make_param('base', NULL)],
     },
     'list': {
         'index': [make_param('value'), make_param('start', NULL), make_param('stop', NULL)],
     },
+    'range': {
+        '__newobj__': [make_param('start'), make_param('stop', NULL), make_param('step', NULL)],
+    },
+    'slice': {
+        '__newobj__': [make_param('start'), make_param('stop', NULL), make_param('step', NULL)],
+    },
     'str': {
+        '__newobj__': [make_poskw_param('object', NULL), make_poskw_param('encoding', NULL), make_poskw_param('errors', NULL)],
         'count': [make_param('sub'), make_param('start', None), make_param('end', None)],
         'endswith': [make_param('suffix'), make_param('start', None), make_param('end', None)],
         'find': [make_param('sub'), make_param('start', None), make_param('end', None)],
@@ -226,6 +239,16 @@ def get_method_signature(name: str, method_name: str) -> dict[str, object] | Non
         return None
     return encode_signature(params)
 
+def get_type_signature(name: str) -> dict[str, object] | None:
+    synthetic = SYNTHETIC_PARAMS.get(name, {}).get('__newobj__')
+    if synthetic is not None:
+        return encode_signature(synthetic)
+    obj = get_runtime_obj(name)
+    params = get_signature_params(obj, None)
+    if params is None:
+        return None
+    return encode_signature(params)
+
 def get_builtin_function_signature(name: str) -> dict[str, object] | None:
     synthetic = SYNTHETIC_PARAMS['builtins'].get(name)
     if synthetic is not None:
@@ -283,7 +306,7 @@ def build_type_entry(name: str) -> dict[str, object]:
             attrs[k] = encode_attr('staticmethod', signature=get_method_signature(name, k))
         else:
             assert False, (name, k, v, v_type)
-    return {'kind': 'type', 'attrs': attrs}
+    return {'kind': 'type', 'signature': get_type_signature(name), 'attrs': attrs}
 
 def build_builtin_module_entry() -> dict[str, object]:
     attrs = {}
