@@ -1555,8 +1555,7 @@ class LoweringVisitor(ast.NodeVisitor):
     def qualname(self, name: str) -> str:
         return name if self.scope.qualname is None else f'{self.scope.qualname}.<locals>.{name}'
 
-    def add_function(self, py_name: str, java_name: str, params: list[inspect.Parameter], body: list[ir.Statement],
-                     invisible_args: bool = False) -> None:
+    def add_function(self, py_name: str, java_name: str, params: list[inspect.Parameter], body: list[ir.Statement]) -> None:
         arg_names = [param.name for param in params]
         arg_defaults = [param.default for param in params if param.default is not inspect.Parameter.empty]
         n_args = len(arg_names)
@@ -1640,12 +1639,11 @@ class LoweringVisitor(ast.NodeVisitor):
             if arg_name in self.scope.info.cell_vars:
                 call_positional_body.append(ir.LocalDecl('PyCell', f'pycell_{arg_name}', ir.CreateObject('PyCell', [ir.Identifier(bind_arg_name)])))
             else:
-                local_arg_name = arg_name if invisible_args else f'pylocal_{arg_name}'
-                call_positional_body.append(ir.LocalDecl(self.java_local_type(arg_name), local_arg_name, self.cast_local_assignment(arg_name, ir.Identifier(bind_arg_name))))
+                call_positional_body.append(ir.LocalDecl(self.java_local_type(arg_name), f'pylocal_{arg_name}', self.cast_local_assignment(arg_name, ir.Identifier(bind_arg_name))))
         for name in sorted(self.scope.info.cell_vars - set(arg_names)):
             call_positional_body.append(ir.LocalDecl('PyCell', f'pycell_{name}', ir.CreateObject('PyCell', [ir.PyConstant(None)])))
         for name in sorted(self.scope.info.locals - self.scope.info.cell_vars - set(arg_names) - set(self.scope.info.initial_builtin_module_locals)):
-            if invisible_args or name not in arg_names:
+            if name not in arg_names:
                 call_positional_body.append(ir.LocalDecl(self.java_local_type(name), f'pylocal_{name}', None))
         implicit_return: ir.Statement = ir.ReturnStatement(ir.PyConstant(None))
         if self.scope.expected_return_java_type not in {None, 'PyObject'}:
@@ -1895,30 +1893,17 @@ class LoweringVisitor(ast.NodeVisitor):
                 call_positional_body.append(ir.LocalDecl('PyCell', f'pycell_{name}', ir.CreateObject('PyCell', [ir.PyConstant(None)])))
             for name in sorted(self.scope.info.locals - self.scope.info.cell_vars - {arg_name} - set(self.scope.info.initial_builtin_module_locals)):
                 call_positional_body.append(ir.LocalDecl('PyObject', f'pylocal_{name}', None))
-            call_positional_body.extend(ir.block_simplify([*body, ir.ReturnStatement(ir.PyConstant(None))]))
-            comp_decl = ir.ClassDecl(
-                'private static final',
-                java_name,
-                None,
-                [
-                    *(ir.FieldDecl('private final', 'PyCell', f'pycell_{name}', None) for name in free_var_names),
-                    ir.ConstructorDecl(
-                        '',
-                        java_name,
-                        [f'PyCell _pycell_{name}' for name in free_var_names],
-                        [*(ir.AssignStatement(ir.Identifier(f'pycell_{name}'), ir.Identifier(f'_pycell_{name}')) for name in free_var_names)],
-                    ),
-                    ir.MethodDecl(
-                        'public',
-                        'PyObject',
-                        'callPositional',
-                        [f'PyObject pyarg_{arg_name}'],
-                        call_positional_body,
-                    ),
-                ],
-            )
+            call_positional_body.extend(ir.block_simplify(body))
             assert java_name not in self.classes
-            self.classes[java_name] = comp_decl
+            self.classes[java_name] = ir.ClassDecl('private static final', java_name, None, [
+                *(ir.FieldDecl('private final', 'PyCell', f'pycell_{name}', None) for name in free_var_names),
+                ir.ConstructorDecl('', java_name, [f'PyCell _pycell_{name}' for name in free_var_names],
+                    [*(ir.AssignStatement(ir.Identifier(f'pycell_{name}'), ir.Identifier(f'_pycell_{name}')) for name in free_var_names)],
+                ),
+                ir.MethodDecl('public', type_name, 'callPositional', [f'PyObject pyarg_{arg_name}'],
+                    call_positional_body,
+                ),
+            ])
 
         return ir.MethodCall(
             ir.CreateObject(java_name, [ir.Identifier(f'pycell_{name}') for name in sorted(free_vars)]),
@@ -1967,24 +1952,18 @@ class LoweringVisitor(ast.NodeVisitor):
                 *(ir.AssignStatement(ir.Identifier(f'pycell_{name}'), ir.Identifier(f'_pycell_{name}')) for name in free_var_names),
                 ir.AssignStatement(ir.Identifier('pyiter_iterable'), ir.MethodCall(ir.Identifier('iterable'), 'iter', [])),
             ]
-            func_decl = ir.ClassDecl(
-                'private static final',
-                java_name,
-                'PyIter',
-                [
-                    ir.FieldDecl('private static final', 'PyConcreteType', 'type_singleton', ir.CreateObject('PyConcreteType', [ir.StrLiteral('generator'), ir.Field(ir.Identifier(java_name), 'class')])),
-                    *(ir.FieldDecl('private final', 'PyCell', f'pycell_{name}', None) for name in free_var_names),
-                    ir.FieldDecl('private final', 'PyIter', 'pyiter_iterable', None),
-                    *(ir.FieldDecl('private final', 'PyCell', f'pycell_{name}', ir.CreateObject('PyCell', [ir.PyConstant(None)])) for name in sorted(self.scope.info.cell_vars)),
-                    *(ir.FieldDecl('private', 'PyObject', f'pylocal_{name}', ir.PyConstant(None)) for name in sorted(self.scope.info.locals - self.scope.info.cell_vars)),
-                    ir.ConstructorDecl('', java_name, ctor_args, ctor_body),
-                    ir.MethodDecl('public', 'PyObject', 'next', [], next_body),
-                    ir.MethodDecl('public', 'String', 'repr', [], [ir.ReturnStatement(ir.StrLiteral(f'<generator object {qualname}>'))]),
-                    ir.MethodDecl('public', 'PyConcreteType', 'type', [], [ir.ReturnStatement(ir.Identifier('type_singleton'))]),
-                ],
-            )
             assert java_name not in self.classes
-            self.classes[java_name] = func_decl
+            self.classes[java_name] = ir.ClassDecl('private static final', java_name, 'PyIter', [
+                ir.FieldDecl('private static final', 'PyConcreteType', 'type_singleton', ir.CreateObject('PyConcreteType', [ir.StrLiteral('generator'), ir.Field(ir.Identifier(java_name), 'class')])),
+                *(ir.FieldDecl('private final', 'PyCell', f'pycell_{name}', None) for name in free_var_names),
+                ir.FieldDecl('private final', 'PyIter', 'pyiter_iterable', None),
+                *(ir.FieldDecl('private final', 'PyCell', f'pycell_{name}', ir.CreateObject('PyCell', [ir.PyConstant(None)])) for name in sorted(self.scope.info.cell_vars)),
+                *(ir.FieldDecl('private', 'PyObject', f'pylocal_{name}', ir.PyConstant(None)) for name in sorted(self.scope.info.locals - self.scope.info.cell_vars)),
+                ir.ConstructorDecl('', java_name, ctor_args, ctor_body),
+                ir.MethodDecl('public', 'PyObject', 'next', [], next_body),
+                ir.MethodDecl('public', 'String', 'repr', [], [ir.ReturnStatement(ir.StrLiteral(f'<generator object {qualname}>'))]),
+                ir.MethodDecl('public', 'PyConcreteType', 'type', [], [ir.ReturnStatement(ir.Identifier('type_singleton'))]),
+            ])
 
         return ir.CreateObject(java_name, [*(ir.Identifier(f'pycell_{name}') for name in sorted(free_vars)), self.visit(generator.iter)])
 
