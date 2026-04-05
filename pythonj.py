@@ -179,7 +179,7 @@ class ScopeAnalyzer(ast.NodeVisitor):
 class Scope:
     __slots__ = ('parent', 'info', 'qualname', 'free_vars', 'locals_are_fields', 'n_temps', 'used_expr_discard',
                  'expected_return_java_type', 'known_builtin_module_locals',
-                 'top_level_function_name', 'top_level_function_call_range')
+                 'known_final_top_level_function_call_ranges')
     parent: Optional['Scope']
     info: ScopeInfo
     qualname: Optional[str]
@@ -189,14 +189,12 @@ class Scope:
     used_expr_discard: bool
     expected_return_java_type: Optional[str]
     known_builtin_module_locals: dict[str, str]
-    top_level_function_name: Optional[str]
-    top_level_function_call_range: Optional[tuple[int, int]]
+    known_final_top_level_function_call_ranges: dict[str, tuple[int, int]]
 
     def __init__(self, parent: Optional['Scope'], info: ScopeInfo, qualname: Optional[str] = None,
                  expected_return_java_type: Optional[str] = None,
                  known_builtin_module_locals: Optional[dict[str, str]] = None,
-                 top_level_function_name: Optional[str] = None,
-                 top_level_function_call_range: Optional[tuple[int, int]] = None):
+                 known_final_top_level_function_call_ranges: Optional[dict[str, tuple[int, int]]] = None):
         self.parent = parent
         self.info = info
         self.qualname = qualname
@@ -206,8 +204,7 @@ class Scope:
         self.used_expr_discard = False
         self.expected_return_java_type = expected_return_java_type
         self.known_builtin_module_locals = {} if known_builtin_module_locals is None else known_builtin_module_locals.copy()
-        self.top_level_function_name = top_level_function_name
-        self.top_level_function_call_range = top_level_function_call_range
+        self.known_final_top_level_function_call_ranges = {} if known_final_top_level_function_call_ranges is None else known_final_top_level_function_call_ranges.copy()
 
     def make_temp(self) -> str:
         """Assign and return a new temporary variable name."""
@@ -223,7 +220,7 @@ class Scope:
 class LoweringVisitor(ast.NodeVisitor):
     __slots__ = ('path', 'n_errors', 'n_functions', 'n_lambdas', 'scope', 'global_code', 'code',
                  'scope_infos', 'pool', 'break_name', 'classes', 'allow_intrinsics',
-                 'python_helper_names', 'python_helper_class', 'known_final_top_level_functions',
+                 'python_helper_names', 'python_helper_class', 'known_final_top_level_function_call_ranges',
                  'final_global_function_classes')
     path: str
     n_errors: int
@@ -239,17 +236,22 @@ class LoweringVisitor(ast.NodeVisitor):
     allow_intrinsics: bool # enables special internal-only codegen features for builtins
     python_helper_names: set[str]
     python_helper_class: Optional[str]
-    known_final_top_level_functions: set[str]
+    known_final_top_level_function_call_ranges: dict[str, tuple[int, int]]
     final_global_function_classes: dict[str, str]
 
     def __init__(self, path: str, scope_infos: dict[ast.AST, ScopeInfo], module_info: ScopeInfo,
                  known_builtin_module_locals: Optional[dict[str, str]] = None,
-                 known_final_top_level_functions: Optional[set[str]] = None):
+                 known_final_top_level_function_call_ranges: Optional[dict[str, tuple[int, int]]] = None):
         self.path = path
         self.n_errors = 0
         self.n_functions = 0
         self.n_lambdas = 0
-        self.scope = Scope(None, module_info, known_builtin_module_locals=known_builtin_module_locals)
+        self.scope = Scope(
+            None,
+            module_info,
+            known_builtin_module_locals=known_builtin_module_locals,
+            known_final_top_level_function_call_ranges=known_final_top_level_function_call_ranges,
+        )
         self.global_code = [ir.LocalDecl('PyObject', 'expr_discard', None)] # XXX remove this variable if not needed
         self.code = self.global_code
         self.scope_infos = scope_infos
@@ -259,7 +261,7 @@ class LoweringVisitor(ast.NodeVisitor):
         self.allow_intrinsics = False
         self.python_helper_names = set()
         self.python_helper_class = None
-        self.known_final_top_level_functions = set() if known_final_top_level_functions is None else known_final_top_level_functions.copy()
+        self.known_final_top_level_function_call_ranges = {} if known_final_top_level_function_call_ranges is None else known_final_top_level_function_call_ranges.copy()
         self.final_global_function_classes = {}
 
     # Note: if n_errors > 0, the generated Java code is not expected to be valid or executable.
@@ -316,6 +318,19 @@ class LoweringVisitor(ast.NodeVisitor):
             if name in self.scope.info.locals or name in self.scope.info.cell_vars or name in self.scope.free_vars:
                 return False
         return not self.module_binds_name(name)
+
+    def name_resolves_to_final_top_level_function(self, name: str) -> bool:
+        if name not in self.module_scope().known_final_top_level_function_call_ranges:
+            return False
+        if self.scope.info.kind == ScopeKind.FUNCTION:
+            if name in self.scope.info.locals or name in self.scope.info.cell_vars or name in self.scope.free_vars:
+                return False
+        return True
+
+    def final_top_level_function_expr(self, name: str) -> ir.Expr:
+        java_name = self.final_global_function_classes.get(name)
+        assert java_name is not None, name
+        return ir.CastExpr(java_name, self.ident_expr(name))
 
     def resolve_free_vars(self, lineno: int, scope_info: ScopeInfo, func_type: str) -> set[str]:
         free_vars = set()
@@ -526,18 +541,13 @@ class LoweringVisitor(ast.NodeVisitor):
 
     def visit_Call(self, node) -> ir.Expr:
         if (isinstance(node.func, ast.Name) and
-            self.scope.top_level_function_name is not None and
-            node.func.id == self.scope.top_level_function_name and
-            self.scope.top_level_function_call_range is not None and
+            self.name_resolves_to_final_top_level_function(node.func.id) and
             not node.keywords and
-            not any(isinstance(arg, ast.Starred) for arg in node.args) and
-            node.func.id not in self.scope.info.locals and
-            node.func.id not in self.scope.info.cell_vars and
-            node.func.id not in self.scope.free_vars):
-            (min_args, max_args) = self.scope.top_level_function_call_range
+            not any(isinstance(arg, ast.Starred) for arg in node.args)):
+            (min_args, max_args) = self.module_scope().known_final_top_level_function_call_ranges[node.func.id]
             if min_args <= len(node.args) <= max_args:
                 return ir.MethodCall(
-                    ir.This(),
+                    self.final_top_level_function_expr(node.func.id),
                     'call_positional',
                     [*([self.visit(arg) for arg in node.args]), *([ir.Null()] * (max_args - len(node.args)))],
                 )
@@ -984,9 +994,7 @@ class LoweringVisitor(ast.NodeVisitor):
     @contextmanager
     def new_function(self, scope_info: ScopeInfo, free_vars: set[str], qualname: str,
                      expected_return_java_type: Optional[str] = None,
-                     known_builtin_module_locals: Optional[dict[str, str]] = None,
-                     top_level_function_name: Optional[str] = None,
-                     top_level_function_call_range: Optional[tuple[int, int]] = None) -> Iterator[None]:
+                     known_builtin_module_locals: Optional[dict[str, str]] = None) -> Iterator[None]:
         saved_scope = self.scope
         self.scope = Scope(
             self.scope,
@@ -994,8 +1002,7 @@ class LoweringVisitor(ast.NodeVisitor):
             qualname,
             expected_return_java_type,
             known_builtin_module_locals,
-            top_level_function_name,
-            top_level_function_call_range,
+            self.module_scope().known_final_top_level_function_call_ranges,
         )
         self.scope.free_vars = free_vars.copy()
         try:
@@ -1216,24 +1223,23 @@ class LoweringVisitor(ast.NodeVisitor):
 
         (arg_names, arg_defaults) = self.check_args(node.lineno, node.args)
         qualname = self.qualname(node.name)
-        java_name = f'pyfunc_{node.name}_{self.n_functions}'
-        self.n_functions += 1
+        java_name = self.final_global_function_classes.get(node.name)
+        if java_name is None:
+            java_name = f'pyfunc_{node.name}_{self.n_functions}'
+            self.n_functions += 1
         scope_info = self.scope_infos[node]
         free_vars = self.resolve_free_vars(node.lineno, scope_info, 'nested function')
-        if self.scope.info.kind == ScopeKind.MODULE and node.name in self.known_final_top_level_functions:
+        if self.scope.info.kind == ScopeKind.MODULE and node.name in self.known_final_top_level_function_call_ranges:
             assert not free_vars, (node.name, free_vars)
             self.final_global_function_classes[node.name] = java_name
         else:
             self.code.append(ir.AssignStatement(self.ident_expr(node.name), ir.CreateObject(java_name, [ir.Identifier(f'pycell_{name}') for name in sorted(free_vars)])))
 
-        is_top_level_function = self.scope.info.kind == ScopeKind.MODULE
         with self.new_function(
             scope_info,
             free_vars,
             qualname,
             known_builtin_module_locals=get_known_top_scope_builtin_module_locals(node),
-            top_level_function_name=node.name if is_top_level_function else None,
-            top_level_function_call_range=(len(arg_names) - len(arg_defaults), len(arg_names)) if is_top_level_function else None,
         ):
             body = self.visit_block(node.body)
             self.add_function(qualname, java_name, arg_names, arg_defaults, body)
@@ -1541,6 +1547,15 @@ class LoweringVisitor(ast.NodeVisitor):
 
     def visit_Module(self, node) -> None:
         for statement in node.body:
+            if isinstance(statement, ast.Import):
+                continue
+            if isinstance(statement, ast.FunctionDef) and statement.name in self.known_final_top_level_function_call_ranges:
+                java_name = f'pyfunc_{statement.name}_{self.n_functions}'
+                self.n_functions += 1
+                self.final_global_function_classes[statement.name] = java_name
+                continue
+            break
+        for statement in node.body:
             self.visit(statement)
 
     def write_java(self, f: TextIO, py_name: str) -> None:
@@ -1607,27 +1622,27 @@ def get_known_top_scope_builtin_module_locals(node: ast.AST) -> dict[str, str]:
         walker._walk_local(statement, set(), later_writes, set(), set(), [])
     return {bind_name: module_name for (bind_name, module_name) in out.items() if bind_name not in later_writes}
 
-def get_known_top_level_final_function_names(node: ast.AST) -> set[str]:
+def get_known_top_level_final_function_call_ranges(node: ast.AST) -> dict[str, tuple[int, int]]:
     if not isinstance(node, ast.Module):
-        return set()
+        return {}
     prefix_end = 0
-    out: set[str] = set()
+    out: dict[str, tuple[int, int]] = {}
     for statement in node.body:
         if isinstance(statement, ast.Import):
             prefix_end += 1
             continue
         if isinstance(statement, ast.FunctionDef):
             prefix_end += 1
-            out.add(statement.name)
+            out[statement.name] = (len(statement.args.args) - len(statement.args.defaults), len(statement.args.args))
             continue
         break
     if not out:
-        return set()
+        return {}
     later_writes: set[str] = set()
     walker = ScopeAnalyzer()
     for statement in node.body[prefix_end:]:
         walker._walk_local(statement, set(), later_writes, set(), set(), [])
-    return {name for name in out if name not in later_writes}
+    return {name: call_range for (name, call_range) in out.items() if name not in later_writes}
 
 NULL = object()
 RAW_ARGS_KWARGS_BUILTINS = {'max', 'min'}
@@ -1805,7 +1820,6 @@ def translate_python_impl_node(node: ast.Module, func: ast.FunctionDef, emitted_
         analyzer.scope_infos,
         analyzer.scope_infos[node],
         known_builtin_module_locals=get_known_top_scope_builtin_module_locals(node),
-        known_final_top_level_functions=get_known_top_level_final_function_names(node),
     )
     visitor.pool = pool
     visitor.allow_intrinsics = True

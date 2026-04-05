@@ -54,7 +54,7 @@ def main() -> None:
             analyzer.scope_infos,
             analyzer.scope_infos[node],
             known_builtin_module_locals=pythonj.get_known_top_scope_builtin_module_locals(node),
-            known_final_top_level_functions=pythonj.get_known_top_level_final_function_names(node),
+            known_final_top_level_function_call_ranges=pythonj.get_known_top_level_final_function_call_ranges(node),
         )
         visitor.visit(node)
         if visitor.n_errors:
