@@ -1636,7 +1636,7 @@ class LoweringVisitor(ast.NodeVisitor):
             if name not in arg_names:
                 call_positional_body.append(ir.LocalDecl(self.java_local_type(name), f'pylocal_{name}', None))
         implicit_return: ir.Statement = ir.ReturnStatement(ir.PyConstant(None))
-        if self.scope.expected_return_java_type not in {None, 'PyObject'}:
+        if self.scope.expected_return_java_type is not None and self.scope.expected_return_java_type != 'PyObject':
             implicit_return = ir.ReturnStatement(ir.CastExpr(self.scope.expected_return_java_type, ir.PyConstant(None)))
         call_positional_body.extend(ir.block_simplify([*body, implicit_return]))
         func_decls.append(ir.MethodDecl(
