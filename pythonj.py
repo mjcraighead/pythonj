@@ -1412,7 +1412,6 @@ class LoweringVisitor(ast.NodeVisitor):
         call_body: list[ir.Statement]
         if shape.posonly_params and not shape.poskw_params:
             tuple_expr = ir.CreateObject('PyTuple', [ir.Identifier('args')])
-            arg_names_tuple = ir.CreateObject('PyTuple', [ir.CreateArray('PyObject', [ir.CreateObject('PyString', [ir.StrLiteral(arg)]) for arg in arg_names])])
             if n_required == n_args:
                 call_body = [
                     ir.LocalDecl(
@@ -1421,7 +1420,7 @@ class LoweringVisitor(ast.NodeVisitor):
                         ir.MethodCall(
                             ir.Identifier('PyRuntime'),
                             'pyfunc_bind_user_exact_positional',
-                            [tuple_expr, ir.Identifier('kwargs'), ir.CreateObject('PyString', [ir.StrLiteral(py_name)]), arg_names_tuple],
+                            [tuple_expr, ir.Identifier('kwargs'), ir.PyConstant(py_name), ir.PyConstant(tuple(arg_names))],
                         ),
                     ),
                     ir.ReturnStatement(ir.MethodCall(
@@ -1449,7 +1448,7 @@ class LoweringVisitor(ast.NodeVisitor):
                         ir.MethodCall(
                             ir.Identifier('PyRuntime'),
                             'pyfunc_bind_user_min_max_positional',
-                            [tuple_expr, ir.Identifier('kwargs'), ir.CreateObject('PyString', [ir.StrLiteral(py_name)]), arg_names_tuple, ir.PyConstant(n_required)],
+                            [tuple_expr, ir.Identifier('kwargs'), ir.PyConstant(py_name), ir.PyConstant(tuple(arg_names)), ir.PyConstant(n_required)],
                         ),
                     ),
                     ir.ReturnStatement(ir.MethodCall(ir.This(), 'callPositional', call_args)),
@@ -1465,8 +1464,8 @@ class LoweringVisitor(ast.NodeVisitor):
                         [
                             ir.CreateObject('PyTuple', [ir.Identifier('args')]),
                             ir.Identifier('kwargs'),
-                            ir.CreateObject('PyString', [ir.StrLiteral(py_name)]),
-                            ir.CreateObject('PyTuple', [ir.CreateArray('PyObject', [ir.CreateObject('PyString', [ir.StrLiteral(arg)]) for arg in arg_names])]),
+                            ir.PyConstant(py_name),
+                            ir.PyConstant(tuple(arg_names)),
                             ir.PyConstant(n_required),
                             ir.PyConstant(len(shape.posonly_params)),
                         ],
