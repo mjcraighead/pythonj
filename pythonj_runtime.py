@@ -63,10 +63,9 @@ def _type_error_user_posonly_as_keyword(name, arg_names) -> TypeError:
         i += 1
     return TypeError(f"{name}() got some positional-only arguments passed as keyword arguments: {joined!r}")
 
-def bind_exact_positional(args, kwargs, kw_name, positional_name, n: int, generic_exact_args_style) -> tuple:
+def require_exact_positional(args_len: int, kwargs, kw_name, positional_name, n: int, generic_exact_args_style) -> None:
     if kwargs is not __pythonj_null__ and kwargs:
         raise TypeError(kw_name + '() takes no keyword arguments')
-    args_len: int = len(args)
     if args_len != n:
         if n == 0:
             raise TypeError(f'{positional_name}() takes no arguments ({args_len} given)')
@@ -74,7 +73,6 @@ def bind_exact_positional(args, kwargs, kw_name, positional_name, n: int, generi
             raise TypeError(f'{positional_name}() takes exactly one argument ({args_len} given)')
         suffix = '' if n == 1 else 's'
         raise TypeError(f'{positional_name} expected {n} argument{suffix}, got {args_len}')
-    return args
 
 def bind_min_max_positional(args, kwargs, kw_name, positional_name, min_args: int, max_args: int) -> tuple:
     if kwargs is not __pythonj_null__ and kwargs:

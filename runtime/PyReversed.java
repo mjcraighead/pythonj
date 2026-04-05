@@ -13,8 +13,9 @@ public final class PyReversed extends PyIter {
     }
 
     public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
-        PyTuple boundArgs = Runtime.bindExactPositional(args, kwargs, type.name(), 1, true);
-        return newObjPositional(boundArgs.items[0]);
+        PyString pyName = new PyString(type.name());
+        PyRuntime.pyfunc_require_exact_positional(new PyInt(args.length), kwargs, pyName, pyName, PyInt.singleton_1, PyBool.true_singleton);
+        return newObjPositional(args[0]);
     }
     public static PyObject newObjPositional(PyObject arg) {
         return arg.reversed();
