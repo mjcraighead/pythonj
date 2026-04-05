@@ -72,11 +72,11 @@ SYNTHETIC_PARAMS = {
         'iter': [make_param('iterable'), make_param('sentinel', NULL)],
         'next': [make_param('iterator'), make_param('default', NULL)],
     },
+    '_io.TextIOWrapper': {
+        'read': [make_param('size', -1)],
+    },
     '_json': {
         'scanstring': [make_param('string'), make_param('end')],
-    },
-    'dict': {
-        'pop': [make_param('key'), make_param('defaultValue', NULL)],
     },
     'bytearray': {
         'count': [make_param('sub'), make_param('start', None), make_param('end', None)],
@@ -98,6 +98,9 @@ SYNTHETIC_PARAMS = {
         'rindex': [make_param('sub'), make_param('start', None), make_param('end', None)],
         'startswith': [make_param('prefix'), make_param('start', None), make_param('end', None)],
     },
+    'dict': {
+        'pop': [make_param('key'), make_param('defaultValue', NULL)],
+    },
     'list': {
         'index': [make_param('value'), make_param('start', NULL), make_param('stop', NULL)],
     },
@@ -110,9 +113,6 @@ SYNTHETIC_PARAMS = {
         'rfind': [make_param('sub'), make_param('start', None), make_param('end', None)],
         'rindex': [make_param('sub'), make_param('start', None), make_param('end', None)],
         'startswith': [make_param('prefix'), make_param('start', None), make_param('end', None)],
-    },
-    '_io.TextIOWrapper': {
-        'read': [make_param('size', -1)],
     },
     'tuple': {
         'index': [make_param('value'), make_param('start', NULL), make_param('stop', NULL)],
