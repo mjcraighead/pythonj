@@ -48,6 +48,25 @@ class ScopeKind(Enum):
     MODULE = 1
     FUNCTION = 2
 
+class NameResolution(Enum):
+    LOCAL = 1
+    CELL = 2
+    GLOBAL = 3
+
+NAME_RESOLUTION_ATTR = '_pythonj_resolution'
+
+def set_name_resolution(node: ast.Name, resolution: NameResolution) -> None:
+    setattr(node, NAME_RESOLUTION_ATTR, resolution)
+
+def get_name_resolution(node: ast.Name) -> NameResolution:
+    return cast(NameResolution, getattr(node, NAME_RESOLUTION_ATTR))
+
+@dataclass(frozen=True)
+class InitialBinding:
+    name: str
+    builtin_module: Optional[str] = None
+    function_call_range: Optional[tuple[int, int]] = None
+
 @dataclass
 class ScopeInfo:
     kind: ScopeKind
@@ -56,6 +75,9 @@ class ScopeInfo:
     nonlocals: set[str]
     cell_vars: set[str]
     needs_from_outer: set[str]
+    initial_final_bindings: set[str]
+    initial_builtin_module_locals: dict[str, str]
+    initial_final_function_call_ranges: dict[str, tuple[int, int]]
 
 @dataclass(frozen=True)
 class WrapperBindingPlan:
@@ -129,6 +151,57 @@ class ScopeAnalyzer(ast.NodeVisitor):
             out.add(args.kwarg.arg)
         return out
 
+    def _get_initial_bindings(self, node: ast.stmt) -> Optional[list[InitialBinding]]:
+        if isinstance(node, ast.Import):
+            bindings: list[InitialBinding] = []
+            for alias in node.names:
+                if alias.name not in extract_spec.BUILTIN_MODULES or '.' in alias.name:
+                    return None
+                bind_name = alias.asname if alias.asname is not None else alias.name
+                bindings.append(InitialBinding(bind_name, builtin_module=alias.name))
+            return bindings
+        if isinstance(node, ast.FunctionDef):
+            if node.decorator_list:
+                return None
+            if any(default is not None for default in [*node.args.defaults, *node.args.kw_defaults]):
+                return None
+            n_required = len(node.args.args) - len(node.args.defaults)
+            n_total = len(node.args.args)
+            return [InitialBinding(node.name, function_call_range=(n_required, n_total))]
+        return None
+
+    def _collect_initial_final_bindings(self, node: ast.AST) -> tuple[set[str], dict[str, str], dict[str, tuple[int, int]]]:
+        if not isinstance(node, (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef)):
+            return (set(), {}, {})
+        prefix_bindings: dict[str, InitialBinding] = {}
+        prefix_end = 0
+        for statement in node.body:
+            bindings = self._get_initial_bindings(statement)
+            if bindings is None:
+                break
+            prefix_end += 1
+            for binding in bindings:
+                prefix_bindings[binding.name] = binding
+        if not prefix_bindings:
+            return (set(), {}, {})
+        later_writes: set[str] = set()
+        for statement in node.body[prefix_end:]:
+            self._walk_local(statement, set(), later_writes, set(), set(), [])
+        final_bindings = {name for name in prefix_bindings if name not in later_writes}
+        return (
+            final_bindings,
+            {
+                name: binding.builtin_module
+                for (name, binding) in prefix_bindings.items()
+                if name in final_bindings and binding.builtin_module is not None
+            },
+            {
+                name: binding.function_call_range
+                for (name, binding) in prefix_bindings.items()
+                if name in final_bindings and binding.function_call_range is not None
+            },
+        )
+
     def _analyze_scope_node(self, node: ast.AST) -> ScopeInfo:
         if node in self.scope_infos:
             return self.scope_infos[node]
@@ -176,17 +249,107 @@ class ScopeAnalyzer(ast.NodeVisitor):
                 elif name not in explicit_globals:
                     needs_from_outer.add(name)
         kind = ScopeKind.MODULE if isinstance(node, ast.Module) else ScopeKind.FUNCTION
-        scope_info = ScopeInfo(kind, locals, explicit_globals, nonlocals, cell_vars, needs_from_outer)
+        (initial_final_bindings,
+         initial_builtin_module_locals,
+         initial_final_function_call_ranges) = self._collect_initial_final_bindings(node)
+        scope_info = ScopeInfo(
+            kind,
+            locals,
+            explicit_globals,
+            nonlocals,
+            cell_vars,
+            needs_from_outer,
+            initial_final_bindings,
+            initial_builtin_module_locals,
+            initial_final_function_call_ranges,
+        )
         self.scope_infos[node] = scope_info
         return scope_info
 
+    def _resolve_name(self, scope_stack: list[ScopeInfo], name: str) -> NameResolution:
+        current = scope_stack[-1]
+        if current.kind == ScopeKind.MODULE:
+            return NameResolution.GLOBAL
+        if name in current.explicit_globals:
+            return NameResolution.GLOBAL
+        if name in current.locals:
+            if name in current.cell_vars:
+                return NameResolution.CELL
+            return NameResolution.LOCAL
+        for parent in reversed(scope_stack[:-1]):
+            if parent.kind == ScopeKind.FUNCTION and name in (parent.locals | parent.cell_vars):
+                return NameResolution.CELL
+        return NameResolution.GLOBAL
+
+    def _tag_names(self, node: ast.AST, scope_stack: list[ScopeInfo]) -> None:
+        if isinstance(node, ast.Name):
+            set_name_resolution(node, self._resolve_name(scope_stack, node.id))
+            return
+        if isinstance(node, ast.ExceptHandler):
+            if node.type is not None:
+                self._tag_names(node.type, scope_stack)
+            for statement in node.body:
+                self._tag_names(statement, scope_stack)
+            return
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            for decorator in node.decorator_list:
+                self._tag_names(decorator, scope_stack)
+            for default in node.args.defaults:
+                self._tag_names(default, scope_stack)
+            for default in node.args.kw_defaults:
+                if default is not None:
+                    self._tag_names(default, scope_stack)
+            if node.returns is not None:
+                self._tag_names(node.returns, scope_stack)
+            child_scope_stack = [*scope_stack, self.scope_infos[node]]
+            for statement in node.body:
+                self._tag_names(statement, child_scope_stack)
+            return
+        if isinstance(node, ast.ClassDef):
+            for base in node.bases:
+                self._tag_names(base, scope_stack)
+            for keyword in node.keywords:
+                self._tag_names(keyword.value, scope_stack)
+            for decorator in node.decorator_list:
+                self._tag_names(decorator, scope_stack)
+            child_scope_stack = [*scope_stack, self.scope_infos[node]]
+            for statement in node.body:
+                self._tag_names(statement, child_scope_stack)
+            return
+        if isinstance(node, ast.Lambda):
+            for default in node.args.defaults:
+                self._tag_names(default, scope_stack)
+            for default in node.args.kw_defaults:
+                if default is not None:
+                    self._tag_names(default, scope_stack)
+            self._tag_names(node.body, [*scope_stack, self.scope_infos[node]])
+            return
+        if isinstance(node, (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)):
+            generators = node.generators
+            self._tag_names(generators[0].iter, scope_stack)
+            child_scope_stack = [*scope_stack, self.scope_infos[node]]
+            for generator in generators:
+                self._tag_names(generator.target, child_scope_stack)
+                if generator is not generators[0]:
+                    self._tag_names(generator.iter, child_scope_stack)
+                for _if in generator.ifs:
+                    self._tag_names(_if, child_scope_stack)
+            if isinstance(node, ast.DictComp):
+                self._tag_names(node.key, child_scope_stack)
+                self._tag_names(node.value, child_scope_stack)
+            else:
+                self._tag_names(node.elt, child_scope_stack)
+            return
+        for child in ast.iter_child_nodes(node):
+            self._tag_names(child, scope_stack)
+
     def visit_Module(self, node) -> None:
         self._analyze_scope_node(node)
+        self._tag_names(node, [self.scope_infos[node]])
 
 class Scope:
     __slots__ = ('parent', 'info', 'qualname', 'free_vars', 'locals_are_fields', 'n_temps', 'used_expr_discard',
-                 'expected_return_java_type', 'known_builtin_module_locals',
-                 'known_final_top_level_function_call_ranges')
+                 'expected_return_java_type')
     parent: Optional['Scope']
     info: ScopeInfo
     qualname: Optional[str]
@@ -195,13 +358,9 @@ class Scope:
     n_temps: int
     used_expr_discard: bool
     expected_return_java_type: Optional[str]
-    known_builtin_module_locals: dict[str, str]
-    known_final_top_level_function_call_ranges: dict[str, tuple[int, int]]
 
     def __init__(self, parent: Optional['Scope'], info: ScopeInfo, qualname: Optional[str] = None,
-                 expected_return_java_type: Optional[str] = None,
-                 known_builtin_module_locals: Optional[dict[str, str]] = None,
-                 known_final_top_level_function_call_ranges: Optional[dict[str, tuple[int, int]]] = None):
+                 expected_return_java_type: Optional[str] = None):
         self.parent = parent
         self.info = info
         self.qualname = qualname
@@ -210,8 +369,6 @@ class Scope:
         self.n_temps = 0
         self.used_expr_discard = False
         self.expected_return_java_type = expected_return_java_type
-        self.known_builtin_module_locals = {} if known_builtin_module_locals is None else known_builtin_module_locals.copy()
-        self.known_final_top_level_function_call_ranges = {} if known_final_top_level_function_call_ranges is None else known_final_top_level_function_call_ranges.copy()
 
     def make_temp(self) -> str:
         """Assign and return a new temporary variable name."""
@@ -227,8 +384,7 @@ class Scope:
 class LoweringVisitor(ast.NodeVisitor):
     __slots__ = ('path', 'n_errors', 'n_functions', 'n_lambdas', 'scope', 'global_code', 'code',
                  'scope_infos', 'pool', 'break_name', 'classes', 'allow_intrinsics',
-                 'python_helper_names', 'python_helper_class', 'known_final_top_level_function_call_ranges',
-                 'final_global_function_classes')
+                 'python_helper_names', 'python_helper_class', 'final_global_function_classes')
     path: str
     n_errors: int
     n_functions: int
@@ -243,22 +399,14 @@ class LoweringVisitor(ast.NodeVisitor):
     allow_intrinsics: bool # enables special internal-only codegen features for builtins
     python_helper_names: set[str]
     python_helper_class: Optional[str]
-    known_final_top_level_function_call_ranges: dict[str, tuple[int, int]]
     final_global_function_classes: dict[str, str]
 
-    def __init__(self, path: str, scope_infos: dict[ast.AST, ScopeInfo], module_info: ScopeInfo,
-                 known_builtin_module_locals: Optional[dict[str, str]] = None,
-                 known_final_top_level_function_call_ranges: Optional[dict[str, tuple[int, int]]] = None):
+    def __init__(self, path: str, scope_infos: dict[ast.AST, ScopeInfo], module_info: ScopeInfo):
         self.path = path
         self.n_errors = 0
         self.n_functions = 0
         self.n_lambdas = 0
-        self.scope = Scope(
-            None,
-            module_info,
-            known_builtin_module_locals=known_builtin_module_locals,
-            known_final_top_level_function_call_ranges=known_final_top_level_function_call_ranges,
-        )
+        self.scope = Scope(None, module_info)
         self.global_code = [ir.LocalDecl('PyObject', 'expr_discard', None)] # XXX remove this variable if not needed
         self.code = self.global_code
         self.scope_infos = scope_infos
@@ -268,7 +416,6 @@ class LoweringVisitor(ast.NodeVisitor):
         self.allow_intrinsics = False
         self.python_helper_names = set()
         self.python_helper_class = None
-        self.known_final_top_level_function_call_ranges = {} if known_final_top_level_function_call_ranges is None else known_final_top_level_function_call_ranges.copy()
         self.final_global_function_classes = {}
 
     # Note: if n_errors > 0, the generated Java code is not expected to be valid or executable.
@@ -279,23 +426,29 @@ class LoweringVisitor(ast.NodeVisitor):
             print(f'ERROR: {self.path}:{lineno}: {msg}')
         self.n_errors += 1
 
-    def ident_expr(self, name: str) -> ir.Expr:
+    def ident_expr_by_resolution(self, name: str, resolution: NameResolution) -> ir.Expr:
         if self.allow_intrinsics and name == '__pythonj_null__':
             return ir.Null()
-        elif self.scope.info.kind == ScopeKind.FUNCTION and (name in self.scope.info.cell_vars or name in self.scope.free_vars):
+        if resolution is NameResolution.CELL:
             return ir.Field(ir.Identifier(f'pycell_{name}'), 'obj')
-        elif self.scope.info.kind == ScopeKind.FUNCTION and name in self.scope.info.locals:
+        if resolution is NameResolution.LOCAL:
             if self.scope.locals_are_fields:
                 return ir.Field(ir.This(), f'pylocal_{name}')
             return ir.Identifier(f'pylocal_{name}')
-        elif name in extract_spec.BUILTIN_TYPES:
+        if name in extract_spec.BUILTIN_TYPES:
             return ir.Field(ir.Identifier(f'{extract_spec.BUILTIN_TYPES[name]}Type'), 'singleton')
-        elif name in extract_spec.EXCEPTION_TYPES:
+        if name in extract_spec.EXCEPTION_TYPES:
             return ir.Field(ir.Identifier(f'Py{name}Type'), 'singleton')
-        elif name in extract_spec.BUILTIN_FUNCTIONS:
+        if name in extract_spec.BUILTIN_FUNCTIONS:
             return ir.Field(ir.Identifier(f'PyBuiltinFunction_{name}'), 'singleton')
-        else:
-            return ir.Identifier(f'pyglobal_{name}')
+        return ir.Identifier(f'pyglobal_{name}')
+
+    def ident_expr(self, name: str) -> ir.Expr:
+        if self.scope.info.kind == ScopeKind.FUNCTION and (name in self.scope.info.cell_vars or name in self.scope.free_vars):
+            return self.ident_expr_by_resolution(name, NameResolution.CELL)
+        if self.scope.info.kind == ScopeKind.FUNCTION and name in self.scope.info.locals:
+            return self.ident_expr_by_resolution(name, NameResolution.LOCAL)
+        return self.ident_expr_by_resolution(name, NameResolution.GLOBAL)
 
     def module_scope(self) -> Scope:
         scope = self.scope
@@ -306,33 +459,30 @@ class LoweringVisitor(ast.NodeVisitor):
     def module_binds_name(self, name: str) -> bool:
         return name in self.module_scope().info.locals
 
-    def name_resolves_to_builtin_function(self, name: str) -> bool:
-        if name not in extract_spec.BUILTIN_FUNCTIONS:
+    def name_resolves_to_builtin_function(self, node: ast.Name) -> bool:
+        if node.id not in extract_spec.BUILTIN_FUNCTIONS:
             return False
         if self.allow_intrinsics:
             return True
-        if self.scope.info.kind == ScopeKind.FUNCTION:
-            if name in self.scope.info.locals or name in self.scope.info.cell_vars or name in self.scope.free_vars:
-                return False
-        return not self.module_binds_name(name)
+        if get_name_resolution(node) is not NameResolution.GLOBAL:
+            return False
+        return not self.module_binds_name(node.id)
 
-    def name_resolves_to_builtin_type(self, name: str) -> bool:
-        if name not in extract_spec.BUILTIN_TYPES:
+    def name_resolves_to_builtin_type(self, node: ast.Name) -> bool:
+        if node.id not in extract_spec.BUILTIN_TYPES:
             return False
         if self.allow_intrinsics:
             return True
-        if self.scope.info.kind == ScopeKind.FUNCTION:
-            if name in self.scope.info.locals or name in self.scope.info.cell_vars or name in self.scope.free_vars:
-                return False
-        return not self.module_binds_name(name)
-
-    def name_resolves_to_final_top_level_function(self, name: str) -> bool:
-        if name not in self.module_scope().known_final_top_level_function_call_ranges:
+        if get_name_resolution(node) is not NameResolution.GLOBAL:
             return False
-        if self.scope.info.kind == ScopeKind.FUNCTION:
-            if name in self.scope.info.locals or name in self.scope.info.cell_vars or name in self.scope.free_vars:
-                return False
-        return True
+        return not self.module_binds_name(node.id)
+
+    def name_resolves_to_final_top_level_function(self, node: ast.Name) -> bool:
+        if node.id not in self.module_scope().info.initial_final_function_call_ranges:
+            return False
+        if node.id not in self.final_global_function_classes:
+            return False
+        return get_name_resolution(node) is NameResolution.GLOBAL
 
     def final_top_level_function_expr(self, name: str) -> ir.Expr:
         assert name in self.final_global_function_classes, name
@@ -547,10 +697,10 @@ class LoweringVisitor(ast.NodeVisitor):
 
     def visit_Call(self, node) -> ir.Expr:
         if (isinstance(node.func, ast.Name) and
-            self.name_resolves_to_final_top_level_function(node.func.id) and
+            self.name_resolves_to_final_top_level_function(node.func) and
             not node.keywords and
             not any(isinstance(arg, ast.Starred) for arg in node.args)):
-            (min_args, max_args) = self.module_scope().known_final_top_level_function_call_ranges[node.func.id]
+            (min_args, max_args) = self.module_scope().info.initial_final_function_call_ranges[node.func.id]
             if min_args <= len(node.args) <= max_args:
                 return ir.MethodCall(
                     self.final_top_level_function_expr(node.func.id),
@@ -608,7 +758,7 @@ class LoweringVisitor(ast.NodeVisitor):
                     assert len(node.args) == 3 and not node.keywords, node.args
                     return ir.MethodCall(ir.Identifier('Runtime'), 'pythonjSetAttr', [self.visit(node.args[0]), self.visit(node.args[1]), self.visit(node.args[2])])
         if (isinstance(node.func, ast.Name) and node.func.id in DIRECT_CALL_POSITIONAL_BUILTINS and
-            self.name_resolves_to_builtin_function(node.func.id) and
+            self.name_resolves_to_builtin_function(node.func) and
             not node.keywords and
             not any(isinstance(arg, ast.Starred) for arg in node.args)):
             func_name = node.func.id
@@ -621,9 +771,8 @@ class LoweringVisitor(ast.NodeVisitor):
                 )
         if (isinstance(node.func, ast.Attribute) and
             isinstance(node.func.value, ast.Name) and
-            self.scope.info.kind == ScopeKind.FUNCTION and
-            node.func.value.id in self.scope.info.locals):
-            module_name = self.scope.known_builtin_module_locals.get(node.func.value.id)
+            get_name_resolution(node.func.value) is NameResolution.LOCAL):
+            module_name = self.scope.info.initial_builtin_module_locals.get(node.func.value.id)
             if (module_name is not None and
                 node.func.attr in DIRECT_CALL_POSITIONAL_MODULE_FUNCTIONS.get(module_name, {}) and
                 not node.keywords and
@@ -659,7 +808,7 @@ class LoweringVisitor(ast.NodeVisitor):
         return ir.MethodCall(func, 'call', [args, kwargs])
 
     def visit_Name(self, node) -> ir.Expr:
-        return self.ident_expr(node.id)
+        return self.ident_expr_by_resolution(node.id, get_name_resolution(node))
 
     def visit_Subscript(self, node) -> ir.Expr:
         return ir.MethodCall(self.visit(node.value), 'getItem', [self.visit(node.slice)])
@@ -667,9 +816,8 @@ class LoweringVisitor(ast.NodeVisitor):
     def visit_Attribute(self, node) -> ir.Expr:
         attr_kind = None
         if (isinstance(node.value, ast.Name) and
-            self.scope.info.kind == ScopeKind.FUNCTION and
-            node.value.id in self.scope.info.locals):
-            module_name = self.scope.known_builtin_module_locals.get(node.value.id)
+            get_name_resolution(node.value) is NameResolution.LOCAL):
+            module_name = self.scope.info.initial_builtin_module_locals.get(node.value.id)
             if module_name is not None:
                 attr_kind = DIRECT_GETATTR_BUILTIN_MODULE_ATTRS.get(module_name, {}).get(node.attr)
                 if attr_kind is not None:
@@ -679,7 +827,7 @@ class LoweringVisitor(ast.NodeVisitor):
         if isinstance(node.value, ast.Name):
             attr_kind = DIRECT_GETATTR_BUILTIN_TYPE_ATTRS.get(node.value.id, {}).get(node.attr)
         if (isinstance(node.value, ast.Name) and
-            self.name_resolves_to_builtin_type(node.value.id) and
+            self.name_resolves_to_builtin_type(node.value) and
             attr_kind is not None):
             java_name = extract_spec.BUILTIN_TYPES[node.value.id]
             attr_expr = ir.Field(ir.Identifier(f'{java_name}Type'), f'pyattr_{node.attr}')
@@ -698,13 +846,13 @@ class LoweringVisitor(ast.NodeVisitor):
                 continue
             bind_name = alias.asname if alias.asname is not None else alias.name
             value = ir.Field(ir.Identifier(extract_spec.BUILTIN_MODULES[alias.name]), 'singleton')
-            if self.scope.known_builtin_module_locals.get(bind_name) == alias.name:
+            if self.scope.info.initial_builtin_module_locals.get(bind_name) == alias.name:
                 if self.scope.info.kind == ScopeKind.FUNCTION:
                     self.code.append(ir.LocalDecl('final PyObject', f'pylocal_{bind_name}', value))
                 else:
                     assert self.scope.info.kind == ScopeKind.MODULE, self.scope.info.kind
                 continue
-            self.code.extend(self.emit_bind(ast.Name(id=bind_name), value))
+            self.code.append(ir.AssignStatement(self.ident_expr(bind_name), value))
 
     def visit_ImportFrom(self, node) -> None:
         self.error(node.lineno, 'from ... import ... is unsupported')
@@ -999,16 +1147,13 @@ class LoweringVisitor(ast.NodeVisitor):
 
     @contextmanager
     def new_function(self, scope_info: ScopeInfo, free_vars: set[str], qualname: str,
-                     expected_return_java_type: Optional[str] = None,
-                     known_builtin_module_locals: Optional[dict[str, str]] = None) -> Iterator[None]:
+                     expected_return_java_type: Optional[str] = None) -> Iterator[None]:
         saved_scope = self.scope
         self.scope = Scope(
             self.scope,
             scope_info,
             qualname,
             expected_return_java_type,
-            known_builtin_module_locals,
-            self.module_scope().known_final_top_level_function_call_ranges,
         )
         self.scope.free_vars = free_vars.copy()
         try:
@@ -1078,7 +1223,7 @@ class LoweringVisitor(ast.NodeVisitor):
                 call_positional_body.append(ir.LocalDecl('PyObject', local_arg_name, ir.Identifier(bind_arg_name)))
         for name in sorted(self.scope.info.cell_vars - set(arg_names)):
             call_positional_body.append(ir.LocalDecl('PyCell', f'pycell_{name}', ir.CreateObject('PyCell', [ir.PyConstant(None)])))
-        for name in sorted(self.scope.info.locals - self.scope.info.cell_vars - set(arg_names) - set(self.scope.known_builtin_module_locals)):
+        for name in sorted(self.scope.info.locals - self.scope.info.cell_vars - set(arg_names) - set(self.scope.info.initial_builtin_module_locals)):
             if invisible_args or name not in arg_names:
                 call_positional_body.append(ir.LocalDecl('PyObject', f'pylocal_{name}', None))
         call_positional_body.extend(ir.block_simplify([*body, ir.ReturnStatement(ir.PyConstant(None))]))
@@ -1109,18 +1254,13 @@ class LoweringVisitor(ast.NodeVisitor):
             self.n_functions += 1
         scope_info = self.scope_infos[node]
         free_vars = self.resolve_free_vars(node.lineno, scope_info, 'nested function')
-        if self.scope.info.kind == ScopeKind.MODULE and node.name in self.known_final_top_level_function_call_ranges:
+        if self.scope.info.kind == ScopeKind.MODULE and node.name in self.scope.info.initial_final_function_call_ranges:
             assert not free_vars, (node.name, free_vars)
             self.final_global_function_classes[node.name] = java_name
         else:
             self.code.append(ir.AssignStatement(self.ident_expr(node.name), ir.CreateObject(java_name, [ir.Identifier(f'pycell_{name}') for name in sorted(free_vars)])))
 
-        with self.new_function(
-            scope_info,
-            free_vars,
-            qualname,
-            known_builtin_module_locals=get_known_top_scope_builtin_module_locals(node),
-        ):
+        with self.new_function(scope_info, free_vars, qualname):
             body = self.visit_block(node.body)
             self.add_function(qualname, java_name, arg_names, arg_defaults, body)
 
@@ -1429,7 +1569,7 @@ class LoweringVisitor(ast.NodeVisitor):
         for statement in node.body:
             if isinstance(statement, ast.Import):
                 continue
-            if isinstance(statement, ast.FunctionDef) and statement.name in self.known_final_top_level_function_call_ranges:
+            if isinstance(statement, ast.FunctionDef) and statement.name in self.scope.info.initial_final_function_call_ranges:
                 java_name = f'pyfunc_{statement.name}_{self.n_functions}'
                 self.n_functions += 1
                 self.final_global_function_classes[statement.name] = java_name
@@ -1440,7 +1580,7 @@ class LoweringVisitor(ast.NodeVisitor):
 
     def write_java(self, f: TextIO, py_name: str) -> None:
         final_import_fields = {
-            bind_name: module_name for (bind_name, module_name) in self.scope.known_builtin_module_locals.items()
+            bind_name: module_name for (bind_name, module_name) in self.scope.info.initial_builtin_module_locals.items()
             if bind_name in self.scope.info.locals
         }
         final_function_fields = {
@@ -1474,50 +1614,6 @@ def get_top_level_functions(node: ast.Module) -> dict[str, ast.FunctionDef]:
 def get_class_functions(node: ast.Module, class_name: str) -> dict[str, ast.FunctionDef]:
     classes = {x.name: x for x in node.body if isinstance(x, ast.ClassDef)}
     return {x.name: x for x in classes[class_name].body if isinstance(x, ast.FunctionDef)}
-
-def get_known_top_scope_builtin_module_locals(node: ast.AST) -> dict[str, str]:
-    if not isinstance(node, (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef)):
-        return {}
-    body = node.body
-    import_block_end = 0
-    out: dict[str, str] = {}
-    for statement in body:
-        if not isinstance(statement, ast.Import):
-            break
-        import_block_end += 1
-        for alias in statement.names:
-            if alias.name in extract_spec.BUILTIN_MODULES and '.' not in alias.name:
-                bind_name = alias.asname if alias.asname is not None else alias.name
-                out[bind_name] = alias.name
-    if not out:
-        return {}
-    later_writes: set[str] = set()
-    walker = ScopeAnalyzer()
-    for statement in body[import_block_end:]:
-        walker._walk_local(statement, set(), later_writes, set(), set(), [])
-    return {bind_name: module_name for (bind_name, module_name) in out.items() if bind_name not in later_writes}
-
-def get_known_top_level_final_function_call_ranges(node: ast.AST) -> dict[str, tuple[int, int]]:
-    if not isinstance(node, ast.Module):
-        return {}
-    prefix_end = 0
-    out: dict[str, tuple[int, int]] = {}
-    for statement in node.body:
-        if isinstance(statement, ast.Import):
-            prefix_end += 1
-            continue
-        if isinstance(statement, ast.FunctionDef):
-            prefix_end += 1
-            out[statement.name] = (len(statement.args.args) - len(statement.args.defaults), len(statement.args.args))
-            continue
-        break
-    if not out:
-        return {}
-    later_writes: set[str] = set()
-    walker = ScopeAnalyzer()
-    for statement in node.body[prefix_end:]:
-        walker._walk_local(statement, set(), later_writes, set(), set(), [])
-    return {name: call_range for (name, call_range) in out.items() if name not in later_writes}
 
 NULL = object()
 RAW_ARGS_KWARGS_BUILTINS = {'max', 'min'}
@@ -1673,7 +1769,7 @@ def emit_python_function_static(visitor: LoweringVisitor, func_name: str, arg_na
             func_code.append(ir.LocalDecl('PyObject', f'pylocal_{arg_name}', ir.Identifier(f'pyarg_{arg_name}')))
     for name in sorted(visitor.scope.info.cell_vars - set(arg_names)):
         func_code.append(ir.LocalDecl('PyCell', f'pycell_{name}', ir.CreateObject('PyCell', [ir.PyConstant(None)])))
-    for name in sorted(visitor.scope.info.locals - visitor.scope.info.cell_vars - set(arg_names) - set(visitor.scope.known_builtin_module_locals)):
+    for name in sorted(visitor.scope.info.locals - visitor.scope.info.cell_vars - set(arg_names) - set(visitor.scope.info.initial_builtin_module_locals)):
         func_code.append(ir.LocalDecl('PyObject', f'pylocal_{name}', None))
     if return_java_type == 'NoReturn':
         func_code.extend(ir.block_simplify(body))
@@ -1690,12 +1786,7 @@ def translate_python_impl_node(node: ast.Module, func: ast.FunctionDef, emitted_
                                python_helper_class: Optional[str] = None) -> tuple[list[ir.ClassDecl], ir.MethodDecl]:
     analyzer = ScopeAnalyzer()
     analyzer.visit(node)
-    visitor = LoweringVisitor(
-        display_name,
-        analyzer.scope_infos,
-        analyzer.scope_infos[node],
-        known_builtin_module_locals=get_known_top_scope_builtin_module_locals(node),
-    )
+    visitor = LoweringVisitor(display_name, analyzer.scope_infos, analyzer.scope_infos[node])
     visitor.pool = pool
     visitor.allow_intrinsics = True
     if python_helper_names is not None:
@@ -1713,8 +1804,7 @@ def translate_python_impl_node(node: ast.Module, func: ast.FunctionDef, emitted_
     scope_info = visitor.scope_infos[func]
     free_vars = visitor.resolve_free_vars(func.lineno, scope_info, role)
     assert not free_vars, (emitted_name, free_vars)
-    with visitor.new_function(scope_info, free_vars, func.name, return_java_type,
-                              known_builtin_module_locals=get_known_top_scope_builtin_module_locals(func)):
+    with visitor.new_function(scope_info, free_vars, func.name, return_java_type):
         body = visitor.visit_block(func.body)
         if return_java_type == 'NoReturn' and not ir.block_ends_control_flow(body):
             visitor.error(func.lineno, f'NoReturn helper function {func.name} may implicitly fall through')
