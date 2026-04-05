@@ -12,7 +12,7 @@ public final class PyEnumerate extends PyIter {
     }
 
     public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
-        return PyBuiltinConstructorsPythonImpl.pyfunc_enumerate__newobj(type, args, kwargs);
+        return PyRuntime.pyfunc_enumerate__newobj(type, args, kwargs);
     }
     public static PyObject newObjPositional(PyObject iterable, PyObject start) {
         long startIndex = (start != null) ? start.indexValue() : 0;

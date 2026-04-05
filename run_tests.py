@@ -29,14 +29,14 @@ def main() -> None:
         shutil.rmtree('runtime/_out')
     os.mkdir('runtime/_out')
     extract_spec.gen_spec('runtime/_out/spec.json')
-    pythonj.gen_runtime_java('runtime/_out/spec.json', 'runtime/_out/PyGenerated.java')
+    pythonj.gen_runtime_java('runtime/_out/spec.json', 'runtime/_out/PyRuntime.java')
     codegen_time = time.perf_counter() - start
     print(f'{codegen_time=:.3f}')
 
     start = time.perf_counter()
     if os.path.exists('tests/_out'):
         shutil.rmtree('tests/_out')
-    subprocess.check_call(['javac', '-d', '_out', *pythonj.RUNTIME_JAVA_FILES, '_out/PyGenerated.java'], cwd='runtime')
+    subprocess.check_call(['javac', '-d', '_out', *pythonj.RUNTIME_JAVA_FILES, '_out/PyRuntime.java'], cwd='runtime')
     os.makedirs('tests/_out', exist_ok=True)
     subprocess.check_call(['jar', '--create', '--file', 'tests/_out/pythonj.jar', '--date=1980-01-01T00:00:02Z', '-C', 'runtime/_out', '.'])
     initial_javac_time = time.perf_counter() - start

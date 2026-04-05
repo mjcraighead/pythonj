@@ -2498,14 +2498,8 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
     pool = ir.ConstantPool('PyGeneratedConstants')
     with open(java_path, 'w') as f:
         top_level_decls: list[ir.Decl] = []
-        python_runtime_helper_classes: list[ir.ClassDecl] = []
-        python_runtime_helper_methods: list[ir.Decl] = []
-        python_builtin_helper_classes: list[ir.ClassDecl] = []
-        python_builtin_helper_methods: list[ir.Decl] = []
-        python_constructor_helper_classes: list[ir.ClassDecl] = []
-        python_constructor_helper_methods: list[ir.Decl] = []
-        python_method_helper_classes: list[ir.ClassDecl] = []
-        python_method_helper_methods: list[ir.Decl] = []
+        python_helper_classes: list[ir.ClassDecl] = []
+        python_helper_methods: list[ir.Decl] = []
         for (name, obj_spec) in spec.items():
             if obj_spec['kind'] != 'type':
                 continue
@@ -2586,7 +2580,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                 ir.SuperConstructorCall([
                     ir.StrLiteral(py_name),
                     ir.Field(ir.Identifier(java_name), 'class'),
-                    ir.MethodRef('PyBuiltinConstructorsPythonImpl', f'pyfunc_{name}__newobj') if name in PYTHON_AUTHORED_CONSTRUCTOR_IMPLS else ir.MethodRef(java_name, 'newObj'),
+                    ir.MethodRef('PyRuntime', f'pyfunc_{name}__newobj') if name in PYTHON_AUTHORED_CONSTRUCTOR_IMPLS else ir.MethodRef(java_name, 'newObj'),
                 ]),
             ]))
             type_decls.append(ir.MethodDecl('public', 'java.util.Map<PyObject, PyObject>', 'getAttributes', [], [
@@ -2658,13 +2652,13 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                     method_impl_target = None
                     if kind in {'method', 'classmethod'} and method_name in PYTHON_AUTHORED_IMPLS.get(name, set()):
                         helper_name = f'{name.replace(".", "_")}__{method_name}'
-                        method_impl_target = f'PyBuiltinMethodsPythonImpl.pyfunc_{helper_name}'
+                        method_impl_target = f'PyRuntime.pyfunc_{helper_name}'
                         (helper_classes, helper_method) = translate_python_method_impl(
                             pythonj_builtins_node, name, method_name, pool,
                             class_funcs=pythonj_builtins_classes, scope_infos=builtins_analyzer.scope_infos,
                         )
-                        python_method_helper_classes.extend(helper_classes)
-                        python_method_helper_methods.append(helper_method)
+                        python_helper_classes.extend(helper_classes)
+                        python_helper_methods.append(helper_method)
                     decls: list[ir.Decl] = [
                         ir.ConstructorDecl('', method_class_name, [ctor_arg], [
                             ir.SuperConstructorCall([ir.Identifier(super_arg) if super_arg == '_self' else ir.CastExpr(java_name, ir.Identifier('_self'))]),
@@ -2734,28 +2728,23 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
             (helper_classes, helper_method) = translate_python_runtime_impl(
                 pythonj_runtime_node, func_name, pool, funcs=pythonj_runtime_funcs, scope_infos=runtime_analyzer.scope_infos,
             )
-            python_runtime_helper_classes.extend(helper_classes)
-            python_runtime_helper_methods.append(helper_method)
-        top_level_decls.extend(python_runtime_helper_classes)
-        top_level_decls.append(ir.ClassDecl('final', 'PyRuntime', None, python_runtime_helper_methods))
-
-        top_level_decls.extend(python_method_helper_classes)
-        top_level_decls.append(ir.ClassDecl('final', 'PyBuiltinMethodsPythonImpl', None, python_method_helper_methods))
+            python_helper_classes.extend(helper_classes)
+            python_helper_methods.append(helper_method)
 
         for type_name in sorted(PYTHON_AUTHORED_CONSTRUCTOR_IMPLS):
             (helper_classes, helper_method) = translate_python_constructor_impl(
                 pythonj_builtins_node, type_name, pool, funcs=pythonj_builtins_funcs, scope_infos=builtins_analyzer.scope_infos,
             )
-            python_constructor_helper_classes.extend(helper_classes)
+            python_helper_classes.extend(helper_classes)
             emitted_name = f'{type_name}__newobj_impl'
-            python_constructor_helper_methods.append(ir.MethodDecl(
+            python_helper_methods.append(ir.MethodDecl(
                 'static',
                 'PyObject',
                 f'pyfunc_{type_name}__newobj',
                 ['PyConcreteType type', 'PyObject[] args', 'PyDict kwargs'],
                 [
                     ir.ReturnStatement(ir.MethodCall(
-                        ir.Identifier('PyBuiltinConstructorsPythonImpl'),
+                        ir.Identifier('PyRuntime'),
                         f'pyfunc_{emitted_name}',
                         [
                             ir.Identifier('type'),
@@ -2769,18 +2758,16 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                     )),
                 ],
             ))
-            python_constructor_helper_methods.append(helper_method)
-        top_level_decls.extend(python_constructor_helper_classes)
-        top_level_decls.append(ir.ClassDecl('final', 'PyBuiltinConstructorsPythonImpl', None, python_constructor_helper_methods))
+            python_helper_methods.append(helper_method)
 
         for func_name in sorted(PYTHON_AUTHORED_IMPLS['builtins']):
             (helper_classes, helper_method) = translate_python_builtin_impl(
                 pythonj_builtins_node, func_name, pool, funcs=pythonj_builtins_funcs, scope_infos=builtins_analyzer.scope_infos,
             )
-            python_builtin_helper_classes.extend(helper_classes)
-            python_builtin_helper_methods.append(helper_method)
-        top_level_decls.extend(python_builtin_helper_classes)
-        top_level_decls.append(ir.ClassDecl('final', 'PyBuiltinFunctionsPythonImpl', None, python_builtin_helper_methods))
+            python_helper_classes.extend(helper_classes)
+            python_helper_methods.append(helper_method)
+        top_level_decls.extend(python_helper_classes)
+        top_level_decls.append(ir.ClassDecl('final', 'PyRuntime', None, python_helper_methods))
 
         for module_name in sorted(extract_spec.BUILTIN_MODULES):
             attrs = extract_spec.get_module_attrs(spec, module_name)
@@ -2861,7 +2848,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                 noarg_name=func_name,
             )
             if func_name in PYTHON_AUTHORED_IMPLS['builtins']:
-                call_target = 'PyBuiltinFunctionsPythonImpl'
+                call_target = 'PyRuntime'
             else:
                 call_target = 'PyBuiltinFunctionsImpl'
             if call_positional_shape is not None:
