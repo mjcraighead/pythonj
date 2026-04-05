@@ -14,7 +14,9 @@ public final class PyReversed extends PyIter {
 
     public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, type.name());
-        Runtime.requireExactArgs(args, 1, type.name());
+        if (args.length != 1) {
+            throw Runtime.raiseExactArgs(args, 1, type.name());
+        }
         return args[0].reversed();
     }
 

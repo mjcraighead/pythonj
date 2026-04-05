@@ -513,11 +513,6 @@ public final class Runtime {
             throw raiseNoKwArgs(name);
         }
     }
-    public static void requireExactArgs(PyObject[] args, int n, String name) {
-        if (args.length != n) {
-            throw raiseExactArgs(args, n, name);
-        }
-    }
     public static PyRaise raiseAtMostArgs(String name, long max, long given) {
         return PyTypeError.raiseFormat("%s() takes at most %d arguments (%d given)", name, max, given);
     }
