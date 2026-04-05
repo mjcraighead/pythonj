@@ -570,7 +570,7 @@ class bytes:
 
 class dict:
     def fromkeys(self, iterable, value):
-        ret = self()
+        ret = {}
         for key in iterable:
             ret[key] = value
         return ret
