@@ -1254,19 +1254,19 @@ class LoweringVisitor(ast.NodeVisitor):
                         ], ir.MethodCall(ir.Super(), 'delAttr', [ir.Identifier('key')])),
                     ]),
                     ir.MethodDecl('public static', 'PyObject', 'newObj', ['PyConcreteType type', 'PyObject[] args', 'PyDict kwargs'], [
-                    ir.ExprStatement(ir.MethodCall(ir.Identifier('Runtime'), 'requireNoKwArgs', [
-                        ir.Identifier('kwargs'),
-                        ir.MethodCall(ir.Identifier('type'), 'name', []),
-                    ])),
-                    ir.IfStatement(
-                        ir.BinaryOp('!=', ir.Field(ir.Identifier('args'), 'length'), ir.IntLiteral(0)),
-                        [ir.ThrowStatement(ir.MethodCall(ir.Identifier('PyTypeError'), 'raise', [
-                            ir.BinaryOp('+', ir.MethodCall(ir.Identifier('type'), 'name', []), ir.StrLiteral('() takes no arguments')),
-                        ]))],
-                        [],
-                    ),
-                    ir.ReturnStatement(ir.CreateObject(java_name, [])),
-                ]),
+                        ir.ExprStatement(ir.MethodCall(ir.Identifier('Runtime'), 'requireNoKwArgs', [
+                            ir.Identifier('kwargs'),
+                            ir.MethodCall(ir.Identifier('type'), 'name', []),
+                        ])),
+                        ir.IfStatement(
+                            ir.BinaryOp('!=', ir.Field(ir.Identifier('args'), 'length'), ir.IntLiteral(0)),
+                            [ir.ThrowStatement(ir.MethodCall(ir.Identifier('PyTypeError'), 'raise', [
+                                ir.BinaryOp('+', ir.MethodCall(ir.Identifier('type'), 'name', []), ir.StrLiteral('() takes no arguments')),
+                            ]))],
+                            [],
+                        ),
+                        ir.ReturnStatement(ir.CreateObject(java_name, [])),
+                    ]),
                 ],
             ))
         class_decls.append(ir.ClassDecl(
