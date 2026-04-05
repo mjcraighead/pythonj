@@ -283,8 +283,8 @@ final class PyBuiltinFunctionsImpl {
         }
         if (argsLength == 1) {
             return isMax
-                ? PyRuntimePythonImpl.pyfunc_max_iterable(args[0], defaultObj, keyFunc)
-                : PyRuntimePythonImpl.pyfunc_min_iterable(args[0], defaultObj, keyFunc);
+                ? PyRuntime.pyfunc_max_iterable(args[0], defaultObj, keyFunc)
+                : PyRuntime.pyfunc_min_iterable(args[0], defaultObj, keyFunc);
         } else {
             if (defaultObj != null) {
                 throw PyTypeError.raise("Cannot specify a default for " + name + "() with multiple positional arguments");

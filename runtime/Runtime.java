@@ -547,13 +547,13 @@ public final class Runtime {
         return bindExactPositional(args, kwargs, name, n, false);
     }
     public static PyTuple bindExactPositional(PyObject[] args, PyDict kwargs, String name, int n, boolean genericExactArgsStyle) {
-        return PyRuntimePythonImpl.pyfunc_bind_exact_positional(new PyTuple(args), kwargs, new PyString(name), new PyString(name), new PyInt(n), PyBool.create(genericExactArgsStyle));
+        return PyRuntime.pyfunc_bind_exact_positional(new PyTuple(args), kwargs, new PyString(name), new PyString(name), new PyInt(n), PyBool.create(genericExactArgsStyle));
     }
     public static PyTuple bindMinMaxPositional(PyObject[] args, PyDict kwargs, String name, int minArgs, int maxArgs) {
-        return PyRuntimePythonImpl.pyfunc_bind_min_max_positional(new PyTuple(args), kwargs, new PyString(name), new PyString(name), new PyInt(minArgs), new PyInt(maxArgs));
+        return PyRuntime.pyfunc_bind_min_max_positional(new PyTuple(args), kwargs, new PyString(name), new PyString(name), new PyInt(minArgs), new PyInt(maxArgs));
     }
     public static PyList bindMinMaxPositionalOrKeyword(PyObject[] args, PyDict kwargs, String name, PyTuple positionalNames, int posonlyCount, PyTuple kwonlyNames, int minArgs, int maxPositional, int maxTotal, boolean minPositionalStyle, boolean exactArgsStyle) {
-        return PyRuntimePythonImpl.pyfunc_bind_min_max_positional_or_keyword(new PyTuple(args), kwargs, new PyString(name), new PyString(name), positionalNames, new PyInt(posonlyCount), kwonlyNames, new PyInt(minArgs), new PyInt(maxPositional), new PyInt(maxTotal), PyBool.create(minPositionalStyle), PyBool.create(exactArgsStyle));
+        return PyRuntime.pyfunc_bind_min_max_positional_or_keyword(new PyTuple(args), kwargs, new PyString(name), new PyString(name), positionalNames, new PyInt(posonlyCount), kwonlyNames, new PyInt(minArgs), new PyInt(maxPositional), new PyInt(maxTotal), PyBool.create(minPositionalStyle), PyBool.create(exactArgsStyle));
     }
     public static PyDict requireKwStrings(PyDict dict) {
         for (var x: dict.items.keySet()) {

@@ -1349,7 +1349,7 @@ class LoweringVisitor(ast.NodeVisitor):
                 'PyList',
                 'boundArgs',
                 ir.MethodCall(
-                    ir.Identifier('PyRuntimePythonImpl'),
+                    ir.Identifier('PyRuntime'),
                     'pyfunc_bind_user_function',
                     [
                         ir.CreateObject('PyTuple', [ir.Identifier('args')]),
@@ -2002,7 +2002,7 @@ def translate_python_runtime_impl(node: ast.Module, func_name: str, pool: ir.Con
     funcs = get_top_level_functions(node)
     return translate_python_impl_node(
         node, funcs[func_name], func_name, f'<runtime {func_name}>', 'runtime helper', pool,
-        python_helper_names=set(funcs), python_helper_class='PyRuntimePythonImpl',
+        python_helper_names=set(funcs), python_helper_class='PyRuntime',
     )
 
 def emit_default_java_expr(default: object) -> ir.Expr:
@@ -2160,7 +2160,7 @@ def build_wrapper_binding_ir(
             'PyTuple',
             'boundArgs',
             ir.MethodCall(
-                ir.Identifier('PyRuntimePythonImpl'),
+                ir.Identifier('PyRuntime'),
                 'pyfunc_bind_exact_positional',
                 [
                     ir.CreateObject('PyTuple', [ir.Identifier('args')]),
@@ -2179,7 +2179,7 @@ def build_wrapper_binding_ir(
             'PyTuple',
             'boundArgs',
             ir.MethodCall(
-                ir.Identifier('PyRuntimePythonImpl'),
+                ir.Identifier('PyRuntime'),
                 'pyfunc_bind_min_max_positional',
                 [
                     ir.CreateObject('PyTuple', [ir.Identifier('args')]),
@@ -2207,7 +2207,7 @@ def build_wrapper_binding_ir(
             'PyList',
             'boundArgs',
             ir.MethodCall(
-                ir.Identifier('PyRuntimePythonImpl'),
+                ir.Identifier('PyRuntime'),
                 'pyfunc_bind_min_max_positional_or_keyword',
                 [
                     ir.CreateObject('PyTuple', [ir.Identifier('args')]),
@@ -2235,7 +2235,7 @@ def build_wrapper_binding_ir(
             'PyList',
             'boundArgs',
             ir.MethodCall(
-                ir.Identifier('PyRuntimePythonImpl'),
+                ir.Identifier('PyRuntime'),
                 'pyfunc_bind_min_max_positional_or_keyword',
                 [
                     ir.CreateObject('PyTuple', [ir.Identifier('args')]),
@@ -2263,7 +2263,7 @@ def build_wrapper_binding_ir(
             'PyList',
             'boundArgs',
             ir.MethodCall(
-                ir.Identifier('PyRuntimePythonImpl'),
+                ir.Identifier('PyRuntime'),
                 'pyfunc_bind_varargs_and_kwonly',
                 [
                     ir.Identifier('kwargs'),
@@ -2576,7 +2576,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
             python_runtime_helper_classes.extend(helper_classes)
             python_runtime_helper_methods.append(helper_method)
         top_level_decls.extend(python_runtime_helper_classes)
-        top_level_decls.append(ir.ClassDecl('final', 'PyRuntimePythonImpl', None, python_runtime_helper_methods))
+        top_level_decls.append(ir.ClassDecl('final', 'PyRuntime', None, python_runtime_helper_methods))
 
         top_level_decls.extend(python_method_helper_classes)
         top_level_decls.append(ir.ClassDecl('final', 'PyBuiltinMethodsPythonImpl', None, python_method_helper_methods))

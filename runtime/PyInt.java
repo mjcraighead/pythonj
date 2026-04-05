@@ -371,7 +371,7 @@ public final class PyInt extends PyObject {
     }
     @Override public double floatValue() { return value; }
     @Override public String format(String formatSpec) {
-        return PyRuntimePythonImpl.pyfunc_pyj_int_format(this, new PyString(formatSpec)).value;
+        return PyRuntime.pyfunc_pyj_int_format(this, new PyString(formatSpec)).value;
     }
     @Override public int hashCode() { return Runtime.hashRational(value, 1); }
     @Override public boolean hasIndex() { return true; }
