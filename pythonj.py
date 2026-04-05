@@ -12,6 +12,7 @@ import inspect
 import itertools
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -1986,7 +1987,13 @@ class LoweringVisitor(ast.NodeVisitor):
                 ['String[] args'],
                 ir.block_simplify([
                     ir.ExprStatement(ir.MethodCall(ir.Identifier('Runtime'), 'setArgv', [ir.StrLiteral(argv0), ir.Identifier('args')])),
-                    *self.global_code,
+                    ir.TryStatement(
+                        self.global_code,
+                        'PyRaise',
+                        'exc',
+                        [ir.ExprStatement(ir.MethodCall(ir.Identifier('Runtime'), 'handleTopLevelPyRaise', [ir.Identifier('exc')]))],
+                        [],
+                    ),
                 ]),
             ),
         ]
@@ -2939,14 +2946,15 @@ def get_java_main_class_name(source_name: str) -> str:
     return py_name
 
 def run_python_script(spec_path: str, runtime_jar_path: str, source_name: str, py_source: str,
-                      script_args: list[str], argv0: str) -> None:
+                      script_args: list[str], argv0: str, run_cwd: str, keep_temp: bool = False) -> None:
     repo_root = os.path.dirname(os.path.abspath(__file__))
     py_name = get_java_main_class_name(source_name)
     build_python = 'py' if os.name == 'nt' else 'python3'
     sep = ';' if os.name == 'nt' else ':'
     build_jar_script = os.path.join(repo_root, 'tools', 'build_jar.py')
 
-    with tempfile.TemporaryDirectory(prefix='.pythonj-run.', dir=os.path.join(repo_root, '_out')) as temp_dir:
+    temp_dir = tempfile.mkdtemp(prefix='.pythonj-run.', dir=os.path.join(repo_root, '_out'))
+    try:
         py_path = os.path.join(temp_dir, f'{py_name}.py')
         java_path = os.path.join(temp_dir, f'{py_name}.java')
         jar_path = os.path.join(temp_dir, f'{py_name}.jar')
@@ -2970,28 +2978,45 @@ def run_python_script(spec_path: str, runtime_jar_path: str, source_name: str, p
             f'{runtime_jar_path}{sep}{jar_path}',
             py_name,
             *script_args,
-        ], cwd=temp_dir)
+        ], cwd=run_cwd)
         if java_result.returncode != 0:
             raise SystemExit(java_result.returncode)
+    finally:
+        if keep_temp:
+            print(f'pythonj temp dir kept at {temp_dir}', file=sys.stderr)
+        else:
+            shutil.rmtree(temp_dir)
 
 def main() -> None:
     repo_root = os.path.dirname(os.path.abspath(__file__))
     python = 'py' if os.name == 'nt' else 'python3'
     spec_path = os.path.join(repo_root, '_out', 'spec.json')
     runtime_jar_path = os.path.join(repo_root, '_out', 'pythonj.jar')
-    if len(sys.argv) >= 2 and sys.argv[1] not in {'gen-runtime', 'translate'}:
-        py_path = sys.argv[1]
-        script_args = sys.argv[2:]
-        if len(sys.argv) < 2:
-            raise SystemExit('usage: pythonj.py [gen-runtime|translate|script.py|-] [script args ...]')
+    direct_args = sys.argv[1:]
+    keep_temp = False
+    if direct_args and direct_args[0] == '--keep-temp':
+        keep_temp = True
+        direct_args = direct_args[1:]
+    if direct_args and direct_args[0] not in {'gen-runtime', 'translate'}:
+        mode = direct_args[0]
+        if mode == '-c':
+            if len(direct_args) < 2:
+                raise SystemExit('usage: pythonj.py [--keep-temp] [gen-runtime|translate|script.py|-|-c code] [script args ...]')
+            py_source = direct_args[1]
+            script_args = direct_args[2:]
+        else:
+            py_path = mode
+            script_args = direct_args[1:]
         make_result = subprocess.run([python, 'make.py', '_out/pythonj.jar'], cwd=repo_root)
         if make_result.returncode != 0:
             raise SystemExit(make_result.returncode)
-        if py_path == '-':
-            run_python_script(spec_path, runtime_jar_path, '<stdin>', sys.stdin.read(), script_args, '-')
+        if mode == '-':
+            run_python_script(spec_path, runtime_jar_path, '<stdin>', sys.stdin.read(), script_args, '-', os.getcwd(), keep_temp=keep_temp)
+        elif mode == '-c':
+            run_python_script(spec_path, runtime_jar_path, '<string>', py_source, script_args, '-c', os.getcwd(), keep_temp=keep_temp)
         else:
             with open(py_path, encoding='utf-8') as f:
-                run_python_script(spec_path, runtime_jar_path, py_path, f.read(), script_args, py_path)
+                run_python_script(spec_path, runtime_jar_path, py_path, f.read(), script_args, py_path, os.getcwd(), keep_temp=keep_temp)
         return
 
     parser = argparse.ArgumentParser()

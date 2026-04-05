@@ -254,6 +254,27 @@ final class PyZlibError extends PyException {
     }
 }
 
+final class PySystemExit extends PyBaseException {
+    PySystemExit(PyObject... _args) { super(_args); }
+    @Override public PyConcreteType type() { return PySystemExitType.singleton; }
+
+    public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
+        Runtime.requireNoKwArgs(kwargs, type.name());
+        return new PySystemExit(args);
+    }
+
+    static PyObject pymember_code(PyObject obj) {
+        PyObject[] args = ((PySystemExit)obj).args;
+        if (args.length == 0) {
+            return PyNone.singleton;
+        }
+        if (args.length == 1) {
+            return args[0];
+        }
+        return new PyTuple(args);
+    }
+}
+
 final class PyRaise extends RuntimeException {
     final PyBaseException exc;
     PyRaise(PyBaseException _exc) { exc = _exc; }

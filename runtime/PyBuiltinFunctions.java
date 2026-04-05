@@ -152,6 +152,9 @@ final class PyBuiltinFunctionsImpl {
         a.setItem(b, c);
         return PyNone.singleton;
     }
+    static PyObject pyfunc_sys_exit(PyObject status) {
+        throw new PyRaise(new PySystemExit((status == PyNone.singleton) ? new PyObject[0] : new PyObject[] {status}));
+    }
     static PyBytes pyfunc_zlib_compress(PyObject arg, PyObject level, PyObject wbits) {
         byte[] in = Runtime.requireBytesLikeBuffer(arg);
         if ((level.indexValue() != -1) || (wbits.indexValue() != 15)) {

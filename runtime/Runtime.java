@@ -138,6 +138,7 @@ final class PySysModule extends PyModule {
     @Override public PyObject getAttr(String key) {
         switch (key) {
             case "argv": return Runtime.sysArgv;
+            case "exit": return PySysFunction_exit.singleton;
             default: return super.getAttr(key);
         }
     }
@@ -543,9 +544,26 @@ public final class Runtime {
     public static PyRaise raiseExpr(PyObject exc) {
         if (exc instanceof PyBaseException baseExc) {
             return new PyRaise(baseExc);
+        } else if ((exc instanceof PyConcreteType excType) && PyBaseException.class.isAssignableFrom(excType.instanceClass)) {
+            return new PyRaise((PyBaseException)excType.call(new PyObject[0], null));
         } else {
             throw PyTypeError.raise("exceptions must derive from BaseException");
         }
+    }
+    public static void handleTopLevelPyRaise(PyRaise exc) {
+        PyBaseException baseExc = exc.exc;
+        if (baseExc instanceof PySystemExit) {
+            PyObject code = PySystemExit.pymember_code(baseExc);
+            if (code == PyNone.singleton) {
+                System.exit(0);
+            } else if (code.hasIndex()) {
+                System.exit((int)code.indexValue());
+            } else {
+                System.err.println(code.str());
+                System.exit(1);
+            }
+        }
+        throw exc;
     }
     public static PyRaise raiseNamedReadOnlyAttr(PyType owner, String key) {
         return PyAttributeError.raise(PyString.reprOf(owner.name()) + " object attribute " + PyString.reprOf(key) + " is read-only");

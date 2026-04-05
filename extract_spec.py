@@ -30,7 +30,7 @@ BUILTIN_MODULE_ATTRS = {
     '_operator': {'contains', 'delitem', 'getitem', 'index', 'setitem'},
     '_types': {'BuiltinFunctionType', 'ClassMethodDescriptorType', 'FunctionType', 'GetSetDescriptorType', 'MappingProxyType', 'MemberDescriptorType', 'MethodDescriptorType', 'NoneType'},
     'math': {'copysign', 'isfinite', 'isinf', 'isnan'},
-    'sys': set(),
+    'sys': {'exit'},
     'zlib': {'compress', 'decompress', 'error'},
 }
 BUILTIN_TYPES = {
@@ -56,7 +56,7 @@ BUILTIN_TYPES = {
 
 EXCEPTION_TYPES = {
     'ArithmeticError', 'AssertionError', 'AttributeError', 'BaseException', 'Exception', 'IndexError',
-    'KeyError', 'LookupError', 'OverflowError', 'RuntimeError', 'StopIteration', 'TypeError', 'ValueError', 'ZeroDivisionError',
+    'KeyError', 'LookupError', 'OverflowError', 'RuntimeError', 'StopIteration', 'SystemExit', 'TypeError', 'ValueError', 'ZeroDivisionError',
 }
 
 NULL = object()
