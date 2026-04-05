@@ -2168,6 +2168,7 @@ def build_wrapper_binding_ir(
                     ir.PyConstant(exact_kw_name),
                     ir.PyConstant(exact_positional_name),
                     ir.PyConstant(plan.exact_positional_arity),
+                    ir.PyConstant(False),
                 ],
             ),
         ))

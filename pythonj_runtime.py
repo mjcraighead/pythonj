@@ -50,16 +50,17 @@ def _type_error_user_missing_args(name, missing_arg_names) -> TypeError:
         i += 1
     return TypeError(ret)
 
-def bind_exact_positional(args, kwargs, kw_name, positional_name, n) -> tuple:
+def bind_exact_positional(args, kwargs, kw_name, positional_name, n, generic_exact_args_style) -> tuple:
     if kwargs is not __pythonj_null__ and kwargs:
         raise TypeError(kw_name + '() takes no keyword arguments')
     args_len = __pythonj_len__(args)
     if args_len != n:
         if n == 0:
             raise TypeError(f'{positional_name}() takes no arguments ({args_len} given)')
-        if n == 1:
+        if n == 1 and not generic_exact_args_style:
             raise TypeError(f'{positional_name}() takes exactly one argument ({args_len} given)')
-        raise TypeError(f'{positional_name} expected {n} arguments, got {args_len}')
+        suffix = '' if n == 1 else 's'
+        raise TypeError(f'{positional_name} expected {n} argument{suffix}, got {args_len}')
     return args
 
 def bind_min_max_positional(args, kwargs, kw_name, positional_name, min_args, max_args) -> tuple:

@@ -544,7 +544,10 @@ public final class Runtime {
         return PyTypeError.raiseFormat("%s expected at most %d argument%s, got %d", name, max, (max == 1) ? "" : "s", args.length);
     }
     public static PyTuple bindExactPositional(PyObject[] args, PyDict kwargs, String name, int n) {
-        return PyRuntimePythonImpl.pyfunc_bind_exact_positional(new PyTuple(args), kwargs, new PyString(name), new PyString(name), new PyInt(n));
+        return bindExactPositional(args, kwargs, name, n, false);
+    }
+    public static PyTuple bindExactPositional(PyObject[] args, PyDict kwargs, String name, int n, boolean genericExactArgsStyle) {
+        return PyRuntimePythonImpl.pyfunc_bind_exact_positional(new PyTuple(args), kwargs, new PyString(name), new PyString(name), new PyInt(n), PyBool.create(genericExactArgsStyle));
     }
     public static PyTuple bindMinMaxPositional(PyObject[] args, PyDict kwargs, String name, int minArgs, int maxArgs) {
         return PyRuntimePythonImpl.pyfunc_bind_min_max_positional(new PyTuple(args), kwargs, new PyString(name), new PyString(name), new PyInt(minArgs), new PyInt(maxArgs));
