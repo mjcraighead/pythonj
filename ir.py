@@ -620,10 +620,8 @@ def while_statement(cond: Expr, body: list[Statement]) -> Iterator[Statement]:
 class IndentedWriter:
     f: TextIO
     indent: int
-    def write(self, line: str) -> None:
-        if not line: # write a blank line
-            self.f.write('\n')
-            return
+
+    def _write(self, line: str) -> None:
         if line.startswith('}'):
             self.indent -= 1
         self.f.write('    ' * self.indent)
@@ -632,13 +630,6 @@ class IndentedWriter:
         if line.endswith('{'):
             self.indent += 1
 
-def emit_statements(writer: IndentedWriter, statements: list[Statement], pool: ConstantPool) -> None:
-    for line in block_emit_java(statements, pool):
-        writer.write(line)
-
-def emit_statement(writer: IndentedWriter, statement: Statement, pool: ConstantPool) -> None:
-    emit_statements(writer, [statement], pool)
-
-def emit_decl(writer: IndentedWriter, decl: Decl, pool: ConstantPool) -> None:
-    for line in decl.emit_java(pool):
-        writer.write(line)
+    def emit_decl(self, decl: Decl, pool: ConstantPool) -> None:
+        for line in decl.emit_java(pool):
+            self._write(line)
