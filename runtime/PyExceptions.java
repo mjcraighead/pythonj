@@ -86,7 +86,16 @@ final class PyAttributeError extends PyException {
 
     public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
         if ((kwargs != null) && kwargs.boolValue()) {
-            throw new IllegalArgumentException("AttributeError() does not accept kwargs");
+            long kwargsLen = kwargs.items.size();
+            if (kwargsLen > 2) {
+                throw Runtime.raiseAtMostKwArgs(type.name(), 2, args.length, kwargsLen);
+            }
+            for (var x: kwargs.items.entrySet()) {
+                PyString kw = (PyString)x.getKey();
+                if (!kw.value.equals("name") && !kw.value.equals("obj")) {
+                    throw Runtime.raiseUnexpectedKwArg(type.name(), kw.value);
+                }
+            }
         }
         return new PyAttributeError(args);
     }

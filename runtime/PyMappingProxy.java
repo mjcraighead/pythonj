@@ -12,14 +12,29 @@ public final class PyMappingProxy extends PyObject {
     }
 
     public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
-        Runtime.requireNoKwArgs(kwargs, type.name()); // XXX Should support a kwarg of 'mapping'
-        if (args.length < 1) {
-            throw PyTypeError.raise("mappingproxy() missing required argument 'mapping' (pos 1)");
-        }
+        PyObject mapping = (args.length >= 1) ? args[0] : null;
         if (args.length > 1) {
             throw PyTypeError.raiseFormat("mappingproxy() takes at most 1 argument (%d given)", args.length);
         }
-        return newObjPositional(args[0]);
+        if ((kwargs != null) && kwargs.boolValue()) {
+            long kwargsLen = kwargs.items.size();
+            if (kwargsLen > 1) {
+                throw Runtime.raiseAtMostKwArgs(type.name(), 1, args.length, kwargsLen);
+            }
+            for (var x: kwargs.items.entrySet()) {
+                PyString kw = (PyString)x.getKey();
+                if (kw.value.equals("mapping")) {
+                    if (mapping != null) {
+                        throw PyTypeError.raiseFormat("%s() got multiple values for argument %s", type.name(), kw.repr());
+                    }
+                    mapping = x.getValue();
+                }
+            }
+        }
+        if (mapping == null) {
+            throw PyTypeError.raise("mappingproxy() missing required argument 'mapping' (pos 1)");
+        }
+        return newObjPositional(mapping);
     }
     public static PyObject newObjPositional(PyObject arg) {
         if (arg instanceof PyDict dict) {

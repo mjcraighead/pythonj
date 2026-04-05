@@ -37,7 +37,7 @@ public final class PyRange extends PyObject {
 
     PyRange(long _start, long _stop, long _step) {
         if (_step == 0) {
-            throw new IllegalArgumentException("range() step cannot be zero");
+            throw PyValueError.raise("range() arg 3 must not be zero");
         }
         start = _start;
         stop = _stop;

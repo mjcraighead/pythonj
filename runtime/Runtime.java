@@ -2,6 +2,9 @@
 // Copyright (c) 2012-2026 Matt Craighead
 // SPDX-License-Identifier: MIT
 
+import java.nio.charset.Charset;
+import java.nio.charset.IllegalCharsetNameException;
+import java.nio.charset.UnsupportedCharsetException;
 import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -186,11 +189,9 @@ final class PyZlibModule extends PyModule {
 
 abstract class PyType extends PyTruthyObject {
     public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
+        Runtime.requireNoKwArgs(kwargs, type.name());
         if (args.length != 1) {
-            throw new IllegalArgumentException("type() takes 1 argument");
-        }
-        if ((kwargs != null) && kwargs.boolValue()) {
-            throw new IllegalArgumentException("type() does not accept kwargs");
+            throw Runtime.raiseExactArgs(args, 1, type.name());
         }
         return args[0].type();
     }
@@ -518,7 +519,7 @@ public final class Runtime {
     }
     public static PyRaise raiseAtMostKwArgs(String name, long max, long argsLength, long kwargsLen) {
         if (argsLength == 0) {
-            return PyTypeError.raiseFormat("%s() takes at most %d keyword arguments (%d given)", name, max, kwargsLen);
+            return PyTypeError.raiseFormat("%s() takes at most %d keyword argument%s (%d given)", name, max, (max == 1) ? "" : "s", kwargsLen);
         } else {
             return raiseAtMostArgs(name, max, argsLength + kwargsLen);
         }
@@ -632,6 +633,26 @@ public final class Runtime {
             return argByteArray.value;
         } else {
             throw PyTypeError.raise("a bytes-like object is required, not " + PyString.reprOf(arg.type().name()));
+        }
+    }
+    public static String requireEncodingArg(PyObject encodingObj, String name) {
+        if (!(encodingObj instanceof PyString encodingStr)) {
+            String typeName = (encodingObj == PyNone.singleton) ? "None" : encodingObj.type().name();
+            throw PyTypeError.raiseFormat("%s() argument 'encoding' must be str, not %s", name, typeName);
+        }
+        return encodingStr.value;
+    }
+    public static void requireErrorsArg(PyObject errorsObj, String name) {
+        if (!(errorsObj instanceof PyString)) {
+            String typeName = (errorsObj == PyNone.singleton) ? "None" : errorsObj.type().name();
+            throw PyTypeError.raiseFormat("%s() argument 'errors' must be str, not %s", name, typeName);
+        }
+    }
+    public static Charset lookupCharset(String encoding) {
+        try {
+            return Charset.forName(encoding);
+        } catch (IllegalCharsetNameException | UnsupportedCharsetException e) {
+            throw PyValueError.raise("unknown encoding: " + encoding);
         }
     }
     public static String getDefaultTextEncoding() {

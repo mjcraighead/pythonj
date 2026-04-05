@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: MIT
 
 import java.io.ByteArrayOutputStream;
+import java.nio.charset.Charset;
 import java.util.Arrays;
 
 public final class PyByteArray extends PyObject {
@@ -29,18 +30,30 @@ public final class PyByteArray extends PyObject {
     PyByteArray(byte[] _value) { value = _value; }
 
     public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
-        if (args.length > 1) {
-            throw new IllegalArgumentException("bytearray() takes 0 or 1 arguments");
-        }
-        if ((kwargs != null) && kwargs.boolValue()) {
-            throw new IllegalArgumentException("bytearray() does not accept kwargs");
+        Runtime.requireNoKwArgs(kwargs, type.name());
+        if (args.length > 3) {
+            throw Runtime.raiseMaxArgs(args, 3, type.name());
         }
         if (args.length == 0) {
             return new PyByteArray(new byte[0]);
         }
         PyObject arg = args[0];
+        if (args.length >= 2) {
+            if (!(arg instanceof PyString argStr)) {
+                throw PyTypeError.raise("encoding without a string argument");
+            }
+            String encoding = Runtime.requireEncodingArg(args[1], type.name());
+            if (args.length == 3) {
+                Runtime.requireErrorsArg(args[2], type.name());
+            }
+            Charset charset = Runtime.lookupCharset(encoding);
+            return new PyByteArray(argStr.value.getBytes(charset));
+        }
         if (arg.hasIndex()) {
             return new PyByteArray(new byte[Math.toIntExact(arg.indexValue())]);
+        }
+        if (arg instanceof PyString) {
+            throw PyTypeError.raise("string argument without an encoding");
         }
         var b = new ByteArrayOutputStream();
         var iter = arg.iter();

@@ -14,13 +14,91 @@ public final class PyInt extends PyObject {
 
     PyInt(long _value) { value = _value; }
 
+    private static PyInt parseStringLike(String s, String repr, long baseObj) {
+        long base = baseObj;
+        int i = 0;
+        int end = s.length();
+        while ((i < end) && (s.charAt(i) == ' ')) {
+            i++;
+        }
+        while ((end > i) && (s.charAt(end - 1) == ' ')) {
+            end--;
+        }
+        long sign = 1;
+        if (i < end) {
+            if (s.charAt(i) == '-') {
+                i++;
+                sign = -1;
+            } else if (s.charAt(i) == '+') {
+                i++;
+            }
+        }
+        if (i == end) {
+            throw PyValueError.raiseFormat("invalid literal for int() with base %d: %s", base, repr);
+        }
+        if ((end - i) >= 2 && (s.charAt(i) == '0')) {
+            char prefix = s.charAt(i + 1);
+            if ((prefix == 'x') || (prefix == 'X')) {
+                if ((base == 0) || (base == 16)) {
+                    base = 16;
+                    i += 2;
+                }
+            } else if ((prefix == 'o') || (prefix == 'O')) {
+                if ((base == 0) || (base == 8)) {
+                    base = 8;
+                    i += 2;
+                }
+            } else if ((prefix == 'b') || (prefix == 'B')) {
+                if ((base == 0) || (base == 2)) {
+                    base = 2;
+                    i += 2;
+                }
+            }
+        }
+        if (base == 0) {
+            base = 10;
+            if ((i < end) && (s.charAt(i) == '0') && ((end - i) > 1)) {
+                boolean allZero = true;
+                for (int j = i + 1; j < end; j++) {
+                    if (s.charAt(j) != '0') {
+                        allZero = false;
+                        break;
+                    }
+                }
+                if (!allZero) {
+                    throw PyValueError.raiseFormat("invalid literal for int() with base %d: %s", baseObj, repr);
+                }
+            }
+        }
+        if (i == end) {
+            throw PyValueError.raiseFormat("invalid literal for int() with base %d: %s", base, repr);
+        }
+        long value = 0;
+        while (i < end) {
+            long digit;
+            char c = s.charAt(i++);
+            if ((c >= '0') && (c <= '9')) {
+                digit = c - '0';
+            } else if ((c >= 'a') && (c <= 'z')) {
+                digit = c - 'a' + 10;
+            } else if ((c >= 'A') && (c <= 'Z')) {
+                digit = c - 'A' + 10;
+            } else {
+                digit = 36;
+            }
+            if (digit >= base) {
+                throw PyValueError.raiseFormat("invalid literal for int() with base %d: %s", base, repr);
+            }
+            value = Math.addExact(Math.multiplyExact(value, base), digit);
+        }
+        return new PyInt(Math.multiplyExact(sign, value));
+    }
+
     public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
         if (args.length > 2) {
             throw Runtime.raiseMaxArgs(args, 2, type.name());
         }
-        if ((kwargs != null) && kwargs.boolValue()) {
-            throw new IllegalArgumentException("int() does not accept kwargs");
-        }
+        Runtime.requireNoKwArgs(kwargs, type.name());
         if (args.length == 0) {
             return PyInt.singleton_0;
         }
@@ -40,48 +118,24 @@ public final class PyInt extends PyObject {
                 if ((base < 0) || (base == 1) || (base > 36)) {
                     throw PyValueError.raise("int() base must be >= 2 and <= 36, or 0");
                 }
-                if (base == 0) {
-                    throw new UnsupportedOperationException("base 0 unsupported at present");
-                }
             }
-            String s = arg0Str.value;
-            int i = 0;
-            while ((i < s.length()) && (s.charAt(i) == ' ')) {
-                i++;
-            }
-            long sign = 1;
-            if (i < s.length()) {
-                if (s.charAt(i) == '-') {
-                    i++;
-                    sign = -1;
-                } else if (s.charAt(i) == '+') {
-                    i++;
-                }
-            }
-            if (i == s.length()) {
-                throw PyValueError.raiseFormat("invalid literal for int() with base %d: %s", base, PyString.reprOf(s));
-            }
-            long value = 0;
-            while (i < s.length()) {
-                long digit;
-                char c = s.charAt(i++);
-                if ((c >= '0') && (c <= '9')) {
-                    digit = c - '0';
-                } else if ((c >= 'a') && (c <= 'z')) {
-                    digit = c - 'a' + 10;
-                } else if ((c >= 'A') && (c <= 'Z')) {
-                    digit = c - 'A' + 10;
-                } else {
-                    digit = 36; // always invalid
-                }
-                if (digit >= base) {
-                    throw PyValueError.raiseFormat("invalid literal for int() with base %d: %s", base, PyString.reprOf(s));
-                }
-                value = Math.addExact(Math.multiplyExact(value, base), digit);
-            }
-            return new PyInt(Math.multiplyExact(sign, value));
+            return parseStringLike(arg0Str.value, PyString.reprOf(arg0Str.value), base);
         }
-        throw new UnsupportedOperationException("don't know how to handle argument to int()");
+        if (arg0 instanceof PyBytes arg0Bytes) {
+            long base = (args.length > 1) ? args[1].indexValue() : 10;
+            if ((base < 0) || (base == 1) || (base > 36)) {
+                throw PyValueError.raise("int() base must be >= 2 and <= 36, or 0");
+            }
+            return parseStringLike(new String(arg0Bytes.value), arg0.repr(), base);
+        }
+        if (arg0 instanceof PyByteArray arg0ByteArray) {
+            long base = (args.length > 1) ? args[1].indexValue() : 10;
+            if ((base < 0) || (base == 1) || (base > 36)) {
+                throw PyValueError.raise("int() base must be >= 2 and <= 36, or 0");
+            }
+            return parseStringLike(new String(arg0ByteArray.value), arg0.repr(), base);
+        }
+        throw PyTypeError.raise("int() argument must be a string, a bytes-like object or a number, not " + PyString.reprOf(arg0.type().name()));
     }
 
     public static long floorDiv(long lhs, long rhs) {

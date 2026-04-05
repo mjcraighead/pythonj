@@ -2,6 +2,7 @@
 // Copyright (c) 2012-2026 Matt Craighead
 // SPDX-License-Identifier: MIT
 
+import java.nio.charset.Charset;
 import java.util.Locale;
 
 public final class PyString extends PyObject {
@@ -32,16 +33,61 @@ public final class PyString extends PyObject {
     PyString(String _value) { value = _value; }
 
     public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
-        if (args.length > 1) {
-            throw new IllegalArgumentException("str() takes 0 or 1 arguments");
+        if (args.length > 3) {
+            throw Runtime.raiseMaxArgs(args, 3, type.name());
         }
+        PyObject object = (args.length >= 1) ? args[0] : null;
+        PyObject encoding = (args.length >= 2) ? args[1] : null;
+        PyObject errors = (args.length >= 3) ? args[2] : null;
         if ((kwargs != null) && kwargs.boolValue()) {
-            throw new IllegalArgumentException("str() does not accept kwargs");
+            long totalKwArgs = kwargs.items.size();
+            if (totalKwArgs > 3) {
+                throw Runtime.raiseAtMostKwArgs(type.name(), 3, args.length, totalKwArgs);
+            }
+            for (var x: kwargs.items.entrySet()) {
+                PyString kw = (PyString)x.getKey();
+                if (kw.value.equals("object")) {
+                    if (object != null) {
+                        throw PyTypeError.raiseFormat("%s() got multiple values for argument %s", type.name(), kw.repr());
+                    }
+                    object = x.getValue();
+                } else if (kw.value.equals("encoding")) {
+                    if (encoding != null) {
+                        throw PyTypeError.raiseFormat("%s() got multiple values for argument %s", type.name(), kw.repr());
+                    }
+                    encoding = x.getValue();
+                } else if (kw.value.equals("errors")) {
+                    if (errors != null) {
+                        throw PyTypeError.raiseFormat("%s() got multiple values for argument %s", type.name(), kw.repr());
+                    }
+                    errors = x.getValue();
+                } else {
+                    throw Runtime.raiseUnexpectedKwArg(type.name(), kw.value);
+                }
+            }
         }
-        if (args.length == 1) {
-            return new PyString(args[0].str());
+        if (object == null) {
+            return PyString.empty_singleton;
         }
-        return PyString.empty_singleton;
+        if ((encoding == null) && (errors == null)) {
+            return new PyString(object.str());
+        }
+        if (errors != null) {
+            Runtime.requireErrorsArg(errors, type.name());
+        }
+        if (object instanceof PyString) {
+            throw PyTypeError.raise("decoding str is not supported");
+        }
+        if ((encoding == null) && (errors != null)) {
+            throw PyTypeError.raise("decoding to str: need a bytes-like object, " + object.type().name() + " found");
+        }
+        if ((object instanceof PyBytes objectBytes) || (object instanceof PyByteArray)) {
+            byte[] buffer = Runtime.requireBytesLikeBuffer(object);
+            String encodingStr = Runtime.requireEncodingArg(encoding, type.name());
+            Charset charset = Runtime.lookupCharset(encodingStr);
+            return new PyString(new String(buffer, charset));
+        }
+        throw PyTypeError.raise("decoding to str: need a bytes-like object, " + object.type().name() + " found");
     }
 
     @Override public PyString add(PyObject rhs) {

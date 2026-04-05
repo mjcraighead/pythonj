@@ -338,7 +338,7 @@ public final class PyDict extends PyObject {
 
     public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
         if (args.length > 1) {
-            throw new IllegalArgumentException("dict() takes 0 or 1 arguments");
+            throw Runtime.raiseMaxArgs(args, 1, type.name());
         }
         var ret = new PyDict();
         ret.updateImpl(args, kwargs);
