@@ -95,9 +95,9 @@ public final class PyInt extends PyObject {
     }
 
     public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
-        PyTuple boundArgs = Runtime.bindMinMaxPositional(args, kwargs, type.name(), 0, 2);
-        PyObject arg0 = (boundArgs.items.length >= 1) ? boundArgs.items[0] : null;
-        PyObject arg1 = (boundArgs.items.length >= 2) ? boundArgs.items[1] : null;
+        Runtime.requireMinMaxPositional(args, kwargs, type.name(), 0, 2);
+        PyObject arg0 = (args.length >= 1) ? args[0] : null;
+        PyObject arg1 = (args.length >= 2) ? args[1] : null;
         return newObjPositional(arg0, arg1);
     }
     public static PyObject newObjPositional(PyObject arg0, PyObject arg1) {

@@ -2544,21 +2544,19 @@ def build_wrapper_binding_ir(
         bind_args = [ir.ArrayAccess(ir.Identifier('args'), ir.IntLiteral(i)) for i in range(plan.exact_positional_arity)]
     elif plan.mode == 'posonly_min_max':
         assert plan.posonly_min_max_range is not None
-        statements.append(ir.LocalDecl('PyTuple', 'boundArgs',
-            ir.MethodCall(ir.Identifier('Runtime'), 'bindMinMaxPositional', [
-                ir.Identifier('args'),
-                ir.Identifier('kwargs'),
-                ir.PyConstant(posonly_kw_name),
-                ir.PyConstant(posonly_positional_name),
-                ir.PyConstant(plan.posonly_min_max_range[0]),
-                ir.PyConstant(plan.posonly_min_max_range[1]),
-            ]),
-        ))
-        bind_args = [ir.ArrayAccess(ir.Field(ir.Identifier('boundArgs'), 'items'), ir.IntLiteral(i)) for i in range(plan.posonly_min_max_range[0])]
+        statements.append(ir.ExprStatement(ir.MethodCall(ir.Identifier('PyRuntime'), 'pyfunc_require_min_max_positional', [
+            ir.CreateObject('PyInt', [ir.Field(ir.Identifier('args'), 'length')]),
+            ir.Identifier('kwargs'),
+            ir.PyConstant(posonly_kw_name),
+            ir.PyConstant(posonly_positional_name),
+            ir.PyConstant(plan.posonly_min_max_range[0]),
+            ir.PyConstant(plan.posonly_min_max_range[1]),
+        ])))
+        bind_args = [ir.ArrayAccess(ir.Identifier('args'), ir.IntLiteral(i)) for i in range(plan.posonly_min_max_range[0])]
         bind_args.extend(
             ir.CondOp(
-                ir.BinaryOp('>', ir.Field(ir.Field(ir.Identifier('boundArgs'), 'items'), 'length'), ir.IntLiteral(i)),
-                ir.ArrayAccess(ir.Field(ir.Identifier('boundArgs'), 'items'), ir.IntLiteral(i)),
+                ir.BinaryOp('>', ir.Field(ir.Identifier('args'), 'length'), ir.IntLiteral(i)),
+                ir.ArrayAccess(ir.Identifier('args'), ir.IntLiteral(i)),
                 ir.Null(),
             )
             for i in range(plan.posonly_min_max_range[0], plan.posonly_min_max_range[1])

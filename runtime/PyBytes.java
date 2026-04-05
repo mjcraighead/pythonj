@@ -32,10 +32,10 @@ public final class PyBytes extends PyObject {
     PyBytes(byte[] _value) { value = _value; }
 
     public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
-        PyTuple boundArgs = Runtime.bindMinMaxPositional(args, kwargs, type.name(), 0, 3);
-        PyObject arg = (boundArgs.items.length >= 1) ? boundArgs.items[0] : null;
-        PyObject encoding = (boundArgs.items.length >= 2) ? boundArgs.items[1] : null;
-        PyObject errors = (boundArgs.items.length >= 3) ? boundArgs.items[2] : null;
+        Runtime.requireMinMaxPositional(args, kwargs, type.name(), 0, 3);
+        PyObject arg = (args.length >= 1) ? args[0] : null;
+        PyObject encoding = (args.length >= 2) ? args[1] : null;
+        PyObject errors = (args.length >= 3) ? args[2] : null;
         return newObjPositional(arg, encoding, errors);
     }
     public static PyObject newObjPositional(PyObject arg, PyObject encodingObj, PyObject errorsObj) {

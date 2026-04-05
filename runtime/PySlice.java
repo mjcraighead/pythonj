@@ -12,10 +12,10 @@ public final class PySlice extends PyTruthyObject {
     }
 
     public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
-        PyTuple boundArgs = Runtime.bindMinMaxPositional(args, kwargs, type.name(), 1, 3);
-        PyObject arg0 = boundArgs.items[0];
-        PyObject arg1 = (boundArgs.items.length >= 2) ? boundArgs.items[1] : null;
-        PyObject arg2 = (boundArgs.items.length >= 3) ? boundArgs.items[2] : null;
+        Runtime.requireMinMaxPositional(args, kwargs, type.name(), 1, 3);
+        PyObject arg0 = args[0];
+        PyObject arg1 = (args.length >= 2) ? args[1] : null;
+        PyObject arg2 = (args.length >= 3) ? args[2] : null;
         return newObjPositional(arg0, arg1, arg2);
     }
     public static PyObject newObjPositional(PyObject arg0, PyObject arg1, PyObject arg2) {

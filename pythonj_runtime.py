@@ -74,17 +74,15 @@ def require_exact_positional(args_len: int, kwargs, kw_name, positional_name, n:
         suffix = '' if n == 1 else 's'
         raise TypeError(f'{positional_name} expected {n} argument{suffix}, got {args_len}')
 
-def bind_min_max_positional(args, kwargs, kw_name, positional_name, min_args: int, max_args: int) -> tuple:
+def require_min_max_positional(args_len: int, kwargs, kw_name, positional_name, min_args: int, max_args: int) -> None:
     if kwargs is not __pythonj_null__ and kwargs:
         raise TypeError(kw_name + '() takes no keyword arguments')
-    args_len: int = len(args)
     if args_len < min_args:
         suffix = '' if min_args == 1 else 's'
         raise TypeError(f'{positional_name} expected at least {min_args} argument{suffix}, got {args_len}')
     if args_len > max_args:
         suffix = '' if max_args == 1 else 's'
         raise TypeError(f'{positional_name} expected at most {max_args} argument{suffix}, got {args_len}')
-    return args
 
 def bind_min_max_positional_or_keyword(args, kwargs: dict, kw_name, positional_name, positional_names, posonly_count: int, kwonly_names, min_args: int, max_positional: int, max_total: int, min_positional_style, exact_args_style) -> list:
     args_len: int = len(args)

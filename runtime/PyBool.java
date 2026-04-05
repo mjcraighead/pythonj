@@ -17,8 +17,8 @@ public final class PyBool extends PyObject {
     }
 
     public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
-        PyTuple boundArgs = Runtime.bindMinMaxPositional(args, kwargs, type.name(), 0, 1);
-        return newObjPositional((boundArgs.items.length == 1) ? boundArgs.items[0] : null);
+        Runtime.requireMinMaxPositional(args, kwargs, type.name(), 0, 1);
+        return newObjPositional((args.length == 1) ? args[0] : null);
     }
     public static PyObject newObjPositional(PyObject arg) {
         return (arg != null) ? PyBool.create(arg.boolValue()) : PyBool.false_singleton;

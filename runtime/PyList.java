@@ -39,8 +39,8 @@ public final class PyList extends PyObject {
     }
 
     public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
-        PyTuple boundArgs = Runtime.bindMinMaxPositional(args, kwargs, type.name(), 0, 1);
-        return newObjPositional((boundArgs.items.length == 0) ? null : boundArgs.items[0]);
+        Runtime.requireMinMaxPositional(args, kwargs, type.name(), 0, 1);
+        return newObjPositional((args.length == 0) ? null : args[0]);
     }
     public static PyObject newObjPositional(PyObject arg) {
         var ret = new PyList();
