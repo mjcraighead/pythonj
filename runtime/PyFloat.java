@@ -422,6 +422,19 @@ public final class PyFloat extends PyObject {
             double coreValue = Math.abs(value);
             if (typeChar.equals("%")) {
                 coreValue *= 100.0;
+                if (!Double.isFinite(coreValue)) {
+                    magnitudeText = ((PyString)PyRuntime.pyfunc_pyj_float_special_text(new PyFloat(coreValue), new PyString(typeChar))).value;
+                    return PyRuntime.pyfunc_pyj_float_finish_text(
+                        new PyString(fill),
+                        alignObj,
+                        new PyString(sign),
+                        PyBool.create(z),
+                        widthObj,
+                        groupingObj,
+                        this,
+                        new PyString(magnitudeText)
+                    ).value;
+                }
             }
             String coreTypeChar = typeChar.equals("%") ? "f" : typeChar;
             PyObject coreGroupingObj = groupingObj;
