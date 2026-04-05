@@ -1715,7 +1715,7 @@ def type_error_throw(msg: str) -> ir.ThrowStatement:
 
 def build_arg_binding_ir(shape: SignatureShape, positional_name: str,
                          kw_name: str, kw_overflow_args_length: str,
-                         noarg_name: str) -> tuple[list[ir.Statement], list[ir.Expr]]:
+                         noarg_name: str, preserve_optional_nulls: bool = False) -> tuple[list[ir.Statement], list[ir.Expr]]:
     args_length = ir.Identifier('argsLength')
     args = ir.Identifier('args')
     kwargs = ir.Identifier('kwargs')
@@ -1839,12 +1839,15 @@ def build_arg_binding_ir(shape: SignatureShape, positional_name: str,
                 [],
             ))
             for i in range(min_args, max_args):
+                default_expr = emit_default_java_expr(shape.posonly_params[i].default)
+                if preserve_optional_nulls:
+                    default_expr = ir.Null()
                 statements.append(ir.LocalDecl(
                     'PyObject', f'arg{i}',
                     ir.CondOp(
                         ir.BinaryOp('>=', args_length, ir.IntLiteral(i + 1)),
                         ir.ArrayAccess(args, ir.IntLiteral(i)),
-                        emit_default_java_expr(shape.posonly_params[i].default),
+                        default_expr,
                     ),
                 ))
                 bind_args.append(ir.Identifier(f'arg{i}'))
@@ -1987,7 +1990,7 @@ def build_arg_binding_ir(shape: SignatureShape, positional_name: str,
     bind_args: list[ir.Expr] = []
     for param in shape.params:
         local = ir.Identifier(java_param_names[param.name])
-        if param.default is not inspect.Parameter.empty:
+        if param.default is not inspect.Parameter.empty and not preserve_optional_nulls:
             statements.append(ir.IfStatement(
                 ir.BinaryOp('==', local, ir.Null()),
                 [ir.AssignStatement(local, emit_default_java_expr(param.default))],
@@ -2282,11 +2285,14 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                             method_name,
                             'argsLength',
                             f'{py_name}.{method_name}',
+                            preserve_optional_nulls=call_positional_shape is not None,
                         )
                         call_body.extend(bind_statements)
                     if kind == 'classmethod':
                         bind_args = [ir.Identifier('self')] + bind_args
-                    if method_impl_target is not None:
+                    if call_positional_shape is not None:
+                        call_expr = ir.MethodCall(ir.This(), 'call_positional', bind_args[1:] if kind == 'classmethod' else bind_args)
+                    elif method_impl_target is not None:
                         call_args = bind_args if kind == 'classmethod' else [ir.Identifier('self'), *bind_args]
                         call_expr = ir.MethodCall(
                             ir.Identifier(method_impl_target.rsplit('.', 1)[0]),
@@ -2383,11 +2389,14 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                         full_name,
                         'argsLength',
                         full_name,
+                        preserve_optional_nulls=call_positional_shape is not None,
                     )
                     call_body.extend(bind_statements)
-                call_body.append(ir.ReturnStatement(
-                    ir.MethodCall(ir.Identifier('PyBuiltinFunctionsImpl'), f'pyfunc_{module_name.removeprefix("_")}_{func_name}', bind_args)
-                ))
+                if call_positional_shape is not None:
+                    call_expr = ir.MethodCall(ir.This(), 'call_positional', bind_args)
+                else:
+                    call_expr = ir.MethodCall(ir.Identifier('PyBuiltinFunctionsImpl'), f'pyfunc_{module_name.removeprefix("_")}_{func_name}', bind_args)
+                call_body.append(ir.ReturnStatement(call_expr))
                 decls.append(ir.MethodDecl('public', 'PyObject', 'call', ['PyObject[] args', 'PyDict kwargs'], call_body))
                 if call_positional_shape is not None:
                     (call_positional_method_args, call_positional_statements, call_positional_args) = build_call_positional_ir(call_positional_shape)
@@ -2480,15 +2489,18 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                     kw_name,
                     kw_overflow_args_length,
                     func_name,
+                    preserve_optional_nulls=call_positional_shape is not None,
                 )
                 call_body.extend(bind_statements)
             if func_name in PYTHON_AUTHORED_IMPLS['builtins']:
                 call_target = 'PyBuiltinFunctionsPythonImpl'
             else:
                 call_target = 'PyBuiltinFunctionsImpl'
-            call_body.append(ir.ReturnStatement(
-                ir.MethodCall(ir.Identifier(call_target), f'pyfunc_{func_name}', bind_args)
-            ))
+            if call_positional_shape is not None:
+                call_expr = ir.MethodCall(ir.This(), 'call_positional', bind_args)
+            else:
+                call_expr = ir.MethodCall(ir.Identifier(call_target), f'pyfunc_{func_name}', bind_args)
+            call_body.append(ir.ReturnStatement(call_expr))
             decls.append(ir.MethodDecl('public', 'PyObject', 'call', ['PyObject[] args', 'PyDict kwargs'], call_body))
             if call_positional_shape is not None:
                 (call_positional_method_args, call_positional_statements, call_positional_args) = build_call_positional_ir(call_positional_shape)
