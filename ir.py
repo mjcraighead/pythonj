@@ -40,11 +40,15 @@ def _java_string_literal(s: str) -> str:
             o = ord(c)
             if 0xD800 <= o <= 0xDFFF:
                 raise ValueError(f'cannot encode string containing surrogate code points: {s!r}')
-            assert o <= 0xFFFF, o # XXX implement surrogate pairs for astral chars
             if 0x20 <= o <= 0x7E: # safe ASCII
                 out.append(c)
-            else:
+            elif o <= 0xFFFF:
                 out.append(f'\\u{o:04x}')
+            else:
+                o -= 0x10000
+                high = 0xD800 | (o >> 10)
+                low = 0xDC00 | (o & 0x3FF)
+                out.append(f'\\u{high:04x}\\u{low:04x}')
     out.append('"')
     return ''.join(out)
 
