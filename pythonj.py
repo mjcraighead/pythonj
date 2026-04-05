@@ -2049,6 +2049,22 @@ def get_posonly_min_max_call_range(params: Optional[list[inspect.Parameter]]) ->
         return None
     return (min_args, max_args)
 
+def supports_python_bind_min_max_positional_or_keyword(shape: Optional[SignatureShape]) -> bool:
+    if shape is None:
+        return False
+    if not shape.poskw_params:
+        return False
+    if shape.kwonly_params:
+        return False
+    if shape.vararg_param is not None:
+        return False
+    if shape.varkw_param is not None:
+        return False
+    call_range = get_positional_call_range(shape.params)
+    if call_range is None:
+        return False
+    return call_range[0] != call_range[1]
+
 def build_call_positional_ir(shape: SignatureShape) -> tuple[list[str], list[ir.Statement], list[ir.Expr]]:
     assert not shape.kwonly_params, shape
     assert shape.vararg_param is None, shape
@@ -2278,6 +2294,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                     bind_name = f'{py_name}.{method_name}'
                     exact_positional_arity = None if kwarg_params is None else get_exact_positional_call_arity(kwarg_params.params)
                     posonly_min_max_range = None if kwarg_params is None else get_posonly_min_max_call_range(kwarg_params.params)
+                    poskw_min_max_python_bind = supports_python_bind_min_max_positional_or_keyword(kwarg_params)
                     call_positional_shape = kwarg_params if (kwarg_params is not None and get_positional_call_range(kwarg_params.params) is not None) else None
                     call_body: list[ir.Statement] = []
                     if exact_positional_arity is not None:
@@ -2323,6 +2340,40 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                         ))
                         bind_args = [ir.ArrayAccess(ir.Field(ir.Identifier('boundArgs'), 'items'), ir.IntLiteral(i)) for i in range(posonly_min_max_range[0])]
                         for i in range(posonly_min_max_range[0], posonly_min_max_range[1]):
+                            bind_args.append(
+                                ir.CondOp(
+                                    ir.BinaryOp('>', ir.Field(ir.Field(ir.Identifier('boundArgs'), 'items'), 'length'), ir.IntLiteral(i)),
+                                    ir.ArrayAccess(ir.Field(ir.Identifier('boundArgs'), 'items'), ir.IntLiteral(i)),
+                                    ir.Null(),
+                                )
+                            )
+                    elif poskw_min_max_python_bind:
+                        assert kwarg_params is not None
+                        (min_args, max_args) = cast(tuple[int, int], get_positional_call_range(kwarg_params.params))
+                        call_body.append(ir.LocalDecl(
+                            'PyTuple',
+                            'boundArgs',
+                            ir.CastExpr(
+                                'PyTuple',
+                                ir.MethodCall(
+                                    ir.Identifier('PyRuntimePythonImpl'),
+                                    'pyfunc_bind_min_max_positional_or_keyword',
+                                    [
+                                        ir.CreateObject('PyTuple', [ir.Identifier('args')]),
+                                        ir.Identifier('kwargs'),
+                                        ir.PyConstant(method_name),
+                                        ir.PyConstant(method_name),
+                                        ir.PyConstant(len(kwarg_params.posonly_params)),
+                                        ir.PyConstant(tuple(param.name for param in kwarg_params.poskw_params)),
+                                        ir.PyConstant(min_args),
+                                        ir.PyConstant(max_args),
+                                        ir.PyConstant(kwarg_params.missing_style == 'min_positional'),
+                                    ],
+                                ),
+                            ),
+                        ))
+                        bind_args = [ir.ArrayAccess(ir.Field(ir.Identifier('boundArgs'), 'items'), ir.IntLiteral(i)) for i in range(min_args)]
+                        for i in range(min_args, max_args):
                             bind_args.append(
                                 ir.CondOp(
                                     ir.BinaryOp('>', ir.Field(ir.Field(ir.Identifier('boundArgs'), 'items'), 'length'), ir.IntLiteral(i)),
@@ -2425,6 +2476,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                     kwarg_params = None
                 else:
                     kwarg_params = analyze_params(params)
+                poskw_min_max_python_bind = supports_python_bind_min_max_positional_or_keyword(kwarg_params)
                 call_positional_shape = kwarg_params if (kwarg_params is not None and get_positional_call_range(kwarg_params.params) is not None) else None
                 decls: list[ir.Decl] = [
                     ir.FieldDecl('public static final', f'{module_func_prefix}Function_{func_name}', 'singleton', ir.CreateObject(f'{module_func_prefix}Function_{func_name}', [])),
@@ -2436,6 +2488,40 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                 full_name = f'{module_name}.{func_name}'
                 if kwarg_params is None:
                     bind_args = [ir.Identifier('args'), ir.Identifier('kwargs')]
+                elif poskw_min_max_python_bind:
+                    assert kwarg_params is not None
+                    (min_args, max_args) = cast(tuple[int, int], get_positional_call_range(kwarg_params.params))
+                    call_body.append(ir.LocalDecl(
+                        'PyTuple',
+                        'boundArgs',
+                        ir.CastExpr(
+                            'PyTuple',
+                            ir.MethodCall(
+                                ir.Identifier('PyRuntimePythonImpl'),
+                                'pyfunc_bind_min_max_positional_or_keyword',
+                                [
+                                    ir.CreateObject('PyTuple', [ir.Identifier('args')]),
+                                    ir.Identifier('kwargs'),
+                                    ir.PyConstant(func_name),
+                                    ir.PyConstant(func_name),
+                                    ir.PyConstant(len(kwarg_params.posonly_params)),
+                                    ir.PyConstant(tuple(param.name for param in kwarg_params.poskw_params)),
+                                    ir.PyConstant(min_args),
+                                    ir.PyConstant(max_args),
+                                    ir.PyConstant(kwarg_params.missing_style == 'min_positional'),
+                                ],
+                            ),
+                        ),
+                    ))
+                    bind_args = [ir.ArrayAccess(ir.Field(ir.Identifier('boundArgs'), 'items'), ir.IntLiteral(i)) for i in range(min_args)]
+                    for i in range(min_args, max_args):
+                        bind_args.append(
+                            ir.CondOp(
+                                ir.BinaryOp('>', ir.Field(ir.Field(ir.Identifier('boundArgs'), 'items'), 'length'), ir.IntLiteral(i)),
+                                ir.ArrayAccess(ir.Field(ir.Identifier('boundArgs'), 'items'), ir.IntLiteral(i)),
+                                ir.Null(),
+                            )
+                        )
                 else:
                     (bind_statements, bind_args) = build_arg_binding_ir(
                         kwarg_params, func_name,
@@ -2476,6 +2562,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                 kwarg_params = analyze_params(params)
             exact_positional_arity = None if params is None else get_exact_positional_call_arity(params)
             posonly_min_max_range = None if params is None else get_posonly_min_max_call_range(params)
+            poskw_min_max_python_bind = supports_python_bind_min_max_positional_or_keyword(kwarg_params)
             call_positional_shape = kwarg_params if (kwarg_params is not None and get_positional_call_range(kwarg_params.params) is not None) else None
             decls: list[ir.Decl] = [
                 ir.FieldDecl('public static final', f'PyBuiltinFunction_{func_name}', 'singleton', ir.CreateObject(f'PyBuiltinFunction_{func_name}', [])),
@@ -2527,6 +2614,40 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                 ))
                 bind_args = [ir.ArrayAccess(ir.Field(ir.Identifier('boundArgs'), 'items'), ir.IntLiteral(i)) for i in range(posonly_min_max_range[0])]
                 for i in range(posonly_min_max_range[0], posonly_min_max_range[1]):
+                    bind_args.append(
+                        ir.CondOp(
+                            ir.BinaryOp('>', ir.Field(ir.Field(ir.Identifier('boundArgs'), 'items'), 'length'), ir.IntLiteral(i)),
+                            ir.ArrayAccess(ir.Field(ir.Identifier('boundArgs'), 'items'), ir.IntLiteral(i)),
+                            ir.Null(),
+                        )
+                    )
+            elif poskw_min_max_python_bind:
+                assert kwarg_params is not None
+                (min_args, max_args) = cast(tuple[int, int], get_positional_call_range(kwarg_params.params))
+                call_body.append(ir.LocalDecl(
+                    'PyTuple',
+                    'boundArgs',
+                    ir.CastExpr(
+                        'PyTuple',
+                        ir.MethodCall(
+                            ir.Identifier('PyRuntimePythonImpl'),
+                            'pyfunc_bind_min_max_positional_or_keyword',
+                            [
+                                ir.CreateObject('PyTuple', [ir.Identifier('args')]),
+                                ir.Identifier('kwargs'),
+                                ir.PyConstant(func_name),
+                                ir.PyConstant(func_name),
+                                ir.PyConstant(len(kwarg_params.posonly_params)),
+                                ir.PyConstant(tuple(param.name for param in kwarg_params.poskw_params)),
+                                ir.PyConstant(min_args),
+                                ir.PyConstant(max_args),
+                                ir.PyConstant(kwarg_params.missing_style == 'min_positional'),
+                            ],
+                        ),
+                    ),
+                ))
+                bind_args = [ir.ArrayAccess(ir.Field(ir.Identifier('boundArgs'), 'items'), ir.IntLiteral(i)) for i in range(min_args)]
+                for i in range(min_args, max_args):
                     bind_args.append(
                         ir.CondOp(
                             ir.BinaryOp('>', ir.Field(ir.Field(ir.Identifier('boundArgs'), 'items'), 'length'), ir.IntLiteral(i)),
