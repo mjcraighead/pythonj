@@ -13,17 +13,22 @@ public final class PySlice extends PyTruthyObject {
 
     public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, type.name());
-        Runtime.requireMinArgs(args, 1, type.name());
-        Runtime.requireMaxArgs(args, 3, type.name());
+        int argsLength = args.length;
+        if (argsLength < 1) {
+            throw Runtime.raiseMinArgs(args, 1, type.name());
+        }
+        if (argsLength > 3) {
+            throw Runtime.raiseMaxArgs(args, 3, type.name());
+        }
         PyObject start = PyNone.singleton;
         PyObject stop;
         PyObject step = PyNone.singleton;
-        if (args.length == 1) {
+        if (argsLength == 1) {
             stop = args[0];
         } else {
             start = args[0];
             stop = args[1];
-            if (args.length == 3) {
+            if (argsLength == 3) {
                 step = args[2];
             }
         }
