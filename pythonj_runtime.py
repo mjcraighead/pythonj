@@ -32,6 +32,22 @@ def _type_error_at_most_keyword_args(kw_name, max_total, kwargs_len) -> TypeErro
 def _type_error_unexpected_kw_arg(kw_name, unknown_kw) -> TypeError:
     return TypeError(f'{kw_name}() got an unexpected keyword argument {unknown_kw!r}')
 
+def _type_error_user_missing_args(name, missing_arg_names) -> TypeError:
+    missing = __pythonj_len__(missing_arg_names)
+    ret = f'{name}() missing {missing} required positional argument'
+    if missing != 1:
+        ret += 's'
+    ret += ':'
+    i = 0
+    while i < missing:
+        ret += f' {missing_arg_names[i]!r}'
+        if missing >= 3 and i != missing - 1:
+            ret += ','
+        if i == missing - 2:
+            ret += ' and'
+        i += 1
+    return TypeError(ret)
+
 def bind_exact_positional(args, kwargs, kw_name, positional_name, n) -> tuple:
     if kwargs is not __pythonj_null__ and kwargs:
         raise TypeError(kw_name + '() takes no keyword arguments')
@@ -117,6 +133,51 @@ def bind_varargs_and_kwonly(kwargs, kw_name, kwonly_names) -> list:
                 bound_args[kwonly_index] = value
             else:
                 raise _type_error_unexpected_kw_arg(kw_name, kw)
+
+    return bound_args
+
+def bind_user_function(args, kwargs, name, arg_names, n_required) -> list:
+    args_len = __pythonj_len__(args)
+    n_args = __pythonj_len__(arg_names)
+    bound_args = _init_bound_args(args, n_args)
+
+    if kwargs is __pythonj_null__ or not kwargs:
+        if n_required == n_args:
+            if args_len > n_args:
+                arg_s = '' if n_args == 1 else 's'
+                was_were = 'was' if args_len == 1 else 'were'
+                raise TypeError(f'{name}() takes {n_args} positional argument{arg_s} but {args_len} {was_were} given')
+            if args_len != n_args:
+                raise _type_error_user_missing_args(name, arg_names[args_len:n_args])
+        else:
+            if args_len < n_required:
+                raise _type_error_user_missing_args(name, arg_names[args_len:n_required])
+            if args_len > n_args:
+                was_were = 'was' if args_len == 1 else 'were'
+                raise TypeError(f'{name}() takes from {n_required} to {n_args} positional arguments but {args_len} {was_were} given')
+        return bound_args
+
+    for (kw, value) in kwargs.items():
+        matched_index = _find_name(arg_names, kw, 0)
+        if matched_index is __pythonj_null__:
+            raise _type_error_unexpected_kw_arg(name, kw)
+        if bound_args[matched_index] is not __pythonj_null__:
+            raise TypeError(f'{name}() got multiple values for argument {arg_names[matched_index]!r}')
+        bound_args[matched_index] = value
+
+    if n_args != 0:
+        if args_len > n_args:
+            was_were = 'was' if args_len == 1 else 'were'
+            raise TypeError(f'{name}() takes from {n_required} to {n_args} positional arguments but {args_len} {was_were} given')
+        if n_required != 0:
+            missing_arg_names = []
+            i = 0
+            while i < n_required:
+                if bound_args[i] is __pythonj_null__:
+                    missing_arg_names.append(arg_names[i])
+                i += 1
+            if missing_arg_names:
+                raise _type_error_user_missing_args(name, missing_arg_names)
 
     return bound_args
 

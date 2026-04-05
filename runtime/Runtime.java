@@ -518,46 +518,6 @@ public final class Runtime {
             throw raiseExactArgs(args, n, name);
         }
     }
-    private static PyRaise raiseUserMissingArgsImpl(String name, Collection<String> missingArgNames) {
-        int missing = missingArgNames.size();
-        StringBuilder s = new StringBuilder(String.format("%s() missing %d required positional argument%s:", name, missing, (missing == 1) ? "" : "s"));
-        int i = 0;
-        for (var argName: missingArgNames) {
-            i++;
-            s.append(" '").append(argName).append("'");
-            if ((missing >= 3) && (i != missing)) {
-                s.append(",");
-            }
-            if (i == missing - 1) {
-                s.append(" and");
-            }
-        }
-        return PyTypeError.raise(s.toString());
-    }
-    public static PyRaise raiseUserExactArgs(PyObject[] args, int n, String name, String... argNames) {
-        if (args.length > n) {
-            return PyTypeError.raiseFormat("%s() takes %d positional argument%s but %d %s given",
-                name, n, (n == 1) ? "" : "s", args.length, (args.length == 1) ? "was" : "were");
-        } else {
-            return raiseUserMissingArgsImpl(name, Arrays.asList(argNames).subList(args.length, n));
-        }
-    }
-    public static PyRaise raiseUserMissingArgs(int nBound, String name, String... argNames) {
-        return raiseUserMissingArgsImpl(name, Arrays.asList(argNames).subList(nBound, argNames.length));
-    }
-    public static PyRaise raiseUserMissingKwArgs(String name, PyObject[] boundArgs, String... argNames) {
-        var missingArgNames = new ArrayList<String>();
-        for (int i = 0; i < argNames.length; i++) {
-            if (boundArgs[i] == null) {
-                missingArgNames.add(argNames[i]);
-            }
-        }
-        return raiseUserMissingArgsImpl(name, missingArgNames);
-    }
-    public static PyRaise raiseUserFromToArgs(PyObject[] args, int min, int max, String name) {
-        return PyTypeError.raiseFormat("%s() takes from %d to %d positional arguments but %d %s given",
-            name, min, max, args.length, (args.length == 1) ? "was" : "were");
-    }
     public static PyRaise raiseAtMostArgs(String name, long max, long given) {
         return PyTypeError.raiseFormat("%s() takes at most %d arguments (%d given)", name, max, given);
     }
@@ -570,9 +530,6 @@ public final class Runtime {
     }
     public static PyRaise raiseUnexpectedKwArg(String name, String kwName) {
         return PyTypeError.raiseFormat("%s() got an unexpected keyword argument %s", name, PyString.reprOf(kwName));
-    }
-    public static PyRaise raiseMultipleValues(String name, String argName) {
-        return PyTypeError.raiseFormat("%s() got multiple values for argument %s", name, PyString.reprOf(argName));
     }
     public static PyRaise raiseExpr(PyObject exc) {
         if (exc instanceof PyBaseException baseExc) {

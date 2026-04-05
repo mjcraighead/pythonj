@@ -1033,150 +1033,27 @@ class LoweringVisitor(ast.NodeVisitor):
             ),
         ]
         call_body: list[ir.Statement] = [
-            ir.LocalDecl('int', 'argsLength', ir.Field(ir.Identifier('args'), 'length')),
-            *(ir.LocalDecl(
-                'PyObject',
-                name,
-                ir.CondOp(
-                    ir.BinaryOp('>=', ir.Identifier('argsLength'), ir.IntLiteral(i + 1)),
-                    ir.ArrayAccess(ir.Identifier('args'), ir.IntLiteral(i)),
-                    ir.Null(),
-                ),
-            ) for (i, name) in enumerate(bind_arg_names)),
-        ]
-        no_kwargs_body: list[ir.Statement] = []
-        if n_required == n_args:
-            no_kwargs_body.append(ir.IfStatement(
-                ir.BinaryOp('!=', ir.Identifier('argsLength'), ir.IntLiteral(n_args)),
-                [ir.ThrowStatement(ir.MethodCall(ir.Identifier('Runtime'), 'raiseUserExactArgs', [
-                    ir.Identifier('args'),
-                    ir.IntLiteral(n_args),
-                    ir.StrLiteral(py_name),
-                    *(ir.StrLiteral(arg) for arg in arg_names),
-                ]))],
-                [],
-            ))
-        else:
-            if n_required != 0:
-                no_kwargs_body.append(ir.IfStatement(
-                    ir.BinaryOp('<', ir.Identifier('argsLength'), ir.IntLiteral(n_required)),
-                    [ir.ThrowStatement(ir.MethodCall(ir.Identifier('Runtime'), 'raiseUserMissingArgs', [
-                        ir.Identifier('argsLength'),
-                        ir.StrLiteral(py_name),
-                        *(ir.StrLiteral(arg) for arg in arg_names[:n_required]),
-                    ]))],
-                    [],
-                ))
-            no_kwargs_body.append(ir.IfStatement(
-                ir.BinaryOp('>', ir.Identifier('argsLength'), ir.IntLiteral(n_args)),
-                [ir.ThrowStatement(ir.MethodCall(ir.Identifier('Runtime'), 'raiseUserFromToArgs', [
-                    ir.Identifier('args'),
-                    ir.IntLiteral(n_required),
-                    ir.IntLiteral(n_args),
-                    ir.StrLiteral(py_name),
-                ]))],
-                [],
-            ))
-        kw_else_body: list[ir.Statement]
-        if arg_names:
-            kw_conditions_and_bodies: list[tuple[ir.Expr, list[ir.Statement]]] = []
-            for (i, arg_name) in enumerate(arg_names):
-                kw_conditions_and_bodies.append((
-                    ir.MethodCall(ir.Identifier('kwName'), 'equals', [ir.StrLiteral(arg_name)]),
+            ir.LocalDecl(
+                'PyList',
+                'boundArgs',
+                ir.MethodCall(
+                    ir.Identifier('PyRuntimePythonImpl'),
+                    'pyfunc_bind_user_function',
                     [
-                        ir.IfStatement(
-                            ir.BinaryOp('!=', ir.Identifier(bind_arg_names[i]), ir.Null()),
-                            [ir.ThrowStatement(ir.MethodCall(ir.Identifier('Runtime'), 'raiseMultipleValues', [
-                                ir.StrLiteral(py_name),
-                                ir.StrLiteral(arg_name),
-                            ]))],
-                            [],
-                        ),
-                        ir.AssignStatement(ir.Identifier(bind_arg_names[i]), ir.Identifier('kwValue')),
-                    ],
-                ))
-            kw_else_body = [
-                ir.ThrowStatement(ir.MethodCall(ir.Identifier('Runtime'), 'raiseUnexpectedKwArg', [
-                    ir.StrLiteral(py_name),
-                    ir.Identifier('kwName'),
-                ])),
-            ]
-            kwargs_body: list[ir.Statement] = [
-                ir.ForEachStatement(
-                    'var',
-                    'x',
-                    ir.MethodCall(ir.Field(ir.Identifier('kwargs'), 'items'), 'entrySet', []),
-                    [
-                        ir.LocalDecl('String', 'kwName', ir.Field(ir.CastExpr('PyString', ir.MethodCall(ir.Identifier('x'), 'getKey', [])), 'value')),
-                        ir.LocalDecl('PyObject', 'kwValue', ir.MethodCall(ir.Identifier('x'), 'getValue', [])),
-                        ir.if_chain(kw_conditions_and_bodies, kw_else_body),
+                        ir.CreateObject('PyTuple', [ir.Identifier('args')]),
+                        ir.Identifier('kwargs'),
+                        ir.CreateObject('PyString', [ir.StrLiteral(py_name)]),
+                        ir.CreateObject('PyTuple', [ir.CreateArray('PyObject', [ir.CreateObject('PyString', [ir.StrLiteral(arg)]) for arg in arg_names])]),
+                        ir.PyConstant(n_required),
                     ],
                 ),
-            ]
-        else:
-            kwargs_body = [
-                ir.LocalDecl(
-                    'String',
-                    'kwName',
-                    ir.Field(
-                        ir.CastExpr(
-                            'PyString',
-                            ir.MethodCall(
-                                ir.MethodCall(
-                                    ir.MethodCall(
-                                        ir.Field(ir.Identifier('kwargs'), 'items'),
-                                        'keySet',
-                                        [],
-                                    ),
-                                    'iterator',
-                                    [],
-                                ),
-                                'next',
-                                [],
-                            ),
-                        ),
-                        'value',
-                    ),
-                ),
-                ir.ThrowStatement(ir.MethodCall(ir.Identifier('Runtime'), 'raiseUnexpectedKwArg', [
-                    ir.StrLiteral(py_name),
-                    ir.Identifier('kwName'),
-                ])),
-            ]
-        if n_args != 0:
-            kwargs_body.append(ir.IfStatement(
-                ir.BinaryOp('>', ir.Identifier('argsLength'), ir.IntLiteral(n_args)),
-                [ir.ThrowStatement(ir.MethodCall(ir.Identifier('Runtime'), 'raiseUserFromToArgs', [
-                    ir.Identifier('args'),
-                    ir.IntLiteral(n_required),
-                    ir.IntLiteral(n_args),
-                    ir.StrLiteral(py_name),
-                ]))],
-                [],
-            ))
-            if n_required != 0:
-                missing_cond = ir.BinaryOp('||', ir.BinaryOp('==', ir.Identifier(bind_arg_names[0]), ir.Null()), ir.Bool(False))
-                for name in bind_arg_names[1:n_required]:
-                    missing_cond = ir.BinaryOp('||', missing_cond, ir.BinaryOp('==', ir.Identifier(name), ir.Null()))
-                kwargs_body.append(ir.IfStatement(
-                    missing_cond,
-                    [ir.ThrowStatement(ir.MethodCall(ir.Identifier('Runtime'), 'raiseUserMissingKwArgs', [
-                        ir.StrLiteral(py_name),
-                        ir.CreateArray('PyObject', [ir.Identifier(name) for name in bind_arg_names[:n_required]]),
-                        *(ir.StrLiteral(arg) for arg in arg_names[:n_required]),
-                    ]))],
-                    [],
-                ))
-        call_body.append(ir.IfStatement(
-            ir.BinaryOp(
-                '||',
-                ir.BinaryOp('==', ir.Identifier('kwargs'), ir.Null()),
-                ir.UnaryOp('!', ir.MethodCall(ir.Identifier('kwargs'), 'boolValue', [])),
             ),
-            no_kwargs_body,
-            kwargs_body,
-        ))
-        call_body.append(ir.ReturnStatement(ir.MethodCall(ir.This(), 'call_positional', [ir.Identifier(name) for name in bind_arg_names])))
+            ir.ReturnStatement(ir.MethodCall(
+                ir.This(),
+                'call_positional',
+                [ir.MethodCall(ir.Field(ir.Identifier('boundArgs'), 'items'), 'get', [ir.IntLiteral(i)]) for i in range(n_args)],
+            )),
+        ]
         func_decls.append(ir.MethodDecl('@Override public', 'PyObject', 'call', ['PyObject[] args', 'PyDict kwargs'], call_body))
         call_positional_body: list[ir.Statement] = [
             *(ir.IfStatement(
