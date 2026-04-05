@@ -2160,10 +2160,10 @@ def build_wrapper_binding_ir(
             'PyTuple',
             'boundArgs',
             ir.MethodCall(
-                ir.Identifier('PyRuntime'),
-                'pyfunc_bind_exact_positional',
+                ir.Identifier('Runtime'),
+                'bindExactPositional',
                 [
-                    ir.CreateObject('PyTuple', [ir.Identifier('args')]),
+                    ir.Identifier('args'),
                     ir.Identifier('kwargs'),
                     ir.PyConstant(exact_kw_name),
                     ir.PyConstant(exact_positional_name),
@@ -2179,10 +2179,10 @@ def build_wrapper_binding_ir(
             'PyTuple',
             'boundArgs',
             ir.MethodCall(
-                ir.Identifier('PyRuntime'),
-                'pyfunc_bind_min_max_positional',
+                ir.Identifier('Runtime'),
+                'bindMinMaxPositional',
                 [
-                    ir.CreateObject('PyTuple', [ir.Identifier('args')]),
+                    ir.Identifier('args'),
                     ir.Identifier('kwargs'),
                     ir.PyConstant(posonly_kw_name),
                     ir.PyConstant(posonly_positional_name),
@@ -2207,10 +2207,10 @@ def build_wrapper_binding_ir(
             'PyList',
             'boundArgs',
             ir.MethodCall(
-                ir.Identifier('PyRuntime'),
-                'pyfunc_bind_min_max_positional_or_keyword',
+                ir.Identifier('Runtime'),
+                'bindMinMaxPositionalOrKeyword',
                 [
-                    ir.CreateObject('PyTuple', [ir.Identifier('args')]),
+                    ir.Identifier('args'),
                     ir.Identifier('kwargs'),
                     ir.PyConstant(poskw_kw_name),
                     ir.PyConstant(poskw_positional_name),
@@ -2235,10 +2235,10 @@ def build_wrapper_binding_ir(
             'PyList',
             'boundArgs',
             ir.MethodCall(
-                ir.Identifier('PyRuntime'),
-                'pyfunc_bind_min_max_positional_or_keyword',
+                ir.Identifier('Runtime'),
+                'bindMinMaxPositionalOrKeyword',
                 [
-                    ir.CreateObject('PyTuple', [ir.Identifier('args')]),
+                    ir.Identifier('args'),
                     ir.Identifier('kwargs'),
                     ir.PyConstant(poskw_kw_name),
                     ir.PyConstant(poskw_positional_name),
