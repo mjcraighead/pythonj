@@ -96,7 +96,7 @@ abstract class PyModule extends PyTruthyObject {
     }
     @Override public boolean equals(Object rhs) { return this == rhs; }
     @Override public int hashCode() { return defaultHashCode(); }
-    @Override public String repr() { return "<module '" + moduleName + "'>"; }
+    @Override public String repr() { return "<module '" + moduleName + "' (built-in)>"; }
     @Override public PyType type() { return PyModuleType.singleton; }
 }
 
