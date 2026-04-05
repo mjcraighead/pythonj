@@ -1869,7 +1869,9 @@ def get_posonly_min_max_call_range(params: Optional[list[inspect.Parameter]]) ->
         return None
     if not all(param.kind is inspect.Parameter.POSITIONAL_ONLY for param in params):
         return None
-    (min_args, max_args) = get_positional_call_range(params)
+    call_range = get_positional_call_range(params)
+    assert call_range is not None
+    (min_args, max_args) = call_range
     if min_args == max_args:
         return None
     return (min_args, max_args)
