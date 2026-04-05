@@ -664,6 +664,15 @@ class LoweringVisitor(ast.NodeVisitor):
             type_name = self.local_exact_builtin_type(node.id)
             if type_name is not None:
                 return type_name
+        if (isinstance(node, ast.Call) and
+            isinstance(node.func, ast.Name) and
+            node.func.id in DIRECT_NEWOBJ_POSITIONAL_BUILTIN_TYPES and
+            self.name_resolves_to_builtin_type(node.func) and
+            not node.keywords and
+            not any(isinstance(arg, ast.Starred) for arg in node.args)):
+            (min_args, max_args) = DIRECT_NEWOBJ_POSITIONAL_BUILTIN_TYPES[node.func.id]
+            if min_args <= len(node.args) <= max_args:
+                return node.func.id
         return infer_exact_builtin_type(node)
 
     def resolve_free_vars(self, lineno: int, scope_info: ScopeInfo, func_type: str) -> set[str]:
@@ -992,10 +1001,13 @@ class LoweringVisitor(ast.NodeVisitor):
                         (min_args, max_args) = call_range
                         if min_args <= len(node.args) <= max_args:
                             java_name = extract_spec.BUILTIN_TYPES[type_name]
+                            receiver = self.visit(node.func.value)
+                            if not (isinstance(node.func.value, ast.Name) and get_name_resolution(node.func.value) is NameResolution.LOCAL):
+                                receiver = ir.CastExpr(java_name, receiver)
                             return ir.MethodCall(
                                 ir.Identifier(f'{java_name}Method_{node.func.attr}'),
                                 'callPositional',
-                                [self.visit(node.func.value), *([self.visit(arg) for arg in node.args]), *([ir.Null()] * (max_args - len(node.args)))],
+                                [receiver, *([self.visit(arg) for arg in node.args]), *([ir.Null()] * (max_args - len(node.args)))],
                             )
         if (isinstance(node.func, ast.Name) and node.func.id in DIRECT_CALL_POSITIONAL_BUILTINS and
             self.name_resolves_to_builtin_function(node.func) and
