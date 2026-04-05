@@ -246,25 +246,6 @@ public final class PyBytes extends PyObject {
         return s + "'";
     }
 
-    public PyBytes pymethod_join(PyObject arg) {
-        var out = new ByteArrayOutputStream();
-        if (!arg.hasIter()) {
-            throw PyTypeError.raise("can only join an iterable");
-        }
-        var iter = arg.iter();
-        long index = 0;
-        for (var item = iter.next(); item != null; item = iter.next(), index++) {
-            if (index != 0) {
-                out.writeBytes(value);
-            }
-            byte[] itemBuffer = Runtime.getBytesLikeBuffer(item);
-            if (itemBuffer == null) {
-                throw PyTypeError.raiseFormat("sequence item %d: expected a bytes-like object, %s found", index, item.type().name());
-            }
-            out.writeBytes(itemBuffer);
-        }
-        return new PyBytes(out.toByteArray());
-    }
     public PyObject pymethod_center(PyObject width, PyObject fillchar) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_decode(PyObject encoding, PyObject errors) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_expandtabs(PyObject tabsize) { throw new UnsupportedOperationException(); }

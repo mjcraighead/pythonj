@@ -255,26 +255,6 @@ public final class PyString extends PyObject {
         }
         return ret;
     }
-    public PyString pymethod_join(PyObject arg) {
-        // XXX consider special casing value.isEmpty() for performance
-        var s = new StringBuilder();
-        if (!arg.hasIter()) {
-            throw PyTypeError.raise("can only join an iterable");
-        }
-        var iter = arg.iter();
-        long index = 0;
-        for (var item = iter.next(); item != null; item = iter.next(), index++) {
-            if (index != 0) {
-                s.append(value);
-            }
-            if (item instanceof PyString itemStr) {
-                s.append(itemStr.value);
-            } else {
-                throw PyTypeError.raiseFormat("sequence item %d: expected str instance, %s found", index, item.type().name());
-            }
-        }
-        return new PyString(s.toString());
-    }
     public PyString pymethod_lower() { return new PyString(value.toLowerCase(Locale.ROOT)); }
     public PyList pymethod_split(PyObject sep, PyObject maxsplit) {
         long m = maxsplit.indexValue();

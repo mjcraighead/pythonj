@@ -29,11 +29,16 @@ EXACT_INT_BINOPS = {'add', 'and', 'floorDiv', 'lshift', 'mod', 'mul', 'or', 'pow
 
 INTRINSIC_SIGNATURES = {
     '__pythonj_abs__': (1, 'pythonjAbs'),
+    '__pythonj_bytes_builder__': (1, 'pythonjBytesBuilder'),
+    '__pythonj_bytes_builder_append__': (2, 'pythonjBytesBuilderAppend'),
+    '__pythonj_bytes_builder_append_byte__': (2, 'pythonjBytesBuilderAppendByte'),
+    '__pythonj_bytes_builder_finish__': (1, 'pythonjBytesBuilderFinish'),
     '__pythonj_delattr__': (2, 'pythonjDelAttr'),
     '__pythonj_dict_get__': (2, 'pythonjDictGet'),
     '__pythonj_format__': (2, 'pythonjFormat'),
     '__pythonj_getattr__': (2, 'pythonjGetAttr'),
     '__pythonj_hash__': (1, 'pythonjHash'),
+    '__pythonj_hasiter__': (1, 'pythonjHasIter'),
     '__pythonj_isinstance__': (2, 'pythonjIsInstance'),
     '__pythonj_issubclass__': (2, 'pythonjIsSubclass'),
     '__pythonj_iter__': (1, 'pythonjIter'),
@@ -41,6 +46,9 @@ INTRINSIC_SIGNATURES = {
     '__pythonj_next__': (1, 'pythonjNext'),
     '__pythonj_repr__': (1, 'pythonjRepr'),
     '__pythonj_setattr__': (3, 'pythonjSetAttr'),
+    '__pythonj_str_builder__': (1, 'pythonjStrBuilder'),
+    '__pythonj_str_builder_append__': (2, 'pythonjStrBuilderAppend'),
+    '__pythonj_str_builder_finish__': (1, 'pythonjStrBuilderFinish'),
     '__pythonj_zip_new__': (2, 'pythonjZipNew'),
 }
 
@@ -2040,12 +2048,12 @@ DIRECT_CALL_POSITIONAL_MODULE_FUNCTIONS: dict[str, dict[str, tuple[int, int]]] =
 
 PYTHON_AUTHORED_IMPLS = {
     'builtins': {'abs', 'all', 'any', 'bin', 'delattr', 'format', 'getattr', 'hash', 'hasattr', 'isinstance', 'issubclass', 'len', 'next', 'oct', 'repr', 'setattr', 'sum'},
-    'bytes': {'capitalize', 'count', 'endswith', 'find', 'fromhex', 'hex', 'index', 'isalnum', 'isalpha', 'isascii', 'isdigit', 'islower', 'isspace', 'istitle', 'isupper', 'lower', 'lstrip', 'partition', 'removeprefix', 'removesuffix', 'rfind', 'rindex', 'rpartition', 'rstrip', 'startswith', 'strip', 'swapcase', 'title', 'upper'},
+    'bytes': {'capitalize', 'count', 'endswith', 'find', 'fromhex', 'hex', 'index', 'isalnum', 'isalpha', 'isascii', 'isdigit', 'islower', 'isspace', 'istitle', 'isupper', 'join', 'lower', 'lstrip', 'partition', 'removeprefix', 'removesuffix', 'rfind', 'rindex', 'rpartition', 'rstrip', 'startswith', 'strip', 'swapcase', 'title', 'upper'},
     'dict': {'fromkeys', 'setdefault'},
     'float': {'conjugate'},
     'int': {'as_integer_ratio', 'conjugate', 'is_integer'},
     'range': {'count'},
-    'str': {'removeprefix', 'removesuffix'},
+    'str': {'join', 'removeprefix', 'removesuffix'},
 }
 PYTHON_AUTHORED_CONSTRUCTOR_IMPLS = {'enumerate', 'zip'}
 

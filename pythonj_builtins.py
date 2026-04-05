@@ -149,24 +149,24 @@ def zip__newobj(type, args: tuple, kwargs: dict):
 # Builtin classes
 class bytes:
     def capitalize(self: bytes):
-        ret: list = []
+        ret = __pythonj_bytes_builder__(__pythonj_len__(self))
         seen_alpha = False
         for c in self:
             if 97 <= c <= 122:
                 if not seen_alpha:
-                    ret.append(c - 32)
+                    __pythonj_bytes_builder_append_byte__(ret, c - 32)
                     seen_alpha = True
                 else:
-                    ret.append(c)
+                    __pythonj_bytes_builder_append_byte__(ret, c)
             elif 65 <= c <= 90:
                 if not seen_alpha:
-                    ret.append(c)
+                    __pythonj_bytes_builder_append_byte__(ret, c)
                     seen_alpha = True
                 else:
-                    ret.append(c + 32)
+                    __pythonj_bytes_builder_append_byte__(ret, c + 32)
             else:
-                ret.append(c)
-        return bytes(ret)
+                __pythonj_bytes_builder_append_byte__(ret, c)
+        return __pythonj_bytes_builder_finish__(ret)
 
     def count(self: bytes, sub, start, end):
         indices = slice(start, end).indices(len(self))
@@ -241,7 +241,7 @@ class bytes:
         is_bytes_like = __pythonj_isinstance__(string, (bytes, bytearray))
         if not (is_str or is_bytes_like):
             raise TypeError('fromhex() argument must be str or bytes-like, not ' + type(string).__name__)
-        ret = []
+        ret = __pythonj_bytes_builder__(len(string) // 2)
         i = 0
         n = len(string)
         while i < n:
@@ -275,9 +275,9 @@ class bytes:
                 value += lo - 65 + 10
             else:
                 raise ValueError('non-hexadecimal number found in fromhex() arg at position ' + str(i + 1))
-            ret.append(value)
+            __pythonj_bytes_builder_append_byte__(ret, value)
             i += 2
-        return self(ret)
+        return __pythonj_bytes_builder_finish__(ret)
 
     def hex(self: bytes, sep, bytes_per_sep):
         if sep is __pythonj_null__:
@@ -295,36 +295,51 @@ class bytes:
             raise TypeError('sep must be str or bytes.')
         bytes_per_sep = _operator.index(bytes_per_sep)
         sep_str: str = sep
-        ret: list = []
-        for c in self:
-            ret.append(format(c, '02x'))
+        ret = __pythonj_str_builder__(len(self) * 2)
+        n = len(self)
         if sep and bytes_per_sep != 0:
-            grouped: list = []
-            n = len(ret)
             group_size = abs(bytes_per_sep)
             if bytes_per_sep > 0:
-                first_group = n % group_size
-                if first_group == 0:
-                    first_group = group_size
                 i = 0
-                grouped.append(''.join(ret[:first_group]))
-                i = first_group
                 while i < n:
-                    grouped.append(''.join(ret[i:i + group_size]))
-                    i += group_size
+                    if i != 0 and ((n - i) % group_size == 0):
+                        __pythonj_str_builder_append__(ret, sep_str)
+                    __pythonj_str_builder_append__(ret, format(self[i], '02x'))
+                    i += 1
             else:
                 i = 0
                 while i < n:
-                    grouped.append(''.join(ret[i:i + group_size]))
-                    i += group_size
-            return sep_str.join(grouped)
-        return ''.join(ret)
+                    if i != 0:
+                        __pythonj_str_builder_append__(ret, sep_str)
+                    group_end = i + group_size
+                    while i < group_end and i < n:
+                        __pythonj_str_builder_append__(ret, format(self[i], '02x'))
+                        i += 1
+        else:
+            for c in self:
+                __pythonj_str_builder_append__(ret, format(c, '02x'))
+        return __pythonj_str_builder_finish__(ret)
 
     def index(self: bytes, sub, start, end):
         ret = self.find(sub, start, end)
         if ret == -1:
             raise ValueError('subsection not found')
         return ret
+
+    def join(self: bytes, iterable):
+        ret = __pythonj_bytes_builder__(None)
+        if not __pythonj_hasiter__(iterable):
+            raise TypeError('can only join an iterable')
+        iterable = __pythonj_iter__(iterable)
+        i: int = 0
+        for item in iterable:
+            if i != 0:
+                __pythonj_bytes_builder_append__(ret, self)
+            if not __pythonj_isinstance__(item, (bytes, bytearray)):
+                raise TypeError(f'sequence item {i}: expected a bytes-like object, {type(item).__name__} found')
+            __pythonj_bytes_builder_append__(ret, item)
+            i += 1
+        return __pythonj_bytes_builder_finish__(ret)
 
     def isalnum(self: bytes):
         if not self:
@@ -400,13 +415,13 @@ class bytes:
         return has_cased
 
     def lower(self: bytes):
-        ret: list = []
+        ret = __pythonj_bytes_builder__(__pythonj_len__(self))
         for c in self:
             if 65 <= c <= 90:
-                ret.append(c + 32)
+                __pythonj_bytes_builder_append_byte__(ret, c + 32)
             else:
-                ret.append(c)
-        return bytes(ret)
+                __pythonj_bytes_builder_append_byte__(ret, c)
+        return __pythonj_bytes_builder_finish__(ret)
 
     def lstrip(self: bytes, bytes_arg):
         if bytes_arg is None:
@@ -513,45 +528,45 @@ class bytes:
         return self.lstrip(bytes_arg).rstrip(bytes_arg)
 
     def swapcase(self: bytes):
-        ret: list = []
+        ret = __pythonj_bytes_builder__(__pythonj_len__(self))
         for c in self:
             if 65 <= c <= 90:
-                ret.append(c + 32)
+                __pythonj_bytes_builder_append_byte__(ret, c + 32)
             elif 97 <= c <= 122:
-                ret.append(c - 32)
+                __pythonj_bytes_builder_append_byte__(ret, c - 32)
             else:
-                ret.append(c)
-        return bytes(ret)
+                __pythonj_bytes_builder_append_byte__(ret, c)
+        return __pythonj_bytes_builder_finish__(ret)
 
     def title(self: bytes):
-        ret: list = []
+        ret = __pythonj_bytes_builder__(__pythonj_len__(self))
         in_word = False
         for c in self:
             if 97 <= c <= 122:
                 if in_word:
-                    ret.append(c)
+                    __pythonj_bytes_builder_append_byte__(ret, c)
                 else:
-                    ret.append(c - 32)
+                    __pythonj_bytes_builder_append_byte__(ret, c - 32)
                     in_word = True
             elif 65 <= c <= 90:
                 if in_word:
-                    ret.append(c + 32)
+                    __pythonj_bytes_builder_append_byte__(ret, c + 32)
                 else:
-                    ret.append(c)
+                    __pythonj_bytes_builder_append_byte__(ret, c)
                     in_word = True
             else:
-                ret.append(c)
+                __pythonj_bytes_builder_append_byte__(ret, c)
                 in_word = False
-        return bytes(ret)
+        return __pythonj_bytes_builder_finish__(ret)
 
     def upper(self: bytes):
-        ret: list = []
+        ret = __pythonj_bytes_builder__(__pythonj_len__(self))
         for c in self:
             if 97 <= c <= 122:
-                ret.append(c - 32)
+                __pythonj_bytes_builder_append_byte__(ret, c - 32)
             else:
-                ret.append(c)
-        return bytes(ret)
+                __pythonj_bytes_builder_append_byte__(ret, c)
+        return __pythonj_bytes_builder_finish__(ret)
 
 class dict:
     def fromkeys(self, iterable, value):
@@ -586,6 +601,21 @@ class range:
         return 1 if value in self else 0
 
 class str:
+    def join(self: str, iterable):
+        ret = __pythonj_str_builder__(None)
+        if not __pythonj_hasiter__(iterable):
+            raise TypeError('can only join an iterable')
+        iterable = __pythonj_iter__(iterable)
+        i: int = 0
+        for item in iterable:
+            if i != 0:
+                __pythonj_str_builder_append__(ret, self)
+            if not __pythonj_isinstance__(item, str):
+                raise TypeError(f'sequence item {i}: expected str instance, {type(item).__name__} found')
+            __pythonj_str_builder_append__(ret, item)
+            i += 1
+        return __pythonj_str_builder_finish__(ret)
+
     def removeprefix(self: str, prefix):
         if not __pythonj_isinstance__(prefix, str):
             raise TypeError("removeprefix() argument must be str, not " + type(prefix).__name__)
