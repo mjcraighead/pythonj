@@ -820,7 +820,12 @@ class LoweringVisitor(ast.NodeVisitor):
                     expr = ir.MethodCall(ir.Identifier('PyBuiltinFunctionsImpl'), 'pyfunc_ascii', [expr])
                 elif val.conversion != -1:
                     self.error(val.lineno, f'unsupported f string conversion type {val.conversion}')
-                vals.append(ir.MethodCall(expr, 'format', [format_spec]))
+                if isinstance(format_spec, ir.StrLiteral) and not format_spec.s and \
+                    isinstance(expr, ir.CreateObject) and expr.type == 'PyString':
+                    expr = expr.args[0]
+                else:
+                    expr = ir.MethodCall(expr, 'format', [format_spec])
+                vals.append(expr)
         expr = ir.chained_binary_op('+', vals)
         if isinstance(expr, ir.StrLiteral):
             return ir.PyConstant(expr.s)
