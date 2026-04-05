@@ -215,9 +215,12 @@ final class PyBuiltinFunctionsImpl {
                 s.append("\\x");
                 s.append("0123456789abcdef".charAt(c >> 4));
                 s.append("0123456789abcdef".charAt(c & 15));
+            } else if (Character.isHighSurrogate(c) && (i + 1 < r.length()) && Character.isLowSurrogate(r.charAt(i + 1))) {
+                int cp = Character.toCodePoint(c, r.charAt(i + 1));
+                s.append(String.format("\\U%08x", cp));
+                i++;
             } else {
-                s.append("\\u");
-                s.append(String.format("%04x", (int)c));
+                s.append(String.format("\\u%04x", (int)c));
             }
         }
         return new PyString(s.toString());
