@@ -8,9 +8,9 @@ def _init_bound_args(args, max_total):
     i = 0
     while i < max_total:
         if i < args_len:
-            bound_args.append(args[i])
+            __pythonj_list_append__(bound_args, args[i])
         else:
-            bound_args.append(__pythonj_null__)
+            __pythonj_list_append__(bound_args, __pythonj_null__)
         i += 1
     return bound_args
 
@@ -177,7 +177,7 @@ def bind_user_function(args, kwargs, name, arg_names, n_required) -> list:
             i = 0
             while i < n_required:
                 if bound_args[i] is __pythonj_null__:
-                    missing_arg_names.append(arg_names[i])
+                    __pythonj_list_append__(missing_arg_names, arg_names[i])
                 i += 1
             if missing_arg_names:
                 raise _type_error_user_missing_args(name, missing_arg_names)
@@ -323,9 +323,9 @@ def _pyj_format_group_digits(digits, grouping, group_size) -> str:
     parts = []
     i = len(digits)
     while i > group_size:
-        parts.append(digits[i - group_size:i])
+        __pythonj_list_append__(parts, digits[i - group_size:i])
         i -= group_size
-    parts.append(digits[:i])
+    __pythonj_list_append__(parts, digits[:i])
     parts.reverse()
     return grouping.join(parts)
 
@@ -347,7 +347,7 @@ def _pyj_int_base_digits(value, base, alphabet) -> str:
         return '0'
     ret = []
     while value:
-        ret.append(alphabet[value % base])
+        __pythonj_list_append__(ret, alphabet[value % base])
         value //= base
     ret.reverse()
     return ''.join(ret)
@@ -615,7 +615,7 @@ def _pyj_percent_without_zero_flag(flags) -> str:
     ret = []
     for c in flags:
         if c != '0':
-            ret.append(c)
+            __pythonj_list_append__(ret, c)
     return ''.join(ret)
 
 def _pyj_percent_int_text(value, flags, width, precision, conv) -> str:
@@ -736,14 +736,14 @@ def pyj_percent_format(fmt, args) -> str:
     while i < n:
         c = fmt[i]
         if c != '%':
-            out.append(c)
+            __pythonj_list_append__(out, c)
             i += 1
             continue
         i += 1
         if i == n:
             raise ValueError('incomplete format')
         if fmt[i] == '%':
-            out.append('%')
+            __pythonj_list_append__(out, '%')
             i += 1
             continue
 
@@ -815,7 +815,7 @@ def pyj_percent_format(fmt, args) -> str:
             arg_index += 1
         else:
             arg = args[mapping_key]
-        out.append(_pyj_percent_item_text(conv, flags, width, precision, arg))
+        __pythonj_list_append__(out, _pyj_percent_item_text(conv, flags, width, precision, arg))
 
     if (not used_mapping) and (arg_index != len(arg_seq)):
         raise TypeError('not all arguments converted during string formatting')
