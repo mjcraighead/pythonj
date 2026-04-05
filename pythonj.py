@@ -179,6 +179,27 @@ def _decode_user_function_return_annotation(annotation: Optional[ast.expr]) -> O
         return annotation.id
     return None
 
+def _get_supported_user_function_call_range(args: ast.arguments) -> Optional[tuple[int, int]]:
+    if args.kwonlyargs or args.kw_defaults or args.vararg or args.kwarg:
+        return None
+    defaults: list[object] = []
+    for default in args.defaults:
+        if isinstance(default, ast.Constant) and is_constant_default(default.value):
+            defaults.append(default.value)
+        elif isinstance(default, ast.Tuple):
+            try:
+                value = ast.literal_eval(default)
+            except (TypeError, ValueError):
+                return None
+            if not is_constant_default(value):
+                return None
+            defaults.append(value)
+        else:
+            return None
+    n_total = len(args.posonlyargs) + len(args.args)
+    n_required = n_total - len(defaults)
+    return (n_required, n_total)
+
 def _get_initial_bindings(node: ast.stmt) -> Optional[list[InitialBinding]]:
     if isinstance(node, ast.Import):
         bindings: list[InitialBinding] = []
@@ -191,13 +212,12 @@ def _get_initial_bindings(node: ast.stmt) -> Optional[list[InitialBinding]]:
     if isinstance(node, ast.FunctionDef):
         if node.decorator_list:
             return None
-        if any(default is not None for default in [*node.args.defaults, *node.args.kw_defaults]):
+        function_call_range = _get_supported_user_function_call_range(node.args)
+        if function_call_range is None:
             return None
-        n_total = len(node.args.posonlyargs) + len(node.args.args)
-        n_required = n_total - len(node.args.defaults)
         return [InitialBinding(
             node.name,
-            function_call_range=(n_required, n_total),
+            function_call_range=function_call_range,
             function_return_type=_decode_user_function_return_annotation(node.returns),
         )]
     return None
