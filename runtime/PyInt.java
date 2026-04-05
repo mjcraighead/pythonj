@@ -111,6 +111,22 @@ public final class PyInt extends PyObject {
             }
             return new PyInt(arg0.indexValue());
         }
+        if (arg0 instanceof PyFloat arg0Float) {
+            if (arg1 != null) {
+                throw PyTypeError.raise("int() can't convert non-string with explicit base");
+            }
+            double value = arg0Float.value;
+            if (Double.isNaN(value)) {
+                throw PyValueError.raise("cannot convert float NaN to integer");
+            }
+            if (Double.isInfinite(value)) {
+                throw PyOverflowError.raise("cannot convert float infinity to integer");
+            }
+            if ((value > Long.MAX_VALUE) || (value < Long.MIN_VALUE)) {
+                throw PyOverflowError.raise("Python int too large to convert to C long");
+            }
+            return new PyInt((long)value);
+        }
         if (arg0 instanceof PyString arg0Str) {
             long base = 10;
             if (arg1 != null) {
