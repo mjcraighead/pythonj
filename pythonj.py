@@ -2022,6 +2022,7 @@ def build_wrapper_binding_ir(
     elif plan.mode == 'fallback_raw':
         bind_args = [ir.Identifier('args'), ir.Identifier('kwargs')]
     else:
+        assert kwarg_params is not None
         (statements, bind_args) = build_arg_binding_ir(
             kwarg_params, general_positional_name,
             general_kw_name,
