@@ -4,13 +4,14 @@
 
 def _init_bound_args(args, max_total):
     args_len = len(args)
+    bound_args: list
     bound_args = []
     i = 0
     while i < max_total:
         if i < args_len:
-            __pythonj_list_append__(bound_args, args[i])
+            bound_args.append(args[i])
         else:
-            __pythonj_list_append__(bound_args, __pythonj_null__)
+            bound_args.append(__pythonj_null__)
         i += 1
     return bound_args
 
@@ -152,13 +153,14 @@ def bind_varargs_and_kwonly(kwargs, kw_name, kwonly_names) -> list:
 def bind_user_exact_positional(args, kwargs, name, arg_names) -> tuple:
     args_len = len(args)
     n_args = len(arg_names)
+    posonly_kw_arg_names: list
 
     if kwargs is not __pythonj_null__ and kwargs:
         posonly_kw_arg_names = []
         unknown_kw = None
         for kw in kwargs:
             if _find_name(arg_names, kw, 0) is not __pythonj_null__:
-                __pythonj_list_append__(posonly_kw_arg_names, kw)
+                posonly_kw_arg_names.append(kw)
             elif unknown_kw is None:
                 unknown_kw = kw
         if posonly_kw_arg_names:
@@ -177,13 +179,14 @@ def bind_user_exact_positional(args, kwargs, name, arg_names) -> tuple:
 def bind_user_min_max_positional(args, kwargs, name, arg_names, n_required) -> tuple:
     args_len = len(args)
     n_args = len(arg_names)
+    posonly_kw_arg_names: list
 
     if kwargs is not __pythonj_null__ and kwargs:
         posonly_kw_arg_names = []
         unknown_kw = None
         for kw in kwargs:
             if _find_name(arg_names, kw, 0) is not __pythonj_null__:
-                __pythonj_list_append__(posonly_kw_arg_names, kw)
+                posonly_kw_arg_names.append(kw)
             elif unknown_kw is None:
                 unknown_kw = kw
         if posonly_kw_arg_names:
@@ -201,6 +204,7 @@ def bind_user_min_max_positional(args, kwargs, name, arg_names, n_required) -> t
 def bind_user_function(args, kwargs, name, arg_names, n_required, posonly_count) -> list:
     args_len = len(args)
     n_args = len(arg_names)
+    missing_arg_names: list
     bound_args = _init_bound_args(args, n_args)
 
     if kwargs is __pythonj_null__ or not kwargs:
@@ -219,6 +223,7 @@ def bind_user_function(args, kwargs, name, arg_names, n_required, posonly_count)
                 raise TypeError(f'{name}() takes from {n_required} to {n_args} positional arguments but {args_len} {was_were} given')
         return bound_args
 
+    posonly_kw_arg_names: list
     posonly_kw_arg_names = []
     unknown_kw = None
     for (kw, value) in kwargs.items():
@@ -226,7 +231,7 @@ def bind_user_function(args, kwargs, name, arg_names, n_required, posonly_count)
         if matched_index is __pythonj_null__:
             posonly_index = _find_name(arg_names, kw, 0)
             if posonly_index is not __pythonj_null__:
-                __pythonj_list_append__(posonly_kw_arg_names, kw)
+                posonly_kw_arg_names.append(kw)
             elif unknown_kw is None:
                 unknown_kw = kw
             continue
@@ -248,7 +253,7 @@ def bind_user_function(args, kwargs, name, arg_names, n_required, posonly_count)
             i = 0
             while i < n_required:
                 if bound_args[i] is __pythonj_null__:
-                    __pythonj_list_append__(missing_arg_names, arg_names[i])
+                    missing_arg_names.append(arg_names[i])
                 i += 1
             if missing_arg_names:
                 raise _type_error_user_missing_args(name, missing_arg_names)
@@ -391,12 +396,13 @@ def _pyj_format_apply_width(text, fill, align, width, default_align) -> str:
 def _pyj_format_group_digits(digits, grouping, group_size) -> str:
     if grouping is None:
         return digits
+    parts: list
     parts = []
     i = len(digits)
     while i > group_size:
-        __pythonj_list_append__(parts, digits[i - group_size:i])
+        parts.append(digits[i - group_size:i])
         i -= group_size
-    __pythonj_list_append__(parts, digits[:i])
+    parts.append(digits[:i])
     parts.reverse()
     return grouping.join(parts)
 
@@ -416,9 +422,10 @@ def _pyj_format_zero_fill_grouped(sign, prefix, digits, grouping, group_size, su
 def _pyj_int_base_digits(value, base, alphabet) -> str:
     if value == 0:
         return '0'
+    ret: list
     ret = []
     while value:
-        __pythonj_list_append__(ret, alphabet[value % base])
+        ret.append(alphabet[value % base])
         value //= base
     ret.reverse()
     return ''.join(ret)
@@ -684,10 +691,11 @@ def _pyj_percent_apply_width(text, flags, width) -> str:
     return _pyj_format_apply_width(text, fill, align, width, '>')
 
 def _pyj_percent_without_zero_flag(flags) -> str:
+    ret: list
     ret = []
     for c in flags:
         if c != '0':
-            __pythonj_list_append__(ret, c)
+            ret.append(c)
     return ''.join(ret)
 
 def _pyj_percent_int_text(value, flags, width, precision, conv) -> str:
@@ -802,20 +810,21 @@ def pyj_percent_format(fmt, args) -> str:
     arg_seq = _pyj_percent_arg_seq(args)
     arg_index = 0
     used_mapping = False
+    out: list
     out = []
     i = 0
     n = len(fmt)
     while i < n:
         c = fmt[i]
         if c != '%':
-            __pythonj_list_append__(out, c)
+            out.append(c)
             i += 1
             continue
         i += 1
         if i == n:
             raise ValueError('incomplete format')
         if fmt[i] == '%':
-            __pythonj_list_append__(out, '%')
+            out.append('%')
             i += 1
             continue
 
@@ -887,7 +896,7 @@ def pyj_percent_format(fmt, args) -> str:
             arg_index += 1
         else:
             arg = args[mapping_key]
-        __pythonj_list_append__(out, _pyj_percent_item_text(conv, flags, width, precision, arg))
+        out.append(_pyj_percent_item_text(conv, flags, width, precision, arg))
 
     if (not used_mapping) and (arg_index != len(arg_seq)):
         raise TypeError('not all arguments converted during string formatting')

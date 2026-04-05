@@ -109,23 +109,24 @@ def sum(iterable, start):
 
 class bytes:
     def capitalize(self):
+        ret: list
         ret = []
         seen_alpha = False
         for c in self:
             if 97 <= c <= 122:
                 if not seen_alpha:
-                    __pythonj_list_append__(ret, c - 32)
+                    ret.append(c - 32)
                     seen_alpha = True
                 else:
-                    __pythonj_list_append__(ret, c)
+                    ret.append(c)
             elif 65 <= c <= 90:
                 if not seen_alpha:
-                    __pythonj_list_append__(ret, c)
+                    ret.append(c)
                     seen_alpha = True
                 else:
-                    __pythonj_list_append__(ret, c + 32)
+                    ret.append(c + 32)
             else:
-                __pythonj_list_append__(ret, c)
+                ret.append(c)
         return bytes(ret)
 
     def count(self, sub, start, end):
@@ -235,7 +236,7 @@ class bytes:
                 value += lo - 65 + 10
             else:
                 raise ValueError('non-hexadecimal number found in fromhex() arg at position ' + str(i + 1))
-            __pythonj_list_append__(ret, value)
+            ret.append(value)
             i += 2
         return self(ret)
 
@@ -254,9 +255,11 @@ class bytes:
                 raise ValueError('sep must be length 1.')
             raise TypeError('sep must be str or bytes.')
         bytes_per_sep = operator.index(bytes_per_sep)
+        grouped: list
+        ret: list
         ret = []
         for c in self:
-            __pythonj_list_append__(ret, format(c, '02x'))
+            ret.append(format(c, '02x'))
         if sep and bytes_per_sep != 0:
             grouped = []
             n = len(ret)
@@ -266,15 +269,15 @@ class bytes:
                 if first_group == 0:
                     first_group = group_size
                 i = 0
-                __pythonj_list_append__(grouped, ''.join(ret[:first_group]))
+                grouped.append(''.join(ret[:first_group]))
                 i = first_group
                 while i < n:
-                    __pythonj_list_append__(grouped, ''.join(ret[i:i + group_size]))
+                    grouped.append(''.join(ret[i:i + group_size]))
                     i += group_size
             else:
                 i = 0
                 while i < n:
-                    __pythonj_list_append__(grouped, ''.join(ret[i:i + group_size]))
+                    grouped.append(''.join(ret[i:i + group_size]))
                     i += group_size
             return sep.join(grouped)
         return ''.join(ret)
@@ -359,12 +362,13 @@ class bytes:
         return has_cased
 
     def lower(self):
+        ret: list
         ret = []
         for c in self:
             if 65 <= c <= 90:
-                __pythonj_list_append__(ret, c + 32)
+                ret.append(c + 32)
             else:
-                __pythonj_list_append__(ret, c)
+                ret.append(c)
         return bytes(ret)
 
     def lstrip(self, bytes_arg):
@@ -472,44 +476,47 @@ class bytes:
         return self.lstrip(bytes_arg).rstrip(bytes_arg)
 
     def swapcase(self):
+        ret: list
         ret = []
         for c in self:
             if 65 <= c <= 90:
-                __pythonj_list_append__(ret, c + 32)
+                ret.append(c + 32)
             elif 97 <= c <= 122:
-                __pythonj_list_append__(ret, c - 32)
+                ret.append(c - 32)
             else:
-                __pythonj_list_append__(ret, c)
+                ret.append(c)
         return bytes(ret)
 
     def title(self):
+        ret: list
         ret = []
         in_word = False
         for c in self:
             if 97 <= c <= 122:
                 if in_word:
-                    __pythonj_list_append__(ret, c)
+                    ret.append(c)
                 else:
-                    __pythonj_list_append__(ret, c - 32)
+                    ret.append(c - 32)
                     in_word = True
             elif 65 <= c <= 90:
                 if in_word:
-                    __pythonj_list_append__(ret, c + 32)
+                    ret.append(c + 32)
                 else:
-                    __pythonj_list_append__(ret, c)
+                    ret.append(c)
                     in_word = True
             else:
-                __pythonj_list_append__(ret, c)
+                ret.append(c)
                 in_word = False
         return bytes(ret)
 
     def upper(self):
+        ret: list
         ret = []
         for c in self:
             if 97 <= c <= 122:
-                __pythonj_list_append__(ret, c - 32)
+                ret.append(c - 32)
             else:
-                __pythonj_list_append__(ret, c)
+                ret.append(c)
         return bytes(ret)
 
 class dict:

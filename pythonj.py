@@ -973,9 +973,6 @@ class LoweringVisitor(ast.NodeVisitor):
                 case '__pythonj_len__':
                     assert len(node.args) == 1 and not node.keywords, node.args
                     return ir.MethodCall(ir.Identifier('Runtime'), 'pythonjLen', [self.visit(node.args[0])])
-                case '__pythonj_list_append__':
-                    assert len(node.args) == 2 and not node.keywords, node.args
-                    return ir.MethodCall(ir.Identifier('Runtime'), 'pythonjListAppend', [self.visit(node.args[0]), self.visit(node.args[1])])
                 case '__pythonj_next__':
                     assert len(node.args) == 1 and not node.keywords, node.args
                     return ir.MethodCall(self.visit(node.args[0]), 'next', [])

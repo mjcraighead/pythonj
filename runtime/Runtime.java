@@ -500,10 +500,6 @@ public final class Runtime {
             throw new UnsupportedOperationException(String.format("issubclass() is unimplemented for types %s and %s", obj.repr(), type.repr()));
         }
     }
-    public static PyNone pythonjListAppend(PyObject obj, PyObject value) {
-        ((PyList)obj).pymethod_append(value);
-        return PyNone.singleton;
-    }
     public static PyString pythonjRepr(PyObject obj) {
         return new PyString(obj.repr());
     }
