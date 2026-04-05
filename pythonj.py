@@ -1,7 +1,9 @@
+#!/usr/bin/env python3
 # pythonj (https://github.com/mjcraighead/pythonj)
 # Copyright (c) 2012-2026 Matt Craighead
 # SPDX-License-Identifier: MIT
 
+import argparse
 import ast
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -9,6 +11,7 @@ from enum import Enum
 import inspect
 import itertools
 import json
+import os
 import types
 from typing import Iterator, Optional, TextIO, cast
 
@@ -19,31 +22,6 @@ import ir
 # exercised and are comfortable lowering directly to JVM instanceof checks.
 ISINSTANCE_SINGLE_FASTPATH_BUILTIN_TYPES = {'bool', 'bytearray', 'bytes', 'float', 'int', 'str', 'tuple'}
 EXACT_INT_BINOPS = {'add', 'and', 'floorDiv', 'lshift', 'mod', 'mul', 'or', 'pow', 'rshift', 'sub', 'xor'}
-
-RUNTIME_JAVA_FILES = (
-    'PyBool.java',
-    'PyBuiltinFunctions.java',
-    'PyByteArray.java',
-    'PyBytes.java',
-    'PyDict.java',
-    'PyEnumerate.java',
-    'PyExceptions.java',
-    'PyFile.java',
-    'PyFloat.java',
-    'PyInt.java',
-    'PyList.java',
-    'PyMappingProxy.java',
-    'PyNone.java',
-    'PyObject.java',
-    'PyRange.java',
-    'PyReversed.java',
-    'PySet.java',
-    'PySlice.java',
-    'PyString.java',
-    'PyTuple.java',
-    'PyZip.java',
-    'Runtime.java',
-)
 
 INTRINSIC_SIGNATURES = {
     '__pythonj_abs__': (1, 'pythonjAbs'),
@@ -2461,11 +2439,16 @@ def build_call_positional_ir(shape: SignatureShape) -> tuple[list[str], list[ir.
             bind_args.append(ir.Identifier(f'arg{i}'))
     return (call_args, statements, bind_args)
 
-def gen_runtime_java(spec_path: str, java_path: str) -> None:
+def load_runtime_spec(spec_path: str) -> dict[str, object]:
     global RUNTIME_SPEC
     with open(spec_path) as f:
         spec = json.load(f)
     RUNTIME_SPEC = spec
+    DIRECT_CALL_POSITIONAL_BUILTINS.clear()
+    DIRECT_NEWOBJ_POSITIONAL_BUILTIN_TYPES.clear()
+    DIRECT_GETATTR_BUILTIN_TYPE_ATTRS.clear()
+    DIRECT_GETATTR_BUILTIN_MODULE_ATTRS.clear()
+    DIRECT_CALL_POSITIONAL_MODULE_FUNCTIONS.clear()
     for func_name in extract_spec.BUILTIN_FUNCTIONS:
         call_range = extract_spec.get_builtin_function_call_range(spec, func_name)
         if call_range is not None:
@@ -2484,6 +2467,10 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
             call_range = extract_spec.get_module_function_call_range(spec, module_name, func_name)
             if call_range is not None:
                 DIRECT_CALL_POSITIONAL_MODULE_FUNCTIONS[module_name][func_name] = call_range
+    return spec
+
+def gen_runtime_java(spec_path: str, java_path: str) -> None:
+    spec = load_runtime_spec(spec_path)
 
     pythonj_builtins_node = parse_python_module('pythonj_builtins.py')
     pythonj_runtime_node = parse_python_module('pythonj_runtime.py')
@@ -2889,3 +2876,48 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                 pass
         top_level_decls.append(ir.with_pooled_fields(py_runtime_decl, pool))
         ir.write_decls(f, top_level_decls, pool)
+
+def translate_python_to_java(spec_path: str, py_path: str, java_path: str) -> None:
+    load_runtime_spec(spec_path)
+    with open(py_path, encoding='utf-8') as f:
+        node = ast.parse(f.read(), filename=py_path)
+    analyzer = ScopeAnalyzer()
+    analyzer.visit(node)
+    visitor = LoweringVisitor(
+        py_path,
+        analyzer.scope_infos,
+        analyzer.scope_infos[node],
+    )
+    visitor.visit(node)
+    if visitor.n_errors:
+        raise SystemExit(f'Translation failed: {visitor.n_errors} errors')
+    py_name = os.path.basename(py_path)[:-3]
+    with open(java_path, 'w', encoding='utf-8') as f:
+        visitor.write_java(f, py_name)
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    subparsers = parser.add_subparsers(dest='command', required=True)
+
+    runtime_parser = subparsers.add_parser('gen-runtime')
+    runtime_parser.add_argument('-o', '--output', required=True)
+    runtime_parser.add_argument('--spec', required=True)
+
+    translate_parser = subparsers.add_parser('translate')
+    translate_parser.add_argument('--spec', required=True)
+    translate_parser.add_argument('-o', '--output', required=True)
+    translate_parser.add_argument('py_path')
+
+    args = parser.parse_args()
+    if args.command == 'gen-runtime':
+        gen_runtime_java(os.path.abspath(args.spec), os.path.abspath(args.output))
+    else:
+        assert args.command == 'translate', args.command
+        translate_python_to_java(
+            os.path.abspath(args.spec),
+            os.path.abspath(args.py_path),
+            os.path.abspath(args.output),
+        )
+
+if __name__ == '__main__':
+    main()

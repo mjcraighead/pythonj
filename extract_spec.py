@@ -522,7 +522,7 @@ def gen_spec(spec_path: str) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument('spec_path', nargs='?', default='runtime/_out/spec.json')
+    parser.add_argument('spec_path', nargs='?', default='_out/spec.json')
     args = parser.parse_args()
 
     spec_dir = os.path.dirname(args.spec_path)

@@ -4,74 +4,46 @@
 # SPDX-License-Identifier: MIT
 
 import argparse
-import ast
 import difflib
 import os
-import shutil
 import subprocess
 import sys
 import time
 
-import extract_spec
-import pythonj
+python = 'py' if os.name == 'nt' else 'python3'
+
+def get_default_test_names() -> list[str]:
+    return sorted(x[:-3] for x in os.listdir('tests') if x.endswith('.py') and x != 'rules.py')
 
 def main() -> None:
     parser = argparse.ArgumentParser()
+    parser.add_argument('-c', '--clean', action='store_true', help='clean build outputs first')
+    parser.add_argument('-j', '--jobs', type=int, help='number of parallel build jobs')
+    parser.add_argument('-v', '--verbose-build', action='store_true', help='show verbose build commands')
     parser.add_argument('py_names', nargs='*', help='names of tests to run')
     args = parser.parse_args()
 
     py_names = args.py_names
     if not py_names:
-        py_names = sorted(x[:-3] for x in os.listdir('tests') if x.endswith('.py'))
+        py_names = get_default_test_names()
 
     start = time.perf_counter()
-    if os.path.exists('runtime/_out'):
-        shutil.rmtree('runtime/_out')
-    os.mkdir('runtime/_out')
-    extract_spec.gen_spec('runtime/_out/spec.json')
-    pythonj.gen_runtime_java('runtime/_out/spec.json', 'runtime/_out/PyRuntime.java')
-    codegen_time = time.perf_counter() - start
-    print(f'{codegen_time=:.3f}')
-
-    start = time.perf_counter()
-    if os.path.exists('tests/_out'):
-        shutil.rmtree('tests/_out')
-    subprocess.check_call(['javac', '-d', '_out', *pythonj.RUNTIME_JAVA_FILES, '_out/PyRuntime.java'], cwd='runtime')
-    os.makedirs('tests/_out', exist_ok=True)
-    subprocess.check_call(['jar', '--create', '--file', 'tests/_out/pythonj.jar', '--date=1980-01-01T00:00:02Z', '-C', 'runtime/_out', '.'])
-    initial_javac_time = time.perf_counter() - start
-    print(f'{initial_javac_time=:.3f}')
-
-    start = time.perf_counter()
-    for py_name in py_names:
-        py_path = f'tests/{py_name}.py'
-        with open(py_path, encoding='utf-8') as f:
-            node = ast.parse(f.read())
-        analyzer = pythonj.ScopeAnalyzer()
-        analyzer.visit(node)
-        visitor = pythonj.LoweringVisitor(
-            py_path,
-            analyzer.scope_infos,
-            analyzer.scope_infos[node],
-        )
-        visitor.visit(node)
-        if visitor.n_errors:
-            print(f'Translation failed: {visitor.n_errors} errors')
-            raise SystemExit(1)
-        with open(f'tests/_out/{py_name}.java', 'w') as f:
-            visitor.write_java(f, py_name)
-    translate_time = time.perf_counter() - start
-    print(f'{translate_time=:5.3f}')
-
-    start = time.perf_counter()
-    subprocess.check_call(['javac', '-cp', 'pythonj.jar', *(f'{py_name}.java' for py_name in py_names)], cwd='tests/_out')
-    javac_time = time.perf_counter() - start
-    print(f'{javac_time=:5.3f}')
+    make_cmd = [python, 'make.py']
+    if args.clean:
+        make_cmd.append('--clean')
+    if args.jobs is not None:
+        make_cmd.extend(['--jobs', str(args.jobs)])
+    if args.verbose_build:
+        make_cmd.append('--verbose')
+    make_cmd.extend(f'tests/_out/{py_name}.jar' for py_name in py_names)
+    subprocess.check_call(make_cmd)
+    build_time = time.perf_counter() - start
+    print(f'{build_time=:5.3f}')
 
     for py_name in py_names:
         start = time.perf_counter()
         sep = ';' if os.name == 'nt' else ':'
-        j_output = subprocess.check_output(['java', '-cp', f'_out/pythonj.jar{sep}_out', py_name], cwd='tests')
+        j_output = subprocess.check_output(['java', '-cp', f'../_out/pythonj.jar{sep}_out/{py_name}.jar', py_name], cwd='tests')
         jexec_time = time.perf_counter() - start
 
         start = time.perf_counter()
