@@ -1567,15 +1567,10 @@ class LoweringVisitor(ast.NodeVisitor):
         constructor_args = [f'PyCell _pycell_{name}' for name in free_var_names]
         func_decls: list[ir.Decl] = [
             *(ir.FieldDecl('private final', 'PyCell', f'pycell_{name}', None) for name in free_var_names),
-            ir.ConstructorDecl(
-                '',
-                java_name,
-                constructor_args,
-                [
-                    ir.SuperConstructorCall([ir.StrLiteral(py_name)]),
-                    *(ir.AssignStatement(ir.Identifier(f'pycell_{name}'), ir.Identifier(f'_pycell_{name}')) for name in free_var_names),
-                ],
-            ),
+            ir.ConstructorDecl('', java_name, constructor_args, [
+                ir.SuperConstructorCall([ir.StrLiteral(py_name)]),
+                *(ir.AssignStatement(ir.Identifier(f'pycell_{name}'), ir.Identifier(f'_pycell_{name}')) for name in free_var_names),
+            ]),
         ]
         call_body: list[ir.Statement]
         if shape.posonly_params and not shape.poskw_params:
@@ -2559,16 +2554,16 @@ def build_wrapper_binding_ir(
         bind_args = [ir.MethodCall(ir.Identifier('boundArgs'), 'get', [ir.IntLiteral(i)]) for i in range(len(kwarg_params.params))]
     elif plan.mode == 'vararg_kwonly_python':
         assert kwarg_params is not None
-        statements.append(ir.LocalDecl('PyList', 'boundArgs',
-            ir.MethodCall(ir.Identifier('PyRuntime'), 'pyfunc_bind_varargs_and_kwonly', [
+        statements.append(ir.LocalDecl('var', 'boundArgs',
+            ir.Field(ir.MethodCall(ir.Identifier('PyRuntime'), 'pyfunc_bind_varargs_and_kwonly', [
                 ir.Identifier('kwargs'),
                 ir.PyConstant(general_kw_name),
                 ir.PyConstant(tuple(param.name for param in kwarg_params.kwonly_params)),
-            ]),
+            ]), 'items'),
         ))
         bind_args = [
             ir.Identifier('args'),
-            *(ir.MethodCall(ir.Field(ir.Identifier('boundArgs'), 'items'), 'get', [ir.IntLiteral(i)]) for i in range(len(kwarg_params.kwonly_params))),
+            *(ir.MethodCall(ir.Identifier('boundArgs'), 'get', [ir.IntLiteral(i)]) for i in range(len(kwarg_params.kwonly_params))),
         ]
     elif plan.mode == 'fallback_raw':
         bind_args = [ir.Identifier('args'), ir.Identifier('kwargs')]
