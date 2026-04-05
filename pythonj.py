@@ -1534,6 +1534,8 @@ def decode_helper_return_annotation(annotation: Optional[ast.expr]) -> str:
         return 'PyNone'
     if isinstance(annotation, ast.Name) and annotation.id == 'NoReturn':
         return 'NoReturn'
+    if isinstance(annotation, ast.Name) and annotation.id in extract_spec.EXCEPTION_TYPES:
+        return f'Py{annotation.id}'
     if isinstance(annotation, ast.Name) and annotation.id in SUPPORTED_HELPER_RETURN_TYPES:
         return extract_spec.BUILTIN_TYPES[annotation.id]
     if isinstance(annotation, ast.Attribute) and annotation.attr == 'NoReturn' and isinstance(annotation.value, ast.Name) and annotation.value.id == 'typing':

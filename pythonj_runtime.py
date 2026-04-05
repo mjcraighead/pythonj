@@ -2,8 +2,6 @@
 # Copyright (c) 2012-2026 Matt Craighead
 # SPDX-License-Identifier: MIT
 
-import typing
-
 def _init_bound_args(args, max_total):
     bound_args = []
     i = 0
@@ -23,13 +21,13 @@ def _find_name(names, kw, start):
         i += 1
     return __pythonj_null__
 
-def _type_error_at_most_args(positional_name, max_total, given):
+def _type_error_at_most_args(positional_name, max_total, given) -> TypeError:
     return TypeError(f'{positional_name}() takes at most {max_total} arguments ({given} given)')
 
-def _type_error_at_most_keyword_args(kw_name, max_total, kwargs_len):
+def _type_error_at_most_keyword_args(kw_name, max_total, kwargs_len) -> TypeError:
     return TypeError(f'{kw_name}() takes at most {max_total} keyword arguments ({kwargs_len} given)')
 
-def _type_error_unexpected_kw_arg(kw_name, unknown_kw):
+def _type_error_unexpected_kw_arg(kw_name, unknown_kw) -> TypeError:
     return TypeError(f'{kw_name}() got an unexpected keyword argument {unknown_kw!r}')
 
 def bind_exact_positional(args, kwargs, kw_name, positional_name, n) -> tuple:
@@ -229,11 +227,11 @@ def _pyj_format_parse_common(spec) -> tuple:
         i += 1
     return (fill, align, sign, z, alt, zero, width, grouping, precision, type_char, i, n)
 
-def _pyj_unknown_format_code(type_char, type_name):
-    return ValueError(f"Unknown format code {type_char!r} for object of type '{type_name}'")
+def _pyj_unknown_format_code(type_char, type_name) -> ValueError:
+    return ValueError(f'Unknown format code {type_char!r} for object of type {type_name!r}')
 
-def _pyj_invalid_format_spec(spec, type_name):
-    return ValueError(f"Invalid format specifier {spec!r} for object of type '{type_name}'")
+def _pyj_invalid_format_spec(spec, type_name) -> ValueError:
+    return ValueError(f'Invalid format specifier {spec!r} for object of type {type_name!r}')
 
 def _pyj_format_split_sign(text) -> tuple:
     if text and text[0] in '+- ':
