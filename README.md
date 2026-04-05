@@ -1,13 +1,11 @@
-# pythonj - a simple, practical Python-to-Java compiler
+# pythonj - an optimizing Python-to-Java compiler
 
-`pythonj` is a compiler that runs a subset of **ordinary Python code** by translating it to
-**Java** and executing it on the JVM.
-
-Its primary goal is **semantic honesty**, with performance gains emerging where Python semantics
-map cleanly onto a simpler execution model.
+`pythonj` is an **optimizing Python-to-Java compiler** that runs a substantial subset of
+**ordinary Python code** by translating it to **Java** and executing it on the JVM.
 
 ## What this is
-- A **Python-to-Java compiler** with a strong bias toward **CPython-compatible behavior**
+- An **optimizing Python-to-Java compiler** with a strong bias toward **CPython-compatible behavior**
+- A substantial **Python runtime and object model** implemented for the JVM
 - A system that treats **dynamic Python semantics as intentional and first-class**
 - A project focused on making **program meaning explicit**, not inferred
 - A way to leverage an existing runtime (GC, JIT, threading) instead of reinventing one
@@ -33,7 +31,7 @@ with future type-based reasoning, `pythonj` will reject it rather than emulate i
 - **Static semantics must be explicit**
 - **The compiler must not guess**
 - **Correctness and clarity come before performance**
-- **Performance is a consequence of declared meaning**
+- **Performance is a consequence of declared meaning, not speculative inference**
 - **Backends are an implementation detail**
 
 If the compiler wants to make a stronger assumption than the program states, it must ask for
@@ -46,28 +44,28 @@ Java (and the JVM) provide:
 - real parallelism (no GIL)
 - a stable object model
 
-This allows the project to focus on **semantics and mapping**, not runtime infrastructure.
+This allows the project to focus on **compiler and runtime design**, not on rebuilding a VM from scratch.
 
 ## Scope and limitations
 - Many Python features are unsupported or only partially supported
 - Some CPython behaviors are intentionally excluded
-- Standard library coverage is incomplete
+- Standard library coverage is incomplete, though the builtin/runtime surface is substantial
 - OS- and POSIX-heavy behavior is especially constrained on the JVM
 
 These limitations are acknowledged design tradeoffs, not oversights.
 
 ## Requirements
 This project currently requires:
-- Python 3.x (most testing has been done on Python 3.14)
+- Python 3.14+
 - Java 17+
 
 There is no installation process yet.
 
 ## Status
 This is an experimental, evolving project.
-The README describes the *direction* more than the current implementation.
+The README describes the *direction* more than the current implementation, but the implementation is already substantial.
 
-Large portions of Python syntax are implemented, but coverage is uneven.
+Large portions of Python syntax, builtin behavior, and runtime semantics are implemented, but coverage is uneven.
 
 Expect rough edges.
 
