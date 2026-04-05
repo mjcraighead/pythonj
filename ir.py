@@ -56,7 +56,7 @@ class ConstantPool:
     __slots__ = ('all_ints', 'all_strings', 'all_floats', 'all_tuples', 'all_bytes', 'owner_name')
     all_ints: set[int]
     all_strings: dict[str, int]
-    all_floats: dict[float, int]
+    all_floats: dict[str, tuple[float, int]]
     all_tuples: dict[tuple[object, ...], int]
     all_bytes: dict[bytes, int]
     owner_name: Optional[str]
@@ -94,9 +94,10 @@ class ConstantPool:
         elif isinstance(value, float):
             if math.isnan(value):
                 return 'PyFloat.nan_singleton'
-            if value not in self.all_floats:
-                self.all_floats[value] = len(self.all_floats)
-            return self.qualify_name(f'float_singleton_{self.all_floats[value]}')
+            key = value.hex()
+            if key not in self.all_floats:
+                self.all_floats[key] = (value, len(self.all_floats))
+            return self.qualify_name(f'float_singleton_{self.all_floats[key][1]}')
         elif isinstance(value, tuple):
             if not value:
                 return 'PyTuple.empty_singleton'
@@ -122,7 +123,7 @@ class ConstantPool:
         for (k, v) in sorted(self.all_strings.items()):
             value = CreateObject('PyString', [StrLiteral(k)])
             decls.append(FieldDecl(field_prefix, 'PyString', f'str_singleton_{v}', value))
-        for (k, v) in sorted(self.all_floats.items()):
+        for (_, (k, v)) in sorted(self.all_floats.items(), key=lambda item: item[1][1]):
             decls.append(FieldDecl(field_prefix, 'PyFloat', f'float_singleton_{v}', CreateObject('PyFloat', [FloatLiteral(k)])))
         for (k, v) in sorted(self.all_tuples.items(), key=lambda x: x[1]):
             value = CreateObject('PyTuple', [CreateArray('PyObject', [PyConstant(x) for x in k])])
