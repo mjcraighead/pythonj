@@ -44,6 +44,22 @@ RUNTIME_JAVA_FILES = (
     'Runtime.java',
 )
 
+INTRINSIC_SIGNATURES = {
+    '__pythonj_abs__': (1, 'pythonjAbs'),
+    '__pythonj_delattr__': (2, 'pythonjDelAttr'),
+    '__pythonj_dict_get__': (2, 'pythonjDictGet'),
+    '__pythonj_format__': (2, 'pythonjFormat'),
+    '__pythonj_getattr__': (2, 'pythonjGetAttr'),
+    '__pythonj_hash__': (1, 'pythonjHash'),
+    '__pythonj_issubclass__': (2, 'pythonjIsSubclass'),
+    '__pythonj_iter__': (1, 'pythonjIter'),
+    '__pythonj_len__': (1, 'pythonjLen'),
+    '__pythonj_next__': (1, 'pythonjNext'),
+    '__pythonj_repr__': (1, 'pythonjRepr'),
+    '__pythonj_setattr__': (3, 'pythonjSetAttr'),
+    '__pythonj_zip_new__': (2, 'pythonjZipNew'),
+}
+
 class ScopeKind(Enum):
     MODULE = 1
     FUNCTION = 2
@@ -1065,52 +1081,13 @@ class LoweringVisitor(ast.NodeVisitor):
                     [*([self.visit(arg) for arg in node.args]), *([ir.Null()] * (max_args - len(node.args)))],
                 )
         if self.allow_intrinsics and isinstance(node.func, ast.Name):
-            match node.func.id:
-                case '__pythonj_abs__':
-                    assert len(node.args) == 1 and not node.keywords, node.args
-                    return ir.MethodCall(self.visit(node.args[0]), 'abs', [])
-                case '__pythonj_delattr__':
-                    assert len(node.args) == 2 and not node.keywords, node.args
-                    return ir.MethodCall(ir.Identifier('Runtime'), 'pythonjDelAttr', [self.visit(node.args[0]), self.visit(node.args[1])])
-                case '__pythonj_dict_get__':
-                    assert len(node.args) == 2 and not node.keywords, node.args
-                    return ir.MethodCall(ir.Identifier('Runtime'), 'pythonjDictGet', [self.visit(node.args[0]), self.visit(node.args[1])])
-                case '__pythonj_format__':
-                    assert len(node.args) == 2 and not node.keywords, node.args
-                    return ir.MethodCall(ir.Identifier('Runtime'), 'pythonjFormat', [self.visit(node.args[0]), self.visit(node.args[1])])
-                case '__pythonj_getattr__':
-                    assert len(node.args) == 2 and not node.keywords, node.args
-                    return ir.MethodCall(ir.Identifier('Runtime'), 'pythonjGetAttr', [self.visit(node.args[0]), self.visit(node.args[1])])
-                case '__pythonj_hash__':
-                    assert len(node.args) == 1 and not node.keywords, node.args
-                    return ir.MethodCall(ir.Identifier('Runtime'), 'pythonjHash', [self.visit(node.args[0])])
-                case '__pythonj_index__':
-                    assert len(node.args) == 1 and not node.keywords, node.args
-                    return ir.MethodCall(ir.Identifier('Runtime'), 'pythonjIndex', [self.visit(node.args[0])])
-                case '__pythonj_isinstance__':
-                    assert len(node.args) == 2 and not node.keywords, node.args
-                    return self.emit_isinstance_condition(node.args[0], node.args[1])
-                case '__pythonj_issubclass__':
-                    assert len(node.args) == 2 and not node.keywords, node.args
-                    return ir.MethodCall(ir.Identifier('Runtime'), 'pythonjIsSubclass', [self.visit(node.args[0]), self.visit(node.args[1])])
-                case '__pythonj_iter__':
-                    assert len(node.args) == 1 and not node.keywords, node.args
-                    return ir.MethodCall(self.visit(node.args[0]), 'iter', [])
-                case '__pythonj_len__':
-                    assert len(node.args) == 1 and not node.keywords, node.args
-                    return ir.MethodCall(ir.Identifier('Runtime'), 'pythonjLen', [self.visit(node.args[0])])
-                case '__pythonj_next__':
-                    assert len(node.args) == 1 and not node.keywords, node.args
-                    return ir.MethodCall(self.visit(node.args[0]), 'next', [])
-                case '__pythonj_repr__':
-                    assert len(node.args) == 1 and not node.keywords, node.args
-                    return ir.MethodCall(ir.Identifier('Runtime'), 'pythonjRepr', [self.visit(node.args[0])])
-                case '__pythonj_setattr__':
-                    assert len(node.args) == 3 and not node.keywords, node.args
-                    return ir.MethodCall(ir.Identifier('Runtime'), 'pythonjSetAttr', [self.visit(node.args[0]), self.visit(node.args[1]), self.visit(node.args[2])])
-                case '__pythonj_zip_new__':
-                    assert len(node.args) == 2 and not node.keywords, node.args
-                    return ir.MethodCall(ir.Identifier('Runtime'), 'pythonjZipNew', [self.visit(node.args[0]), self.visit(node.args[1])])
+            if node.func.id == '__pythonj_isinstance__':
+                assert len(node.args) == 2 and not node.keywords, node.args
+                return self.emit_isinstance_condition(node.args[0], node.args[1])
+            if node.func.id in INTRINSIC_SIGNATURES:
+                (n_args, method_name) = INTRINSIC_SIGNATURES[node.func.id]
+                assert len(node.args) == n_args and not node.keywords, (node.func.id, n_args, node.args, node.keywords)
+                return ir.MethodCall(ir.Identifier('Runtime'), method_name, [self.visit(node.args[i]) for i in range(n_args)])
         if (isinstance(node.func, ast.Attribute) and
             not node.keywords and
             not any(isinstance(arg, ast.Starred) for arg in node.args)):

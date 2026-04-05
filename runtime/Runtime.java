@@ -457,12 +457,8 @@ public final class Runtime {
         }
         return 31 * Long.hashCode(numerator) + Long.hashCode(denominator);
     }
-    public static PyObject pythonjGetAttr(PyObject obj, PyObject nameObj) {
-        return obj.getAttr(((PyString)nameObj).value);
-    }
-    public static PyNone pythonjSetAttr(PyObject obj, PyObject nameObj, PyObject value) {
-        obj.setAttr(((PyString)nameObj).value, value);
-        return PyNone.singleton;
+    public static PyObject pythonjAbs(PyObject obj) {
+        return obj.abs();
     }
     public static PyNone pythonjDelAttr(PyObject obj, PyObject nameObj) {
         obj.delAttr(((PyString)nameObj).value);
@@ -474,11 +470,8 @@ public final class Runtime {
     public static PyString pythonjFormat(PyObject obj, PyObject formatSpecObj) {
         return new PyString(obj.format(((PyString)formatSpecObj).value));
     }
-    public static PyInt pythonjLen(PyObject obj) {
-        return new PyInt(obj.len());
-    }
-    public static PyInt pythonjIndex(PyObject obj) {
-        return new PyInt(obj.indexValue());
+    public static PyObject pythonjGetAttr(PyObject obj, PyObject nameObj) {
+        return obj.getAttr(((PyString)nameObj).value);
     }
     public static PyInt pythonjHash(PyObject obj) {
         return new PyInt(obj.hashCode());
@@ -500,8 +493,21 @@ public final class Runtime {
             throw new UnsupportedOperationException(String.format("issubclass() is unimplemented for types %s and %s", obj.repr(), type.repr()));
         }
     }
+    public static PyIter pythonjIter(PyObject obj) {
+        return obj.iter();
+    }
+    public static PyInt pythonjLen(PyObject obj) {
+        return new PyInt(obj.len());
+    }
+    public static PyObject pythonjNext(PyObject obj) {
+        return obj.next();
+    }
     public static PyString pythonjRepr(PyObject obj) {
         return new PyString(obj.repr());
+    }
+    public static PyNone pythonjSetAttr(PyObject obj, PyObject nameObj, PyObject value) {
+        obj.setAttr(((PyString)nameObj).value, value);
+        return PyNone.singleton;
     }
     public static PyObject pythonjZipNew(PyTuple args, PyObject strict) {
         return PyZip.newObjPositional(args.items, strict);
