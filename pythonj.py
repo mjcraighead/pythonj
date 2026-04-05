@@ -2120,18 +2120,13 @@ def decode_default(spec: dict[str, object]) -> object:
         return tuple(decode_default(cast(dict[str, object], x)) for x in cast(list[object], spec['items']))
     assert False, spec
 
-def decode_param_kind(kind: str) -> inspect._ParameterKind:
-    if kind == 'posonly':
-        return inspect.Parameter.POSITIONAL_ONLY
-    if kind == 'poskw':
-        return inspect.Parameter.POSITIONAL_OR_KEYWORD
-    if kind == 'kwonly':
-        return inspect.Parameter.KEYWORD_ONLY
-    if kind == 'vararg':
-        return inspect.Parameter.VAR_POSITIONAL
-    if kind == 'varkw':
-        return inspect.Parameter.VAR_KEYWORD
-    assert False, kind
+PARAM_KINDS = {
+    'posonly': inspect.Parameter.POSITIONAL_ONLY,
+    'poskw': inspect.Parameter.POSITIONAL_OR_KEYWORD,
+    'kwonly': inspect.Parameter.KEYWORD_ONLY,
+    'vararg': inspect.Parameter.VAR_POSITIONAL,
+    'varkw': inspect.Parameter.VAR_KEYWORD,
+}
 
 def decode_signature(spec: Optional[dict[str, object]]) -> Optional[list[inspect.Parameter]]:
     if spec is None:
@@ -2144,7 +2139,7 @@ def decode_signature(spec: Optional[dict[str, object]]) -> Optional[list[inspect
             default = decode_default(cast(dict[str, object], param['default']))
         params.append(inspect.Parameter(
             cast(str, param['name']),
-            decode_param_kind(cast(str, param['kind'])),
+            PARAM_KINDS[cast(str, param['kind'])],
             default=default,
         ))
     return params
