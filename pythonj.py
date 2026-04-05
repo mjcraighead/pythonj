@@ -2059,11 +2059,14 @@ def emit_python_function_static(visitor: LoweringVisitor, func_name: str, arg_na
 
 def translate_python_impl_node(node: ast.Module, func: ast.FunctionDef, emitted_name: str, display_name: str,
                                role: str, pool: ir.ConstantPool,
+                               scope_infos: Optional[dict[ast.AST, ScopeInfo]] = None,
                                python_helper_names: Optional[set[str]] = None,
                                python_helper_class: Optional[str] = None) -> tuple[list[ir.ClassDecl], ir.MethodDecl]:
-    analyzer = ScopeAnalyzer()
-    analyzer.visit(node)
-    visitor = LoweringVisitor(display_name, analyzer.scope_infos, analyzer.scope_infos[node])
+    if scope_infos is None:
+        analyzer = ScopeAnalyzer()
+        analyzer.visit(node)
+        scope_infos = analyzer.scope_infos
+    visitor = LoweringVisitor(display_name, scope_infos, scope_infos[node])
     visitor.pool = pool
     visitor.allow_intrinsics = True
     if python_helper_names is not None:
@@ -2091,19 +2094,32 @@ def translate_python_impl_node(node: ast.Module, func: ast.FunctionDef, emitted_
     assert visitor.n_errors == 0, (emitted_name, visitor.n_errors)
     return (list(visitor.classes.values()), helper_method)
 
-def translate_python_builtin_impl(node: ast.Module, func_name: str, pool: ir.ConstantPool) -> tuple[list[ir.ClassDecl], ir.MethodDecl]:
-    func = get_top_level_functions(node)[func_name]
-    return translate_python_impl_node(node, func, func_name, f'<builtin {func_name}>', 'builtin function', pool)
+def translate_python_builtin_impl(node: ast.Module, func_name: str, pool: ir.ConstantPool,
+                                  funcs: Optional[dict[str, ast.FunctionDef]] = None,
+                                  scope_infos: Optional[dict[ast.AST, ScopeInfo]] = None) -> tuple[list[ir.ClassDecl], ir.MethodDecl]:
+    if funcs is None:
+        funcs = get_top_level_functions(node)
+    func = funcs[func_name]
+    return translate_python_impl_node(node, func, func_name, f'<builtin {func_name}>', 'builtin function', pool, scope_infos=scope_infos)
 
-def translate_python_method_impl(node: ast.Module, type_name: str, method_name: str, pool: ir.ConstantPool) -> tuple[list[ir.ClassDecl], ir.MethodDecl]:
+def translate_python_method_impl(node: ast.Module, type_name: str, method_name: str, pool: ir.ConstantPool,
+                                 class_funcs: Optional[dict[str, dict[str, ast.FunctionDef]]] = None,
+                                 scope_infos: Optional[dict[ast.AST, ScopeInfo]] = None) -> tuple[list[ir.ClassDecl], ir.MethodDecl]:
     func_name = f'{type_name}__{method_name}'
-    func = get_class_functions(node, type_name)[method_name]
-    return translate_python_impl_node(node, func, func_name, f'<method {type_name}.{method_name}>', 'builtin method', pool)
+    if class_funcs is None:
+        func = get_class_functions(node, type_name)[method_name]
+    else:
+        func = class_funcs[type_name][method_name]
+    return translate_python_impl_node(node, func, func_name, f'<method {type_name}.{method_name}>', 'builtin method', pool, scope_infos=scope_infos)
 
-def translate_python_runtime_impl(node: ast.Module, func_name: str, pool: ir.ConstantPool) -> tuple[list[ir.ClassDecl], ir.MethodDecl]:
-    funcs = get_top_level_functions(node)
+def translate_python_runtime_impl(node: ast.Module, func_name: str, pool: ir.ConstantPool,
+                                  funcs: Optional[dict[str, ast.FunctionDef]] = None,
+                                  scope_infos: Optional[dict[ast.AST, ScopeInfo]] = None) -> tuple[list[ir.ClassDecl], ir.MethodDecl]:
+    if funcs is None:
+        funcs = get_top_level_functions(node)
     return translate_python_impl_node(
         node, funcs[func_name], func_name, f'<runtime {func_name}>', 'runtime helper', pool,
+        scope_infos=scope_infos,
         python_helper_names=set(funcs), python_helper_class='PyRuntime',
     )
 
@@ -2418,6 +2434,16 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
 
     pythonj_builtins_node = parse_python_module('pythonj_builtins.py')
     pythonj_runtime_node = parse_python_module('pythonj_runtime.py')
+    pythonj_builtins_funcs = get_top_level_functions(pythonj_builtins_node)
+    pythonj_builtins_classes = {
+        class_name: {x.name: x for x in class_node.body if isinstance(x, ast.FunctionDef)}
+        for (class_name, class_node) in {x.name: x for x in pythonj_builtins_node.body if isinstance(x, ast.ClassDef)}.items()
+    }
+    pythonj_runtime_funcs = get_top_level_functions(pythonj_runtime_node)
+    builtins_analyzer = ScopeAnalyzer()
+    builtins_analyzer.visit(pythonj_builtins_node)
+    runtime_analyzer = ScopeAnalyzer()
+    runtime_analyzer.visit(pythonj_runtime_node)
 
     pool = ir.ConstantPool('PyGeneratedConstants')
     with open(java_path, 'w') as f:
@@ -2584,7 +2610,10 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                     if kind in {'method', 'classmethod'} and method_name in PYTHON_AUTHORED_IMPLS.get(name, set()):
                         helper_name = f'{name.replace(".", "_")}__{method_name}'
                         method_impl_target = f'PyBuiltinMethodsPythonImpl.pyfunc_{helper_name}'
-                        (helper_classes, helper_method) = translate_python_method_impl(pythonj_builtins_node, name, method_name, pool)
+                        (helper_classes, helper_method) = translate_python_method_impl(
+                            pythonj_builtins_node, name, method_name, pool,
+                            class_funcs=pythonj_builtins_classes, scope_infos=builtins_analyzer.scope_infos,
+                        )
                         python_method_helper_classes.extend(helper_classes)
                         python_method_helper_methods.append(helper_method)
                     decls: list[ir.Decl] = [
@@ -2644,9 +2673,10 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                         ))
                     top_level_decls.append(ir.ClassDecl('final', method_class_name, f'PyBuiltinMethod<{self_type}>', decls))
 
-        python_runtime_impls = get_top_level_functions(pythonj_runtime_node)
-        for func_name in sorted(python_runtime_impls):
-            (helper_classes, helper_method) = translate_python_runtime_impl(pythonj_runtime_node, func_name, pool)
+        for func_name in sorted(pythonj_runtime_funcs):
+            (helper_classes, helper_method) = translate_python_runtime_impl(
+                pythonj_runtime_node, func_name, pool, funcs=pythonj_runtime_funcs, scope_infos=runtime_analyzer.scope_infos,
+            )
             python_runtime_helper_classes.extend(helper_classes)
             python_runtime_helper_methods.append(helper_method)
         top_level_decls.extend(python_runtime_helper_classes)
@@ -2656,7 +2686,9 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
         top_level_decls.append(ir.ClassDecl('final', 'PyBuiltinMethodsPythonImpl', None, python_method_helper_methods))
 
         for func_name in sorted(PYTHON_AUTHORED_IMPLS['builtins']):
-            (helper_classes, helper_method) = translate_python_builtin_impl(pythonj_builtins_node, func_name, pool)
+            (helper_classes, helper_method) = translate_python_builtin_impl(
+                pythonj_builtins_node, func_name, pool, funcs=pythonj_builtins_funcs, scope_infos=builtins_analyzer.scope_infos,
+            )
             python_builtin_helper_classes.extend(helper_classes)
             python_builtin_helper_methods.append(helper_method)
         top_level_decls.extend(python_builtin_helper_classes)
