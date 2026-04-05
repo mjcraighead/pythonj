@@ -12,17 +12,22 @@ public final class PyMappingProxy extends PyObject {
     }
 
     public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
-        Runtime.requireNoKwArgs(kwargs, type.name());
-        if (args.length != 1) {
-            throw PyTypeError.raise("mappingproxy() takes 1 argument");
+        Runtime.requireNoKwArgs(kwargs, type.name()); // XXX Should support a kwarg of 'mapping'
+        if (args.length < 1) {
+            throw PyTypeError.raise("mappingproxy() missing required argument 'mapping' (pos 1)");
         }
-        PyObject arg = args[0];
+        if (args.length > 1) {
+            throw PyTypeError.raiseFormat("mappingproxy() takes at most 1 argument (%d given)", args.length);
+        }
+        return newObjPositional(args[0]);
+    }
+    public static PyObject newObjPositional(PyObject arg) {
         if (arg instanceof PyDict dict) {
             return new PyMappingProxy(dict.items);
         } else if (arg instanceof PyMappingProxy proxy) {
             return new PyMappingProxy(proxy.items);
         } else {
-            throw PyTypeError.raise("mappingproxy() argument must be a mapping");
+            throw PyTypeError.raise("mappingproxy() argument must be a mapping, not " + arg.type().name());
         }
     }
 
