@@ -1850,8 +1850,7 @@ class LoweringVisitor(ast.NodeVisitor):
 
     def _lower_comp(self, node: ast.expr, py_name: str, type_name: str, method_name: str, lineno: int,
                     generators: list[ast.comprehension], elts: list[ast.expr]) -> ir.Expr:
-        arg_name = 'iterable'
-        java_name = f'pylambda{self.n_lambdas}'
+        java_name = f'pycomp{self.n_lambdas}'
         self.n_lambdas += 1
 
         qualname = self.qualname(py_name)
@@ -1866,7 +1865,7 @@ class LoweringVisitor(ast.NodeVisitor):
                     ir.method_call_statement(ir.Identifier(temp_result), method_name, [self.visit(elt) for elt in elts])
                 ]
                 for (i, generator) in enumerate(reversed(generators)):
-                    iterable = ir.Identifier(arg_name) if i == len(generators)-1 else self.visit(generator.iter)
+                    iterable = ir.Identifier('iterable') if i == len(generators)-1 else self.visit(generator.iter)
                     statements = self._lower_comp_generator(generator, iterable, statements)
                 body += [
                     ir.LocalDecl('var', temp_result, ir.CreateObject(type_name, [])),
@@ -1874,34 +1873,37 @@ class LoweringVisitor(ast.NodeVisitor):
                     ir.ReturnStatement(ir.Identifier(temp_result)),
                 ]
             free_var_names = sorted(self.scope.free_vars)
-            call_positional_body: list[ir.Statement] = [
-                ir.LocalDecl('PyObject', arg_name, ir.Identifier(f'pyarg_{arg_name}')),
-            ]
+            call_body: list[ir.Statement] = []
             if self.scope.used_expr_discard:
-                call_positional_body.append(ir.LocalDecl('PyObject', 'expr_discard', None))
-            for name in sorted(self.scope.info.cell_vars - {arg_name}):
-                call_positional_body.append(ir.LocalDecl('PyCell', f'pycell_{name}', ir.CreateObject('PyCell', [ir.PyConstant(None)])))
-            for name in sorted(self.scope.info.locals - self.scope.info.cell_vars - {arg_name} - set(self.scope.info.initial_builtin_module_locals)):
-                call_positional_body.append(ir.LocalDecl('PyObject', f'pylocal_{name}', None))
-            call_positional_body.extend(ir.block_simplify(body))
+                call_body.append(ir.LocalDecl('PyObject', 'expr_discard', None))
+            for name in sorted(self.scope.info.cell_vars):
+                call_body.append(ir.LocalDecl('PyCell', f'pycell_{name}', ir.CreateObject('PyCell', [ir.PyConstant(None)])))
+            for name in sorted(self.scope.info.locals - self.scope.info.cell_vars - set(self.scope.info.initial_builtin_module_locals)):
+                call_body.append(ir.LocalDecl(self.java_local_type(name), f'pylocal_{name}', None))
+            call_body.extend(ir.block_simplify(body))
             assert java_name not in self.classes
             self.classes[java_name] = ir.ClassDecl('private static final', java_name, None, [
-                *(ir.FieldDecl('private final', 'PyCell', f'pycell_{name}', None) for name in free_var_names),
-                ir.ConstructorDecl('', java_name, [f'PyCell _pycell_{name}' for name in free_var_names],
-                    [*(ir.AssignStatement(ir.Identifier(f'pycell_{name}'), ir.Identifier(f'_pycell_{name}')) for name in free_var_names)],
-                ),
-                ir.MethodDecl('public', type_name, 'callPositional', [f'PyObject pyarg_{arg_name}'],
-                    call_positional_body,
+                ir.MethodDecl('public static', type_name, 'invoke',
+                    [*(f'PyCell pycell_{name}' for name in free_var_names), 'PyObject iterable'],
+                    call_body,
                 ),
             ])
 
-        return ir.MethodCall(
-            ir.CreateObject(java_name, [ir.Identifier(f'pycell_{name}') for name in sorted(free_vars)]),
-            'callPositional',
-            [self.visit(generators[0].iter)],
-        )
+        return ir.MethodCall(ir.Identifier(java_name), 'invoke', [
+            *(ir.Identifier(f'pycell_{name}') for name in sorted(free_vars)),
+            self.visit(generators[0].iter),
+        ])
 
-    def _lower_genexpr(self, node: ast.GeneratorExp) -> ir.Expr:
+    def visit_ListComp(self, node) -> ir.Expr:
+        return self._lower_comp(node, '<listcomp>', 'PyList', 'pymethod_append', node.lineno, node.generators, [node.elt])
+
+    def visit_SetComp(self, node) -> ir.Expr:
+        return self._lower_comp(node, '<setcomp>', 'PySet', 'pymethod_add', node.lineno, node.generators, [node.elt])
+
+    def visit_DictComp(self, node) -> ir.Expr:
+        return self._lower_comp(node, '<dictcomp>', 'PyDict', 'setItem', node.lineno, node.generators, [node.key, node.value])
+
+    def visit_GeneratorExp(self, node) -> ir.Expr:
         if len(node.generators) != 1:
             self.error(node.lineno, 'generator expressions with multiple for clauses are unsupported')
             return ir.MethodCall(ir.CreateObject('PyTuple', []), 'iter', [])
@@ -1956,18 +1958,6 @@ class LoweringVisitor(ast.NodeVisitor):
             ])
 
         return ir.CreateObject(java_name, [*(ir.Identifier(f'pycell_{name}') for name in sorted(free_vars)), self.visit(generator.iter)])
-
-    def visit_ListComp(self, node) -> ir.Expr:
-        return self._lower_comp(node, '<listcomp>', 'PyList', 'pymethod_append', node.lineno, node.generators, [node.elt])
-
-    def visit_SetComp(self, node) -> ir.Expr:
-        return self._lower_comp(node, '<setcomp>', 'PySet', 'pymethod_add', node.lineno, node.generators, [node.elt])
-
-    def visit_DictComp(self, node) -> ir.Expr:
-        return self._lower_comp(node, '<dictcomp>', 'PyDict', 'setItem', node.lineno, node.generators, [node.key, node.value])
-
-    def visit_GeneratorExp(self, node) -> ir.Expr:
-        return self._lower_genexpr(node)
 
     def visit_Module(self, node) -> None:
         for statement in node.body:
