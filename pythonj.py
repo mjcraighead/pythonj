@@ -215,7 +215,7 @@ class Scope:
 # XXX "invokedynamic" might help us a lot, but there is no way to access it from Java source
 class LoweringVisitor(ast.NodeVisitor):
     __slots__ = ('path', 'n_errors', 'n_functions', 'n_lambdas', 'scope', 'global_code', 'code',
-                 'scope_infos', 'pool', 'break_name', 'functions', 'allow_intrinsics',
+                 'scope_infos', 'pool', 'break_name', 'classes', 'allow_intrinsics',
                  'python_helper_names', 'python_helper_class')
     path: str
     n_errors: int
@@ -227,7 +227,7 @@ class LoweringVisitor(ast.NodeVisitor):
     scope_infos: dict[ast.AST, ScopeInfo]
     pool: ir.ConstantPool
     break_name: Optional[str]
-    functions: dict[str, list[str]]
+    classes: dict[str, ir.ClassDecl]
     allow_intrinsics: bool # enables special internal-only codegen features for builtins
     python_helper_names: set[str]
     python_helper_class: Optional[str]
@@ -244,7 +244,7 @@ class LoweringVisitor(ast.NodeVisitor):
         self.scope_infos = scope_infos
         self.pool = ir.ConstantPool()
         self.break_name = None
-        self.functions = {}
+        self.classes = {}
         self.allow_intrinsics = False
         self.python_helper_names = set()
         self.python_helper_class = None
@@ -969,100 +969,195 @@ class LoweringVisitor(ast.NodeVisitor):
         py_name_java = ir.StrLiteral(py_name).emit_java(self.pool)
         arg_names_java = ', '.join(ir.StrLiteral(arg).emit_java(self.pool) for arg in arg_names)
         required_arg_names_java = ', '.join(ir.StrLiteral(arg).emit_java(self.pool) for arg in arg_names[:n_required])
-        func_code = [
-            f'private static final class {java_name} extends PyFunction {{',
-            *(line for name in free_var_names for line in ir.FieldDecl('private final', 'PyCell', f'pycell_{name}', None).emit_java(self.pool)),
-            (f'{java_name}({", ".join(f"PyCell pycell_{name}" for name in free_var_names)}) {{' if free_var_names else f'{java_name}() {{'),
-            *ir.block_emit_java([ir.SuperConstructorCall([ir.StrLiteral(py_name)])], self.pool),
-            *(f'this.pycell_{name} = pycell_{name};' for name in free_var_names),
-            '}',
-            '@Override public PyObject call(PyObject[] args, PyDict kwargs) {',
-            'int argsLength = args.length;',
-            *(f'PyObject {name} = (argsLength >= {i + 1}) ? args[{i}] : null;' for (i, name) in enumerate(bind_arg_names)),
-            'if ((kwargs == null) || !kwargs.boolValue()) {',
+        constructor_args = [f'PyCell _pycell_{name}' for name in free_var_names]
+        func_decls: list[ir.Decl] = [
+            *(ir.FieldDecl('private final', 'PyCell', f'pycell_{name}', None) for name in free_var_names),
+            ir.ConstructorDecl(
+                '',
+                java_name,
+                constructor_args,
+                [
+                    ir.SuperConstructorCall([ir.StrLiteral(py_name)]),
+                    *(ir.AssignStatement(ir.Identifier(f'pycell_{name}'), ir.Identifier(f'_pycell_{name}')) for name in free_var_names),
+                ],
+            ),
         ]
+        call_body: list[ir.Statement] = [
+            ir.LocalDecl('int', 'argsLength', ir.Field(ir.Identifier('args'), 'length')),
+            *(ir.LocalDecl(
+                'PyObject',
+                name,
+                ir.CondOp(
+                    ir.BinaryOp('>=', ir.Identifier('argsLength'), ir.IntLiteral(i + 1)),
+                    ir.ArrayAccess(ir.Identifier('args'), ir.IntLiteral(i)),
+                    ir.Null(),
+                ),
+            ) for (i, name) in enumerate(bind_arg_names)),
+        ]
+        no_kwargs_body: list[ir.Statement] = []
         if n_required == n_args:
-            func_code.extend([
-                f'if (argsLength != {n_args}) {{',
-                f'throw Runtime.raiseUserExactArgs(args, {n_args}, {py_name_java}{", " if arg_names_java else ""}{arg_names_java});',
-                '}',
-            ])
+            no_kwargs_body.append(ir.IfStatement(
+                ir.BinaryOp('!=', ir.Identifier('argsLength'), ir.IntLiteral(n_args)),
+                [ir.ThrowStatement(ir.MethodCall(ir.Identifier('Runtime'), 'raiseUserExactArgs', [
+                    ir.Identifier('args'),
+                    ir.IntLiteral(n_args),
+                    ir.StrLiteral(py_name),
+                    *(ir.StrLiteral(arg) for arg in arg_names),
+                ]))],
+                [],
+            ))
         else:
             if n_required != 0:
-                func_code.extend([
-                    f'if (argsLength < {n_required}) {{',
-                    f'throw Runtime.raiseUserMissingArgs(argsLength, {py_name_java}, {required_arg_names_java});',
-                    '}',
-                ])
-            func_code.extend([
-                f'if (argsLength > {n_args}) {{',
-                f'throw Runtime.raiseUserFromToArgs(args, {n_required}, {n_args}, {py_name_java});',
-                '}',
-            ])
-        func_code.append('} else {')
+                no_kwargs_body.append(ir.IfStatement(
+                    ir.BinaryOp('<', ir.Identifier('argsLength'), ir.IntLiteral(n_required)),
+                    [ir.ThrowStatement(ir.MethodCall(ir.Identifier('Runtime'), 'raiseUserMissingArgs', [
+                        ir.Identifier('argsLength'),
+                        ir.StrLiteral(py_name),
+                        *(ir.StrLiteral(arg) for arg in arg_names[:n_required]),
+                    ]))],
+                    [],
+                ))
+            no_kwargs_body.append(ir.IfStatement(
+                ir.BinaryOp('>', ir.Identifier('argsLength'), ir.IntLiteral(n_args)),
+                [ir.ThrowStatement(ir.MethodCall(ir.Identifier('Runtime'), 'raiseUserFromToArgs', [
+                    ir.Identifier('args'),
+                    ir.IntLiteral(n_required),
+                    ir.IntLiteral(n_args),
+                    ir.StrLiteral(py_name),
+                ]))],
+                [],
+            ))
+        kw_else_body: list[ir.Statement]
         if arg_names:
-            func_code.extend([
-                'for (var x: kwargs.items.entrySet()) {',
-                'String kwName = ((PyString)x.getKey()).value;',
-                'PyObject kwValue = x.getValue();',
-            ])
+            kw_conditions_and_bodies: list[tuple[ir.Expr, list[ir.Statement]]] = []
             for (i, arg_name) in enumerate(arg_names):
-                prefix = '' if i == 0 else 'else '
-                func_code.extend([
-                    f'{prefix}if (kwName.equals({ir.StrLiteral(arg_name).emit_java(self.pool)})) {{',
-                    f'if ({bind_arg_names[i]} != null) {{',
-                    f'throw Runtime.raiseMultipleValues({py_name_java}, {ir.StrLiteral(arg_name).emit_java(self.pool)});',
-                    '}',
-                    f'{bind_arg_names[i]} = kwValue;',
-                    '}',
-                ])
-            func_code.extend([
-                'else {',
-                f'throw Runtime.raiseUnexpectedKwArg({py_name_java}, kwName);',
-                '}',
-                '}',
-            ])
+                kw_conditions_and_bodies.append((
+                    ir.MethodCall(ir.Identifier('kwName'), 'equals', [ir.StrLiteral(arg_name)]),
+                    [
+                        ir.IfStatement(
+                            ir.BinaryOp('!=', ir.Identifier(bind_arg_names[i]), ir.Null()),
+                            [ir.ThrowStatement(ir.MethodCall(ir.Identifier('Runtime'), 'raiseMultipleValues', [
+                                ir.StrLiteral(py_name),
+                                ir.StrLiteral(arg_name),
+                            ]))],
+                            [],
+                        ),
+                        ir.AssignStatement(ir.Identifier(bind_arg_names[i]), ir.Identifier('kwValue')),
+                    ],
+                ))
+            kw_else_body = [
+                ir.ThrowStatement(ir.MethodCall(ir.Identifier('Runtime'), 'raiseUnexpectedKwArg', [
+                    ir.StrLiteral(py_name),
+                    ir.Identifier('kwName'),
+                ])),
+            ]
+            kwargs_body: list[ir.Statement] = [
+                ir.ForEachStatement(
+                    'var',
+                    'x',
+                    ir.MethodCall(ir.Field(ir.Identifier('kwargs'), 'items'), 'entrySet', []),
+                    [
+                        ir.LocalDecl('String', 'kwName', ir.Field(ir.CastExpr('PyString', ir.MethodCall(ir.Identifier('x'), 'getKey', [])), 'value')),
+                        ir.LocalDecl('PyObject', 'kwValue', ir.MethodCall(ir.Identifier('x'), 'getValue', [])),
+                        ir.if_chain(kw_conditions_and_bodies, kw_else_body),
+                    ],
+                ),
+            ]
         else:
-            func_code.extend([
-                'String kwName = ((PyString)kwargs.items.keySet().iterator().next()).value;',
-                f'throw Runtime.raiseUnexpectedKwArg({py_name_java}, kwName);',
-            ])
+            kwargs_body = [
+                ir.LocalDecl(
+                    'String',
+                    'kwName',
+                    ir.Field(
+                        ir.CastExpr(
+                            'PyString',
+                            ir.MethodCall(
+                                ir.MethodCall(
+                                    ir.MethodCall(
+                                        ir.Field(ir.Identifier('kwargs'), 'items'),
+                                        'keySet',
+                                        [],
+                                    ),
+                                    'iterator',
+                                    [],
+                                ),
+                                'next',
+                                [],
+                            ),
+                        ),
+                        'value',
+                    ),
+                ),
+                ir.ThrowStatement(ir.MethodCall(ir.Identifier('Runtime'), 'raiseUnexpectedKwArg', [
+                    ir.StrLiteral(py_name),
+                    ir.Identifier('kwName'),
+                ])),
+            ]
         if n_args != 0:
-            func_code.extend([
-                f'if (argsLength > {n_args}) {{',
-                f'throw Runtime.raiseUserFromToArgs(args, {n_required}, {n_args}, {py_name_java});',
-                '}',
-            ])
+            kwargs_body.append(ir.IfStatement(
+                ir.BinaryOp('>', ir.Identifier('argsLength'), ir.IntLiteral(n_args)),
+                [ir.ThrowStatement(ir.MethodCall(ir.Identifier('Runtime'), 'raiseUserFromToArgs', [
+                    ir.Identifier('args'),
+                    ir.IntLiteral(n_required),
+                    ir.IntLiteral(n_args),
+                    ir.StrLiteral(py_name),
+                ]))],
+                [],
+            ))
             if n_required != 0:
-                func_code.append(f'if ({ " || ".join(f"{bind_arg_names[i]} == null" for i in range(n_required)) }) {{')
-                func_code.append(f'throw Runtime.raiseUserMissingKwArgs({py_name_java}, new PyObject[] {{{", ".join(bind_arg_names[:n_required])}}}, {required_arg_names_java});')
-                func_code.append('}')
-        func_code.append('}')
-        func_code.append(f'return this.call_positional({", ".join(bind_arg_names)});' if bind_arg_names else 'return this.call_positional();')
-        func_code.append('}')
-        func_code.append(f'public PyObject call_positional({", ".join(f"PyObject {name}" for name in bind_arg_names)}) {{')
-        for (i, name) in enumerate(bind_arg_names[n_required:]):
-            func_code.append(f'if ({name} == null) {{ {name} = {emit_default_expr(arg_defaults[i], self.pool)}; }}')
+                missing_cond = ir.BinaryOp('||', ir.BinaryOp('==', ir.Identifier(bind_arg_names[0]), ir.Null()), ir.Bool(False))
+                for name in bind_arg_names[1:n_required]:
+                    missing_cond = ir.BinaryOp('||', missing_cond, ir.BinaryOp('==', ir.Identifier(name), ir.Null()))
+                kwargs_body.append(ir.IfStatement(
+                    missing_cond,
+                    [ir.ThrowStatement(ir.MethodCall(ir.Identifier('Runtime'), 'raiseUserMissingKwArgs', [
+                        ir.StrLiteral(py_name),
+                        ir.CreateArray('PyObject', [ir.Identifier(name) for name in bind_arg_names[:n_required]]),
+                        *(ir.StrLiteral(arg) for arg in arg_names[:n_required]),
+                    ]))],
+                    [],
+                ))
+        call_body.append(ir.IfStatement(
+            ir.BinaryOp(
+                '||',
+                ir.BinaryOp('==', ir.Identifier('kwargs'), ir.Null()),
+                ir.UnaryOp('!', ir.MethodCall(ir.Identifier('kwargs'), 'boolValue', [])),
+            ),
+            no_kwargs_body,
+            kwargs_body,
+        ))
+        call_body.append(ir.ReturnStatement(ir.MethodCall(ir.This(), 'call_positional', [ir.Identifier(name) for name in bind_arg_names])))
+        func_decls.append(ir.MethodDecl('@Override public', 'PyObject', 'call', ['PyObject[] args', 'PyDict kwargs'], call_body))
+        call_positional_body: list[ir.Statement] = [
+            *(ir.IfStatement(
+                ir.BinaryOp('==', ir.Identifier(name), ir.Null()),
+                [ir.AssignStatement(ir.Identifier(name), emit_default_java_expr(arg_defaults[i]))],
+                [],
+            ) for (i, name) in enumerate(bind_arg_names[n_required:])),
+        ]
         if self.scope.used_expr_discard:
-            func_code.append('PyObject expr_discard;')
+            call_positional_body.append(ir.LocalDecl('PyObject', 'expr_discard', None))
         for (arg_name, bind_arg_name) in zip(arg_names, bind_arg_names):
             if arg_name in self.scope.info.cell_vars:
-                func_code.append(f'PyCell pycell_{arg_name} = new PyCell({bind_arg_name});')
+                call_positional_body.append(ir.LocalDecl('PyCell', f'pycell_{arg_name}', ir.CreateObject('PyCell', [ir.Identifier(bind_arg_name)])))
             else:
                 local_arg_name = arg_name if invisible_args else f'pylocal_{arg_name}'
-                func_code.append(f'PyObject {local_arg_name} = {bind_arg_name};')
+                call_positional_body.append(ir.LocalDecl('PyObject', local_arg_name, ir.Identifier(bind_arg_name)))
         for name in sorted(self.scope.info.cell_vars - set(arg_names)):
-            func_code.append(f'PyCell pycell_{name} = new PyCell({ir.PyConstant(None).emit_java(self.pool)});')
+            call_positional_body.append(ir.LocalDecl('PyCell', f'pycell_{name}', ir.CreateObject('PyCell', [ir.PyConstant(None)])))
         for name in sorted(self.scope.info.locals - self.scope.info.cell_vars - set(arg_names)):
             if invisible_args or name not in arg_names:
-                func_code.append(f'PyObject pylocal_{name};')
-        func_code.extend(ir.block_emit_java(ir.block_simplify([*body, ir.ReturnStatement(ir.PyConstant(None))]), self.pool))
-        func_code.extend([
-            '}',
-            '}',
-        ])
-        assert java_name not in self.functions
-        self.functions[java_name] = func_code
+                call_positional_body.append(ir.LocalDecl('PyObject', f'pylocal_{name}', None))
+        call_positional_body.extend(ir.block_simplify([*body, ir.ReturnStatement(ir.PyConstant(None))]))
+        func_decls.append(ir.MethodDecl(
+            'public',
+            'PyObject',
+            'call_positional',
+            [f'PyObject {name}' for name in bind_arg_names],
+            call_positional_body,
+        ))
+        assert java_name not in self.classes
+        self.classes[java_name] = ir.ClassDecl('private static final', java_name, 'PyFunction', func_decls)
 
     def visit_FunctionDef(self, node) -> None:
         # node.type_comment is ignored; we only plan to support "real" type annotations.
@@ -1118,9 +1213,9 @@ class LoweringVisitor(ast.NodeVisitor):
         java_name = f'pyclass_{node.name}'
         type_name = f'{java_name}Type'
         type_class_name = f'{type_name}Class'
-        class_code = []
+        class_decls: list[ir.ClassDecl] = []
         if slots is None:
-            class_code.extend(ir.ClassDecl(
+            class_decls.append(ir.ClassDecl(
                 'private static final',
                 java_name,
                 'PyBagObject',
@@ -1143,7 +1238,7 @@ class LoweringVisitor(ast.NodeVisitor):
                         ir.ReturnStatement(ir.CreateObject(java_name, [])),
                     ]),
                 ],
-            ).emit_java(self.pool))
+            ))
         else:
             get_attr_helper_decls = [
                 ir.MethodDecl('private', 'PyObject', f'pygetslot_{name}', [], [
@@ -1184,7 +1279,7 @@ class LoweringVisitor(ast.NodeVisitor):
                     ir.Identifier('key'),
                 ])),
             ])
-            class_code.extend(ir.ClassDecl(
+            class_decls.append(ir.ClassDecl(
                 'private static final',
                 java_name,
                 'PySlottedObject',
@@ -1230,8 +1325,8 @@ class LoweringVisitor(ast.NodeVisitor):
                     ir.ReturnStatement(ir.CreateObject(java_name, [])),
                 ]),
                 ],
-            ).emit_java(self.pool))
-        class_code.extend(ir.ClassDecl(
+            ))
+        class_decls.append(ir.ClassDecl(
             'private static final',
             type_class_name,
             'PyConcreteType',
@@ -1241,9 +1336,10 @@ class LoweringVisitor(ast.NodeVisitor):
                     ir.SuperConstructorCall([ir.StrLiteral(node.name), ir.Field(ir.Identifier(java_name), 'class'), ir.MethodRef(java_name, 'newObj')]),
                 ]),
             ],
-        ).emit_java(self.pool))
-        assert java_name not in self.functions
-        self.functions[java_name] = class_code
+        ))
+        for class_decl in class_decls:
+            assert class_decl.name not in self.classes
+            self.classes[class_decl.name] = class_decl
         self.code.append(ir.AssignStatement(self.ident_expr(node.name), ir.Identifier(f'{type_class_name}.singleton')))
 
     def visit_Lambda(self, node) -> ir.Expr:
@@ -1353,7 +1449,7 @@ class LoweringVisitor(ast.NodeVisitor):
                 *(ir.AssignStatement(ir.Identifier(f'pycell_{name}'), ir.Identifier(f'_pycell_{name}')) for name in free_var_names),
                 ir.AssignStatement(ir.Identifier('pyiter_iterable'), ir.MethodCall(ir.Identifier('iterable'), 'iter', [])),
             ]
-            func_code = list(ir.ClassDecl(
+            func_decl = ir.ClassDecl(
                 'private static final',
                 java_name,
                 'PyIter',
@@ -1368,9 +1464,9 @@ class LoweringVisitor(ast.NodeVisitor):
                     ir.MethodDecl('public', 'String', 'repr', [], [ir.ReturnStatement(ir.StrLiteral(f'<generator object {qualname}>'))]),
                     ir.MethodDecl('public', 'PyConcreteType', 'type', [], [ir.ReturnStatement(ir.Identifier('type_singleton'))]),
                 ],
-            ).emit_java(self.pool))
-            assert java_name not in self.functions
-            self.functions[java_name] = func_code
+            )
+            assert java_name not in self.classes
+            self.classes[java_name] = func_decl
 
         return ir.CreateObject(java_name, [*(ir.Identifier(f'pycell_{name}') for name in sorted(free_vars)), self.visit(generator.iter)])
 
@@ -1393,9 +1489,8 @@ class LoweringVisitor(ast.NodeVisitor):
     def write_java(self, f: TextIO, py_name: str) -> None:
         writer = ir.IndentedWriter(f, 0)
         writer.write(f'public final class {py_name} {{')
-        for code in self.functions.values():
-            for line in code:
-                writer.write(line)
+        for class_decl in self.classes.values():
+            ir.emit_decl(writer, class_decl, self.pool)
             writer.write('')
 
         # XXX Initializing all globals to None is weird, but we don't have a better option yet
@@ -1651,20 +1746,20 @@ def translate_python_impl_node(node: ast.Module, func: ast.FunctionDef, emitted_
             visitor.error(func.lineno, f'annotated function {func.name} may implicitly return None')
         helper_method = emit_python_function_static(visitor, emitted_name, arg_names, body, return_java_type)
     assert visitor.n_errors == 0, (emitted_name, visitor.n_errors)
-    return (list(visitor.functions.values()), helper_method)
+    return (list(visitor.classes.values()), helper_method)
 
-def translate_python_builtin_impl(func_name: str, pool: ir.ConstantPool) -> tuple[list[list[str]], ir.MethodDecl]:
+def translate_python_builtin_impl(func_name: str, pool: ir.ConstantPool) -> tuple[list[ir.ClassDecl], ir.MethodDecl]:
     node = parse_python_module('pythonj_builtins.py')
     func = get_top_level_functions(node)[func_name]
     return translate_python_impl_node(node, func, func_name, f'<builtin {func_name}>', 'builtin function', pool)
 
-def translate_python_method_impl(type_name: str, method_name: str, pool: ir.ConstantPool) -> tuple[list[list[str]], ir.MethodDecl]:
+def translate_python_method_impl(type_name: str, method_name: str, pool: ir.ConstantPool) -> tuple[list[ir.ClassDecl], ir.MethodDecl]:
     func_name = f'{type_name}__{method_name}'
     node = parse_python_module('pythonj_builtins.py')
     func = get_class_functions(node, type_name)[method_name]
     return translate_python_impl_node(node, func, func_name, f'<method {type_name}.{method_name}>', 'builtin method', pool)
 
-def translate_python_runtime_impl(func_name: str, pool: ir.ConstantPool) -> tuple[list[list[str]], ir.MethodDecl]:
+def translate_python_runtime_impl(func_name: str, pool: ir.ConstantPool) -> tuple[list[ir.ClassDecl], ir.MethodDecl]:
     node = parse_python_module('pythonj_runtime.py')
     funcs = get_top_level_functions(node)
     return translate_python_impl_node(
@@ -2077,11 +2172,11 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
     pool = ir.ConstantPool('PyGeneratedConstants')
     with open(java_path, 'w') as f:
         writer = ir.IndentedWriter(f, 0)
-        python_runtime_helper_classes: list[list[str]] = []
+        python_runtime_helper_classes: list[ir.ClassDecl] = []
         python_runtime_helper_methods: list[ir.Decl] = []
-        python_builtin_helper_classes: list[list[str]] = []
+        python_builtin_helper_classes: list[ir.ClassDecl] = []
         python_builtin_helper_methods: list[ir.Decl] = []
-        python_method_helper_classes: list[list[str]] = []
+        python_method_helper_classes: list[ir.ClassDecl] = []
         python_method_helper_methods: list[ir.Decl] = []
         for (name, obj_spec) in spec.items():
             if obj_spec['kind'] != 'type':
@@ -2314,17 +2409,15 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                 (helper_classes, helper_method) = translate_python_runtime_impl(func_name, pool)
                 python_runtime_helper_classes.extend(helper_classes)
                 python_runtime_helper_methods.append(helper_method)
-            for code in python_runtime_helper_classes:
-                for line in code:
-                    writer.write(line)
+            for class_decl in python_runtime_helper_classes:
+                ir.emit_decl(writer, class_decl, pool)
                 writer.write('')
             ir.emit_decl(writer, ir.ClassDecl('final', 'PyRuntimePythonImpl', None, python_runtime_helper_methods), pool)
             writer.write('')
 
         if any(PYTHON_AUTHORED_IMPLS.get(name, set()) for name in PYTHON_AUTHORED_IMPLS if name != 'builtins'):
-            for code in python_method_helper_classes:
-                for line in code:
-                    writer.write(line)
+            for class_decl in python_method_helper_classes:
+                ir.emit_decl(writer, class_decl, pool)
                 writer.write('')
             ir.emit_decl(writer, ir.ClassDecl('final', 'PyBuiltinMethodsPythonImpl', None, python_method_helper_methods), pool)
             writer.write('')
@@ -2334,9 +2427,8 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                 (helper_classes, helper_method) = translate_python_builtin_impl(func_name, pool)
                 python_builtin_helper_classes.extend(helper_classes)
                 python_builtin_helper_methods.append(helper_method)
-            for code in python_builtin_helper_classes:
-                for line in code:
-                    writer.write(line)
+            for class_decl in python_builtin_helper_classes:
+                ir.emit_decl(writer, class_decl, pool)
                 writer.write('')
             ir.emit_decl(writer, ir.ClassDecl('final', 'PyBuiltinFunctionsPythonImpl', None, python_builtin_helper_methods), pool)
             writer.write('')
