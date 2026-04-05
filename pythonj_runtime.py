@@ -3,10 +3,11 @@
 # SPDX-License-Identifier: MIT
 
 def _init_bound_args(args, max_total):
+    args_len = __pythonj_len__(args)
     bound_args = []
     i = 0
     while i < max_total:
-        if i < __pythonj_len__(args):
+        if i < args_len:
             bound_args.append(args[i])
         else:
             bound_args.append(__pythonj_null__)
@@ -14,8 +15,9 @@ def _init_bound_args(args, max_total):
     return bound_args
 
 def _find_name(names, kw, start):
+    names_len = __pythonj_len__(names)
     i = start
-    while i < __pythonj_len__(names):
+    while i < names_len:
         if kw == names[i]:
             return i
         i += 1
@@ -70,6 +72,7 @@ def bind_min_max_positional_or_keyword(args, kwargs, kw_name, positional_name, p
     unknown_kw = None
     if kwargs is not __pythonj_null__ and kwargs:
         kwargs_len = __pythonj_len__(kwargs)
+        positional_names_len = __pythonj_len__(positional_names)
         if args_len + kwargs_len > max_total:
             if args_len == 0:
                 raise _type_error_at_most_keyword_args(kw_name, max_total, kwargs_len)
@@ -83,7 +86,7 @@ def bind_min_max_positional_or_keyword(args, kwargs, kw_name, positional_name, p
             else:
                 kwonly_index = _find_name(kwonly_names, kw, 0)
                 if kwonly_index is not __pythonj_null__:
-                    bound_args[__pythonj_len__(positional_names) + kwonly_index] = value
+                    bound_args[positional_names_len + kwonly_index] = value
                 elif unknown_kw is None:
                     unknown_kw = kw
 
@@ -107,11 +110,7 @@ def bind_min_max_positional_or_keyword(args, kwargs, kw_name, positional_name, p
     return tuple(bound_args)
 
 def bind_varargs_and_kwonly(args, kwargs, kw_name, kwonly_names):
-    bound_args = [args]
-    i = 0
-    while i < __pythonj_len__(kwonly_names):
-        bound_args.append(__pythonj_null__)
-        i += 1
+    bound_args = [args] + ([__pythonj_null__] * __pythonj_len__(kwonly_names))
 
     unknown_kw = None
     if kwargs is not __pythonj_null__ and kwargs:
