@@ -1488,25 +1488,17 @@ class LoweringVisitor(ast.NodeVisitor):
 
     def write_java(self, f: TextIO, py_name: str) -> None:
         writer = ir.IndentedWriter(f, 0)
-        writer.write(f'public final class {py_name} {{')
-        for class_decl in self.classes.values():
-            ir.emit_decl(writer, class_decl, self.pool)
-            writer.write('')
-
-        # XXX Initializing all globals to None is weird, but we don't have a better option yet
-        for name in sorted(self.scope.info.locals):
-            ir.emit_decl(writer, ir.FieldDecl('private static', 'PyObject', f'pyglobal_{name}', ir.PyConstant(None)), self.pool)
-        writer.write('')
-
-        writer.write('public static void main(String[] args) {')
-        for line in ir.block_emit_java(ir.block_simplify(self.global_code), self.pool):
-            writer.write(line)
-        writer.write('}')
-
-        writer.write('')
-        for decl in self.pool.build_pool_decls():
-            ir.emit_decl(writer, decl, self.pool)
-        writer.write('}')
+        body_decls: list[ir.Decl] = [
+            *self.classes.values(),
+            # XXX Initializing all globals to None is weird, but we don't have a better option yet
+            *(ir.FieldDecl('private static', 'PyObject', f'pyglobal_{name}', ir.PyConstant(None)) for name in sorted(self.scope.info.locals)),
+            ir.MethodDecl('public static', 'void', 'main', ['String[] args'], ir.block_simplify(self.global_code)),
+        ]
+        for decl in body_decls:
+            for _ in decl.emit_java(self.pool):
+                pass
+        decls = [*body_decls, *self.pool.build_pool_decls()]
+        ir.emit_decl(writer, ir.ClassDecl('public final', py_name, None, decls), self.pool)
         assert writer.indent == 0, writer.indent
 
 def get_top_level_function_names(path: str) -> set[str]:
@@ -2271,7 +2263,6 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                 ], ir.Null()),
             ]))
             ir.emit_decl(writer, ir.ClassDecl('final', f'{java_name}Type', 'PyConcreteType', type_decls), pool)
-            writer.write('')
 
             if name == 'type':
                 for method_name in ['mro']:
@@ -2291,7 +2282,6 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                             ]),
                         ],
                     ), pool)
-                    writer.write('')
 
             gen_methods = {}
             for (method_name, v) in attrs.items():
@@ -2401,7 +2391,6 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                             [*call_positional_statements, ir.ReturnStatement(call_positional_expr)],
                         ))
                     ir.emit_decl(writer, ir.ClassDecl('final', method_class_name, f'PyBuiltinMethod<{self_type}>', decls), pool)
-                writer.write('')
 
         python_runtime_impls = get_top_level_function_names('pythonj_runtime.py')
         if python_runtime_impls:
@@ -2411,16 +2400,12 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                 python_runtime_helper_methods.append(helper_method)
             for class_decl in python_runtime_helper_classes:
                 ir.emit_decl(writer, class_decl, pool)
-                writer.write('')
             ir.emit_decl(writer, ir.ClassDecl('final', 'PyRuntimePythonImpl', None, python_runtime_helper_methods), pool)
-            writer.write('')
 
         if any(PYTHON_AUTHORED_IMPLS.get(name, set()) for name in PYTHON_AUTHORED_IMPLS if name != 'builtins'):
             for class_decl in python_method_helper_classes:
                 ir.emit_decl(writer, class_decl, pool)
-                writer.write('')
             ir.emit_decl(writer, ir.ClassDecl('final', 'PyBuiltinMethodsPythonImpl', None, python_method_helper_methods), pool)
-            writer.write('')
 
         if PYTHON_AUTHORED_IMPLS['builtins']:
             for func_name in sorted(PYTHON_AUTHORED_IMPLS['builtins']):
@@ -2429,9 +2414,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                 python_builtin_helper_methods.append(helper_method)
             for class_decl in python_builtin_helper_classes:
                 ir.emit_decl(writer, class_decl, pool)
-                writer.write('')
             ir.emit_decl(writer, ir.ClassDecl('final', 'PyBuiltinFunctionsPythonImpl', None, python_builtin_helper_methods), pool)
-            writer.write('')
 
         for module_name in sorted(extract_spec.BUILTIN_MODULES):
             module_spec = cast(dict[str, object], spec[module_name])
@@ -2493,7 +2476,6 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                         ],
                     ))
                 ir.emit_decl(writer, ir.ClassDecl('final', f'{module_func_prefix}Function_{func_name}', 'PyBuiltinFunction', decls), pool)
-                writer.write('')
 
         for func_name in sorted(extract_spec.BUILTIN_FUNCTIONS):
             params = get_builtin_function_params(spec, func_name)
@@ -2553,7 +2535,6 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                     ],
                 ))
             ir.emit_decl(writer, ir.ClassDecl('final', f'PyBuiltinFunction_{func_name}', 'PyBuiltinFunction', decls), pool)
-            writer.write('')
 
         for decl in pool.build_pool_decls():
             ir.emit_decl(writer, decl, pool)
