@@ -335,9 +335,8 @@ class LoweringVisitor(ast.NodeVisitor):
         return True
 
     def final_top_level_function_expr(self, name: str) -> ir.Expr:
-        java_name = self.final_global_function_classes.get(name)
-        assert java_name is not None, name
-        return ir.CastExpr(java_name, self.ident_expr(name))
+        assert name in self.final_global_function_classes, name
+        return self.ident_expr(name)
 
     def resolve_free_vars(self, lineno: int, scope_info: ScopeInfo, func_type: str) -> set[str]:
         free_vars = set()
@@ -1453,7 +1452,7 @@ class LoweringVisitor(ast.NodeVisitor):
             # XXX Initializing all globals to None is weird, but we don't have a better option yet
             *(ir.FieldDecl('private static final', 'PyObject', f'pyglobal_{name}', ir.Field(ir.Identifier(extract_spec.BUILTIN_MODULES[module_name]), 'singleton'))
               for (name, module_name) in sorted(final_import_fields.items())),
-            *(ir.FieldDecl('private static final', 'PyObject', f'pyglobal_{name}', ir.CreateObject(java_name, []))
+            *(ir.FieldDecl('private static final', java_name, f'pyglobal_{name}', ir.CreateObject(java_name, []))
               for (name, java_name) in sorted(final_function_fields.items())),
             *(ir.FieldDecl('private static', 'PyObject', f'pyglobal_{name}', ir.PyConstant(None))
               for name in sorted(self.scope.info.locals - set(final_import_fields) - set(final_function_fields))),
