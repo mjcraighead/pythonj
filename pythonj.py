@@ -107,16 +107,8 @@ class ScopeAnalyzer(ast.NodeVisitor):
 
     def _iter_scope_local_nodes(self, node: ast.AST) -> Iterator[ast.AST]:
         if isinstance(node, ast.Name):
-            yield node
-            return
-        if isinstance(node, ast.ExceptHandler):
-            yield node
-            if node.type is not None:
-                yield from self._iter_scope_local_nodes(node.type)
-            for statement in node.body:
-                yield from self._iter_scope_local_nodes(statement)
-            return
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            yield node # don't yield ctx (Load/Store/Del)
+        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             yield node
             for decorator in node.decorator_list:
                 yield from self._iter_scope_local_nodes(decorator)
@@ -127,8 +119,7 @@ class ScopeAnalyzer(ast.NodeVisitor):
                     yield from self._iter_scope_local_nodes(default)
             if node.returns is not None:
                 yield from self._iter_scope_local_nodes(node.returns)
-            return
-        if isinstance(node, ast.ClassDef):
+        elif isinstance(node, ast.ClassDef):
             yield node
             for base in node.bases:
                 yield from self._iter_scope_local_nodes(base)
@@ -136,56 +127,23 @@ class ScopeAnalyzer(ast.NodeVisitor):
                 yield from self._iter_scope_local_nodes(keyword.value)
             for decorator in node.decorator_list:
                 yield from self._iter_scope_local_nodes(decorator)
-            return
-        if isinstance(node, ast.Lambda):
+        elif isinstance(node, ast.Lambda):
             yield node
             for default in node.args.defaults:
                 yield from self._iter_scope_local_nodes(default)
             for default in node.args.kw_defaults:
                 if default is not None:
                     yield from self._iter_scope_local_nodes(default)
-            return
-        if isinstance(node, (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)):
+        elif isinstance(node, (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)):
             yield node
-            generators = node.generators
-            yield from self._iter_scope_local_nodes(generators[0].iter)
-            return
-        yield node
-        for child in ast.iter_child_nodes(node):
-            yield from self._iter_scope_local_nodes(child)
+            yield from self._iter_scope_local_nodes(node.generators[0].iter)
+        else:
+            yield node
+            for child in ast.iter_child_nodes(node):
+                yield from self._iter_scope_local_nodes(child)
 
     def _walk_local(self, node: ast.AST, reads: set[str], writes: set[str], explicit_globals: set[str],
                     nonlocals: set[str], children: list[ast.AST]) -> None:
-        if isinstance(node, ast.Name):
-            if isinstance(node.ctx, (ast.Store, ast.Del)):
-                writes.add(node.id)
-            else:
-                reads.add(node.id)
-            return
-        if isinstance(node, ast.Global):
-            explicit_globals.update(node.names)
-            return
-        if isinstance(node, ast.Nonlocal):
-            nonlocals.update(node.names)
-            return
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            writes.add(node.name)
-            children.append(node)
-        elif isinstance(node, ast.Lambda):
-            children.append(node)
-        elif isinstance(node, ast.ClassDef):
-            writes.add(node.name)
-            children.append(node)
-        elif isinstance(node, (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)):
-            children.append(node)
-        elif isinstance(node, ast.Import):
-            for alias in node.names:
-                writes.add(alias.asname if alias.asname is not None else alias.name)
-            return
-        elif isinstance(node, ast.ImportFrom):
-            for alias in node.names:
-                writes.add(alias.asname if alias.asname is not None else alias.name)
-            return
         for local_node in self._iter_scope_local_nodes(node):
             if isinstance(local_node, ast.Name):
                 if isinstance(local_node.ctx, (ast.Store, ast.Del)):
@@ -196,25 +154,17 @@ class ScopeAnalyzer(ast.NodeVisitor):
                 explicit_globals.update(local_node.names)
             elif isinstance(local_node, ast.Nonlocal):
                 nonlocals.update(local_node.names)
-            elif isinstance(local_node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            elif isinstance(local_node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
                 writes.add(local_node.name)
                 children.append(local_node)
-            elif isinstance(local_node, ast.Lambda):
-                children.append(local_node)
-            elif isinstance(local_node, ast.ClassDef):
-                writes.add(local_node.name)
+            elif isinstance(local_node, (ast.Lambda, ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)):
                 children.append(local_node)
             elif isinstance(local_node, ast.ExceptHandler):
                 if local_node.name is not None:
                     writes.add(local_node.name)
-            elif isinstance(local_node, ast.Import):
+            elif isinstance(local_node, (ast.Import, ast.ImportFrom)):
                 for alias in local_node.names:
                     writes.add(alias.asname if alias.asname is not None else alias.name)
-            elif isinstance(local_node, ast.ImportFrom):
-                for alias in local_node.names:
-                    writes.add(alias.asname if alias.asname is not None else alias.name)
-            elif isinstance(local_node, (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)):
-                children.append(local_node)
 
     def _param_names(self, args: ast.arguments) -> set[str]:
         out = {arg.arg for arg in args.posonlyargs}
