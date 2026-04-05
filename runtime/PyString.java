@@ -66,6 +66,9 @@ public final class PyString extends PyObject {
                 }
             }
         }
+        return newObjPositional(object, encoding, errors);
+    }
+    public static PyObject newObjPositional(PyObject object, PyObject encoding, PyObject errors) {
         if (object == null) {
             return PyString.empty_singleton;
         }
@@ -73,7 +76,7 @@ public final class PyString extends PyObject {
             return new PyString(object.str());
         }
         if (errors != null) {
-            Runtime.requireErrorsArg(errors, type.name());
+            Runtime.requireErrorsArg(errors, "str");
         }
         if (object instanceof PyString) {
             throw PyTypeError.raise("decoding str is not supported");
@@ -83,7 +86,7 @@ public final class PyString extends PyObject {
         }
         if ((object instanceof PyBytes objectBytes) || (object instanceof PyByteArray)) {
             byte[] buffer = Runtime.requireBytesLikeBuffer(object);
-            String encodingStr = Runtime.requireEncodingArg(encoding, type.name());
+            String encodingStr = Runtime.requireEncodingArg(encoding, "str");
             Charset charset = Runtime.lookupCharset(encodingStr);
             return new PyString(new String(buffer, charset));
         }

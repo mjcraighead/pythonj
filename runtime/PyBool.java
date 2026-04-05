@@ -21,10 +21,10 @@ public final class PyBool extends PyObject {
         if (args.length > 1) {
             throw Runtime.raiseMaxArgs(args, 1, type.name());
         }
-        if (args.length == 1) {
-            return PyBool.create(args[0].boolValue());
-        }
-        return PyBool.false_singleton;
+        return (args.length == 1) ? newObjPositional(args[0]) : newObjPositional(null);
+    }
+    public static PyObject newObjPositional(PyObject arg) {
+        return (arg != null) ? PyBool.create(arg.boolValue()) : PyBool.false_singleton;
     }
 
     protected int asInt() { return value ? 1 : 0; }

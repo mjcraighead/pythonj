@@ -34,17 +34,22 @@ public final class PyByteArray extends PyObject {
         if (args.length > 3) {
             throw Runtime.raiseMaxArgs(args, 3, type.name());
         }
-        if (args.length == 0) {
+        PyObject arg = (args.length >= 1) ? args[0] : null;
+        PyObject encoding = (args.length >= 2) ? args[1] : null;
+        PyObject errors = (args.length >= 3) ? args[2] : null;
+        return newObjPositional(arg, encoding, errors);
+    }
+    public static PyObject newObjPositional(PyObject arg, PyObject encodingObj, PyObject errorsObj) {
+        if (arg == null) {
             return new PyByteArray(new byte[0]);
         }
-        PyObject arg = args[0];
-        if (args.length >= 2) {
+        if (encodingObj != null) {
             if (!(arg instanceof PyString argStr)) {
                 throw PyTypeError.raise("encoding without a string argument");
             }
-            String encoding = Runtime.requireEncodingArg(args[1], type.name());
-            if (args.length == 3) {
-                Runtime.requireErrorsArg(args[2], type.name());
+            String encoding = Runtime.requireEncodingArg(encodingObj, "bytearray");
+            if (errorsObj != null) {
+                Runtime.requireErrorsArg(errorsObj, "bytearray");
             }
             Charset charset = Runtime.lookupCharset(encoding);
             return new PyByteArray(argStr.value.getBytes(charset));

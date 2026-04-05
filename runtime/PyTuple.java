@@ -37,11 +37,14 @@ public final class PyTuple extends PyObject {
         if (args.length > 1) {
             throw Runtime.raiseMaxArgs(args, 1, type.name());
         }
-        if (args.length == 0) {
+        return (args.length == 0) ? newObjPositional(null) : newObjPositional(args[0]);
+    }
+    public static PyObject newObjPositional(PyObject arg) {
+        if (arg == null) {
             return empty_singleton;
         }
         var list = new ArrayList<PyObject>();
-        Runtime.addIterableToCollection(list, args[0]);
+        Runtime.addIterableToCollection(list, arg);
         return new PyTuple(list);
     }
 

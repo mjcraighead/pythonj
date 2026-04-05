@@ -43,11 +43,14 @@ public final class PyList extends PyObject {
         if (args.length > 1) {
             throw Runtime.raiseMaxArgs(args, 1, type.name());
         }
+        return (args.length == 0) ? newObjPositional(null) : newObjPositional(args[0]);
+    }
+    public static PyObject newObjPositional(PyObject arg) {
         var ret = new PyList();
-        if (args.length == 0) {
+        if (arg == null) {
             return ret;
         }
-        Runtime.addIterableToCollection(ret.items, args[0]);
+        Runtime.addIterableToCollection(ret.items, arg);
         return ret;
     }
 

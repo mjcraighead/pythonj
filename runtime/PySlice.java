@@ -20,17 +20,21 @@ public final class PySlice extends PyTruthyObject {
         if (argsLength > 3) {
             throw Runtime.raiseMaxArgs(args, 3, type.name());
         }
-        PyObject start = PyNone.singleton;
+        PyObject arg0 = args[0];
+        PyObject arg1 = (argsLength >= 2) ? args[1] : null;
+        PyObject arg2 = (argsLength >= 3) ? args[2] : null;
+        return newObjPositional(arg0, arg1, arg2);
+    }
+    public static PyObject newObjPositional(PyObject arg0, PyObject arg1, PyObject arg2) {
+        PyObject start;
         PyObject stop;
-        PyObject step = PyNone.singleton;
-        if (argsLength == 1) {
-            stop = args[0];
+        PyObject step = (arg2 != null) ? arg2 : PyNone.singleton;
+        if (arg1 == null) {
+            start = PyNone.singleton;
+            stop = arg0;
         } else {
-            start = args[0];
-            stop = args[1];
-            if (argsLength == 3) {
-                step = args[2];
-            }
+            start = arg0;
+            stop = arg1;
         }
         return new PySlice(start, stop, step);
     }

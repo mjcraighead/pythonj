@@ -14,7 +14,7 @@ public final class PyZip extends PyIter {
     }
 
     public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
-        boolean strict = false;
+        PyObject strict = null;
         if ((kwargs != null) && kwargs.boolValue()) {
             long kwargsLen = kwargs.items.size();
             if (kwargsLen > 1) {
@@ -25,14 +25,18 @@ public final class PyZip extends PyIter {
                 if (!kw.value.equals("strict")) {
                     throw Runtime.raiseUnexpectedKwArg(type.name(), kw.value);
                 }
-                strict = x.getValue().boolValue();
+                strict = x.getValue();
             }
         }
-        PyIter iters[] = new PyIter[args.length];
+        return newObjPositional(args, strict);
+    }
+    public static PyObject newObjPositional(PyObject[] args, PyObject strict) {
+        boolean strictBool = (strict != null) && strict.boolValue();
+        PyIter[] iters = new PyIter[args.length];
         for (int i = 0; i < args.length; i++) {
             iters[i] = args[i].iter();
         }
-        return new PyZip(iters, strict);
+        return new PyZip(iters, strictBool);
     }
 
     @Override public PyTuple next() {

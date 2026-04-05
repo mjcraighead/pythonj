@@ -233,10 +233,12 @@ public final class PyFloat extends PyObject {
         if (args.length > 1) {
             throw Runtime.raiseMaxArgs(args, 1, type.name());
         }
-        if (args.length == 0) {
+        return (args.length == 0) ? newObjPositional(null) : newObjPositional(args[0]);
+    }
+    public static PyObject newObjPositional(PyObject arg) {
+        if (arg == null) {
             return new PyFloat(0.0);
         }
-        PyObject arg = args[0];
         if (arg instanceof PyFloat argFloat) {
             return argFloat;
         } else if (arg.hasIndex()) {

@@ -17,7 +17,10 @@ public final class PyReversed extends PyIter {
         if (args.length != 1) {
             throw Runtime.raiseExactArgs(args, 1, type.name());
         }
-        return args[0].reversed();
+        return newObjPositional(args[0]);
+    }
+    public static PyObject newObjPositional(PyObject arg) {
+        return arg.reversed();
     }
 
     @Override public PyObject next() {

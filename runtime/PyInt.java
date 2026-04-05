@@ -99,21 +99,24 @@ public final class PyInt extends PyObject {
             throw Runtime.raiseMaxArgs(args, 2, type.name());
         }
         Runtime.requireNoKwArgs(kwargs, type.name());
-        if (args.length == 0) {
+        PyObject arg0 = (args.length >= 1) ? args[0] : null;
+        PyObject arg1 = (args.length >= 2) ? args[1] : null;
+        return newObjPositional(arg0, arg1);
+    }
+    public static PyObject newObjPositional(PyObject arg0, PyObject arg1) {
+        if (arg0 == null) {
             return PyInt.singleton_0;
         }
-        PyObject arg0 = args[0];
         // XXX should also try intValue when length is 1
         if (arg0.hasIndex()) {
-            if (args.length > 1) {
+            if (arg1 != null) {
                 throw PyTypeError.raise("int() can't convert non-string with explicit base");
             }
             return new PyInt(arg0.indexValue());
         }
         if (arg0 instanceof PyString arg0Str) {
             long base = 10;
-            if (args.length > 1) {
-                PyObject arg1 = args[1];
+            if (arg1 != null) {
                 base = arg1.indexValue();
                 if ((base < 0) || (base == 1) || (base > 36)) {
                     throw PyValueError.raise("int() base must be >= 2 and <= 36, or 0");
@@ -122,14 +125,14 @@ public final class PyInt extends PyObject {
             return parseStringLike(arg0Str.value, PyString.reprOf(arg0Str.value), base);
         }
         if (arg0 instanceof PyBytes arg0Bytes) {
-            long base = (args.length > 1) ? args[1].indexValue() : 10;
+            long base = (arg1 != null) ? arg1.indexValue() : 10;
             if ((base < 0) || (base == 1) || (base > 36)) {
                 throw PyValueError.raise("int() base must be >= 2 and <= 36, or 0");
             }
             return parseStringLike(new String(arg0Bytes.value), arg0.repr(), base);
         }
         if (arg0 instanceof PyByteArray arg0ByteArray) {
-            long base = (args.length > 1) ? args[1].indexValue() : 10;
+            long base = (arg1 != null) ? arg1.indexValue() : 10;
             if ((base < 0) || (base == 1) || (base > 36)) {
                 throw PyValueError.raise("int() base must be >= 2 and <= 36, or 0");
             }

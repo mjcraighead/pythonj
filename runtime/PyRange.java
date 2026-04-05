@@ -53,14 +53,22 @@ public final class PyRange extends PyObject {
         if (argsLength > 3) {
             throw Runtime.raiseMaxArgs(args, 3, type.name());
         }
-        long start = 0, stop, step = 1;
-        if (argsLength == 1) {
-            stop = args[0].indexValue();
+        PyObject arg0 = args[0];
+        PyObject arg1 = (argsLength >= 2) ? args[1] : null;
+        PyObject arg2 = (argsLength >= 3) ? args[2] : null;
+        return newObjPositional(arg0, arg1, arg2);
+    }
+    public static PyObject newObjPositional(PyObject arg0, PyObject arg1, PyObject arg2) {
+        long start = 0;
+        long stop;
+        long step = 1;
+        if (arg1 == null) {
+            stop = arg0.indexValue();
         } else {
-            start = args[0].indexValue();
-            stop = args[1].indexValue();
-            if (argsLength == 3) {
-                step = args[2].indexValue();
+            start = arg0.indexValue();
+            stop = arg1.indexValue();
+            if (arg2 != null) {
+                step = arg2.indexValue();
             }
         }
         return new PyRange(start, stop, step);
