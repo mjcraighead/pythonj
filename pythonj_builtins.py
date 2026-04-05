@@ -198,9 +198,8 @@ class bytes:
 
     def fromhex(self, string):
         is_str = __pythonj_isinstance__(string, str)
-        is_bytes = __pythonj_isinstance__(string, bytes)
-        is_bytearray = __pythonj_isinstance__(string, bytearray)
-        if not (is_str or is_bytes or is_bytearray):
+        is_bytes_like = __pythonj_isinstance__(string, (bytes, bytearray))
+        if not (is_str or is_bytes_like):
             raise TypeError('fromhex() argument must be str or bytes-like, not ' + type(string).__name__)
         ret = []
         i = 0
@@ -251,8 +250,9 @@ class bytes:
             if len(sep) != 1:
                 raise ValueError('sep must be length 1.')
         else:
-            len(sep)
-            raise AssertionError(sep)
+            if len(sep) != 1:
+                raise ValueError('sep must be length 1.')
+            raise TypeError('sep must be str or bytes.')
         bytes_per_sep = operator.index(bytes_per_sep)
         ret = []
         for c in self:
