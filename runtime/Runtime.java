@@ -11,11 +11,6 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.function.Function;
 
-@FunctionalInterface
-interface TriFunction<A, B, C, R> {
-    R apply(A a, B b, C c);
-}
-
 abstract class PyTruthyObject extends PyObject {
     @Override public final boolean boolValue() { return true; }
 }
@@ -220,18 +215,10 @@ abstract class PyType extends PyTruthyObject {
 class PyConcreteType extends PyType {
     protected final String typeName;
     protected final Class<? extends PyObject> instanceClass;
-    protected final TriFunction<PyConcreteType, PyObject[], PyDict, PyObject> newObj;
 
     protected PyConcreteType(String name, Class<? extends PyObject> _instanceClass) {
         typeName = name;
         instanceClass = _instanceClass;
-        newObj = null;
-    }
-    protected PyConcreteType(String name, Class<? extends PyObject> _instanceClass,
-                            TriFunction<PyConcreteType, PyObject[], PyDict, PyObject> _newObj) {
-        typeName = name;
-        instanceClass = _instanceClass;
-        newObj = _newObj;
     }
     @Override public final PyObject getAttr(String key) {
         var desc = lookupAttr(key);
@@ -256,14 +243,6 @@ class PyConcreteType extends PyType {
     @Override public final void delAttr(String key) {
         throw PyTypeError.raiseFormat("cannot set %s attribute of immutable type %s", PyString.reprOf(key), PyString.reprOf(typeName));
     }
-
-    @Override public PyObject call(PyObject[] args, PyDict kwargs) {
-        if (newObj != null) {
-            return newObj.apply(this, args, kwargs);
-        }
-        return super.call(args, kwargs);
-    }
-
     @Override public final String repr() { return "<class '" + typeName + "'>"; }
     @Override public final PyTypeType type() { return PyTypeType.singleton; }
     @Override public final String name() { return typeName; }
@@ -278,7 +257,11 @@ final class PyModuleType extends PyConcreteType {
 final class PyZlibErrorType extends PyConcreteType {
     public static final PyZlibErrorType singleton = new PyZlibErrorType();
 
-    private PyZlibErrorType() { super("error", PyZlibError.class, PyZlibError::newObj); }
+    private PyZlibErrorType() { super("error", PyZlibError.class); }
+
+    @Override public PyObject call(PyObject[] args, PyDict kwargs) {
+        return PyZlibError.newObj(this, args, kwargs);
+    }
 }
 
 abstract class PyGettableDescriptor extends PyTruthyObject {

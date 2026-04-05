@@ -1796,7 +1796,10 @@ class LoweringVisitor(ast.NodeVisitor):
         class_decls.append(ir.ClassDecl('private static final', type_class_name, 'PyConcreteType', [
             ir.FieldDecl('private static final', type_class_name, 'singleton', ir.CreateObject(type_class_name, [])),
             ir.ConstructorDecl('private', type_class_name, [], [
-                ir.SuperConstructorCall([ir.StrLiteral(node.name), ir.Field(ir.Identifier(java_name), 'class'), ir.MethodRef(java_name, 'newObj')]),
+                ir.SuperConstructorCall([ir.StrLiteral(node.name), ir.Field(ir.Identifier(java_name), 'class')]),
+            ]),
+            ir.MethodDecl('@Override public', 'PyObject', 'call', ['PyObject[] args', 'PyDict kwargs'], [
+                ir.ReturnStatement(ir.MethodCall(ir.Identifier(java_name), 'newObj', [ir.This(), ir.Identifier('args'), ir.Identifier('kwargs')])),
             ]),
         ]))
         for class_decl in class_decls:
@@ -2580,8 +2583,16 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                 ir.SuperConstructorCall([
                     ir.StrLiteral(py_name),
                     ir.Field(ir.Identifier(java_name), 'class'),
-                    ir.MethodRef('PyRuntime', f'pyfunc_{name}__newobj') if name in PYTHON_AUTHORED_CONSTRUCTOR_IMPLS else ir.MethodRef(java_name, 'newObj'),
                 ]),
+            ]))
+            type_decls.append(ir.MethodDecl('@Override public', 'PyObject', 'call', ['PyObject[] args', 'PyDict kwargs'], [
+                ir.ReturnStatement(
+                        ir.MethodCall(
+                            ir.Identifier('PyRuntime' if name in PYTHON_AUTHORED_CONSTRUCTOR_IMPLS else java_name),
+                            f'pyfunc_{name}__newobj' if name in PYTHON_AUTHORED_CONSTRUCTOR_IMPLS else 'newObj',
+                        [ir.This(), ir.Identifier('args'), ir.Identifier('kwargs')],
+                    )
+                ),
             ]))
             type_decls.append(ir.MethodDecl('public', 'java.util.Map<PyObject, PyObject>', 'getAttributes', [], [
                 ir.ReturnStatement(ir.Field(ir.Identifier('AttrsHolder'), 'attrs')),
