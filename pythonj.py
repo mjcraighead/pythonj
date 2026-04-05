@@ -159,13 +159,13 @@ def _walk_local(node: ast.AST, reads: set[str], writes: set[str], explicit_globa
             for alias in local_node.names:
                 writes.add(alias.asname if alias.asname is not None else alias.name)
 
-def _param_names(args: ast.arguments) -> set[str]:
-    out = {arg.arg for arg in itertools.chain(args.posonlyargs, args.args, args.kwonlyargs)}
+def _param_names(args: ast.arguments) -> Iterator[str]:
+    for arg in itertools.chain(args.posonlyargs, args.args, args.kwonlyargs):
+        yield arg.arg
     if args.vararg is not None:
-        out.add(args.vararg.arg)
+        yield args.vararg.arg
     if args.kwarg is not None:
-        out.add(args.kwarg.arg)
-    return out
+        yield args.kwarg.arg
 
 def _get_initial_bindings(node: ast.stmt) -> Optional[list[InitialBinding]]:
     if isinstance(node, ast.Import):
