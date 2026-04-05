@@ -19,16 +19,16 @@ BUILTIN_FUNCTIONS = {
 }
 BUILTIN_MODULES = {
     '_json': 'PyJsonModule',
+    '_operator': 'PyOperatorModule',
+    '_types': 'PyTypesModule',
     'math': 'PyMathModule',
-    'operator': 'PyOperatorModule',
-    'types': 'PyTypesModule',
     'zlib': 'PyZlibModule',
 }
 BUILTIN_MODULE_ATTRS = {
     '_json': {'encode_basestring_ascii', 'scanstring'},
+    '_operator': {'contains', 'delitem', 'getitem', 'index', 'setitem'},
+    '_types': {'BuiltinFunctionType', 'ClassMethodDescriptorType', 'FunctionType', 'GetSetDescriptorType', 'MappingProxyType', 'MemberDescriptorType', 'MethodDescriptorType', 'NoneType'},
     'math': {'copysign', 'isfinite', 'isinf', 'isnan'},
-    'operator': {'contains', 'delitem', 'getitem', 'index', 'setitem'},
-    'types': {'BuiltinFunctionType', 'ClassMethodDescriptorType', 'FunctionType', 'GetSetDescriptorType', 'MappingProxyType', 'MemberDescriptorType', 'MethodDescriptorType', 'NoneType'},
     'zlib': {'compress', 'decompress', 'error'},
 }
 BUILTIN_TYPES = {
@@ -132,7 +132,7 @@ def _get_runtime_obj(name: str) -> object:
         return getattr(_io, name.split('.', 1)[1])
     elif name in BUILTIN_MODULES:
         return __import__(name)
-    elif name.startswith('types.'):
+    elif name.startswith('_types.'):
         return getattr(types, name.split('.', 1)[1])
     else:
         return getattr(builtins, name)
@@ -509,9 +509,9 @@ def _write_pretty_json(f, value: object, indent: int = 0) -> None:
 def gen_spec(spec_path: str) -> None:
     spec = {'builtins': _build_builtin_module_entry()}
     for name in [*BUILTIN_TYPES, *sorted(EXCEPTION_TYPES),
-                 'types.BuiltinFunctionType', 'types.ClassMethodDescriptorType',
-                 'types.FunctionType', 'types.GetSetDescriptorType', 'types.MappingProxyType', 'types.MemberDescriptorType',
-                 'types.MethodDescriptorType', 'types.NoneType', '_io.BufferedReader', '_io.TextIOWrapper']:
+                 '_types.BuiltinFunctionType', '_types.ClassMethodDescriptorType',
+                 '_types.FunctionType', '_types.GetSetDescriptorType', '_types.MappingProxyType', '_types.MemberDescriptorType',
+                 '_types.MethodDescriptorType', '_types.NoneType', '_io.BufferedReader', '_io.TextIOWrapper']:
         spec[name] = _build_type_entry(name)
     for name in sorted(BUILTIN_MODULES):
         spec[name] = _build_module_entry(name)

@@ -1990,7 +1990,7 @@ class LoweringVisitor(ast.NodeVisitor):
         ]
         ir.write_decls(
             f,
-            [ir.ClassDecl('public final', py_name, None, ir.with_pool_decls(body_decls, self.pool))],
+            [ir.with_pooled_fields(ir.ClassDecl('public final', py_name, None, body_decls), self.pool)],
             self.pool,
         )
 
@@ -2246,10 +2246,10 @@ def emit_default_java_expr(default: object) -> ir.Expr:
 def get_java_name(name: str) -> str:
     if name.startswith('_io.'):
         return f"Py{name.split('.', 1)[1]}" # _io.Foo -> PyFoo + PyFooType
-    elif name == 'types.BuiltinFunctionType':
+    elif name == '_types.BuiltinFunctionType':
         return 'PyBuiltinFunctionOrMethod' # weird shared type
-    elif name.startswith('types.') and name.endswith('Type'):
-        return f"Py{name[:-4].split('.', 1)[1]}" # types.FooType -> PyFoo + PyFooType
+    elif name.startswith('_types.') and name.endswith('Type'):
+        return f"Py{name[:-4].split('.', 1)[1]}" # _types.FooType -> PyFoo + PyFooType
     elif name in extract_spec.EXCEPTION_TYPES:
         return f'Py{name}'
     else:
@@ -2498,7 +2498,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
     runtime_analyzer = ScopeAnalyzer()
     runtime_analyzer.visit(pythonj_runtime_node)
 
-    pool = ir.ConstantPool('PyGeneratedConstants')
+    pool = ir.ConstantPool('PyRuntime')
     with open(java_path, 'w') as f:
         top_level_decls: list[ir.Decl] = []
         python_helper_classes: list[ir.ClassDecl] = []
@@ -2509,14 +2509,14 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
             attrs = extract_spec.get_type_attrs(spec, name)
             java_name = get_java_name(name)
             match name:
-                case 'types.BuiltinFunctionType': py_name = 'builtin_function_or_method'
-                case 'types.ClassMethodDescriptorType': py_name = 'classmethod_descriptor'
-                case 'types.FunctionType': py_name = 'function'
-                case 'types.GetSetDescriptorType': py_name = 'getset_descriptor'
-                case 'types.MappingProxyType': py_name = 'mappingproxy'
-                case 'types.MemberDescriptorType': py_name = 'member_descriptor'
-                case 'types.MethodDescriptorType': py_name = 'method_descriptor'
-                case 'types.NoneType': py_name = 'NoneType'
+                case '_types.BuiltinFunctionType': py_name = 'builtin_function_or_method'
+                case '_types.ClassMethodDescriptorType': py_name = 'classmethod_descriptor'
+                case '_types.FunctionType': py_name = 'function'
+                case '_types.GetSetDescriptorType': py_name = 'getset_descriptor'
+                case '_types.MappingProxyType': py_name = 'mappingproxy'
+                case '_types.MemberDescriptorType': py_name = 'member_descriptor'
+                case '_types.MethodDescriptorType': py_name = 'method_descriptor'
+                case '_types.NoneType': py_name = 'NoneType'
                 case _: py_name = name
 
             type_decls: list[ir.Decl] = [
@@ -2778,7 +2778,6 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
             python_helper_classes.extend(helper_classes)
             python_helper_methods.append(helper_method)
         top_level_decls.extend(python_helper_classes)
-        top_level_decls.append(ir.ClassDecl('final', 'PyRuntime', None, python_helper_methods))
 
         for module_name in sorted(extract_spec.BUILTIN_MODULES):
             attrs = extract_spec.get_module_attrs(spec, module_name)
@@ -2884,4 +2883,9 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                 ))
             top_level_decls.append(ir.ClassDecl('final', f'PyBuiltinFunction_{func_name}', 'PyBuiltinFunction', decls))
 
-        ir.write_decls(f, top_level_decls, pool, include_pool_decls=True)
+        py_runtime_decl = ir.ClassDecl('final', 'PyRuntime', None, python_helper_methods)
+        for decl in [*top_level_decls, py_runtime_decl]:
+            for _ in decl.emit_java(pool):
+                pass
+        top_level_decls.append(ir.with_pooled_fields(py_runtime_decl, pool))
+        ir.write_decls(f, top_level_decls, pool)

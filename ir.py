@@ -49,24 +49,24 @@ def _java_string_literal(s: str) -> str:
     return ''.join(out)
 
 class ConstantPool:
-    __slots__ = ('all_ints', 'all_strings', 'all_floats', 'all_tuples', 'all_bytes', 'holder_name')
+    __slots__ = ('all_ints', 'all_strings', 'all_floats', 'all_tuples', 'all_bytes', 'owner_name')
     all_ints: set[int]
     all_strings: dict[str, int]
     all_floats: dict[float, int]
     all_tuples: dict[tuple[object, ...], int]
     all_bytes: dict[bytes, int]
-    holder_name: Optional[str]
+    owner_name: Optional[str]
 
-    def __init__(self, holder_name: Optional[str] = None):
+    def __init__(self, owner_name: Optional[str] = None):
         self.all_ints = set()
         self.all_strings = {}
         self.all_floats = {}
         self.all_tuples = {}
         self.all_bytes = {}
-        self.holder_name = holder_name
+        self.owner_name = owner_name
 
-    def qualify(self, name: str) -> str:
-        return name if self.holder_name is None else f'{self.holder_name}.{name}'
+    def qualify_name(self, name: str) -> str:
+        return name if self.owner_name is None else f'{self.owner_name}.{name}'
 
     def emit_constant(self, value: object) -> str:
         if value is None:
@@ -80,19 +80,19 @@ class ConstantPool:
                 else:
                     return f'PyInt.singleton_{value}'
             self.all_ints.add(value)
-            return self.qualify(_int_name(value))
+            return self.qualify_name(_int_name(value))
         elif isinstance(value, str):
             if not value:
                 return 'PyString.empty_singleton'
             if value not in self.all_strings:
                 self.all_strings[value] = len(self.all_strings)
-            return self.qualify(f'str_singleton_{self.all_strings[value]}')
+            return self.qualify_name(f'str_singleton_{self.all_strings[value]}')
         elif isinstance(value, float):
             if math.isnan(value):
                 return 'PyFloat.nan_singleton'
             if value not in self.all_floats:
                 self.all_floats[value] = len(self.all_floats)
-            return self.qualify(f'float_singleton_{self.all_floats[value]}')
+            return self.qualify_name(f'float_singleton_{self.all_floats[value]}')
         elif isinstance(value, tuple):
             if not value:
                 return 'PyTuple.empty_singleton'
@@ -100,18 +100,18 @@ class ConstantPool:
                 for x in value:
                     self.emit_constant(x)
                 self.all_tuples[value] = len(self.all_tuples)
-            return self.qualify(f'tuple_singleton_{self.all_tuples[value]}')
+            return self.qualify_name(f'tuple_singleton_{self.all_tuples[value]}')
         else:
             assert isinstance(value, bytes), value
             if not value:
                 return 'PyBytes.empty_singleton'
             if value not in self.all_bytes:
                 self.all_bytes[value] = len(self.all_bytes)
-            return self.qualify(f'bytes_singleton_{self.all_bytes[value]}')
+            return self.qualify_name(f'bytes_singleton_{self.all_bytes[value]}')
 
-    def build_pool_decls(self) -> list['Decl']:
+    def build_field_decls(self) -> list[Decl]:
         decls: list[Decl] = []
-        field_prefix = 'private static final' if self.holder_name is None else 'static final'
+        field_prefix = 'private static final' if self.owner_name is None else 'static final'
         for i in sorted(self.all_ints):
             value = CreateObject('PyInt', [IntLiteral(i, 'L')])
             decls.append(FieldDecl(field_prefix, 'PyInt', _int_name(i), value))
@@ -126,9 +126,12 @@ class ConstantPool:
         for (k, v) in sorted(self.all_bytes.items()):
             value = CreateObject('PyBytes', [CreateArray('byte', [IntLiteral(((x + 0x80) & 0xFF) - 0x80, '') for x in k])])
             decls.append(FieldDecl(field_prefix, 'PyBytes', f'bytes_singleton_{v}', value))
-        if self.holder_name is not None:
-            return [ClassDecl('final', self.holder_name, None, decls)]
         return decls
+
+def with_pooled_fields(class_decl: ClassDecl, pool: ConstantPool) -> ClassDecl:
+    for _ in class_decl.emit_java(pool):
+        pass
+    return ClassDecl(class_decl.modifiers, class_decl.name, class_decl.extends, [*pool.build_field_decls(), *class_decl.decls])
 
 class Expr(ABC):
     @abstractmethod
@@ -652,19 +655,10 @@ def while_statement(cond: Expr, body: list[Statement]) -> Iterator[Statement]:
     else:
         yield WhileStatement(cond, body)
 
-def with_pool_decls(decls: list[Decl], pool: ConstantPool) -> list[Decl]:
+def write_decls(f: TextIO, decls: list[Decl], pool: ConstantPool) -> None:
     for decl in decls:
         for _ in decl.emit_java(pool):
             pass
-    return [*decls, *pool.build_pool_decls()]
-
-def write_decls(f: TextIO, decls: list[Decl], pool: ConstantPool, include_pool_decls: bool = False) -> None:
-    if include_pool_decls:
-        decls = with_pool_decls(decls, pool)
-    else:
-        for decl in decls:
-            for _ in decl.emit_java(pool):
-                pass
     indent = 0
     for decl in decls:
         for line in decl.emit_java(pool):

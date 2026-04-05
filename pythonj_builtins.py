@@ -2,7 +2,7 @@
 # Copyright (c) 2012-2026 Matt Craighead
 # SPDX-License-Identifier: MIT
 
-import operator
+import _operator
 
 # Builtin functions
 def abs(arg):
@@ -21,7 +21,7 @@ def any(iterable):
     return False
 
 def bin(arg):
-    value = operator.index(arg)
+    value = _operator.index(arg)
     if value < 0:
         return '-0b' + format(-value, 'b')
     return '0b' + format(value, 'b')
@@ -84,7 +84,7 @@ def next(iterator, default):
     return ret
 
 def oct(arg):
-    value = operator.index(arg)
+    value = _operator.index(arg)
     if value < 0:
         return '-0o' + format(-value, 'o')
     return '0o' + format(value, 'o')
@@ -293,7 +293,7 @@ class bytes:
             if len(sep) != 1:
                 raise ValueError('sep must be length 1.')
             raise TypeError('sep must be str or bytes.')
-        bytes_per_sep = operator.index(bytes_per_sep)
+        bytes_per_sep = _operator.index(bytes_per_sep)
         sep_str: str = sep
         ret: list = []
         for c in self:

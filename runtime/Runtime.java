@@ -133,7 +133,7 @@ final class PyMathModule extends PyModule {
 final class PyOperatorModule extends PyModule {
     public static final PyOperatorModule singleton = new PyOperatorModule();
 
-    private PyOperatorModule() { super("operator"); }
+    private PyOperatorModule() { super("_operator"); }
 
     @Override public PyObject getAttr(String key) {
         switch (key) {
@@ -150,7 +150,7 @@ final class PyOperatorModule extends PyModule {
 final class PyTypesModule extends PyModule {
     public static final PyTypesModule singleton = new PyTypesModule();
 
-    private PyTypesModule() { super("types"); }
+    private PyTypesModule() { super("_types"); }
 
     @Override public PyObject getAttr(String key) {
         switch (key) {
