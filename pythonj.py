@@ -1253,18 +1253,18 @@ class LoweringVisitor(ast.NodeVisitor):
         elif isinstance(target, ast.Attribute):
             temp_name = self.scope.make_temp()
             yield ir.LocalDecl('var', temp_name, value)
-            yield ir.ExprStatement(ir.MethodCall(self.visit(target.value), 'setAttr', [ir.StrLiteral(target.attr), ir.Identifier(temp_name)]))
+            yield ir.method_call_statement(self.visit(target.value), 'setAttr', [ir.StrLiteral(target.attr), ir.Identifier(temp_name)])
         elif isinstance(target, ast.Subscript):
             temp_name = self.scope.make_temp()
             yield ir.LocalDecl('var', temp_name, value)
-            yield ir.ExprStatement(ir.MethodCall(self.visit(target.value), 'setItem', [self.visit(target.slice), ir.Identifier(temp_name)]))
+            yield ir.method_call_statement(self.visit(target.value), 'setItem', [self.visit(target.slice), ir.Identifier(temp_name)])
         elif isinstance(target, (ast.Tuple, ast.List)):
             temp_name = self.scope.make_temp()
             yield ir.LocalDecl('var', temp_name, ir.MethodCall(value, 'iter', []))
             # XXX This is not atomic if an exception is thrown; a subset of LHS's will be left assigned
             for subtarget in target.elts:
                 yield from self.emit_bind(subtarget, ir.MethodCall(ir.Identifier('Runtime'), 'nextRequireNonNull', [ir.Identifier(temp_name)]))
-            yield ir.ExprStatement(ir.MethodCall(ir.Identifier('Runtime'), 'nextRequireNull', [ir.Identifier(temp_name)]))
+            yield ir.method_call_statement(ir.Identifier('Runtime'), 'nextRequireNull', [ir.Identifier(temp_name)])
         else:
             self.error(target.lineno, f'binding to {type(target).__name__} is unsupported')
 
@@ -1309,27 +1309,27 @@ class LoweringVisitor(ast.NodeVisitor):
         elif isinstance(node.target, ast.Attribute):
             temp_name = self.scope.make_temp()
             self.code.append(ir.LocalDecl('var', temp_name, self.visit(node.target.value)))
-            code = ir.ExprStatement(ir.MethodCall(ir.Identifier(temp_name), 'setAttr', [
+            code = ir.method_call_statement(ir.Identifier(temp_name), 'setAttr', [
                 ir.StrLiteral(node.target.attr),
                 ir.MethodCall(
                     ir.MethodCall(ir.Identifier(temp_name), 'getAttr', [ir.StrLiteral(node.target.attr)]),
                     op,
                     [self.visit(node.value)]
                 )
-            ]))
+            ])
         elif isinstance(node.target, ast.Subscript):
             temp_name0 = self.scope.make_temp()
             temp_name1 = self.scope.make_temp()
             self.code.append(ir.LocalDecl('var', temp_name0, self.visit(node.target.value)))
             self.code.append(ir.LocalDecl('var', temp_name1, self.visit(node.target.slice)))
-            code = ir.ExprStatement(ir.MethodCall(ir.Identifier(temp_name0), 'setItem', [
+            code = ir.method_call_statement(ir.Identifier(temp_name0), 'setItem', [
                 ir.Identifier(temp_name1),
                 ir.MethodCall(
                     ir.MethodCall(ir.Identifier(temp_name0), 'getItem', [ir.Identifier(temp_name1)]),
                     op,
                     [self.visit(node.value)]
                 )
-            ]))
+            ])
         else:
             self.error(node.lineno, f'augmented assignment to {type(node.target).__name__} is unsupported')
             self.visit(node.value) # recurse to find more errors
@@ -1348,9 +1348,9 @@ class LoweringVisitor(ast.NodeVisitor):
     def visit_Delete(self, node) -> None:
         for target in node.targets:
             if isinstance(target, ast.Attribute):
-                code = ir.ExprStatement(ir.MethodCall(self.visit(target.value), 'delAttr', [ir.StrLiteral(target.attr)]))
+                code = ir.method_call_statement(self.visit(target.value), 'delAttr', [ir.StrLiteral(target.attr)])
             elif isinstance(target, ast.Subscript):
-                code = ir.ExprStatement(ir.MethodCall(self.visit(target.value), 'delItem', [self.visit(target.slice)]))
+                code = ir.method_call_statement(self.visit(target.value), 'delItem', [self.visit(target.slice)])
             else:
                 self.error(node.lineno, f"'del' of {type(target).__name__} is unsupported")
                 continue
@@ -1447,14 +1447,14 @@ class LoweringVisitor(ast.NodeVisitor):
         temp_name = self.scope.make_temp()
         self.code.append(ir.LocalDecl('var', temp_name, self.visit(item.context_expr)))
         if item.optional_vars is None:
-            self.code.append(ir.ExprStatement(ir.MethodCall(ir.Identifier(temp_name), 'enter', [])))
+            self.code.append(ir.method_call_statement(ir.Identifier(temp_name), 'enter', []))
         else:
             self.code.extend(self.emit_bind(item.optional_vars, ir.MethodCall(ir.Identifier(temp_name), 'enter', [])))
 
         body = self.visit_block(node.body)
 
         self.code.append(ir.TryStatement(body, None, None, [], [
-            ir.ExprStatement(ir.MethodCall(ir.Identifier(temp_name), 'exit', [])),
+            ir.method_call_statement(ir.Identifier(temp_name), 'exit', []),
         ]))
 
     def visit_Try(self, node) -> None:
@@ -1605,12 +1605,12 @@ class LoweringVisitor(ast.NodeVisitor):
         if shape.posonly_params and not shape.poskw_params:
             if n_required == n_args:
                 call_body = [
-                    ir.ExprStatement(ir.MethodCall(ir.Identifier('PyRuntime'), 'pyfunc_require_user_exact_positional', [
+                    ir.method_call_statement(ir.Identifier('PyRuntime'), 'pyfunc_require_user_exact_positional', [
                         ir.CreateObject('PyInt', [ir.Field(ir.Identifier('args'), 'length')]),
                         ir.Identifier('kwargs'),
                         ir.PyConstant(py_name),
                         ir.PyConstant(tuple(arg_names)),
-                    ])),
+                    ]),
                     ir.ReturnStatement(ir.MethodCall(
                         ir.This(),
                         'callPositional',
@@ -1620,13 +1620,13 @@ class LoweringVisitor(ast.NodeVisitor):
             else:
                 call_body = [
                     ir.LocalDecl('int', 'argsLength', ir.Field(ir.Identifier('args'), 'length')),
-                    ir.ExprStatement(ir.MethodCall(ir.Identifier('PyRuntime'), 'pyfunc_require_user_min_max_positional', [
+                    ir.method_call_statement(ir.Identifier('PyRuntime'), 'pyfunc_require_user_min_max_positional', [
                         ir.CreateObject('PyInt', [ir.Identifier('argsLength')]),
                         ir.Identifier('kwargs'),
                         ir.PyConstant(py_name),
                         ir.PyConstant(tuple(arg_names)),
                         ir.PyConstant(n_required),
-                    ])),
+                    ]),
                     ir.ReturnStatement(ir.MethodCall(ir.This(), 'callPositional', [
                         *(ir.ArrayAccess(ir.Identifier('args'), ir.IntLiteral(i)) for i in range(n_required)),
                         *(
@@ -1761,10 +1761,10 @@ class LoweringVisitor(ast.NodeVisitor):
                 ir.SuperConstructorCall([ir.Identifier(f'{type_class_name}.singleton')]),
             ]),
             ir.MethodDecl('public static', 'PyObject', 'newObj', ['PyConcreteType type', 'PyObject[] args', 'PyDict kwargs'], [
-                ir.ExprStatement(ir.MethodCall(ir.Identifier('Runtime'), 'requireNoKwArgs', [
+                ir.method_call_statement(ir.Identifier('Runtime'), 'requireNoKwArgs', [
                     ir.Identifier('kwargs'),
                     ir.MethodCall(ir.Identifier('type'), 'name', []),
-                ])),
+                ]),
                 ir.IfStatement(
                     ir.BinaryOp('!=', ir.Field(ir.Identifier('args'), 'length'), ir.IntLiteral(0)),
                     [ir.ThrowStatement(ir.MethodCall(ir.Identifier('PyTypeError'), 'raise', [
@@ -1904,7 +1904,7 @@ class LoweringVisitor(ast.NodeVisitor):
             with self.new_block() as body:
                 temp_result = self.scope.make_temp()
                 statements: list[ir.Statement] = [
-                    ir.ExprStatement(ir.MethodCall(ir.Identifier(temp_result), method_name, [self.visit(elt) for elt in elts]))
+                    ir.method_call_statement(ir.Identifier(temp_result), method_name, [self.visit(elt) for elt in elts])
                 ]
                 for (i, generator) in enumerate(reversed(generators)):
                     iterable = ir.Identifier(arg_name) if i == len(generators)-1 else self.visit(generator.iter)
@@ -2519,25 +2519,25 @@ def build_wrapper_binding_ir(
     if plan.mode == 'exact_positional':
         assert plan.exact_positional_arity is not None
         exact_positional_name = exact_kw_name if plan.exact_positional_arity <= 1 else exact_positional_name_many
-        statements.append(ir.ExprStatement(ir.MethodCall(ir.Identifier('PyRuntime'), 'pyfunc_require_exact_positional', [
+        statements.append(ir.method_call_statement(ir.Identifier('PyRuntime'), 'pyfunc_require_exact_positional', [
             ir.CreateObject('PyInt', [ir.Field(ir.Identifier('args'), 'length')]),
             ir.Identifier('kwargs'),
             ir.PyConstant(exact_kw_name),
             ir.PyConstant(exact_positional_name),
             ir.PyConstant(plan.exact_positional_arity),
             ir.PyConstant(False),
-        ])))
+        ]))
         bind_args = [ir.ArrayAccess(ir.Identifier('args'), ir.IntLiteral(i)) for i in range(plan.exact_positional_arity)]
     elif plan.mode == 'posonly_min_max':
         assert plan.posonly_min_max_range is not None
-        statements.append(ir.ExprStatement(ir.MethodCall(ir.Identifier('PyRuntime'), 'pyfunc_require_min_max_positional', [
+        statements.append(ir.method_call_statement(ir.Identifier('PyRuntime'), 'pyfunc_require_min_max_positional', [
             ir.CreateObject('PyInt', [ir.Field(ir.Identifier('args'), 'length')]),
             ir.Identifier('kwargs'),
             ir.PyConstant(posonly_kw_name),
             ir.PyConstant(posonly_positional_name),
             ir.PyConstant(plan.posonly_min_max_range[0]),
             ir.PyConstant(plan.posonly_min_max_range[1]),
-        ])))
+        ]))
         bind_args = [ir.ArrayAccess(ir.Identifier('args'), ir.IntLiteral(i)) for i in range(plan.posonly_min_max_range[0])]
         bind_args.extend(
             ir.CondOp(
@@ -2767,11 +2767,11 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                     ir.CreateObject('java.util.LinkedHashMap<PyObject, PyObject>', [ir.IntLiteral(len(attrs))]),
                 ),
                 ir.StaticBlock([
-                    ir.ExprStatement(ir.MethodCall(
+                    ir.method_call_statement(
                         ir.Identifier('attrs'),
                         'put',
                         [ir.CreateObject('PyString', [ir.StrLiteral(k)]), ir.Identifier(f'pyattr_{k}')],
-                    ))
+                    )
                     for k in attrs
                 ]),
             ]))

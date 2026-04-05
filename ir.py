@@ -605,6 +605,9 @@ def chained_binary_op(op: str, exprs: list[Expr]) -> Expr:
         expr = BinaryOp(op, expr, term)
     return expr
 
+def method_call_statement(obj: Expr, method: str, args: list[Expr]) -> ExprStatement:
+    return ExprStatement(MethodCall(obj, method, args))
+
 def if_statement(cond: Expr, body: list[Statement], orelse: list[Statement]) -> Iterator[Statement]:
     if isinstance(cond, Bool) and cond.value:
         yield from body
