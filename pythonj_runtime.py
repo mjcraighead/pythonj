@@ -4,28 +4,28 @@
 
 import typing
 
-def bind_exact_positional(args, kwargs, name, n) -> tuple:
+def bind_exact_positional(args, kwargs, kw_name, positional_name, n) -> tuple:
     if kwargs is not __pythonj_null__ and kwargs:
-        raise TypeError(name + '() takes no keyword arguments')
+        raise TypeError(kw_name + '() takes no keyword arguments')
     args_len = __pythonj_len__(args)
     if args_len != n:
         if n == 0:
-            raise TypeError(f'{name}() takes no arguments ({args_len} given)')
+            raise TypeError(f'{positional_name}() takes no arguments ({args_len} given)')
         if n == 1:
-            raise TypeError(f'{name}() takes exactly one argument ({args_len} given)')
-        raise TypeError(f'{name} expected {n} arguments, got {args_len}')
+            raise TypeError(f'{positional_name}() takes exactly one argument ({args_len} given)')
+        raise TypeError(f'{positional_name} expected {n} arguments, got {args_len}')
     return args
 
-def bind_min_max_positional(args, kwargs, name, min_args, max_args) -> tuple:
+def bind_min_max_positional(args, kwargs, kw_name, positional_name, min_args, max_args) -> tuple:
     if kwargs is not __pythonj_null__ and kwargs:
-        raise TypeError(name + '() takes no keyword arguments')
+        raise TypeError(kw_name + '() takes no keyword arguments')
     args_len = __pythonj_len__(args)
     if args_len < min_args:
         suffix = '' if min_args == 1 else 's'
-        raise TypeError(f'{name} expected at least {min_args} argument{suffix}, got {args_len}')
+        raise TypeError(f'{positional_name} expected at least {min_args} argument{suffix}, got {args_len}')
     if args_len > max_args:
         suffix = '' if max_args == 1 else 's'
-        raise TypeError(f'{name} expected at most {max_args} argument{suffix}, got {args_len}')
+        raise TypeError(f'{positional_name} expected at most {max_args} argument{suffix}, got {args_len}')
     return args
 
 def max_iterable(iterable, default_obj, key_func):
