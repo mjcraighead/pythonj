@@ -78,6 +78,7 @@ class InitialBinding:
     name: str
     builtin_module: Optional[str] = None
     function_call_range: Optional[tuple[int, int]] = None
+    function_return_type: Optional[str] = None
 
 @dataclass
 class ScopeInfo:
@@ -90,6 +91,7 @@ class ScopeInfo:
     initial_final_bindings: set[str]
     initial_builtin_module_locals: dict[str, str]
     initial_final_function_call_ranges: dict[str, tuple[int, int]]
+    initial_final_function_return_types: dict[str, str]
     exact_arg_types: dict[str, str]
     exact_local_types: dict[str, str]
     annotation_errors: list[tuple[int, str]]
@@ -170,6 +172,13 @@ def _param_names(args: ast.arguments) -> Iterator[str]:
     if args.kwarg is not None:
         yield args.kwarg.arg
 
+def _decode_user_function_return_annotation(annotation: Optional[ast.expr]) -> Optional[str]:
+    if annotation is None:
+        return None
+    if isinstance(annotation, ast.Name) and annotation.id in extract_spec.BUILTIN_TYPES:
+        return annotation.id
+    return None
+
 def _get_initial_bindings(node: ast.stmt) -> Optional[list[InitialBinding]]:
     if isinstance(node, ast.Import):
         bindings: list[InitialBinding] = []
@@ -186,12 +195,16 @@ def _get_initial_bindings(node: ast.stmt) -> Optional[list[InitialBinding]]:
             return None
         n_total = len(node.args.posonlyargs) + len(node.args.args)
         n_required = n_total - len(node.args.defaults)
-        return [InitialBinding(node.name, function_call_range=(n_required, n_total))]
+        return [InitialBinding(
+            node.name,
+            function_call_range=(n_required, n_total),
+            function_return_type=_decode_user_function_return_annotation(node.returns),
+        )]
     return None
 
-def _collect_initial_final_bindings(node: ast.AST) -> tuple[set[str], dict[str, str], dict[str, tuple[int, int]]]:
+def _collect_initial_final_bindings(node: ast.AST) -> tuple[set[str], dict[str, str], dict[str, tuple[int, int]], dict[str, str]]:
     if not isinstance(node, (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef)):
-        return (set(), {}, {})
+        return (set(), {}, {}, {})
     prefix_bindings: dict[str, InitialBinding] = {}
     prefix_end = 0
     for statement in node.body:
@@ -202,7 +215,7 @@ def _collect_initial_final_bindings(node: ast.AST) -> tuple[set[str], dict[str, 
         for binding in bindings:
             prefix_bindings[binding.name] = binding
     if not prefix_bindings:
-        return (set(), {}, {})
+        return (set(), {}, {}, {})
     later_writes: set[str] = set()
     for statement in node.body[prefix_end:]:
         _walk_local(statement, set(), later_writes, set(), set(), [])
@@ -218,6 +231,11 @@ def _collect_initial_final_bindings(node: ast.AST) -> tuple[set[str], dict[str, 
             name: binding.function_call_range
             for (name, binding) in prefix_bindings.items()
             if name in final_bindings and binding.function_call_range is not None
+        },
+        {
+            name: binding.function_return_type
+            for (name, binding) in prefix_bindings.items()
+            if name in final_bindings and binding.function_return_type is not None
         },
     )
 
@@ -404,7 +422,8 @@ class ScopeAnalyzer(ast.NodeVisitor):
                 annotation_errors.append((getattr(node, 'lineno', 0), f"annotated local {name!r} may not be captured by an inner scope"))
         (initial_final_bindings,
          initial_builtin_module_locals,
-         initial_final_function_call_ranges) = _collect_initial_final_bindings(node)
+         initial_final_function_call_ranges,
+         initial_final_function_return_types) = _collect_initial_final_bindings(node)
         scope_info = ScopeInfo(
             kind,
             locals,
@@ -415,6 +434,7 @@ class ScopeAnalyzer(ast.NodeVisitor):
             initial_final_bindings,
             initial_builtin_module_locals,
             initial_final_function_call_ranges,
+            initial_final_function_return_types,
             exact_arg_types,
             exact_local_types,
             annotation_errors,
@@ -697,6 +717,11 @@ class LoweringVisitor(ast.NodeVisitor):
             type_name = self.local_exact_builtin_type(node.id)
             if type_name is not None:
                 return type_name
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
+            if self.name_resolves_to_final_top_level_function(node.func):
+                type_name = self.module_scope().info.initial_final_function_return_types.get(node.func.id)
+                if type_name is not None and not node.keywords and not any(isinstance(arg, ast.Starred) for arg in node.args):
+                    return type_name
         if (isinstance(node, ast.Call) and
             isinstance(node.func, ast.Name) and
             node.func.id in DIRECT_NEWOBJ_POSITIONAL_BUILTIN_TYPES and
@@ -1187,11 +1212,6 @@ class LoweringVisitor(ast.NodeVisitor):
 
     def visit_AnnAssign(self, node) -> None:
         self.report_annotation_errors()
-        if not self.allow_intrinsics:
-            self.error(node.lineno, 'local type annotations are unsupported')
-            if node.value is not None:
-                self.visit(node.value)
-            return
         if not isinstance(node.target, ast.Name):
             self.error(node.lineno, 'only simple local variable annotations are supported')
             if node.value is not None:
@@ -1453,9 +1473,7 @@ class LoweringVisitor(ast.NodeVisitor):
         for arg in positional_args:
             # arg.type_comment is ignored; we only plan to support "real" type annotations.
             if arg.annotation:
-                if not self.allow_intrinsics:
-                    self.error(lineno, 'argument type annotations are unsupported')
-                elif not isinstance(arg.annotation, ast.Name) or arg.annotation.id not in extract_spec.BUILTIN_TYPES:
+                if not isinstance(arg.annotation, ast.Name) or arg.annotation.id not in extract_spec.BUILTIN_TYPES:
                     self.error(lineno, 'only exact builtin-type argument annotations are supported')
         params: list[inspect.Parameter] = []
         n_args = len(positional_args)
@@ -1603,7 +1621,10 @@ class LoweringVisitor(ast.NodeVisitor):
         for name in sorted(self.scope.info.locals - self.scope.info.cell_vars - set(arg_names) - set(self.scope.info.initial_builtin_module_locals)):
             if invisible_args or name not in arg_names:
                 call_positional_body.append(ir.LocalDecl(self.java_local_type(name), f'pylocal_{name}', None))
-        call_positional_body.extend(ir.block_simplify([*body, ir.ReturnStatement(ir.PyConstant(None))]))
+        implicit_return: ir.Statement = ir.ReturnStatement(ir.PyConstant(None))
+        if self.scope.expected_return_java_type not in {None, 'PyObject'}:
+            implicit_return = ir.ReturnStatement(ir.CastExpr(self.scope.expected_return_java_type, ir.PyConstant(None)))
+        call_positional_body.extend(ir.block_simplify([*body, implicit_return]))
         func_decls.append(ir.MethodDecl(
             'public',
             'PyObject',
@@ -1618,10 +1639,15 @@ class LoweringVisitor(ast.NodeVisitor):
         # node.type_comment is ignored; we only plan to support "real" type annotations.
         if node.decorator_list:
             self.error(node.lineno, 'function decorators are unsupported')
-        if node.returns:
-            self.error(node.lineno, 'function return annotations are unsupported')
         if node.type_params:
             self.error(node.lineno, 'function type parameters are unsupported')
+        return_java_type = 'PyObject'
+        if node.returns is not None:
+            type_name = _decode_user_function_return_annotation(node.returns)
+            if type_name is None:
+                self.error(node.lineno, 'only exact builtin-type function return annotations are supported')
+            else:
+                return_java_type = extract_spec.BUILTIN_TYPES[type_name]
 
         params = self.get_supported_params(node.lineno, node.args)
         qualname = self.qualname(node.name)
@@ -1637,9 +1663,11 @@ class LoweringVisitor(ast.NodeVisitor):
         else:
             self.code.append(ir.AssignStatement(self.ident_expr(node.name), ir.CreateObject(java_name, [ir.Identifier(f'pycell_{name}') for name in sorted(free_vars)])))
 
-        with self.new_function(scope_info, free_vars, qualname):
+        with self.new_function(scope_info, free_vars, qualname, return_java_type):
             self.report_annotation_errors()
             body = self.visit_block(node.body)
+            if return_java_type != 'PyObject' and not ir.block_ends_control_flow(body):
+                self.error(node.lineno, f'annotated function {node.name} may implicitly return None')
             self.add_function(qualname, java_name, params, body)
 
     def visit_ClassDef(self, node) -> None:
