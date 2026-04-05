@@ -159,22 +159,20 @@ def _walk_local(node: ast.AST, reads: set[str], writes: set[str], explicit_globa
             for alias in local_node.names:
                 writes.add(alias.asname if alias.asname is not None else alias.name)
 
+def _param_names(args: ast.arguments) -> set[str]:
+    out = {arg.arg for arg in itertools.chain(args.posonlyargs, args.args, args.kwonlyargs)}
+    if args.vararg is not None:
+        out.add(args.vararg.arg)
+    if args.kwarg is not None:
+        out.add(args.kwarg.arg)
+    return out
+
 class ScopeAnalyzer(ast.NodeVisitor):
     __slots__ = ('scope_infos',)
     scope_infos: dict[ast.AST, ScopeInfo]
 
     def __init__(self):
         self.scope_infos = {}
-
-    def _param_names(self, args: ast.arguments) -> set[str]:
-        out = {arg.arg for arg in args.posonlyargs}
-        out.update(arg.arg for arg in args.args)
-        out.update(arg.arg for arg in args.kwonlyargs)
-        if args.vararg is not None:
-            out.add(args.vararg.arg)
-        if args.kwarg is not None:
-            out.add(args.kwarg.arg)
-        return out
 
     def _get_initial_bindings(self, node: ast.stmt) -> Optional[list[InitialBinding]]:
         if isinstance(node, ast.Import):
@@ -241,14 +239,14 @@ class ScopeAnalyzer(ast.NodeVisitor):
             for statement in node.body:
                 _walk_local(statement, reads, writes, explicit_globals, nonlocals, children)
         elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            writes.update(self._param_names(node.args))
+            writes.update(_param_names(node.args))
             for statement in node.body:
                 _walk_local(statement, reads, writes, explicit_globals, nonlocals, children)
         elif isinstance(node, ast.ClassDef):
             for statement in node.body:
                 _walk_local(statement, reads, writes, explicit_globals, nonlocals, children)
         elif isinstance(node, ast.Lambda):
-            writes.update(self._param_names(node.args))
+            writes.update(_param_names(node.args))
             _walk_local(node.body, reads, writes, explicit_globals, nonlocals, children)
         else:
             assert isinstance(node, (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)), node
@@ -381,7 +379,7 @@ class ScopeAnalyzer(ast.NodeVisitor):
             states[name] = NameBindingState.DEFINITELY_UNBOUND
         default_global_state = NameBindingState.DEFINITELY_UNBOUND
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)):
-            for name in self._param_names(node.args):
+            for name in _param_names(node.args):
                 states[name] = NameBindingState.DEFINITELY_BOUND
 
         for statement in ordered_nodes:
