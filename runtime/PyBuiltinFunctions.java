@@ -47,7 +47,7 @@ final class PyBuiltinFunctionsImpl {
         out.append('"');
         return new PyString(out.toString());
     }
-    private static PyValueError jsonScanstringError(String msg, String s, int pos) {
+    private static PyRaise jsonScanstringError(String msg, String s, int pos) {
         int line = 1;
         int col = 1;
         for (int i = 0; i < pos; i++) {
@@ -58,7 +58,7 @@ final class PyBuiltinFunctionsImpl {
                 col++;
             }
         }
-        return new PyValueError(new PyString(String.format("%s: line %d column %d (char %d)", msg, line, col, pos)));
+        return PyValueError.raiseFormat("%s: line %d column %d (char %d)", msg, line, col, pos);
     }
     static PyTuple pyfunc_json_scanstring(PyObject sObj, PyObject endObj) {
         if (!(sObj instanceof PyString sStr)) {
@@ -70,7 +70,7 @@ final class PyBuiltinFunctionsImpl {
         var out = new StringBuilder();
         while (true) {
             if (i >= s.length()) {
-                throw new PyRaise(jsonScanstringError("Unterminated string starting at", s, start - 1));
+                throw jsonScanstringError("Unterminated string starting at", s, start - 1);
             }
             char c = s.charAt(i);
             if (c == '"') {
@@ -79,7 +79,7 @@ final class PyBuiltinFunctionsImpl {
             if (c == '\\') {
                 i++;
                 if (i >= s.length()) {
-                    throw new PyRaise(jsonScanstringError("Unterminated string starting at", s, start - 1));
+                    throw jsonScanstringError("Unterminated string starting at", s, start - 1);
                 }
                 char esc = s.charAt(i);
                 switch (esc) {
@@ -93,13 +93,13 @@ final class PyBuiltinFunctionsImpl {
                     case 't': out.append('\t'); break;
                     case 'u': {
                         if (i + 4 >= s.length()) {
-                            throw new PyRaise(jsonScanstringError("Invalid \\uXXXX escape", s, i));
+                            throw jsonScanstringError("Invalid \\uXXXX escape", s, i);
                         }
                         int code = 0;
                         for (int j = 1; j <= 4; j++) {
                             int digit = Character.digit(s.charAt(i + j), 16);
                             if (digit < 0) {
-                                throw new PyRaise(jsonScanstringError("Invalid \\uXXXX escape", s, i));
+                                throw jsonScanstringError("Invalid \\uXXXX escape", s, i);
                             }
                             code = (code << 4) | digit;
                         }
@@ -108,7 +108,7 @@ final class PyBuiltinFunctionsImpl {
                         break;
                     }
                     default:
-                        throw new PyRaise(jsonScanstringError("Invalid \\escape", s, i - 1));
+                        throw jsonScanstringError("Invalid \\escape", s, i - 1);
                 }
                 i++;
                 continue;
