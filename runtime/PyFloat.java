@@ -362,15 +362,13 @@ public final class PyFloat extends PyObject {
     }
     @Override public double floatValue() { return value; }
     @Override public int hashCode() {
-        if (Double.isNaN(value)) {
-            throw new UnsupportedOperationException();
-        } else if (value == Double.POSITIVE_INFINITY) {
-            return 314159;
-        } else if (value == Double.NEGATIVE_INFINITY) {
-            return -314159;
+        if (Double.isFinite(value) && (value >= Long.MIN_VALUE) && (value <= Long.MAX_VALUE)) {
+            long longValue = (long)value;
+            if (value == (double)longValue) {
+                return Long.hashCode(longValue);
+            }
         }
-        long[] ratio = finiteIntegerRatio(value);
-        return Runtime.hashRational(ratio[0], ratio[1]);
+        return Long.hashCode(Double.doubleToLongBits(value));
     }
     @Override public boolean ge(PyObject rhs) {
         if ((rhs instanceof PyFloat) || (rhs instanceof PyInt) || (rhs instanceof PyBool)) {

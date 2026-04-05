@@ -490,12 +490,6 @@ public final class Runtime {
         sysArgv = new PyList(argv);
     }
 
-    public static int hashRational(long numerator, long denominator) {
-        if (denominator <= 0) {
-            throw new IllegalArgumentException("denominator must be positive");
-        }
-        return 31 * Long.hashCode(numerator) + Long.hashCode(denominator);
-    }
     public static PyObject pythonjAbs(PyObject obj) {
         return obj.abs();
     }
