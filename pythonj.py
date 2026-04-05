@@ -1660,7 +1660,40 @@ class LoweringVisitor(ast.NodeVisitor):
                     *statements,
                     ir.ReturnStatement(ir.Identifier(temp_result)),
                 ]
-            self.add_function(qualname, java_name, [arg_name], [], body, invisible_args=True)
+            free_var_names = sorted(self.scope.free_vars)
+            call_positional_body: list[ir.Statement] = [
+                ir.LocalDecl('PyObject', arg_name, ir.Identifier(f'pyarg_{arg_name}')),
+            ]
+            if self.scope.used_expr_discard:
+                call_positional_body.append(ir.LocalDecl('PyObject', 'expr_discard', None))
+            for name in sorted(self.scope.info.cell_vars - {arg_name}):
+                call_positional_body.append(ir.LocalDecl('PyCell', f'pycell_{name}', ir.CreateObject('PyCell', [ir.PyConstant(None)])))
+            for name in sorted(self.scope.info.locals - self.scope.info.cell_vars - {arg_name} - set(self.scope.info.initial_builtin_module_locals)):
+                call_positional_body.append(ir.LocalDecl('PyObject', f'pylocal_{name}', None))
+            call_positional_body.extend(ir.block_simplify([*body, ir.ReturnStatement(ir.PyConstant(None))]))
+            comp_decl = ir.ClassDecl(
+                'private static final',
+                java_name,
+                None,
+                [
+                    *(ir.FieldDecl('private final', 'PyCell', f'pycell_{name}', None) for name in free_var_names),
+                    ir.ConstructorDecl(
+                        '',
+                        java_name,
+                        [f'PyCell _pycell_{name}' for name in free_var_names],
+                        [*(ir.AssignStatement(ir.Identifier(f'pycell_{name}'), ir.Identifier(f'_pycell_{name}')) for name in free_var_names)],
+                    ),
+                    ir.MethodDecl(
+                        'public',
+                        'PyObject',
+                        'callPositional',
+                        [f'PyObject pyarg_{arg_name}'],
+                        call_positional_body,
+                    ),
+                ],
+            )
+            assert java_name not in self.classes
+            self.classes[java_name] = comp_decl
 
         return ir.MethodCall(
             ir.CreateObject(java_name, [ir.Identifier(f'pycell_{name}') for name in sorted(free_vars)]),
