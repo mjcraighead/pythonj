@@ -24,10 +24,12 @@ def _find_name(names, kw, start):
     return __pythonj_null__
 
 def _type_error_at_most_args(positional_name, max_total, given) -> TypeError:
-    return TypeError(f'{positional_name}() takes at most {max_total} arguments ({given} given)')
+    suffix = '' if max_total == 1 else 's'
+    return TypeError(f'{positional_name}() takes at most {max_total} argument{suffix} ({given} given)')
 
 def _type_error_at_most_keyword_args(kw_name, max_total, kwargs_len) -> TypeError:
-    return TypeError(f'{kw_name}() takes at most {max_total} keyword arguments ({kwargs_len} given)')
+    suffix = '' if max_total == 1 else 's'
+    return TypeError(f'{kw_name}() takes at most {max_total} keyword argument{suffix} ({kwargs_len} given)')
 
 def _type_error_unexpected_kw_arg(kw_name, unknown_kw) -> TypeError:
     return TypeError(f'{kw_name}() got an unexpected keyword argument {unknown_kw!r}')

@@ -5,6 +5,7 @@
 import java.util.Map;
 
 public final class PyMappingProxy extends PyObject {
+    private static final PyTuple constructor_positional_names = new PyTuple(new PyObject[] {new PyString("mapping")});
     private final Map<PyObject, PyObject> items;
 
     PyMappingProxy(Map<PyObject, PyObject> _items) {
@@ -12,29 +13,8 @@ public final class PyMappingProxy extends PyObject {
     }
 
     public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
-        PyObject mapping = (args.length >= 1) ? args[0] : null;
-        if (args.length > 1) {
-            throw PyTypeError.raiseFormat("mappingproxy() takes at most 1 argument (%d given)", args.length);
-        }
-        if ((kwargs != null) && kwargs.boolValue()) {
-            long kwargsLen = kwargs.items.size();
-            if (kwargsLen > 1) {
-                throw Runtime.raiseAtMostKwArgs(type.name(), 1, args.length, kwargsLen);
-            }
-            for (var x: kwargs.items.entrySet()) {
-                PyString kw = (PyString)x.getKey();
-                if (kw.value.equals("mapping")) {
-                    if (mapping != null) {
-                        throw PyTypeError.raiseFormat("%s() got multiple values for argument %s", type.name(), kw.repr());
-                    }
-                    mapping = x.getValue();
-                }
-            }
-        }
-        if (mapping == null) {
-            throw PyTypeError.raise("mappingproxy() missing required argument 'mapping' (pos 1)");
-        }
-        return newObjPositional(mapping);
+        PyList boundArgs = Runtime.bindMinMaxPositionalOrKeyword(args, kwargs, type.name(), constructor_positional_names, 0, PyTuple.empty_singleton, 1, 1, 1, false, false);
+        return newObjPositional(boundArgs.items.get(0));
     }
     public static PyObject newObjPositional(PyObject arg) {
         if (arg instanceof PyDict dict) {

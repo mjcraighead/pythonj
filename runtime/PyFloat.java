@@ -229,11 +229,8 @@ public final class PyFloat extends PyObject {
     }
 
     public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
-        Runtime.requireNoKwArgs(kwargs, type.name());
-        if (args.length > 1) {
-            throw Runtime.raiseMaxArgs(args, 1, type.name());
-        }
-        return (args.length == 0) ? newObjPositional(null) : newObjPositional(args[0]);
+        PyTuple boundArgs = Runtime.bindMinMaxPositional(args, kwargs, type.name(), 0, 1);
+        return newObjPositional((boundArgs.items.length == 0) ? null : boundArgs.items[0]);
     }
     public static PyObject newObjPositional(PyObject arg) {
         if (arg == null) {

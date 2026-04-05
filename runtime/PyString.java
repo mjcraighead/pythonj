@@ -7,6 +7,7 @@ import java.util.Locale;
 
 public final class PyString extends PyObject {
     public static final PyString empty_singleton = new PyString("");
+    private static final PyTuple constructor_positional_names = new PyTuple(new PyObject[] {new PyString("object"), new PyString("encoding"), new PyString("errors")});
 
     static final class PyStringIter extends PyIter {
         private static final PyConcreteType type_singleton = new PyConcreteType("str_iterator", PyStringIter.class);
@@ -33,40 +34,8 @@ public final class PyString extends PyObject {
     PyString(String _value) { value = _value; }
 
     public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
-        if (args.length > 3) {
-            throw Runtime.raiseMaxArgs(args, 3, type.name());
-        }
-        PyObject object = (args.length >= 1) ? args[0] : null;
-        PyObject encoding = (args.length >= 2) ? args[1] : null;
-        PyObject errors = (args.length >= 3) ? args[2] : null;
-        if ((kwargs != null) && kwargs.boolValue()) {
-            long totalKwArgs = kwargs.items.size();
-            if (totalKwArgs > 3) {
-                throw Runtime.raiseAtMostKwArgs(type.name(), 3, args.length, totalKwArgs);
-            }
-            for (var x: kwargs.items.entrySet()) {
-                PyString kw = (PyString)x.getKey();
-                if (kw.value.equals("object")) {
-                    if (object != null) {
-                        throw PyTypeError.raiseFormat("%s() got multiple values for argument %s", type.name(), kw.repr());
-                    }
-                    object = x.getValue();
-                } else if (kw.value.equals("encoding")) {
-                    if (encoding != null) {
-                        throw PyTypeError.raiseFormat("%s() got multiple values for argument %s", type.name(), kw.repr());
-                    }
-                    encoding = x.getValue();
-                } else if (kw.value.equals("errors")) {
-                    if (errors != null) {
-                        throw PyTypeError.raiseFormat("%s() got multiple values for argument %s", type.name(), kw.repr());
-                    }
-                    errors = x.getValue();
-                } else {
-                    throw Runtime.raiseUnexpectedKwArg(type.name(), kw.value);
-                }
-            }
-        }
-        return newObjPositional(object, encoding, errors);
+        PyList boundArgs = Runtime.bindMinMaxPositionalOrKeyword(args, kwargs, type.name(), constructor_positional_names, 0, PyTuple.empty_singleton, 0, 3, 3, false, false);
+        return newObjPositional(boundArgs.items.get(0), boundArgs.items.get(1), boundArgs.items.get(2));
     }
     public static PyObject newObjPositional(PyObject object, PyObject encoding, PyObject errors) {
         if (object == null) {
