@@ -12,6 +12,9 @@ import inspect
 import itertools
 import json
 import os
+import subprocess
+import sys
+import tempfile
 import types
 from typing import Iterator, Optional, TextIO, cast
 
@@ -1955,8 +1958,18 @@ class LoweringVisitor(ast.NodeVisitor):
             name: java_name for (name, java_name) in self.final_global_function_classes.items()
             if name in self.scope.info.locals
         }
+        predefined_global_fields: list[ir.Decl] = []
+        if '__name__' not in self.scope.info.locals:
+            predefined_global_fields.append(
+                ir.FieldDecl('private static final', 'PyString', 'pyglobal___name__', ir.PyConstant('__main__'))
+            )
+        if '__file__' not in self.scope.info.locals:
+            predefined_global_fields.append(
+                ir.FieldDecl('private static final', 'PyString', 'pyglobal___file__', ir.PyConstant(self.path))
+            )
         body_decls: list[ir.Decl] = [
             *self.classes.values(),
+            *predefined_global_fields,
             # XXX Initializing all globals to None is weird, but we don't have a better option yet
             *(ir.FieldDecl('private static final', 'PyObject', f'pyglobal_{name}', ir.Field(ir.Identifier(extract_spec.BUILTIN_MODULES[module_name]), 'singleton'))
               for (name, module_name) in sorted(final_import_fields.items())),
@@ -2878,24 +2891,94 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
         ir.write_decls(f, top_level_decls, pool)
 
 def translate_python_to_java(spec_path: str, py_path: str, java_path: str) -> None:
-    load_runtime_spec(spec_path)
     with open(py_path, encoding='utf-8') as f:
-        node = ast.parse(f.read(), filename=py_path)
+        translate_python_source_to_java(spec_path, f.read(), py_path, java_path)
+
+def translate_python_source_to_java(spec_path: str, py_source: str, source_name: str, java_path: str) -> None:
+    load_runtime_spec(spec_path)
+    node = ast.parse(py_source, filename=source_name)
     analyzer = ScopeAnalyzer()
     analyzer.visit(node)
     visitor = LoweringVisitor(
-        py_path,
+        source_name,
         analyzer.scope_infos,
         analyzer.scope_infos[node],
     )
     visitor.visit(node)
     if visitor.n_errors:
         raise SystemExit(f'Translation failed: {visitor.n_errors} errors')
-    py_name = os.path.basename(py_path)[:-3]
+    py_name = get_java_main_class_name(source_name)
     with open(java_path, 'w', encoding='utf-8') as f:
         visitor.write_java(f, py_name)
 
+def get_java_main_class_name(source_name: str) -> str:
+    base = os.path.basename(source_name)
+    if base.endswith('.py'):
+        base = base[:-3]
+    out = []
+    for c in base:
+        if c.isalnum() or c == '_':
+            out.append(c)
+        else:
+            out.append('_')
+    py_name = ''.join(out) or 'stdin'
+    if py_name[0].isdigit():
+        py_name = f'_{py_name}'
+    return py_name
+
+def run_python_script(spec_path: str, runtime_jar_path: str, source_name: str, py_source: str) -> None:
+    repo_root = os.path.dirname(os.path.abspath(__file__))
+    py_name = get_java_main_class_name(source_name)
+    build_python = 'py' if os.name == 'nt' else 'python3'
+    sep = ';' if os.name == 'nt' else ':'
+    build_jar_script = os.path.join(repo_root, 'tools', 'build_jar.py')
+
+    with tempfile.TemporaryDirectory(prefix='.pythonj-run.', dir=os.path.join(repo_root, '_out')) as temp_dir:
+        py_path = os.path.join(temp_dir, f'{py_name}.py')
+        java_path = os.path.join(temp_dir, f'{py_name}.java')
+        jar_path = os.path.join(temp_dir, f'{py_name}.jar')
+        with open(py_path, 'w', encoding='utf-8') as f:
+            f.write(py_source)
+        translate_python_source_to_java(spec_path, py_source, source_name, java_path)
+        build_result = subprocess.run([
+            build_python,
+            build_jar_script,
+            '--classpath',
+            runtime_jar_path,
+            '-o',
+            jar_path,
+            java_path,
+        ], cwd=temp_dir)
+        if build_result.returncode != 0:
+            raise SystemExit(build_result.returncode)
+        java_result = subprocess.run([
+            'java',
+            '-cp',
+            f'{runtime_jar_path}{sep}{jar_path}',
+            py_name,
+        ], cwd=temp_dir)
+        if java_result.returncode != 0:
+            raise SystemExit(java_result.returncode)
+
 def main() -> None:
+    repo_root = os.path.dirname(os.path.abspath(__file__))
+    python = 'py' if os.name == 'nt' else 'python3'
+    spec_path = os.path.join(repo_root, '_out', 'spec.json')
+    runtime_jar_path = os.path.join(repo_root, '_out', 'pythonj.jar')
+    if len(sys.argv) >= 2 and sys.argv[1] not in {'gen-runtime', 'translate'}:
+        py_path = sys.argv[1]
+        if len(sys.argv) != 2:
+            raise SystemExit('usage: pythonj.py [gen-runtime|translate|script.py|-] ...')
+        make_result = subprocess.run([python, 'make.py', '_out/pythonj.jar'], cwd=repo_root)
+        if make_result.returncode != 0:
+            raise SystemExit(make_result.returncode)
+        if py_path == '-':
+            run_python_script(spec_path, runtime_jar_path, '<stdin>', sys.stdin.read())
+        else:
+            with open(py_path, encoding='utf-8') as f:
+                run_python_script(spec_path, runtime_jar_path, py_path, f.read())
+        return
+
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest='command', required=True)
 
