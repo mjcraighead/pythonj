@@ -661,12 +661,16 @@ class LoweringVisitor(ast.NodeVisitor):
             if self.scope.locals_are_fields:
                 return ir.Field(ir.This(), f'pylocal_{name}')
             return ir.Identifier(f'pylocal_{name}')
+        if resolution is NameResolution.GLOBAL:
+            module_name = self.module_scope().info.initial_builtin_module_locals.get(name)
+            if module_name is not None:
+                return ir.PyBuiltinModule(module_name, extract_spec.BUILTIN_MODULES[module_name])
         if name in extract_spec.BUILTIN_TYPES:
-            return ir.Field(ir.Identifier(f'{extract_spec.BUILTIN_TYPES[name]}Type'), 'singleton')
+            return ir.PyBuiltinType(name, extract_spec.BUILTIN_TYPES[name])
         if name in extract_spec.EXCEPTION_TYPES:
             return ir.Field(ir.Identifier(f'Py{name}Type'), 'singleton')
         if name in extract_spec.BUILTIN_FUNCTIONS:
-            return ir.Field(ir.Identifier(f'PyBuiltinFunction_{name}'), 'singleton')
+            return ir.PyBuiltinFunction(name)
         return ir.Identifier(f'pyglobal_{name}')
 
     def ident_expr(self, name: str) -> ir.Expr:
@@ -715,14 +719,6 @@ class LoweringVisitor(ast.NodeVisitor):
     def final_top_level_function_expr(self, name: str) -> ir.Expr:
         assert name in self.final_global_function_classes, name
         return self.ident_expr(name)
-
-    def builtin_module_name_for_name(self, node: ast.Name) -> Optional[str]:
-        resolution = get_name_resolution(node)
-        if resolution is NameResolution.LOCAL:
-            return self.scope.info.initial_builtin_module_locals.get(node.id)
-        if resolution is NameResolution.GLOBAL:
-            return self.module_scope().info.initial_builtin_module_locals.get(node.id)
-        return None
 
     def report_annotation_errors(self) -> None:
         if self.scope.reported_annotation_errors:
@@ -1069,18 +1065,18 @@ class LoweringVisitor(ast.NodeVisitor):
                     [*([self.visit(arg) for arg in node.args]), *([ir.Null()] * (max_args - len(node.args)))],
                 )
         if (isinstance(node.func, ast.Name) and
-            node.func.id in DIRECT_NEWOBJ_POSITIONAL_BUILTIN_TYPES and
-            self.name_resolves_to_builtin_type(node.func) and
             not node.keywords and
             not any(isinstance(arg, ast.Starred) for arg in node.args)):
-            (min_args, max_args) = DIRECT_NEWOBJ_POSITIONAL_BUILTIN_TYPES[node.func.id]
-            if min_args <= len(node.args) <= max_args:
-                java_name = extract_spec.BUILTIN_TYPES[node.func.id]
-                return ir.MethodCall(
-                    ir.Identifier(java_name),
-                    'newObjPositional',
-                    [*([self.visit(arg) for arg in node.args]), *([ir.Null()] * (max_args - len(node.args)))],
-                )
+            func = self.visit(node.func)
+            if isinstance(func, ir.PyBuiltinType) and func.name in DIRECT_NEWOBJ_POSITIONAL_BUILTIN_TYPES:
+                (min_args, max_args) = DIRECT_NEWOBJ_POSITIONAL_BUILTIN_TYPES[func.name]
+                if min_args <= len(node.args) <= max_args:
+                    java_name = func.java_name
+                    return ir.MethodCall(
+                        ir.Identifier(java_name),
+                        'newObjPositional',
+                        [*([self.visit(arg) for arg in node.args]), *([ir.Null()] * (max_args - len(node.args)))],
+                    )
         if self.allow_intrinsics and isinstance(node.func, ast.Name) and node.func.id in INTRINSIC_SIGNATURES:
             (n_args, method_name) = INTRINSIC_SIGNATURES[node.func.id]
             assert len(node.args) == n_args and not node.keywords, (node.func.id, n_args, node.args, node.keywords)
@@ -1107,28 +1103,28 @@ class LoweringVisitor(ast.NodeVisitor):
                                 'callPositional',
                                 [receiver, *([self.visit(arg) for arg in node.args]), *([ir.Null()] * (max_args - len(node.args)))],
                             )
-        if (isinstance(node.func, ast.Name) and node.func.id in DIRECT_CALL_POSITIONAL_BUILTINS and
-            self.name_resolves_to_builtin_function(node.func) and
+        func = self.visit(node.func)
+        if (isinstance(func, ir.PyBuiltinFunction) and
+            func.name in DIRECT_CALL_POSITIONAL_BUILTINS and
             not node.keywords and
             not any(isinstance(arg, ast.Starred) for arg in node.args)):
-            func_name = node.func.id
-            (min_args, max_args) = DIRECT_CALL_POSITIONAL_BUILTINS[node.func.id]
+            (min_args, max_args) = DIRECT_CALL_POSITIONAL_BUILTINS[func.name]
             if min_args <= len(node.args) <= max_args:
                 return ir.MethodCall(
-                    ir.Field(ir.Identifier(f'PyBuiltinFunction_{func_name}'), 'singleton'),
+                    func,
                     'callPositional',
                     [*([self.visit(arg) for arg in node.args]), *([ir.Null()] * (max_args - len(node.args)))],
                 )
-        if isinstance(node.func, ast.Attribute) and isinstance(node.func.value, ast.Name):
-            module_name = self.builtin_module_name_for_name(node.func.value)
-            if (module_name is not None and
-                node.func.attr in DIRECT_CALL_POSITIONAL_MODULE_FUNCTIONS.get(module_name, {}) and
-                not node.keywords and
-                not any(isinstance(arg, ast.Starred) for arg in node.args)):
-                (min_args, max_args) = DIRECT_CALL_POSITIONAL_MODULE_FUNCTIONS[module_name][node.func.attr]
+        if (isinstance(func, ir.PyBuiltinFunction) and
+            '.' in func.name and
+            not node.keywords and
+            not any(isinstance(arg, ast.Starred) for arg in node.args)):
+            (module_name, func_name) = func.name.split('.', 1)
+            if func_name in DIRECT_CALL_POSITIONAL_MODULE_FUNCTIONS.get(module_name, {}):
+                (min_args, max_args) = DIRECT_CALL_POSITIONAL_MODULE_FUNCTIONS[module_name][func_name]
                 if min_args <= len(node.args) <= max_args:
                     return ir.MethodCall(
-                        get_builtin_module_attr_expr(module_name, node.func.attr, 'builtin_function'),
+                        func,
                         'callPositional',
                         [*([self.visit(arg) for arg in node.args]), *([ir.Null()] * (max_args - len(node.args)))],
                     )
@@ -1138,7 +1134,6 @@ class LoweringVisitor(ast.NodeVisitor):
             assert self.python_helper_class is not None, node.func.id
             return ir.MethodCall(ir.Identifier(self.python_helper_class), f'pyfunc_{node.func.id}', [self.visit(arg) for arg in node.args])
 
-        func = self.visit(node.func)
         args = self.emit_star_expanded(node.args)
         if node.keywords:
             kv_list: list[ir.Expr] = []
@@ -1162,27 +1157,22 @@ class LoweringVisitor(ast.NodeVisitor):
         return ir.MethodCall(self.visit(node.value), 'getItem', [self.visit(node.slice)])
 
     def visit_Attribute(self, node) -> ir.Expr:
-        attr_kind = None
-        if isinstance(node.value, ast.Name):
-            module_name = self.builtin_module_name_for_name(node.value)
-            if module_name is not None:
-                attr_kind = DIRECT_GETATTR_BUILTIN_MODULE_ATTRS.get(module_name, {}).get(node.attr)
-                if attr_kind is not None:
-                    return get_builtin_module_attr_expr(module_name, node.attr, attr_kind)
-                base = ir.Field(ir.Identifier(extract_spec.BUILTIN_MODULES[module_name]), 'singleton')
-                return ir.MethodCall(base, 'getAttr', [ir.StrLiteral(node.attr)])
-        if isinstance(node.value, ast.Name):
-            attr_kind = DIRECT_GETATTR_BUILTIN_TYPE_ATTRS.get(node.value.id, {}).get(node.attr)
-        if (isinstance(node.value, ast.Name) and
-            self.name_resolves_to_builtin_type(node.value) and
-            attr_kind is not None):
-            return get_builtin_type_attr_expr(node.value.id, node.attr, attr_kind, None)
+        value = self.visit(node.value)
+        if isinstance(value, ir.PyBuiltinModule):
+            attr_kind = DIRECT_GETATTR_BUILTIN_MODULE_ATTRS.get(value.name, {}).get(node.attr)
+            if attr_kind is not None:
+                return get_builtin_module_attr_expr(value.name, node.attr, attr_kind)
+            return ir.MethodCall(value, 'getAttr', [ir.StrLiteral(node.attr)])
+        if isinstance(value, ir.PyBuiltinType):
+            attr_kind = DIRECT_GETATTR_BUILTIN_TYPE_ATTRS.get(value.name, {}).get(node.attr)
+            if attr_kind is not None:
+                return get_builtin_type_attr_expr(value.name, node.attr, attr_kind, None)
         type_name = self.infer_exact_builtin_type_expr(node.value)
         if type_name is not None:
             attr_kind = DIRECT_GETATTR_BUILTIN_TYPE_ATTRS.get(type_name, {}).get(node.attr)
             if attr_kind is not None:
-                return get_builtin_type_attr_expr(type_name, node.attr, attr_kind, self.visit(node.value))
-        return ir.MethodCall(self.visit(node.value), 'getAttr', [ir.StrLiteral(node.attr)])
+                return get_builtin_type_attr_expr(type_name, node.attr, attr_kind, value)
+        return ir.MethodCall(value, 'getAttr', [ir.StrLiteral(node.attr)])
 
     def visit_Import(self, node) -> None:
         for alias in node.names:
@@ -1193,7 +1183,7 @@ class LoweringVisitor(ast.NodeVisitor):
                 self.error(node.lineno, f"package imports are unsupported (got import {alias.name!r})")
                 continue
             bind_name = alias.asname if alias.asname is not None else alias.name
-            value = ir.Field(ir.Identifier(extract_spec.BUILTIN_MODULES[alias.name]), 'singleton')
+            value = ir.PyBuiltinModule(alias.name, extract_spec.BUILTIN_MODULES[alias.name])
             if self.scope.info.initial_builtin_module_locals.get(bind_name) == alias.name:
                 if self.scope.info.kind is ScopeKind.FUNCTION:
                     self.code.append(ir.LocalDecl('final PyObject', f'pylocal_{bind_name}', value))
@@ -2356,9 +2346,10 @@ def get_builtin_module_attr_expr(module_name: str, attr_name: str, kind: str) ->
     if kind == 'builtin_function':
         module_java_name = extract_spec.BUILTIN_MODULES[module_name]
         module_func_prefix = module_java_name.removesuffix('Module')
-        return ir.Field(ir.Identifier(f'{module_func_prefix}Function_{attr_name}'), 'singleton')
+        return ir.PyBuiltinFunction(f'{module_name}.{attr_name}', java_name=f'{module_func_prefix}Function_{attr_name}')
     if kind == 'type':
-        return ir.Field(ir.Identifier(f'{get_java_name(f"{module_name}.{attr_name}")}Type'), 'singleton')
+        java_name = get_java_name(f'{module_name}.{attr_name}')
+        return ir.PyBuiltinType(f'{module_name}.{attr_name}', java_name)
     assert False, (module_name, attr_name, kind)
 
 def get_positional_call_range(params: Optional[list[inspect.Parameter]]) -> Optional[tuple[int, int]]:

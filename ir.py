@@ -163,6 +163,28 @@ class Identifier(Expr):
         return self.name
 
 @dataclass(slots=True)
+class PyBuiltinFunction(Expr):
+    name: str
+    java_name: Optional[str] = None
+    def emit_java(self, pool: ConstantPool) -> str:
+        java_name = self.java_name if self.java_name is not None else f'PyBuiltinFunction_{self.name}'
+        return f'{java_name}.singleton'
+
+@dataclass(slots=True)
+class PyBuiltinType(Expr):
+    name: str
+    java_name: str
+    def emit_java(self, pool: ConstantPool) -> str:
+        return f'{self.java_name}Type.singleton'
+
+@dataclass(slots=True)
+class PyBuiltinModule(Expr):
+    name: str
+    java_name: str
+    def emit_java(self, pool: ConstantPool) -> str:
+        return f'{self.java_name}.singleton'
+
+@dataclass(slots=True)
 class Null(Expr):
     def emit_java(self, pool: ConstantPool) -> str:
         return 'null'
