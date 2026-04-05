@@ -625,6 +625,15 @@ public final class Runtime {
         }
         throw new UnsupportedOperationException(msg);
     }
+    public static byte[] requireBytesLikeBuffer(PyObject arg) {
+        if (arg instanceof PyBytes argBytes) {
+            return argBytes.value;
+        } else if (arg instanceof PyByteArray argByteArray) {
+            return argByteArray.value;
+        } else {
+            throw PyTypeError.raise("a bytes-like object is required, not " + PyString.reprOf(arg.type().name()));
+        }
+    }
     public static String getDefaultTextEncoding() {
         String os = System.getProperty("os.name").toLowerCase();
         return os.contains("win") ? "cp1252" : "UTF-8"; // XXX extremely basic, good enough for now

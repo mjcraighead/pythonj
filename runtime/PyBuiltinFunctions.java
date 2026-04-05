@@ -152,17 +152,8 @@ final class PyBuiltinFunctionsImpl {
         a.setItem(b, c);
         return PyNone.singleton;
     }
-    private static byte[] requireBytesLikeBuffer(PyObject arg, String name) {
-        if (arg instanceof PyBytes argBytes) {
-            return argBytes.value;
-        }
-        if (arg instanceof PyByteArray argByteArray) {
-            return argByteArray.value;
-        }
-        throw PyTypeError.raise("a bytes-like object is required, not " + PyString.reprOf(arg.type().name()));
-    }
     static PyBytes pyfunc_zlib_compress(PyObject arg, PyObject level, PyObject wbits) {
-        byte[] in = requireBytesLikeBuffer(arg, "zlib.compress");
+        byte[] in = Runtime.requireBytesLikeBuffer(arg);
         if ((level.indexValue() != -1) || (wbits.indexValue() != 15)) {
             throw new UnsupportedOperationException("zlib.compress() arguments beyond data are unsupported");
         }
@@ -184,7 +175,7 @@ final class PyBuiltinFunctionsImpl {
         return new PyBytes(out.toByteArray());
     }
     static PyBytes pyfunc_zlib_decompress(PyObject arg, PyObject wbits, PyObject bufsize) {
-        byte[] in = requireBytesLikeBuffer(arg, "zlib.decompress");
+        byte[] in = Runtime.requireBytesLikeBuffer(arg);
         if ((wbits.indexValue() != 15) || (bufsize.indexValue() != 16384)) {
             throw new UnsupportedOperationException("zlib.decompress() arguments beyond data are unsupported");
         }
