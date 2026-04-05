@@ -221,10 +221,10 @@ final class PyBuiltinFunctionsImpl {
     }
     static PyString pyfunc_chr(PyObject arg) {
         long index = arg.indexValue();
-        if ((index < 0) || (index > 65535)) {
-            throw new IllegalArgumentException("chr() argument out of range");
+        if ((index < 0) || (index > 0x10FFFF)) {
+            throw PyValueError.raise("chr() arg not in range(0x110000)");
         }
-        return new PyString(String.valueOf((char)index));
+        return new PyString(new String(Character.toChars((int)index)));
     }
     static PyList pyfunc_dir(PyObject object) {
         if (object == null) {
@@ -338,11 +338,24 @@ final class PyBuiltinFunctionsImpl {
         }
     }
     static PyInt pyfunc_ord(PyObject arg_obj) {
-        PyString arg = (PyString)arg_obj;
-        if (arg.len() != 1) {
-            throw new IllegalArgumentException("argument to ord() must be string of length 1");
+        if (arg_obj instanceof PyString arg) {
+            if (arg.len() != 1) {
+                throw PyTypeError.raise("ord() expected a character, but string of length " + arg.len() + " found");
+            }
+            return new PyInt(arg.value.charAt(0));
         }
-        return new PyInt(arg.value.charAt(0));
+        byte[] buffer = Runtime.getBytesLikeBuffer(arg_obj);
+        if (buffer != null) {
+            if (buffer.length != 1) {
+                throw PyTypeError.raise("ord() expected a character, but string of length " + buffer.length + " found");
+            }
+            return new PyInt(buffer[0] & 0xFF);
+        }
+        if (arg_obj == PyNone.singleton) {
+            throw PyTypeError.raise("ord() expected string of length 1, but NoneType found");
+        } else {
+            throw PyTypeError.raise("ord() expected string of length 1, but " + arg_obj.type().name() + " found");
+        }
     }
     static PyNone pyfunc_print(PyObject[] args, PyObject sep, PyObject end, PyObject file, PyObject flush) {
         if (file != PyNone.singleton) {
