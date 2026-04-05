@@ -15,7 +15,9 @@ public final class PyInt extends PyObject {
     PyInt(long _value) { value = _value; }
 
     public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
-        Runtime.requireMaxArgs(args, 2, type.name());
+        if (args.length > 2) {
+            throw Runtime.raiseMaxArgs(args, 2, type.name());
+        }
         if ((kwargs != null) && kwargs.boolValue()) {
             throw new IllegalArgumentException("int() does not accept kwargs");
         }

@@ -485,7 +485,9 @@ public final class PyDict extends PyObject {
         }
     }
     public PyNone pymethod_update(PyObject[] args, PyDict kwargs) {
-        Runtime.requireMaxArgs(args, 1, "update");
+        if (args.length > 1) {
+            throw Runtime.raiseMaxArgs(args, 1, "update");
+        }
         updateImpl(args, kwargs);
         return PyNone.singleton;
     }

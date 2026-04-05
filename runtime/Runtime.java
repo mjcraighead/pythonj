@@ -547,11 +547,6 @@ public final class Runtime {
     public static PyRaise raiseMaxArgs(PyObject[] args, int max, String name) {
         return PyTypeError.raiseFormat("%s expected at most %d argument%s, got %d", name, max, (max == 1) ? "" : "s", args.length);
     }
-    public static void requireMaxArgs(PyObject[] args, int max, String name) {
-        if (args.length > max) {
-            throw raiseMaxArgs(args, max, name);
-        }
-    }
     public static PyDict requireKwStrings(PyDict dict) {
         for (var x: dict.items.keySet()) {
             if (!(x instanceof PyString)) {

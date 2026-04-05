@@ -34,7 +34,9 @@ public final class PyTuple extends PyObject {
 
     public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, type.name());
-        Runtime.requireMaxArgs(args, 1, type.name());
+        if (args.length > 1) {
+            throw Runtime.raiseMaxArgs(args, 1, type.name());
+        }
         if (args.length == 0) {
             return empty_singleton;
         }
