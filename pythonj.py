@@ -51,6 +51,7 @@ INTRINSIC_SIGNATURES = {
     '__pythonj_format__': (2, 'pythonjFormat'),
     '__pythonj_getattr__': (2, 'pythonjGetAttr'),
     '__pythonj_hash__': (1, 'pythonjHash'),
+    '__pythonj_isinstance__': (2, 'pythonjIsInstance'),
     '__pythonj_issubclass__': (2, 'pythonjIsSubclass'),
     '__pythonj_iter__': (1, 'pythonjIter'),
     '__pythonj_len__': (1, 'pythonjLen'),
@@ -1080,14 +1081,12 @@ class LoweringVisitor(ast.NodeVisitor):
                     'newObjPositional',
                     [*([self.visit(arg) for arg in node.args]), *([ir.Null()] * (max_args - len(node.args)))],
                 )
-        if self.allow_intrinsics and isinstance(node.func, ast.Name):
+        if self.allow_intrinsics and isinstance(node.func, ast.Name) and node.func.id in INTRINSIC_SIGNATURES:
+            (n_args, method_name) = INTRINSIC_SIGNATURES[node.func.id]
+            assert len(node.args) == n_args and not node.keywords, (node.func.id, n_args, node.args, node.keywords)
             if node.func.id == '__pythonj_isinstance__':
-                assert len(node.args) == 2 and not node.keywords, node.args
                 return self.emit_isinstance_condition(node.args[0], node.args[1])
-            if node.func.id in INTRINSIC_SIGNATURES:
-                (n_args, method_name) = INTRINSIC_SIGNATURES[node.func.id]
-                assert len(node.args) == n_args and not node.keywords, (node.func.id, n_args, node.args, node.keywords)
-                return ir.MethodCall(ir.Identifier('Runtime'), method_name, [self.visit(node.args[i]) for i in range(n_args)])
+            return ir.MethodCall(ir.Identifier('Runtime'), method_name, [self.visit(node.args[i]) for i in range(n_args)])
         if (isinstance(node.func, ast.Attribute) and
             not node.keywords and
             not any(isinstance(arg, ast.Starred) for arg in node.args)):
