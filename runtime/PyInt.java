@@ -138,22 +138,28 @@ public final class PyInt extends PyObject {
         throw PyTypeError.raise("int() argument must be a string, a bytes-like object or a number, not " + PyString.reprOf(arg0.type().name()));
     }
 
-    public static long floorDiv(long lhs, long rhs) {
+    public static PyInt add(long lhs, long rhs) {
+        return new PyInt(Math.addExact(lhs, rhs));
+    }
+    public static PyInt and(long lhs, long rhs) {
+        return new PyInt(lhs & rhs);
+    }
+    public static PyInt floorDiv(long lhs, long rhs) {
         if ((lhs == Long.MIN_VALUE) && (rhs == -1)) {
             throw new ArithmeticException("integer overflow");
         }
         if (rhs == 0) {
             throw PyZeroDivisionError.raise("division by zero");
         }
-        return Math.floorDiv(lhs, rhs);
+        return new PyInt(Math.floorDiv(lhs, rhs));
     }
-    public static long lshift(long lhs, long rhs) {
+    public static PyInt lshift(long lhs, long rhs) {
         if (rhs < 0) {
             throw PyValueError.raise("negative shift count");
         }
         if (rhs >= 64) {
             if (lhs == 0) {
-                return 0; // 0 << N -> 0 for any N >= 0
+                return PyInt.singleton_0; // 0 << N -> 0 for any N >= 0
             }
             throw new ArithmeticException("shift count too large");
         }
@@ -161,18 +167,24 @@ public final class PyInt extends PyObject {
         if ((ret >> rhs) != lhs) {
             throw new ArithmeticException("integer overflow");
         }
-        return ret;
+        return new PyInt(ret);
     }
-    public static long mod(long lhs, long rhs) {
+    public static PyInt mod(long lhs, long rhs) {
         if ((lhs == Long.MIN_VALUE) && (rhs == -1)) {
             throw new ArithmeticException("integer overflow");
         }
         if (rhs == 0) {
             throw PyZeroDivisionError.raise("division by zero");
         }
-        return Math.floorMod(lhs, rhs);
+        return new PyInt(Math.floorMod(lhs, rhs));
     }
-    public static long pow(long lhs, long rhs) {
+    public static PyInt mul(long lhs, long rhs) {
+        return new PyInt(Math.multiplyExact(lhs, rhs));
+    }
+    public static PyInt or(long lhs, long rhs) {
+        return new PyInt(lhs | rhs);
+    }
+    public static PyInt pow(long lhs, long rhs) {
         if (rhs < 0) {
             throw new ArithmeticException("negative exponent");
         }
@@ -184,16 +196,22 @@ public final class PyInt extends PyObject {
             lhs = Math.multiplyExact(lhs, lhs);
             rhs >>= 1;
         }
-        return ret;
+        return new PyInt(ret);
     }
-    public static long rshift(long lhs, long rhs) {
+    public static PyInt rshift(long lhs, long rhs) {
         if (rhs < 0) {
             throw PyValueError.raise("negative shift count");
         }
         if (rhs > 63) {
             rhs = 63; // for all longs, rshift of >=63 yields the sign bit replicated into all bits
         }
-        return lhs >> rhs;
+        return new PyInt(lhs >> rhs);
+    }
+    public static PyInt sub(long lhs, long rhs) {
+        return new PyInt(Math.subtractExact(lhs, rhs));
+    }
+    public static PyInt xor(long lhs, long rhs) {
+        return new PyInt(lhs ^ rhs);
     }
 
     // XXX Make sure that all of these throw an exception if the value wraps/overflows/etc.
@@ -204,90 +222,90 @@ public final class PyInt extends PyObject {
 
     @Override public PyObject add(PyObject rhs) {
         if (rhs instanceof PyInt rhsInt) {
-            return new PyInt(Math.addExact(value, rhsInt.value));
+            return add(value, rhsInt.value);
         } else if (rhs instanceof PyBool rhsBool) {
-            return new PyInt(Math.addExact(value, rhsBool.asInt()));
+            return add(value, rhsBool.asInt());
         } else {
             return super.add(rhs);
         }
     }
     @Override public PyObject and(PyObject rhs) {
         if (rhs instanceof PyInt rhsInt) {
-            return new PyInt(value & rhsInt.value);
+            return and(value, rhsInt.value);
         } else if (rhs instanceof PyBool rhsBool) {
-            return new PyInt(value & rhsBool.asInt());
+            return and(value, rhsBool.asInt());
         } else {
             return super.and(rhs);
         }
     }
     @Override public PyObject floorDiv(PyObject rhs) {
         if (rhs instanceof PyInt rhsInt) {
-            return new PyInt(floorDiv(value, rhsInt.value));
+            return floorDiv(value, rhsInt.value);
         } else if (rhs instanceof PyBool rhsBool) {
-            return new PyInt(floorDiv(value, rhsBool.asInt()));
+            return floorDiv(value, rhsBool.asInt());
         } else {
             return super.floorDiv(rhs);
         }
     }
     @Override public PyObject lshift(PyObject rhs) {
         if (rhs instanceof PyInt rhsInt) {
-            return new PyInt(lshift(value, rhsInt.value));
+            return lshift(value, rhsInt.value);
         } else if (rhs instanceof PyBool rhsBool) {
-            return new PyInt(lshift(value, rhsBool.asInt()));
+            return lshift(value, rhsBool.asInt());
         } else {
             return super.lshift(rhs);
         }
     }
     @Override public PyObject mod(PyObject rhs) {
         if (rhs instanceof PyInt rhsInt) {
-            return new PyInt(mod(value, rhsInt.value));
+            return mod(value, rhsInt.value);
         } else if (rhs instanceof PyBool rhsBool) {
-            return new PyInt(mod(value, rhsBool.asInt()));
+            return mod(value, rhsBool.asInt());
         } else {
             return super.mod(rhs);
         }
     }
     @Override public PyObject mul(PyObject rhs) {
         if (rhs instanceof PyInt rhsInt) {
-            return new PyInt(Math.multiplyExact(value, rhsInt.value));
+            return mul(value, rhsInt.value);
         } else if (rhs instanceof PyBool rhsBool) {
-            return new PyInt(value * rhsBool.asInt());
+            return mul(value, rhsBool.asInt());
         } else {
             return super.mul(rhs);
         }
     }
     @Override public PyObject or(PyObject rhs) {
         if (rhs instanceof PyInt rhsInt) {
-            return new PyInt(value | rhsInt.value);
+            return or(value, rhsInt.value);
         } else if (rhs instanceof PyBool rhsBool) {
-            return new PyInt(value | rhsBool.asInt());
+            return or(value, rhsBool.asInt());
         } else {
             return super.or(rhs);
         }
     }
     @Override public PyObject pow(PyObject rhs) {
         if (rhs instanceof PyInt rhsInt) {
-            return new PyInt(pow(value, rhsInt.value));
+            return pow(value, rhsInt.value);
         } else if (rhs instanceof PyBool rhsBool) {
-            return new PyInt(pow(value, rhsBool.asInt()));
+            return pow(value, rhsBool.asInt());
         } else {
             return super.pow(rhs);
         }
     }
     @Override public PyObject rshift(PyObject rhs) {
         if (rhs instanceof PyInt rhsInt) {
-            return new PyInt(rshift(value, rhsInt.value));
+            return rshift(value, rhsInt.value);
         } else if (rhs instanceof PyBool rhsBool) {
-            return new PyInt(rshift(value, rhsBool.asInt()));
+            return rshift(value, rhsBool.asInt());
         } else {
             return super.rshift(rhs);
         }
     }
     @Override public PyObject sub(PyObject rhs) {
         if (rhs instanceof PyInt rhsInt) {
-            return new PyInt(Math.subtractExact(value, rhsInt.value));
+            return sub(value, rhsInt.value);
         } else if (rhs instanceof PyBool rhsBool) {
-            return new PyInt(Math.subtractExact(value, rhsBool.asInt()));
+            return sub(value, rhsBool.asInt());
         } else {
             return super.sub(rhs);
         }
@@ -301,9 +319,9 @@ public final class PyInt extends PyObject {
     }
     @Override public PyObject xor(PyObject rhs) {
         if (rhs instanceof PyInt rhsInt) {
-            return new PyInt(value ^ rhsInt.value);
+            return xor(value, rhsInt.value);
         } else if (rhs instanceof PyBool rhsBool) {
-            return new PyInt(value ^ rhsBool.asInt());
+            return xor(value, rhsBool.asInt());
         } else {
             return super.xor(rhs);
         }

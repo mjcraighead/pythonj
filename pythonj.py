@@ -742,11 +742,26 @@ class LoweringVisitor(ast.NodeVisitor):
             return ir.Field(expr, 'value')
         return ir.Field(ir.CastExpr('PyInt', expr), 'value')
 
+    def emit_exact_int_binop(self, op: str, lhs_node: ast.expr, rhs_node: ast.expr) -> Optional[ir.Expr]:
+        lhs_int = self.emit_exact_int_value(lhs_node)
+        rhs_int = self.emit_exact_int_value(rhs_node)
+        if lhs_int is None or rhs_int is None:
+            return None
+        if op not in {'add', 'and', 'floorDiv', 'lshift', 'mod', 'mul', 'or', 'pow', 'rshift', 'sub', 'xor'}:
+            return None
+        return ir.MethodCall(ir.Identifier('PyInt'), op, [lhs_int, rhs_int])
+
     def infer_exact_builtin_type_expr(self, node: ast.expr) -> Optional[str]:
         if isinstance(node, ast.Name) and get_name_resolution(node) is NameResolution.LOCAL:
             type_name = self.local_exact_builtin_type(node.id)
             if type_name is not None:
                 return type_name
+        if isinstance(node, ast.BinOp):
+            op = self.visit(node.op)
+            if (op in {'add', 'and', 'floorDiv', 'lshift', 'mod', 'mul', 'or', 'pow', 'rshift', 'sub', 'xor'} and
+                self.infer_exact_builtin_type_expr(node.left) == 'int' and
+                self.infer_exact_builtin_type_expr(node.right) == 'int'):
+                return 'int'
         if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
             if self.name_resolves_to_final_top_level_function(node.func):
                 type_name = self.module_scope().info.initial_final_function_return_types.get(node.func.id)
@@ -815,6 +830,9 @@ class LoweringVisitor(ast.NodeVisitor):
     def visit_Sub(self, node): return 'sub'
     def visit_BinOp(self, node) -> ir.Expr:
         op = self.visit(node.op)
+        exact_int_expr = self.emit_exact_int_binop(op, node.left, node.right)
+        if exact_int_expr is not None:
+            return exact_int_expr
         lhs = self.visit(node.left)
         rhs = self.visit(node.right)
         if (isinstance(lhs, ir.PyConstant) and isinstance(lhs.value, int) and
@@ -1282,7 +1300,11 @@ class LoweringVisitor(ast.NodeVisitor):
         op = f'{self.visit(node.op)}InPlace'
 
         if isinstance(node.target, ast.Name):
-            value = ir.MethodCall(self.visit(node.target), op, [self.visit(node.value)])
+            exact_int_expr = self.emit_exact_int_binop(self.visit(node.op), node.target, node.value)
+            if exact_int_expr is not None:
+                value = exact_int_expr
+            else:
+                value = ir.MethodCall(self.visit(node.target), op, [self.visit(node.value)])
             code = ir.AssignStatement(self.visit(node.target), self.cast_local_assignment(node.target.id, value))
         elif isinstance(node.target, ast.Attribute):
             temp_name = self.scope.make_temp()

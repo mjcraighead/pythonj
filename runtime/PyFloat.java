@@ -86,9 +86,9 @@ public final class PyFloat extends PyObject {
         }
         long denominator = 1;
         if (exponent > 0) {
-            numerator = PyInt.lshift(numerator, exponent);
+            numerator = PyInt.lshift(numerator, exponent).value;
         } else if (exponent < 0) {
-            denominator = PyInt.lshift(1, -exponent);
+            denominator = PyInt.lshift(1, -exponent).value;
         }
         if (negative) {
             numerator = Math.negateExact(numerator);

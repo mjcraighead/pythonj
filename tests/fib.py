@@ -2,7 +2,7 @@
 # Copyright (c) 2012-2026 Matt Craighead
 # SPDX-License-Identifier: MIT
 
-def fib(x: int, /):
+def fib(x: int, /) -> int:
     if x <= 1:
         return 1
     return fib(x-1) + fib(x-2)
