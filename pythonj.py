@@ -18,6 +18,17 @@ import ir
 # Keep this explicit and narrow; widen it only for builtin types we have actually
 # exercised and are comfortable lowering directly to JVM instanceof checks.
 ISINSTANCE_SINGLE_FASTPATH_BUILTIN_TYPES = {'bool', 'bytearray', 'bytes', 'float', 'int', 'str', 'tuple'}
+DIRECT_CALL_KNOWN_RECEIVER_METHODS = {
+    ('bytes', 'endswith'): (1, 3),
+    ('bytes', 'find'): (1, 3),
+    ('bytes', 'startswith'): (1, 3),
+    ('list', 'append'): (1, 1),
+    ('slice', 'indices'): (1, 1),
+    ('str', 'endswith'): (1, 3),
+    ('str', 'find'): (1, 3),
+    ('str', 'join'): (1, 1),
+    ('str', 'startswith'): (1, 3),
+}
 
 RUNTIME_JAVA_FILES = (
     'PyBool.java',
@@ -933,6 +944,20 @@ class LoweringVisitor(ast.NodeVisitor):
                 case '__pythonj_str_startswith__':
                     assert len(node.args) == 4 and not node.keywords, node.args
                     return ir.MethodCall(ir.Identifier('Runtime'), 'pythonjStrStartswith', [self.visit(node.args[0]), self.visit(node.args[1]), self.visit(node.args[2]), self.visit(node.args[3])])
+        if (isinstance(node.func, ast.Attribute) and
+            not node.keywords and
+            not any(isinstance(arg, ast.Starred) for arg in node.args)):
+            type_name = infer_exact_builtin_type(node.func.value)
+            call_range = DIRECT_CALL_KNOWN_RECEIVER_METHODS.get((type_name, node.func.attr)) if type_name is not None else None
+            if call_range is not None:
+                (min_args, max_args) = call_range
+                if min_args <= len(node.args) <= max_args:
+                    java_name = extract_spec.BUILTIN_TYPES[type_name]
+                    return ir.MethodCall(
+                        ir.CreateObject(f'{java_name}Method_{node.func.attr}', [self.visit(node.func.value)]),
+                        'callPositional',
+                        [*([self.visit(arg) for arg in node.args]), *([ir.Null()] * (max_args - len(node.args)))],
+                    )
         if (isinstance(node.func, ast.Name) and node.func.id in DIRECT_CALL_POSITIONAL_BUILTINS and
             self.name_resolves_to_builtin_function(node.func) and
             not node.keywords and
