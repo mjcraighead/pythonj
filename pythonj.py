@@ -240,8 +240,8 @@ class ScopeAnalyzer(ast.NodeVisitor):
                 return None
             if any(default is not None for default in [*node.args.defaults, *node.args.kw_defaults]):
                 return None
-            n_required = len(node.args.args) - len(node.args.defaults)
-            n_total = len(node.args.args)
+            n_total = len(node.args.posonlyargs) + len(node.args.args)
+            n_required = n_total - len(node.args.defaults)
             return [InitialBinding(node.name, function_call_range=(n_required, n_total))]
         return None
 
@@ -855,9 +855,8 @@ class LoweringVisitor(ast.NodeVisitor):
         if (isinstance(node.func, ast.Lambda) and
             not node.keywords and
             not any(isinstance(arg, ast.Starred) for arg in node.args)):
-            (arg_names, arg_defaults) = self.check_args(node.lineno, node.func.args)
-            min_args = len(arg_names) - len(arg_defaults)
-            max_args = len(arg_names)
+            params = self.get_supported_params(node.lineno, node.func.args)
+            (min_args, max_args) = cast(tuple[int, int], get_positional_call_range(params))
             if min_args <= len(node.args) <= max_args:
                 return ir.MethodCall(
                     self.visit(node.func),
@@ -1317,9 +1316,7 @@ class LoweringVisitor(ast.NodeVisitor):
             self.code.append(ir.AssignStatement(ir.Identifier('expr_discard'), value))
             self.scope.used_expr_discard = True
 
-    def check_args(self, lineno: int, args: ast.arguments) -> tuple[list[str], list[object]]:
-        if args.posonlyargs:
-            self.error(lineno, 'position-only arguments are unsupported')
+    def get_supported_params(self, lineno: int, args: ast.arguments) -> list[inspect.Parameter]:
         if args.vararg:
             self.error(lineno, '*args are unsupported')
         if args.kwonlyargs:
@@ -1344,11 +1341,26 @@ class LoweringVisitor(ast.NodeVisitor):
                         self.error(lineno, 'only constant argument defaults are supported')
             else:
                 self.error(lineno, 'only constant argument defaults are supported')
-        for arg in args.args:
+        positional_args = [*args.posonlyargs, *args.args]
+        for arg in positional_args:
             # arg.type_comment is ignored; we only plan to support "real" type annotations.
             if arg.annotation:
                 self.error(lineno, 'argument type annotations are unsupported')
-        return ([arg.arg for arg in args.args], defaults)
+        params: list[inspect.Parameter] = []
+        n_args = len(positional_args)
+        n_defaults = len(defaults)
+        first_default = n_args - n_defaults
+        for (i, arg) in enumerate(positional_args):
+            default = inspect.Parameter.empty if i < first_default else defaults[i - first_default]
+            kind = inspect.Parameter.POSITIONAL_ONLY if i < len(args.posonlyargs) else inspect.Parameter.POSITIONAL_OR_KEYWORD
+            params.append(inspect.Parameter(arg.arg, kind, default=default))
+        return params
+
+    def check_args(self, lineno: int, args: ast.arguments) -> tuple[list[str], list[object]]:
+        params = self.get_supported_params(lineno, args)
+        arg_names = [param.name for param in params]
+        arg_defaults = [param.default for param in params if param.default is not inspect.Parameter.empty]
+        return (arg_names, arg_defaults)
 
     @contextmanager
     def new_function(self, scope_info: ScopeInfo, free_vars: set[str], qualname: str,
@@ -1369,11 +1381,14 @@ class LoweringVisitor(ast.NodeVisitor):
     def qualname(self, name: str) -> str:
         return name if self.scope.qualname is None else f'{self.scope.qualname}.<locals>.{name}'
 
-    def add_function(self, py_name: str, java_name: str, arg_names: list[str], arg_defaults: list[object], body: list[ir.Statement],
+    def add_function(self, py_name: str, java_name: str, params: list[inspect.Parameter], body: list[ir.Statement],
                      invisible_args: bool = False) -> None:
+        arg_names = [param.name for param in params]
+        arg_defaults = [param.default for param in params if param.default is not inspect.Parameter.empty]
         n_args = len(arg_names)
         n_required = n_args - len(arg_defaults)
         bind_arg_names = [f'pyarg_{arg}' for arg in arg_names]
+        shape = analyze_params(params)
         free_var_names = sorted(self.scope.free_vars)
         constructor_args = [f'PyCell _pycell_{name}' for name in free_var_names]
         func_decls: list[ir.Decl] = [
@@ -1388,28 +1403,75 @@ class LoweringVisitor(ast.NodeVisitor):
                 ],
             ),
         ]
-        call_body: list[ir.Statement] = [
-            ir.LocalDecl(
-                'PyList',
-                'boundArgs',
-                ir.MethodCall(
-                    ir.Identifier('PyRuntime'),
-                    'pyfunc_bind_user_function',
-                    [
-                        ir.CreateObject('PyTuple', [ir.Identifier('args')]),
-                        ir.Identifier('kwargs'),
-                        ir.CreateObject('PyString', [ir.StrLiteral(py_name)]),
-                        ir.CreateObject('PyTuple', [ir.CreateArray('PyObject', [ir.CreateObject('PyString', [ir.StrLiteral(arg)]) for arg in arg_names])]),
-                        ir.PyConstant(n_required),
-                    ],
+        call_body: list[ir.Statement]
+        if shape.posonly_params and not shape.poskw_params:
+            tuple_expr = ir.CreateObject('PyTuple', [ir.Identifier('args')])
+            arg_names_tuple = ir.CreateObject('PyTuple', [ir.CreateArray('PyObject', [ir.CreateObject('PyString', [ir.StrLiteral(arg)]) for arg in arg_names])])
+            if n_required == n_args:
+                call_body = [
+                    ir.LocalDecl(
+                        'PyTuple',
+                        'boundArgs',
+                        ir.MethodCall(
+                            ir.Identifier('PyRuntime'),
+                            'pyfunc_bind_user_exact_positional',
+                            [tuple_expr, ir.Identifier('kwargs'), ir.CreateObject('PyString', [ir.StrLiteral(py_name)]), arg_names_tuple],
+                        ),
+                    ),
+                    ir.ReturnStatement(ir.MethodCall(
+                        ir.This(),
+                        'callPositional',
+                        [ir.ArrayAccess(ir.Field(ir.Identifier('boundArgs'), 'items'), ir.IntLiteral(i)) for i in range(n_args)],
+                    )),
+                ]
+            else:
+                call_args: list[ir.Expr] = []
+                for i in range(n_required):
+                    call_args.append(ir.ArrayAccess(ir.Field(ir.Identifier('boundArgs'), 'items'), ir.IntLiteral(i)))
+                for i in range(n_required, n_args):
+                    call_args.append(
+                        ir.CondOp(
+                            ir.BinaryOp('>', ir.Field(ir.Field(ir.Identifier('boundArgs'), 'items'), 'length'), ir.IntLiteral(i)),
+                            ir.ArrayAccess(ir.Field(ir.Identifier('boundArgs'), 'items'), ir.IntLiteral(i)),
+                            ir.Null(),
+                        )
+                    )
+                call_body = [
+                    ir.LocalDecl(
+                        'PyTuple',
+                        'boundArgs',
+                        ir.MethodCall(
+                            ir.Identifier('PyRuntime'),
+                            'pyfunc_bind_user_min_max_positional',
+                            [tuple_expr, ir.Identifier('kwargs'), ir.CreateObject('PyString', [ir.StrLiteral(py_name)]), arg_names_tuple, ir.PyConstant(n_required)],
+                        ),
+                    ),
+                    ir.ReturnStatement(ir.MethodCall(ir.This(), 'callPositional', call_args)),
+                ]
+        else:
+            call_body = [
+                ir.LocalDecl(
+                    'PyList',
+                    'boundArgs',
+                    ir.MethodCall(
+                        ir.Identifier('PyRuntime'),
+                        'pyfunc_bind_user_function',
+                        [
+                            ir.CreateObject('PyTuple', [ir.Identifier('args')]),
+                            ir.Identifier('kwargs'),
+                            ir.CreateObject('PyString', [ir.StrLiteral(py_name)]),
+                            ir.CreateObject('PyTuple', [ir.CreateArray('PyObject', [ir.CreateObject('PyString', [ir.StrLiteral(arg)]) for arg in arg_names])]),
+                            ir.PyConstant(n_required),
+                            ir.PyConstant(len(shape.posonly_params)),
+                        ],
+                    ),
                 ),
-            ),
-            ir.ReturnStatement(ir.MethodCall(
-                ir.This(),
-                'callPositional',
-                [ir.MethodCall(ir.Field(ir.Identifier('boundArgs'), 'items'), 'get', [ir.IntLiteral(i)]) for i in range(n_args)],
-            )),
-        ]
+                ir.ReturnStatement(ir.MethodCall(
+                    ir.This(),
+                    'callPositional',
+                    [ir.MethodCall(ir.Field(ir.Identifier('boundArgs'), 'items'), 'get', [ir.IntLiteral(i)]) for i in range(n_args)],
+                )),
+            ]
         func_decls.append(ir.MethodDecl('@Override public', 'PyObject', 'call', ['PyObject[] args', 'PyDict kwargs'], call_body))
         call_positional_body: list[ir.Statement] = [
             *(ir.IfStatement(
@@ -1451,7 +1513,7 @@ class LoweringVisitor(ast.NodeVisitor):
         if node.type_params:
             self.error(node.lineno, 'function type parameters are unsupported')
 
-        (arg_names, arg_defaults) = self.check_args(node.lineno, node.args)
+        params = self.get_supported_params(node.lineno, node.args)
         qualname = self.qualname(node.name)
         java_name = self.final_global_function_classes.get(node.name)
         if java_name is None:
@@ -1467,7 +1529,7 @@ class LoweringVisitor(ast.NodeVisitor):
 
         with self.new_function(scope_info, free_vars, qualname):
             body = self.visit_block(node.body)
-            self.add_function(qualname, java_name, arg_names, arg_defaults, body)
+            self.add_function(qualname, java_name, params, body)
 
     def visit_ClassDef(self, node) -> None:
         if self.scope.info.kind is not ScopeKind.MODULE:
@@ -1631,7 +1693,7 @@ class LoweringVisitor(ast.NodeVisitor):
         self.code.append(ir.AssignStatement(self.ident_expr(node.name), ir.Identifier(f'{type_class_name}.singleton')))
 
     def visit_Lambda(self, node) -> ir.Expr:
-        (arg_names, arg_defaults) = self.check_args(node.lineno, node.args)
+        params = self.get_supported_params(node.lineno, node.args)
         qualname = self.qualname('<lambda>')
         java_name = f'pylambda{self.n_lambdas}'
         self.n_lambdas += 1
@@ -1644,7 +1706,7 @@ class LoweringVisitor(ast.NodeVisitor):
         with self.new_function(scope_info, free_vars, qualname):
             with self.new_block() as body:
                 body.append(ir.ReturnStatement(self.visit(node.body)))
-            self.add_function(qualname, java_name, arg_names, arg_defaults, body)
+            self.add_function(qualname, java_name, params, body)
 
         return ir.CreateObject(java_name, [ir.Identifier(f'pycell_{name}') for name in sorted(free_vars)])
 
