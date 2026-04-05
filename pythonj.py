@@ -1769,132 +1769,98 @@ class LoweringVisitor(ast.NodeVisitor):
             self.error(node.lineno, "only 'class X: pass' and 'class X: __slots__ = (...)' are supported")
 
         java_name = f'pyclass_{node.name}'
-        type_name = f'{java_name}Type'
-        type_class_name = f'{type_name}Class'
+        type_class_name = f'pyclasstype_{node.name}'
+        constructor_decls = [
+            ir.ConstructorDecl('', java_name, [], [
+                ir.SuperConstructorCall([ir.Identifier(f'{type_class_name}.singleton')]),
+            ]),
+            ir.MethodDecl('public static', 'PyObject', 'newObj', ['PyConcreteType type', 'PyObject[] args', 'PyDict kwargs'], [
+                ir.ExprStatement(ir.MethodCall(ir.Identifier('Runtime'), 'requireNoKwArgs', [
+                    ir.Identifier('kwargs'),
+                    ir.MethodCall(ir.Identifier('type'), 'name', []),
+                ])),
+                ir.IfStatement(
+                    ir.BinaryOp('!=', ir.Field(ir.Identifier('args'), 'length'), ir.IntLiteral(0)),
+                    [ir.ThrowStatement(ir.MethodCall(ir.Identifier('PyTypeError'), 'raise', [
+                        ir.BinaryOp('+', ir.MethodCall(ir.Identifier('type'), 'name', []), ir.StrLiteral('() takes no arguments')),
+                    ]))],
+                    [],
+                ),
+                ir.ReturnStatement(ir.CreateObject(java_name, [])),
+            ]),
+        ]
+
         class_decls: list[ir.ClassDecl] = []
         if slots is None:
-            class_decls.append(ir.ClassDecl(
-                'private static final',
-                java_name,
-                'PyBagObject',
-                [
-                    ir.ConstructorDecl('', java_name, [], [
-                        ir.SuperConstructorCall([ir.Identifier(f'{type_class_name}.singleton')]),
-                    ]),
-                    ir.MethodDecl('public static', 'PyObject', 'newObj', ['PyConcreteType type', 'PyObject[] args', 'PyDict kwargs'], [
-                        ir.ExprStatement(ir.MethodCall(ir.Identifier('Runtime'), 'requireNoKwArgs', [
-                            ir.Identifier('kwargs'),
-                            ir.MethodCall(ir.Identifier('type'), 'name', []),
-                        ])),
-                        ir.IfStatement(
-                            ir.BinaryOp('!=', ir.Field(ir.Identifier('args'), 'length'), ir.IntLiteral(0)),
-                            [ir.ThrowStatement(ir.MethodCall(ir.Identifier('PyTypeError'), 'raise', [
-                                ir.BinaryOp('+', ir.MethodCall(ir.Identifier('type'), 'name', []), ir.StrLiteral('() takes no arguments')),
-                            ]))],
-                            [],
-                        ),
-                        ir.ReturnStatement(ir.CreateObject(java_name, [])),
-                    ]),
-                ],
-            ))
+            class_decls.append(ir.ClassDecl('private static final', java_name, 'PyBagObject', constructor_decls))
         else:
-            get_attr_helper_decls = [
-                ir.MethodDecl('private', 'PyObject', f'pygetslot_{name}', [], [
-                    ir.IfStatement(
-                        ir.BinaryOp('==', ir.Identifier(f'pyslot_{name}'), ir.Null()),
-                        [ir.ThrowStatement(ir.MethodCall(ir.This(), 'raiseMissingAttr', [ir.StrLiteral(name)]))],
-                        [],
-                    ),
-                    ir.ReturnStatement(ir.Identifier(f'pyslot_{name}')),
-                ])
-                for name in slots
-            ]
-            get_attr_helper_decls.append(ir.MethodDecl('private', 'PyObject', 'pygetslot___dict__', [], [
-                ir.ThrowStatement(ir.MethodCall(ir.This(), 'raiseMissingAttr', [ir.StrLiteral('__dict__')])),
-            ]))
-            set_attr_helper_decls = [
-                ir.MethodDecl('private', 'void', f'pysetslot_{name}', ['PyObject value'], [
-                    ir.AssignStatement(ir.Identifier(f'pyslot_{name}'), ir.Identifier('value')),
-                    ir.ReturnStatement(None),
-                ])
-                for name in slots
-            ]
-            del_attr_helper_decls = [
-                ir.MethodDecl('private', 'void', f'pydelslot_{name}', [], [
-                    ir.IfStatement(
-                        ir.BinaryOp('==', ir.Identifier(f'pyslot_{name}'), ir.Null()),
-                        [ir.ThrowStatement(ir.MethodCall(ir.This(), 'raiseMissingAttr', [ir.StrLiteral(name)]))],
-                        [],
-                    ),
-                    ir.AssignStatement(ir.Identifier(f'pyslot_{name}'), ir.Null()),
-                    ir.ReturnStatement(None),
-                ])
-                for name in slots
-            ]
-            readonly_helper_decl = ir.MethodDecl('private', 'void', 'pyraise_readonly___class__', ['String key'], [
-                ir.ThrowStatement(ir.MethodCall(ir.Identifier('Runtime'), 'raiseNamedReadOnlyAttr', [
-                    ir.MethodCall(ir.This(), 'type', []),
-                    ir.Identifier('key'),
-                ])),
-            ])
-            class_decls.append(ir.ClassDecl(
-                'private static final',
-                java_name,
-                'PySlottedObject',
-                [
-                    *(ir.FieldDecl('private', 'PyObject', f'pyslot_{name}', ir.Null()) for name in slots),
-                    ir.ConstructorDecl('', java_name, [], [
-                        ir.SuperConstructorCall([ir.Identifier(f'{type_class_name}.singleton')]),
-                    ]),
-                    *get_attr_helper_decls,
-                    *set_attr_helper_decls,
-                    *del_attr_helper_decls,
-                    readonly_helper_decl,
-                    ir.MethodDecl('public', 'PyObject', 'getAttr', ['String key'], [
-                        ir.SwitchStatement(ir.Identifier('key'), [
-                            *(ir.SwitchCase(ir.StrLiteral(name), ir.MethodCall(ir.This(), f'pygetslot_{name}', [])) for name in slots),
-                            ir.SwitchCase(ir.StrLiteral('__dict__'), ir.MethodCall(ir.This(), 'pygetslot___dict__', [])),
-                        ], ir.MethodCall(ir.Super(), 'getAttr', [ir.Identifier('key')])),
-                    ]),
-                    ir.MethodDecl('public', 'void', 'setAttr', ['String key', 'PyObject value'], [
-                        ir.SwitchVoidStatement(ir.Identifier('key'), [
-                            *(ir.SwitchCase(ir.StrLiteral(name), ir.MethodCall(ir.This(), f'pysetslot_{name}', [ir.Identifier('value')])) for name in slots),
-                            ir.SwitchCase(ir.StrLiteral('__class__'), ir.MethodCall(ir.This(), 'pyraise_readonly___class__', [ir.Identifier('key')])),
-                        ], ir.MethodCall(ir.Super(), 'setAttr', [ir.Identifier('key'), ir.Identifier('value')])),
-                    ]),
-                    ir.MethodDecl('public', 'void', 'delAttr', ['String key'], [
-                        ir.SwitchVoidStatement(ir.Identifier('key'), [
-                            *(ir.SwitchCase(ir.StrLiteral(name), ir.MethodCall(ir.This(), f'pydelslot_{name}', [])) for name in slots),
-                            ir.SwitchCase(ir.StrLiteral('__class__'), ir.MethodCall(ir.This(), 'pyraise_readonly___class__', [ir.Identifier('key')])),
-                        ], ir.MethodCall(ir.Super(), 'delAttr', [ir.Identifier('key')])),
-                    ]),
-                    ir.MethodDecl('public static', 'PyObject', 'newObj', ['PyConcreteType type', 'PyObject[] args', 'PyDict kwargs'], [
-                        ir.ExprStatement(ir.MethodCall(ir.Identifier('Runtime'), 'requireNoKwArgs', [
-                            ir.Identifier('kwargs'),
-                            ir.MethodCall(ir.Identifier('type'), 'name', []),
-                        ])),
+            class_decls.append(ir.ClassDecl('private static final', java_name, 'PySlottedObject', [
+                *(ir.FieldDecl('private', 'PyObject', f'pyslot_{name}', ir.Null()) for name in slots),
+                *constructor_decls,
+                *(
+                    ir.MethodDecl('private', 'PyObject', f'pygetslot_{name}', [], [
                         ir.IfStatement(
-                            ir.BinaryOp('!=', ir.Field(ir.Identifier('args'), 'length'), ir.IntLiteral(0)),
-                            [ir.ThrowStatement(ir.MethodCall(ir.Identifier('PyTypeError'), 'raise', [
-                                ir.BinaryOp('+', ir.MethodCall(ir.Identifier('type'), 'name', []), ir.StrLiteral('() takes no arguments')),
-                            ]))],
+                            ir.BinaryOp('==', ir.Identifier(f'pyslot_{name}'), ir.Null()),
+                            [ir.ThrowStatement(ir.MethodCall(ir.This(), 'raiseMissingAttr', [ir.StrLiteral(name)]))],
                             [],
                         ),
-                        ir.ReturnStatement(ir.CreateObject(java_name, [])),
-                    ]),
-                ],
-            ))
-        class_decls.append(ir.ClassDecl(
-            'private static final',
-            type_class_name,
-            'PyConcreteType',
-            [
-                ir.FieldDecl('private static final', type_class_name, 'singleton', ir.CreateObject(type_class_name, [])),
-                ir.ConstructorDecl('private', type_class_name, [], [
-                    ir.SuperConstructorCall([ir.StrLiteral(node.name), ir.Field(ir.Identifier(java_name), 'class'), ir.MethodRef(java_name, 'newObj')]),
+                        ir.ReturnStatement(ir.Identifier(f'pyslot_{name}')),
+                    ])
+                    for name in slots
+                ),
+                *(
+                    ir.MethodDecl('private', 'void', f'pysetslot_{name}', ['PyObject value'], [
+                        ir.AssignStatement(ir.Identifier(f'pyslot_{name}'), ir.Identifier('value')),
+                        ir.ReturnStatement(None),
+                    ])
+                    for name in slots
+                ),
+                *(
+                    ir.MethodDecl('private', 'void', f'pydelslot_{name}', [], [
+                        ir.IfStatement(
+                            ir.BinaryOp('==', ir.Identifier(f'pyslot_{name}'), ir.Null()),
+                            [ir.ThrowStatement(ir.MethodCall(ir.This(), 'raiseMissingAttr', [ir.StrLiteral(name)]))],
+                            [],
+                        ),
+                        ir.AssignStatement(ir.Identifier(f'pyslot_{name}'), ir.Null()),
+                        ir.ReturnStatement(None),
+                    ])
+                    for name in slots
+                ),
+                ir.MethodDecl('private', 'PyObject', 'pygetslot___dict__', [], [
+                    ir.ThrowStatement(ir.MethodCall(ir.This(), 'raiseMissingAttr', [ir.StrLiteral('__dict__')])),
                 ]),
-            ],
-        ))
+                ir.MethodDecl('private', 'void', 'pyraise_readonly___class__', ['String key'], [
+                    ir.ThrowStatement(ir.MethodCall(ir.Identifier('Runtime'), 'raiseNamedReadOnlyAttr', [
+                        ir.MethodCall(ir.This(), 'type', []),
+                        ir.Identifier('key'),
+                    ])),
+                ]),
+                ir.MethodDecl('public', 'PyObject', 'getAttr', ['String key'], [
+                    ir.SwitchStatement(ir.Identifier('key'), [
+                        *(ir.SwitchCase(ir.StrLiteral(name), ir.MethodCall(ir.This(), f'pygetslot_{name}', [])) for name in slots),
+                        ir.SwitchCase(ir.StrLiteral('__dict__'), ir.MethodCall(ir.This(), 'pygetslot___dict__', [])),
+                    ], ir.MethodCall(ir.Super(), 'getAttr', [ir.Identifier('key')])),
+                ]),
+                ir.MethodDecl('public', 'void', 'setAttr', ['String key', 'PyObject value'], [
+                    ir.SwitchVoidStatement(ir.Identifier('key'), [
+                        *(ir.SwitchCase(ir.StrLiteral(name), ir.MethodCall(ir.This(), f'pysetslot_{name}', [ir.Identifier('value')])) for name in slots),
+                        ir.SwitchCase(ir.StrLiteral('__class__'), ir.MethodCall(ir.This(), 'pyraise_readonly___class__', [ir.Identifier('key')])),
+                    ], ir.MethodCall(ir.Super(), 'setAttr', [ir.Identifier('key'), ir.Identifier('value')])),
+                ]),
+                ir.MethodDecl('public', 'void', 'delAttr', ['String key'], [
+                    ir.SwitchVoidStatement(ir.Identifier('key'), [
+                        *(ir.SwitchCase(ir.StrLiteral(name), ir.MethodCall(ir.This(), f'pydelslot_{name}', [])) for name in slots),
+                        ir.SwitchCase(ir.StrLiteral('__class__'), ir.MethodCall(ir.This(), 'pyraise_readonly___class__', [ir.Identifier('key')])),
+                    ], ir.MethodCall(ir.Super(), 'delAttr', [ir.Identifier('key')])),
+                ]),
+            ]))
+        class_decls.append(ir.ClassDecl('private static final', type_class_name, 'PyConcreteType', [
+            ir.FieldDecl('private static final', type_class_name, 'singleton', ir.CreateObject(type_class_name, [])),
+            ir.ConstructorDecl('private', type_class_name, [], [
+                ir.SuperConstructorCall([ir.StrLiteral(node.name), ir.Field(ir.Identifier(java_name), 'class'), ir.MethodRef(java_name, 'newObj')]),
+            ]),
+        ]))
         for class_decl in class_decls:
             assert class_decl.name not in self.classes
             self.classes[class_decl.name] = class_decl
