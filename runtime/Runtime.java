@@ -574,9 +574,6 @@ public final class Runtime {
     public static PyTuple bindExactPositional(PyObject[] args, PyDict kwargs, PyString kwName, PyString positionalName, PyInt n, PyBool genericExactArgsStyle) {
         return PyRuntime.pyfunc_bind_exact_positional(new PyTuple(args), kwargs, kwName, positionalName, n, genericExactArgsStyle);
     }
-    public static PyTuple bindExactPositional(PyObject[] args, PyDict kwargs, String name, int n) {
-        return bindExactPositional(args, kwargs, name, n, false);
-    }
     public static PyTuple bindExactPositional(PyObject[] args, PyDict kwargs, String name, int n, boolean genericExactArgsStyle) {
         PyString pyName = new PyString(name);
         return bindExactPositional(args, kwargs, pyName, pyName, new PyInt(n), PyBool.create(genericExactArgsStyle));
