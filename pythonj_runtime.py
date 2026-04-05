@@ -23,14 +23,14 @@ def _find_name(names, kw, start):
         i += 1
     return __pythonj_null__
 
-def _raise_at_most_args(positional_name, max_total, given) -> typing.NoReturn:
-    raise TypeError(f'{positional_name}() takes at most {max_total} arguments ({given} given)')
+def _type_error_at_most_args(positional_name, max_total, given):
+    return TypeError(f'{positional_name}() takes at most {max_total} arguments ({given} given)')
 
-def _raise_at_most_keyword_args(kw_name, max_total, kwargs_len) -> typing.NoReturn:
-    raise TypeError(f'{kw_name}() takes at most {max_total} keyword arguments ({kwargs_len} given)')
+def _type_error_at_most_keyword_args(kw_name, max_total, kwargs_len):
+    return TypeError(f'{kw_name}() takes at most {max_total} keyword arguments ({kwargs_len} given)')
 
-def _raise_unexpected_kw_arg(kw_name, unknown_kw) -> typing.NoReturn:
-    raise TypeError(f'{kw_name}() got an unexpected keyword argument {unknown_kw!r}')
+def _type_error_unexpected_kw_arg(kw_name, unknown_kw):
+    return TypeError(f'{kw_name}() got an unexpected keyword argument {unknown_kw!r}')
 
 def bind_exact_positional(args, kwargs, kw_name, positional_name, n) -> tuple:
     if kwargs is not __pythonj_null__ and kwargs:
@@ -65,7 +65,7 @@ def bind_min_max_positional_or_keyword(args, kwargs, kw_name, positional_name, p
         suffix = '' if min_args == 1 else 's'
         raise TypeError(f'{positional_name}() takes at least {min_args} positional argument{suffix} ({args_len} given)')
     if args_len > max_total:
-        _raise_at_most_args(positional_name, max_total, args_len)
+        raise _type_error_at_most_args(positional_name, max_total, args_len)
 
     bound_args = _init_bound_args(args, max_total)
 
@@ -74,8 +74,8 @@ def bind_min_max_positional_or_keyword(args, kwargs, kw_name, positional_name, p
         kwargs_len = __pythonj_len__(kwargs)
         if args_len + kwargs_len > max_total:
             if args_len == 0:
-                _raise_at_most_keyword_args(kw_name, max_total, kwargs_len)
-            _raise_at_most_args(positional_name, max_total, args_len + kwargs_len)
+                raise _type_error_at_most_keyword_args(kw_name, max_total, kwargs_len)
+            raise _type_error_at_most_args(positional_name, max_total, args_len + kwargs_len)
         for (kw, value) in kwargs.items():
             matched_index = _find_name(positional_names, kw, posonly_count)
             if matched_index is not __pythonj_null__:
@@ -102,7 +102,7 @@ def bind_min_max_positional_or_keyword(args, kwargs, kw_name, positional_name, p
             i += 1
 
     if unknown_kw is not None:
-        _raise_unexpected_kw_arg(kw_name, unknown_kw)
+        raise _type_error_unexpected_kw_arg(kw_name, unknown_kw)
 
     if kwonly_names:
         return bound_args
@@ -125,7 +125,7 @@ def bind_varargs_and_kwonly(args, kwargs, kw_name, kwonly_names):
                 unknown_kw = kw
 
     if unknown_kw is not None:
-        _raise_unexpected_kw_arg(kw_name, unknown_kw)
+        raise _type_error_unexpected_kw_arg(kw_name, unknown_kw)
 
     return bound_args
 
@@ -229,11 +229,11 @@ def _pyj_format_parse_common(spec) -> tuple:
         i += 1
     return (fill, align, sign, z, alt, zero, width, grouping, precision, type_char, i, n)
 
-def _pyj_raise_unknown_format_code(type_char, type_name) -> typing.NoReturn:
-    raise ValueError(f"Unknown format code {type_char!r} for object of type '{type_name}'")
+def _pyj_unknown_format_code(type_char, type_name):
+    return ValueError(f"Unknown format code {type_char!r} for object of type '{type_name}'")
 
-def _pyj_raise_invalid_format_spec(spec, type_name) -> typing.NoReturn:
-    raise ValueError(f"Invalid format specifier {spec!r} for object of type '{type_name}'")
+def _pyj_invalid_format_spec(spec, type_name):
+    return ValueError(f"Invalid format specifier {spec!r} for object of type '{type_name}'")
 
 def _pyj_format_split_sign(text) -> tuple:
     if text and text[0] in '+- ':
@@ -302,11 +302,11 @@ def pyj_float_parse_spec(spec) -> tuple:
 
     if type_char and type_char not in 'eEfFgGn%':
         if i != n:
-            _pyj_raise_invalid_format_spec(spec, 'float')
-        _pyj_raise_unknown_format_code(type_char, 'float')
+            raise _pyj_invalid_format_spec(spec, 'float')
+        raise _pyj_unknown_format_code(type_char, 'float')
 
     if i != n:
-        _pyj_raise_invalid_format_spec(spec, 'float')
+        raise _pyj_invalid_format_spec(spec, 'float')
 
     if zero and align is None:
         fill = '0'
@@ -327,11 +327,11 @@ def _pyj_int_like_parse_spec(spec, type_name) -> tuple:
 
     if type_char and type_char not in 'boxXdn':
         if i != n:
-            _pyj_raise_invalid_format_spec(spec, type_name)
-        _pyj_raise_unknown_format_code(type_char, type_name)
+            raise _pyj_invalid_format_spec(spec, type_name)
+        raise _pyj_unknown_format_code(type_char, type_name)
 
     if i != n:
-        _pyj_raise_invalid_format_spec(spec, type_name)
+        raise _pyj_invalid_format_spec(spec, type_name)
 
     if zero and align is None:
         fill = '0'
@@ -354,7 +354,7 @@ def pyj_str_parse_spec(spec) -> tuple:
     if sign != '-':
         raise ValueError('Sign not allowed in string format specifier')
     if z:
-        _pyj_raise_invalid_format_spec(spec, 'str')
+        raise _pyj_invalid_format_spec(spec, 'str')
     if alt:
         raise ValueError('Alternate form (#) not allowed in string format specifier')
     if grouping is not None:
@@ -364,11 +364,11 @@ def pyj_str_parse_spec(spec) -> tuple:
 
     if type_char and type_char != 's':
         if i != n:
-            _pyj_raise_invalid_format_spec(spec, 'str')
-        _pyj_raise_unknown_format_code(type_char, 'str')
+            raise _pyj_invalid_format_spec(spec, 'str')
+        raise _pyj_unknown_format_code(type_char, 'str')
 
     if i != n:
-        _pyj_raise_invalid_format_spec(spec, 'str')
+        raise _pyj_invalid_format_spec(spec, 'str')
 
     if zero and align is None:
         fill = '0'
