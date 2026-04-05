@@ -847,9 +847,6 @@ class LoweringVisitor(ast.NodeVisitor):
     def visit_Sub(self, node): return 'sub'
     def visit_BinOp(self, node) -> ir.Expr:
         op = self.visit(node.op)
-        exact_int_expr = self.emit_exact_int_binop(op, node.left, node.right)
-        if exact_int_expr is not None:
-            return exact_int_expr
         lhs = self.visit(node.left)
         rhs = self.visit(node.right)
         if (isinstance(lhs, ir.PyConstant) and isinstance(lhs.value, int) and
@@ -871,6 +868,9 @@ class LoweringVisitor(ast.NodeVisitor):
                     return ir.PyConstant(lhs.value >> rhs.value)
                 case 'sub':
                     return ir.PyConstant(lhs.value - rhs.value)
+        exact_int_expr = self.emit_exact_int_binop(op, node.left, node.right)
+        if exact_int_expr is not None:
+            return exact_int_expr
         return ir.MethodCall(lhs, op, [rhs])
 
     def visit_Lt(self, node): return 'lt'
