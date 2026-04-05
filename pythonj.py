@@ -297,24 +297,22 @@ def _collect_exact_local_annotations(node: ast.AST) -> tuple[dict[str, str], lis
     exact_local_types: dict[str, str] = {}
     errors: list[tuple[int, str]] = []
     for statement in body:
-        if not isinstance(statement, ast.AnnAssign):
-            continue
-        if statement.value is not None:
-            errors.append((statement.lineno, 'annotated assignments are unsupported; annotate and assign separately'))
-            continue
-        if not isinstance(statement.target, ast.Name):
-            errors.append((statement.lineno, 'only simple local variable annotations are supported'))
-            continue
-        if statement.target.id in arg_names:
-            errors.append((statement.lineno, f"local annotation for {statement.target.id!r} collides with an argument name"))
-            continue
-        if statement.target.id in exact_local_types:
-            errors.append((statement.lineno, f"duplicate local annotation for {statement.target.id!r}"))
-            continue
-        if not isinstance(statement.annotation, ast.Name) or statement.annotation.id not in extract_spec.BUILTIN_TYPES:
-            errors.append((statement.lineno, 'only exact builtin-type local annotations are supported'))
-            continue
-        exact_local_types[statement.target.id] = statement.annotation.id
+        for local_node in _iter_scope_local_nodes(statement):
+            if not isinstance(local_node, ast.AnnAssign):
+                continue
+            if not isinstance(local_node.target, ast.Name):
+                errors.append((local_node.lineno, 'only simple local variable annotations are supported'))
+                continue
+            if local_node.target.id in arg_names:
+                errors.append((local_node.lineno, f"local annotation for {local_node.target.id!r} collides with an argument name"))
+                continue
+            if local_node.target.id in exact_local_types:
+                errors.append((local_node.lineno, f"duplicate local annotation for {local_node.target.id!r}"))
+                continue
+            if not isinstance(local_node.annotation, ast.Name) or local_node.annotation.id not in extract_spec.BUILTIN_TYPES:
+                errors.append((local_node.lineno, 'only exact builtin-type local annotations are supported'))
+                continue
+            exact_local_types[local_node.target.id] = local_node.annotation.id
     return (exact_local_types, errors)
 
 class ScopeAnalyzer(ast.NodeVisitor):
@@ -1149,20 +1147,25 @@ class LoweringVisitor(ast.NodeVisitor):
             if node.value is not None:
                 self.visit(node.value)
             return
-        if node.value is not None:
-            self.error(node.lineno, 'annotated assignments are unsupported; annotate and assign separately')
-            self.visit(node.value)
-            return
         if not isinstance(node.target, ast.Name):
             self.error(node.lineno, 'only simple local variable annotations are supported')
+            if node.value is not None:
+                self.visit(node.value)
             return
         if not isinstance(node.annotation, ast.Name) or node.annotation.id not in extract_spec.BUILTIN_TYPES:
             self.error(node.lineno, 'only exact builtin-type local annotations are supported')
+            if node.value is not None:
+                self.visit(node.value)
             return
         if any(lineno == node.lineno for (lineno, _) in self.scope.info.annotation_errors):
             return
         if node.target.id not in self.scope.info.exact_local_types:
             self.error(node.lineno, 'unsupported local annotation')
+            if node.value is not None:
+                self.visit(node.value)
+            return
+        if node.value is not None:
+            self.code.extend(self.emit_bind(node.target, self.visit(node.value)))
 
     def visit_AugAssign(self, node) -> None:
         op = f'{self.visit(node.op)}InPlace'

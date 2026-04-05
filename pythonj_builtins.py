@@ -109,8 +109,7 @@ def sum(iterable, start):
 
 class bytes:
     def capitalize(self):
-        ret: list
-        ret = []
+        ret: list = []
         seen_alpha = False
         for c in self:
             if 97 <= c <= 122:
@@ -255,13 +254,12 @@ class bytes:
                 raise ValueError('sep must be length 1.')
             raise TypeError('sep must be str or bytes.')
         bytes_per_sep = operator.index(bytes_per_sep)
-        grouped: list
-        ret: list
-        ret = []
+        sep_str: str = sep
+        ret: list = []
         for c in self:
             ret.append(format(c, '02x'))
         if sep and bytes_per_sep != 0:
-            grouped = []
+            grouped: list = []
             n = len(ret)
             group_size = abs(bytes_per_sep)
             if bytes_per_sep > 0:
@@ -279,7 +277,7 @@ class bytes:
                 while i < n:
                     grouped.append(''.join(ret[i:i + group_size]))
                     i += group_size
-            return sep.join(grouped)
+            return sep_str.join(grouped)
         return ''.join(ret)
 
     def index(self, sub, start, end):
@@ -362,8 +360,7 @@ class bytes:
         return has_cased
 
     def lower(self):
-        ret: list
-        ret = []
+        ret: list = []
         for c in self:
             if 65 <= c <= 90:
                 ret.append(c + 32)
@@ -476,8 +473,7 @@ class bytes:
         return self.lstrip(bytes_arg).rstrip(bytes_arg)
 
     def swapcase(self):
-        ret: list
-        ret = []
+        ret: list = []
         for c in self:
             if 65 <= c <= 90:
                 ret.append(c + 32)
@@ -488,8 +484,7 @@ class bytes:
         return bytes(ret)
 
     def title(self):
-        ret: list
-        ret = []
+        ret: list = []
         in_word = False
         for c in self:
             if 97 <= c <= 122:
@@ -510,8 +505,7 @@ class bytes:
         return bytes(ret)
 
     def upper(self):
-        ret: list
-        ret = []
+        ret: list = []
         for c in self:
             if 97 <= c <= 122:
                 ret.append(c - 32)

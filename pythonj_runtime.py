@@ -4,8 +4,7 @@
 
 def _init_bound_args(args, max_total):
     args_len = len(args)
-    bound_args: list
-    bound_args = []
+    bound_args: list = []
     i = 0
     while i < max_total:
         if i < args_len:
@@ -153,10 +152,9 @@ def bind_varargs_and_kwonly(kwargs, kw_name, kwonly_names) -> list:
 def bind_user_exact_positional(args, kwargs, name, arg_names) -> tuple:
     args_len = len(args)
     n_args = len(arg_names)
-    posonly_kw_arg_names: list
 
     if kwargs is not __pythonj_null__ and kwargs:
-        posonly_kw_arg_names = []
+        posonly_kw_arg_names: list = []
         unknown_kw = None
         for kw in kwargs:
             if _find_name(arg_names, kw, 0) is not __pythonj_null__:
@@ -179,10 +177,9 @@ def bind_user_exact_positional(args, kwargs, name, arg_names) -> tuple:
 def bind_user_min_max_positional(args, kwargs, name, arg_names, n_required) -> tuple:
     args_len = len(args)
     n_args = len(arg_names)
-    posonly_kw_arg_names: list
 
     if kwargs is not __pythonj_null__ and kwargs:
-        posonly_kw_arg_names = []
+        posonly_kw_arg_names: list = []
         unknown_kw = None
         for kw in kwargs:
             if _find_name(arg_names, kw, 0) is not __pythonj_null__:
@@ -204,7 +201,6 @@ def bind_user_min_max_positional(args, kwargs, name, arg_names, n_required) -> t
 def bind_user_function(args, kwargs, name, arg_names, n_required, posonly_count) -> list:
     args_len = len(args)
     n_args = len(arg_names)
-    missing_arg_names: list
     bound_args = _init_bound_args(args, n_args)
 
     if kwargs is __pythonj_null__ or not kwargs:
@@ -223,8 +219,7 @@ def bind_user_function(args, kwargs, name, arg_names, n_required, posonly_count)
                 raise TypeError(f'{name}() takes from {n_required} to {n_args} positional arguments but {args_len} {was_were} given')
         return bound_args
 
-    posonly_kw_arg_names: list
-    posonly_kw_arg_names = []
+    posonly_kw_arg_names: list = []
     unknown_kw = None
     for (kw, value) in kwargs.items():
         matched_index = _find_name(arg_names, kw, posonly_count)
@@ -249,7 +244,7 @@ def bind_user_function(args, kwargs, name, arg_names, n_required, posonly_count)
             was_were = 'was' if args_len == 1 else 'were'
             raise TypeError(f'{name}() takes from {n_required} to {n_args} positional arguments but {args_len} {was_were} given')
         if n_required != 0:
-            missing_arg_names = []
+            missing_arg_names: list = []
             i = 0
             while i < n_required:
                 if bound_args[i] is __pythonj_null__:
@@ -396,15 +391,15 @@ def _pyj_format_apply_width(text, fill, align, width, default_align) -> str:
 def _pyj_format_group_digits(digits, grouping, group_size) -> str:
     if grouping is None:
         return digits
-    parts: list
-    parts = []
+    parts: list = []
+    grouping_str: str = grouping
     i = len(digits)
     while i > group_size:
         parts.append(digits[i - group_size:i])
         i -= group_size
     parts.append(digits[:i])
     parts.reverse()
-    return grouping.join(parts)
+    return grouping_str.join(parts)
 
 def _pyj_format_zero_fill_grouped(sign, prefix, digits, grouping, group_size, suffix, width) -> str:
     if grouping is None:
@@ -422,8 +417,7 @@ def _pyj_format_zero_fill_grouped(sign, prefix, digits, grouping, group_size, su
 def _pyj_int_base_digits(value, base, alphabet) -> str:
     if value == 0:
         return '0'
-    ret: list
-    ret = []
+    ret: list = []
     while value:
         ret.append(alphabet[value % base])
         value //= base
@@ -564,6 +558,8 @@ def _pyj_float_sign_prefix(value, sign, z, magnitude_text) -> str:
 
 def _pyj_float_apply_zero_fill(text, grouping, width) -> str:
     magnitude: str
+    mantissa: str
+    integer_digits: str
     sign, magnitude = _pyj_format_split_sign(text)
     if grouping is None:
         return sign + ('0' * (width - len(sign) - len(magnitude))) + magnitude
@@ -691,8 +687,7 @@ def _pyj_percent_apply_width(text, flags, width) -> str:
     return _pyj_format_apply_width(text, fill, align, width, '>')
 
 def _pyj_percent_without_zero_flag(flags) -> str:
-    ret: list
-    ret = []
+    ret: list = []
     for c in flags:
         if c != '0':
             ret.append(c)
@@ -810,8 +805,7 @@ def pyj_percent_format(fmt, args) -> str:
     arg_seq = _pyj_percent_arg_seq(args)
     arg_index = 0
     used_mapping = False
-    out: list
-    out = []
+    out: list = []
     i = 0
     n = len(fmt)
     while i < n:
