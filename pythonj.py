@@ -167,6 +167,25 @@ def _param_names(args: ast.arguments) -> set[str]:
         out.add(args.kwarg.arg)
     return out
 
+def _get_initial_bindings(node: ast.stmt) -> Optional[list[InitialBinding]]:
+    if isinstance(node, ast.Import):
+        bindings: list[InitialBinding] = []
+        for alias in node.names:
+            if alias.name not in extract_spec.BUILTIN_MODULES or '.' in alias.name:
+                return None
+            bind_name = alias.asname if alias.asname is not None else alias.name
+            bindings.append(InitialBinding(bind_name, builtin_module=alias.name))
+        return bindings
+    if isinstance(node, ast.FunctionDef):
+        if node.decorator_list:
+            return None
+        if any(default is not None for default in [*node.args.defaults, *node.args.kw_defaults]):
+            return None
+        n_total = len(node.args.posonlyargs) + len(node.args.args)
+        n_required = n_total - len(node.args.defaults)
+        return [InitialBinding(node.name, function_call_range=(n_required, n_total))]
+    return None
+
 class ScopeAnalyzer(ast.NodeVisitor):
     __slots__ = ('scope_infos',)
     scope_infos: dict[ast.AST, ScopeInfo]
@@ -174,32 +193,13 @@ class ScopeAnalyzer(ast.NodeVisitor):
     def __init__(self):
         self.scope_infos = {}
 
-    def _get_initial_bindings(self, node: ast.stmt) -> Optional[list[InitialBinding]]:
-        if isinstance(node, ast.Import):
-            bindings: list[InitialBinding] = []
-            for alias in node.names:
-                if alias.name not in extract_spec.BUILTIN_MODULES or '.' in alias.name:
-                    return None
-                bind_name = alias.asname if alias.asname is not None else alias.name
-                bindings.append(InitialBinding(bind_name, builtin_module=alias.name))
-            return bindings
-        if isinstance(node, ast.FunctionDef):
-            if node.decorator_list:
-                return None
-            if any(default is not None for default in [*node.args.defaults, *node.args.kw_defaults]):
-                return None
-            n_total = len(node.args.posonlyargs) + len(node.args.args)
-            n_required = n_total - len(node.args.defaults)
-            return [InitialBinding(node.name, function_call_range=(n_required, n_total))]
-        return None
-
     def _collect_initial_final_bindings(self, node: ast.AST) -> tuple[set[str], dict[str, str], dict[str, tuple[int, int]]]:
         if not isinstance(node, (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef)):
             return (set(), {}, {})
         prefix_bindings: dict[str, InitialBinding] = {}
         prefix_end = 0
         for statement in node.body:
-            bindings = self._get_initial_bindings(statement)
+            bindings = _get_initial_bindings(statement)
             if bindings is None:
                 break
             prefix_end += 1
