@@ -398,7 +398,7 @@ def _pyj_format_group_digits(digits, grouping, group_size) -> str:
         i -= group_size
     __pythonj_list_append__(parts, digits[:i])
     parts.reverse()
-    return __pythonj_str_join__(grouping, parts)
+    return grouping.join(parts)
 
 def _pyj_format_zero_fill_grouped(sign, prefix, digits, grouping, group_size, suffix, width) -> str:
     if grouping is None:
@@ -421,7 +421,7 @@ def _pyj_int_base_digits(value, base, alphabet) -> str:
         __pythonj_list_append__(ret, alphabet[value % base])
         value //= base
     ret.reverse()
-    return __pythonj_str_join__('', ret)
+    return ''.join(ret)
 
 def pyj_float_parse_spec(spec) -> tuple:
     fill, align, sign, z, alt, zero, width, grouping, precision, type_char, i, n = _pyj_format_parse_common(spec)
@@ -560,9 +560,9 @@ def _pyj_float_apply_zero_fill(text, grouping, width) -> str:
     if grouping is None:
         return sign + ('0' * (width - len(sign) - len(magnitude))) + magnitude
 
-    exp_index = __pythonj_str_find__(magnitude, 'e', None, None)
+    exp_index = magnitude.find('e')
     if exp_index == -1:
-        exp_index = __pythonj_str_find__(magnitude, 'E', None, None)
+        exp_index = magnitude.find('E')
     if exp_index == -1:
         exp_suffix = ''
         mantissa = magnitude
@@ -570,7 +570,7 @@ def _pyj_float_apply_zero_fill(text, grouping, width) -> str:
         exp_suffix = magnitude[exp_index:]
         mantissa = magnitude[:exp_index]
 
-    dot_index = __pythonj_str_find__(mantissa, '.', None, None)
+    dot_index = mantissa.find('.')
     if dot_index == -1:
         integer_digits = mantissa
         fractional_suffix = ''
@@ -687,7 +687,7 @@ def _pyj_percent_without_zero_flag(flags) -> str:
     for c in flags:
         if c != '0':
             __pythonj_list_append__(ret, c)
-    return __pythonj_str_join__('', ret)
+    return ''.join(ret)
 
 def _pyj_percent_int_text(value, flags, width, precision, conv) -> str:
     is_negative = value < 0
@@ -890,4 +890,4 @@ def pyj_percent_format(fmt, args) -> str:
 
     if (not used_mapping) and (arg_index != len(arg_seq)):
         raise TypeError('not all arguments converted during string formatting')
-    return __pythonj_str_join__('', out)
+    return ''.join(out)

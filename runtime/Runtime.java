@@ -464,15 +464,6 @@ public final class Runtime {
         obj.setAttr(((PyString)nameObj).value, value);
         return PyNone.singleton;
     }
-    public static PyBool pythonjBytesStartswith(PyObject obj, PyObject prefix, PyObject start, PyObject end) {
-        return (PyBool)PyBuiltinMethodsPythonImpl.pyfunc_bytes__startswith(obj, prefix, start, end);
-    }
-    public static PyInt pythonjBytesFind(PyObject obj, PyObject sub, PyObject start, PyObject end) {
-        return (PyInt)PyBuiltinMethodsPythonImpl.pyfunc_bytes__find(obj, sub, start, end);
-    }
-    public static PyBool pythonjBytesEndswith(PyObject obj, PyObject suffix, PyObject start, PyObject end) {
-        return (PyBool)PyBuiltinMethodsPythonImpl.pyfunc_bytes__endswith(obj, suffix, start, end);
-    }
     public static PyNone pythonjDelAttr(PyObject obj, PyObject nameObj) {
         obj.delAttr(((PyString)nameObj).value);
         return PyNone.singleton;
@@ -515,21 +506,6 @@ public final class Runtime {
     }
     public static PyString pythonjRepr(PyObject obj) {
         return new PyString(obj.repr());
-    }
-    public static PyTuple pythonjSliceIndices(PyObject obj, PyObject length) {
-        return ((PySlice)obj).pymethod_indices(length);
-    }
-    public static PyBool pythonjStrEndswith(PyObject obj, PyObject suffix, PyObject start, PyObject end) {
-        return ((PyString)obj).pymethod_endswith(suffix, start, end);
-    }
-    public static PyInt pythonjStrFind(PyObject obj, PyObject sub, PyObject start, PyObject end) {
-        return ((PyString)obj).pymethod_find(sub, start, end);
-    }
-    public static PyString pythonjStrJoin(PyObject obj, PyObject iterable) {
-        return ((PyString)obj).pymethod_join(iterable);
-    }
-    public static PyBool pythonjStrStartswith(PyObject obj, PyObject prefix, PyObject start, PyObject end) {
-        return ((PyString)obj).pymethod_startswith(prefix, start, end);
     }
     public static PyRaise raiseNoKwArgs(String name) {
         return PyTypeError.raise(name + "() takes no keyword arguments");
