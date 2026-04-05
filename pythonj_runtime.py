@@ -56,7 +56,7 @@ def bind_min_max_positional(args, kwargs, kw_name, positional_name, min_args, ma
         raise TypeError(f'{positional_name} expected at most {max_args} argument{suffix}, got {args_len}')
     return args
 
-def bind_min_max_positional_or_keyword(args, kwargs, kw_name, positional_name, positional_names, posonly_count, kwonly_names, min_args, max_positional, max_total, min_positional_style, exact_args_style):
+def bind_min_max_positional_or_keyword(args, kwargs, kw_name, positional_name, positional_names, posonly_count, kwonly_names, min_args, max_positional, max_total, min_positional_style, exact_args_style) -> list:
     args_len = __pythonj_len__(args)
     if exact_args_style and args_len != min_args:
         suffix = '' if min_args == 1 else 's'
@@ -105,24 +105,18 @@ def bind_min_max_positional_or_keyword(args, kwargs, kw_name, positional_name, p
     if unknown_kw is not None:
         raise _type_error_unexpected_kw_arg(kw_name, unknown_kw)
 
-    if kwonly_names:
-        return bound_args
-    return tuple(bound_args)
+    return bound_args
 
-def bind_varargs_and_kwonly(args, kwargs, kw_name, kwonly_names):
-    bound_args = [args] + ([__pythonj_null__] * __pythonj_len__(kwonly_names))
+def bind_varargs_and_kwonly(kwargs, kw_name, kwonly_names) -> list:
+    bound_args = [__pythonj_null__] * __pythonj_len__(kwonly_names)
 
-    unknown_kw = None
     if kwargs is not __pythonj_null__ and kwargs:
         for (kw, value) in kwargs.items():
             kwonly_index = _find_name(kwonly_names, kw, 0)
             if kwonly_index is not __pythonj_null__:
-                bound_args[kwonly_index + 1] = value
-            elif unknown_kw is None:
-                unknown_kw = kw
-
-    if unknown_kw is not None:
-        raise _type_error_unexpected_kw_arg(kw_name, unknown_kw)
+                bound_args[kwonly_index] = value
+            else:
+                raise _type_error_unexpected_kw_arg(kw_name, kw)
 
     return bound_args
 
