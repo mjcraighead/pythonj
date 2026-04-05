@@ -53,7 +53,7 @@ BUILTIN_TYPES = {
 
 EXCEPTION_TYPES = {
     'ArithmeticError', 'AssertionError', 'AttributeError', 'BaseException', 'Exception', 'IndexError',
-    'KeyError', 'LookupError', 'OverflowError', 'StopIteration', 'TypeError', 'ValueError', 'ZeroDivisionError',
+    'KeyError', 'LookupError', 'OverflowError', 'RuntimeError', 'StopIteration', 'TypeError', 'ValueError', 'ZeroDivisionError',
 }
 
 NULL = object()
@@ -107,9 +107,6 @@ SYNTHETIC_PARAMS = {
     'int': {
         '__newobj__': [make_param('x', 0), make_param('base', NULL)],
     },
-    'list': {
-        'index': [make_param('value'), make_param('start', NULL), make_param('stop', NULL)],
-    },
     'range': {
         '__newobj__': [make_param('start'), make_param('stop', NULL), make_param('step', NULL)],
     },
@@ -126,9 +123,6 @@ SYNTHETIC_PARAMS = {
         'rfind': [make_param('sub'), make_param('start', None), make_param('end', None)],
         'rindex': [make_param('sub'), make_param('start', None), make_param('end', None)],
         'startswith': [make_param('prefix'), make_param('start', None), make_param('end', None)],
-    },
-    'tuple': {
-        'index': [make_param('value'), make_param('start', NULL), make_param('stop', NULL)],
     },
 }
 

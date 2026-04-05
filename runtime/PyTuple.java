@@ -182,7 +182,7 @@ public final class PyTuple extends PyObject {
     }
     public PyInt pymethod_index(PyObject value, PyObject start, PyObject stop) {
         int n = items.length;
-        int startIndex = Runtime.asSliceIndexAllowNull(start, 0, n);
+        int startIndex = Runtime.asBoundedSearchIndexAllowNull(start, 0, n);
         int stopIndex = Runtime.asSliceIndexAllowNull(stop, n, n);
         for (int i = startIndex; i < stopIndex; i++) {
             if (items[i].equals(value)) {

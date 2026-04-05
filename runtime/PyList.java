@@ -246,14 +246,20 @@ public final class PyList extends PyObject {
         return PyNone.singleton;
     }
     public PyInt pymethod_index(PyObject value, PyObject start, PyObject stop) {
-        if ((start != null) || (stop != null)) {
-            throw new UnsupportedOperationException("'start' and 'stop' arguments are not supported");
+        int n = items.size();
+        int startIndex = Runtime.asBoundedSearchIndexAllowNull(start, 0, n);
+        int stopIndex = Runtime.asSliceIndexAllowNull(stop, n, n);
+        try {
+            for (int i = startIndex; i < stopIndex; i++) {
+                if (items.get(i).equals(value)) {
+                    return new PyInt(i);
+                }
+            }
+        } catch (IndexOutOfBoundsException e) {
+            // Concurrent mutation can invalidate the originally computed bounds.
+            throw PyRuntimeError.raise("list changed size during index search");
         }
-        int index = items.indexOf(value);
-        if (index == -1) {
-            throw PyValueError.raise("list.index(x): x not in list");
-        }
-        return new PyInt(index);
+        throw PyValueError.raise("list.index(x): x not in list");
     }
     public PyNone pymethod_insert(PyObject indexObj, PyObject value) {
         int index = Math.toIntExact(indexObj.indexValue());

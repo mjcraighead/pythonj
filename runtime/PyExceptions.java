@@ -192,6 +192,20 @@ final class PyStopIteration extends PyException {
     static PyObject pymember_value(PyObject obj) { throw new UnsupportedOperationException(); }
 }
 
+final class PyRuntimeError extends PyException {
+    PyRuntimeError(PyObject... _args) { super(_args); }
+    @Override public PyConcreteType type() { return PyRuntimeErrorType.singleton; }
+
+    static PyRaise raise(String msg) {
+        return new PyRaise(new PyRuntimeError(new PyString(msg)));
+    }
+
+    public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
+        Runtime.requireNoKwArgs(kwargs, type.name());
+        return new PyRuntimeError(args);
+    }
+}
+
 final class PyTypeError extends PyException {
     PyTypeError(PyObject... _args) { super(_args); }
     @Override public PyConcreteType type() { return PyTypeErrorType.singleton; }
