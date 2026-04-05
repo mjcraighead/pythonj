@@ -729,14 +729,12 @@ class LoweringVisitor(ast.NodeVisitor):
         return self.scope.info.exact_local_types.get(name) or self.scope.info.exact_arg_types.get(name)
 
     def java_local_type(self, name: str) -> str:
-        type_name = self.local_exact_builtin_type(name)
-        if type_name is None:
+        if (type_name := self.local_exact_builtin_type(name)) is None:
             return 'PyObject'
         return extract_spec.BUILTIN_TYPES[type_name]
 
     def cast_local_assignment(self, name: str, value: ir.Expr) -> ir.Expr:
-        type_name = self.local_exact_builtin_type(name)
-        if type_name is None:
+        if (type_name := self.local_exact_builtin_type(name)) is None:
             return value
         return ir.CastExpr(extract_spec.BUILTIN_TYPES[type_name], value)
 
@@ -761,8 +759,7 @@ class LoweringVisitor(ast.NodeVisitor):
 
     def infer_exact_builtin_type_expr(self, node: ast.expr) -> Optional[str]:
         if isinstance(node, ast.Name) and get_name_resolution(node) is NameResolution.LOCAL:
-            type_name = self.local_exact_builtin_type(node.id)
-            if type_name is not None:
+            if (type_name := self.local_exact_builtin_type(node.id)) is not None:
                 return type_name
         if isinstance(node, ast.BinOp):
             op = self.visit(node.op)
@@ -2325,8 +2322,7 @@ def get_positional_call_range(params: Optional[list[inspect.Parameter]]) -> Opti
     return (min_args, len(params))
 
 def get_exact_positional_call_arity(params: Optional[list[inspect.Parameter]]) -> Optional[int]:
-    call_range = get_positional_call_range(params)
-    if call_range is None:
+    if (call_range := get_positional_call_range(params)) is None:
         return None
     (min_args, max_args) = call_range
     if min_args != max_args:

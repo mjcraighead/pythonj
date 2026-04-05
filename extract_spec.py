@@ -213,8 +213,7 @@ def encode_signature(params: list[inspect.Parameter]) -> dict[str, object] | Non
     return {'params': out}
 
 def get_method_signature(name: str, method_name: str) -> dict[str, object] | None:
-    synthetic = SYNTHETIC_PARAMS.get(name, {}).get(method_name)
-    if synthetic is not None:
+    if (synthetic := SYNTHETIC_PARAMS.get(name, {}).get(method_name)) is not None:
         return encode_signature(synthetic)
     obj = get_runtime_obj(name)
     desc = obj.__dict__.get(method_name)
@@ -234,8 +233,7 @@ def get_method_signature(name: str, method_name: str) -> dict[str, object] | Non
     return encode_signature(params)
 
 def get_type_signature(name: str) -> dict[str, object] | None:
-    synthetic = SYNTHETIC_PARAMS.get(name, {}).get('__newobj__')
-    if synthetic is not None:
+    if (synthetic := SYNTHETIC_PARAMS.get(name, {}).get('__newobj__')) is not None:
         return encode_signature(synthetic)
     obj = get_runtime_obj(name)
     params = get_signature_params(obj, None)
@@ -244,8 +242,7 @@ def get_type_signature(name: str) -> dict[str, object] | None:
     return encode_signature(params)
 
 def get_builtin_function_signature(name: str) -> dict[str, object] | None:
-    synthetic = SYNTHETIC_PARAMS['builtins'].get(name)
-    if synthetic is not None:
+    if (synthetic := SYNTHETIC_PARAMS['builtins'].get(name)) is not None:
         return encode_signature(synthetic)
     desc = builtins.__dict__.get(name)
     if type(desc) is not types.BuiltinFunctionType:
@@ -256,8 +253,7 @@ def get_builtin_function_signature(name: str) -> dict[str, object] | None:
     return encode_signature(params)
 
 def get_module_function_signature(module_name: str, func_name: str) -> dict[str, object] | None:
-    synthetic = SYNTHETIC_PARAMS.get(module_name, {}).get(func_name)
-    if synthetic is not None:
+    if (synthetic := SYNTHETIC_PARAMS.get(module_name, {}).get(func_name)) is not None:
         return encode_signature(synthetic)
     module = get_runtime_obj(module_name)
     func = getattr(module, func_name)
