@@ -732,6 +732,16 @@ class LoweringVisitor(ast.NodeVisitor):
             return value
         return ir.CastExpr(extract_spec.BUILTIN_TYPES[type_name], value)
 
+    def emit_exact_int_value(self, node: ast.expr) -> Optional[ir.Expr]:
+        if self.infer_exact_builtin_type_expr(node) != 'int':
+            return None
+        if isinstance(node, ast.Constant) and isinstance(node.value, int) and not isinstance(node.value, bool):
+            return ir.IntLiteral(node.value, 'L')
+        expr = self.visit(node)
+        if isinstance(node, ast.Name) and get_name_resolution(node) is NameResolution.LOCAL:
+            return ir.Field(expr, 'value')
+        return ir.Field(ir.CastExpr('PyInt', expr), 'value')
+
     def infer_exact_builtin_type_expr(self, node: ast.expr) -> Optional[str]:
         if isinstance(node, ast.Name) and get_name_resolution(node) is NameResolution.LOCAL:
             type_name = self.local_exact_builtin_type(node.id)
@@ -836,6 +846,19 @@ class LoweringVisitor(ast.NodeVisitor):
         n_compares = len(node.comparators)
         assert n_compares == len(node.ops), node # should have consistent number of these
         assert n_compares >= 1, node # should always have at least one
+        if n_compares == 1 and isinstance(node.ops[0], (ast.Lt, ast.LtE, ast.Gt, ast.GtE, ast.Eq, ast.NotEq)):
+            lhs_int = self.emit_exact_int_value(node.left)
+            rhs_int = self.emit_exact_int_value(node.comparators[0])
+            if lhs_int is not None and rhs_int is not None:
+                op = {
+                    ast.Lt: '<',
+                    ast.LtE: '<=',
+                    ast.Gt: '>',
+                    ast.GtE: '>=',
+                    ast.Eq: '==',
+                    ast.NotEq: '!=',
+                }[type(node.ops[0])]
+                return ir.MethodCall(ir.Identifier('PyBool'), 'create', [ir.BinaryOp(op, lhs_int, rhs_int)])
 
         lhs = self.visit(node.left)
         exprs: list[ir.Expr] = []
@@ -1256,7 +1279,8 @@ class LoweringVisitor(ast.NodeVisitor):
         op = f'{self.visit(node.op)}InPlace'
 
         if isinstance(node.target, ast.Name):
-            code = ir.AssignStatement(self.visit(node.target), ir.MethodCall(self.visit(node.target), op, [self.visit(node.value)]))
+            value = ir.MethodCall(self.visit(node.target), op, [self.visit(node.value)])
+            code = ir.AssignStatement(self.visit(node.target), self.cast_local_assignment(node.target.id, value))
         elif isinstance(node.target, ast.Attribute):
             temp_name = self.scope.make_temp()
             self.code.append(ir.LocalDecl('var', temp_name, self.visit(node.target.value)))
