@@ -35,13 +35,16 @@ public final class PyEnumerate extends PyIter {
             if (iterable == null) {
                 throw PyTypeError.raise("enumerate() missing required argument 'iterable'");
             }
-            long startIndex = (start != null) ? start.indexValue() : 0;
-            return new PyEnumerate(iterable.iter(), startIndex);
+            return newObjPositional(iterable, start);
         } else if (args.length == 0) {
             throw PyTypeError.raise("enumerate() missing required argument 'iterable'");
         } else {
             throw Runtime.raiseAtMostArgs("enumerate", 2, totalArgs);
         }
+    }
+    public static PyObject newObjPositional(PyObject iterable, PyObject start) {
+        long startIndex = (start != null) ? start.indexValue() : 0;
+        return new PyEnumerate(iterable.iter(), startIndex);
     }
 
     @Override public PyTuple next() {
