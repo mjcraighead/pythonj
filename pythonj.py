@@ -968,6 +968,25 @@ class LoweringVisitor(ast.NodeVisitor):
             ])
         return ir.MethodCall(ir.Identifier('Runtime'), 'pythonjIsInstance', [obj_expr, self.visit(class_or_tuple)])
 
+    def build_intrinsic_call(self, name: str, args: list[ir.Expr]) -> ir.Expr:
+        assert name in INTRINSIC_SIGNATURES, name
+        (method_name, n_args, return_type) = INTRINSIC_SIGNATURES[name]
+        assert len(args) == n_args, (name, n_args, args)
+        return ir.MethodCall(
+            ir.Identifier('Runtime'),
+            method_name,
+            args,
+            java_type_for_python_type_name(return_type),
+        )
+
+    def emit_intrinsic_call(self, name: str, args: list[ast.expr]) -> ir.Expr:
+        assert self.allow_intrinsics and name in INTRINSIC_SIGNATURES, name
+        (method_name, n_args, _) = INTRINSIC_SIGNATURES[name]
+        assert len(args) == n_args, (name, n_args, args)
+        if name == '__pythonj_isinstance__':
+            return self.emit_isinstance_condition(args[0], args[1])
+        return self.build_intrinsic_call(name, [self.visit(arg) for arg in args])
+
     def visit_Constant(self, node) -> ir.Expr:
         if isinstance(node.value, (types.NoneType, bool, int, float, str, bytes)):
             return ir.PyConstant(node.value)
@@ -1000,7 +1019,7 @@ class LoweringVisitor(ast.NodeVisitor):
                 if val.conversion == ord('s'):
                     expr = ir.CreateObject('PyString', [ir.MethodCall(expr, 'str', [], 'String')])
                 elif val.conversion == ord('r'):
-                    expr = ir.CreateObject('PyString', [ir.MethodCall(expr, 'repr', [], 'String')])
+                    expr = self.build_intrinsic_call('__pythonj_repr__', [expr])
                 elif val.conversion == ord('a'):
                     expr = ir.MethodCall(ir.Identifier('PyBuiltinFunctionsImpl'), 'pyfunc_ascii', [expr])
                 elif val.conversion != -1:
@@ -1083,16 +1102,8 @@ class LoweringVisitor(ast.NodeVisitor):
                         [*([self.visit(arg) for arg in node.args]), *([ir.Null()] * (max_args - len(node.args)))],
                     )
         if self.allow_intrinsics and isinstance(node.func, ast.Name) and node.func.id in INTRINSIC_SIGNATURES:
-            (method_name, n_args, return_type) = INTRINSIC_SIGNATURES[node.func.id]
-            assert len(node.args) == n_args and not node.keywords, (node.func.id, n_args, node.args, node.keywords)
-            if node.func.id == '__pythonj_isinstance__':
-                return self.emit_isinstance_condition(node.args[0], node.args[1])
-            return ir.MethodCall(
-                ir.Identifier('Runtime'),
-                method_name,
-                [self.visit(node.args[i]) for i in range(n_args)],
-                java_type_for_python_type_name(return_type),
-            )
+            assert not node.keywords, (node.func.id, node.keywords)
+            return self.emit_intrinsic_call(node.func.id, node.args)
         if (isinstance(node.func, ast.Attribute) and
             not node.keywords and
             not any(isinstance(arg, ast.Starred) for arg in node.args)):
