@@ -268,6 +268,10 @@ class CastExpr(Expr):
 class UnaryOp(Expr):
     op: str
     operand: Expr
+    def java_type(self) -> str:
+        if self.op == '!':
+            return 'boolean'
+        return JAVA_TYPE_UNKNOWN
     def emit_java(self, pool: ConstantPool) -> str:
         return f'({self.op}{self.operand.emit_java(pool)})'
 
@@ -277,7 +281,7 @@ class BinaryOp(Expr):
     lhs: Expr
     rhs: Expr
     def java_type(self) -> str:
-        if self.op in {'==', '!=', '<', '<=', '>', '>=', '&&', '||'}:
+        if self.op in {'==', '!=', '<', '<=', '>', '>=', '&&', '||', 'instanceof'}:
             return 'boolean'
         return JAVA_TYPE_UNKNOWN
     def emit_java(self, pool: ConstantPool) -> str:
@@ -694,7 +698,10 @@ def bool_value(expr: Expr) -> Expr:
         return expr.args[0] # return the raw boolean instead of box/unbox
     if isinstance(expr, PyConstant):
         return Bool(bool(expr.value))
-    return MethodCall(expr, 'boolValue', [])
+    return MethodCall(expr, 'boolValue', [], 'boolean')
+
+def py_bool_create(expr: Expr) -> Expr:
+    return MethodCall(Identifier('PyBool'), 'create', [expr], 'PyBool')
 
 def chained_binary_op(op: str, exprs: list[Expr]) -> Expr:
     assert len(exprs) >= 1, exprs

@@ -825,7 +825,7 @@ class LoweringVisitor(ast.NodeVisitor):
     def visit_USub(self, node): return 'neg'
     def visit_UnaryOp(self, node) -> ir.Expr:
         if isinstance(node.op, ast.Not):
-            return ir.MethodCall(ir.Identifier('PyBool'), 'create', [ir.unary_op('!', self.emit_condition(node.operand))])
+            return ir.py_bool_create(ir.unary_op('!', self.emit_condition(node.operand)))
         op = self.visit(node.op)
         operand = self.visit(node.operand)
         if isinstance(operand, ir.PyConstant) and isinstance(operand.value, int):
@@ -895,7 +895,7 @@ class LoweringVisitor(ast.NodeVisitor):
                     ast.Eq: '==',
                     ast.NotEq: '!=',
                 }[type(node.ops[0])]
-                return ir.MethodCall(ir.Identifier('PyBool'), 'create', [ir.BinaryOp(op, lhs_int, rhs_int)])
+                return ir.py_bool_create(ir.BinaryOp(op, lhs_int, rhs_int))
 
         lhs = self.visit(node.left)
         exprs: list[ir.Expr] = []
@@ -912,19 +912,19 @@ class LoweringVisitor(ast.NodeVisitor):
             elif isinstance(op, ast.IsNot):
                 term = ir.BinaryOp('!=', lhs, rhs)
             elif isinstance(op, ast.In):
-                term = ir.MethodCall(lhs, 'in', [rhs])
+                term = ir.MethodCall(lhs, 'in', [rhs], 'boolean')
             elif isinstance(op, ast.NotIn):
-                term = ir.unary_op('!', ir.MethodCall(lhs, 'in', [rhs]))
+                term = ir.unary_op('!', ir.MethodCall(lhs, 'in', [rhs], 'boolean'))
             elif isinstance(op, ast.Eq):
-                term = ir.MethodCall(lhs, 'equals', [rhs])
+                term = ir.MethodCall(lhs, 'equals', [rhs], 'boolean')
             elif isinstance(op, ast.NotEq):
-                term = ir.unary_op('!', ir.MethodCall(lhs, 'equals', [rhs]))
+                term = ir.unary_op('!', ir.MethodCall(lhs, 'equals', [rhs], 'boolean'))
             else:
-                term = ir.MethodCall(lhs, self.visit(op), [rhs])
+                term = ir.MethodCall(lhs, self.visit(op), [rhs], 'boolean')
             exprs.append(term)
             if i < n_compares - 1:
                 lhs = ir.Identifier(temp_name)
-        return ir.MethodCall(ir.Identifier('PyBool'), 'create', [ir.chained_binary_op('&&', exprs)])
+        return ir.py_bool_create(ir.chained_binary_op('&&', exprs))
 
     def emit_bool_op(self, op: ast.boolop, values: list[ast.expr]) -> ir.Expr:
         if len(values) == 1:
@@ -957,16 +957,16 @@ class LoweringVisitor(ast.NodeVisitor):
         if isinstance(class_or_tuple, ast.Name) and class_or_tuple.id in ISINSTANCE_SINGLE_FASTPATH_BUILTIN_TYPES:
             builtin_type = class_or_tuple.id
             assert builtin_type in extract_spec.BUILTIN_TYPES, builtin_type
-            return ir.MethodCall(ir.Identifier('PyBool'), 'create', [
+            return ir.py_bool_create(
                 ir.BinaryOp('instanceof', obj_expr, ir.Identifier(extract_spec.BUILTIN_TYPES[builtin_type]))
-            ])
+            )
         if isinstance(class_or_tuple, ast.Tuple):
             if not class_or_tuple.elts:
                 return ir.PyConstant(False)
-            return ir.MethodCall(ir.Identifier('PyBool'), 'create', [
+            return ir.py_bool_create(
                 ir.chained_binary_op('||', [ir.bool_value(self.emit_isinstance_condition(obj, elt)) for elt in class_or_tuple.elts])
-            ])
-        return ir.MethodCall(ir.Identifier('Runtime'), 'pythonjIsInstance', [obj_expr, self.visit(class_or_tuple)])
+            )
+        return ir.MethodCall(ir.Identifier('Runtime'), 'pythonjIsInstance', [obj_expr, self.visit(class_or_tuple)], 'PyBool')
 
     def build_intrinsic_call(self, name: str, args: list[ir.Expr]) -> ir.Expr:
         assert name in INTRINSIC_SIGNATURES, name
@@ -1021,7 +1021,7 @@ class LoweringVisitor(ast.NodeVisitor):
                 elif val.conversion == ord('r'):
                     expr = self.build_intrinsic_call('__pythonj_repr__', [expr])
                 elif val.conversion == ord('a'):
-                    expr = ir.MethodCall(ir.Identifier('PyBuiltinFunctionsImpl'), 'pyfunc_ascii', [expr])
+                    expr = ir.MethodCall(ir.Identifier('PyBuiltinFunctionsImpl'), 'pyfunc_ascii', [expr], 'PyString')
                 elif val.conversion != -1:
                     self.error(val.lineno, f'unsupported f string conversion type {val.conversion}')
                 if isinstance(format_spec, ir.StrLiteral) and not format_spec.s and expr.java_type() == 'PyString':
