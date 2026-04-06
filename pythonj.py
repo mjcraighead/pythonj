@@ -28,28 +28,28 @@ ISINSTANCE_SINGLE_FASTPATH_BUILTIN_TYPES = {'bool', 'bytearray', 'bytes', 'float
 EXACT_INT_BINOPS = {'add', 'and', 'floorDiv', 'lshift', 'mod', 'mul', 'or', 'pow', 'rshift', 'sub', 'xor'}
 
 INTRINSIC_SIGNATURES = {
-    '__pythonj_abs__': ('pythonjAbs', 1, None),
-    '__pythonj_bytes_builder__': ('pythonjBytesBuilder', 1, None),
-    '__pythonj_bytes_builder_append__': ('pythonjBytesBuilderAppend', 2, None),
-    '__pythonj_bytes_builder_append_byte__': ('pythonjBytesBuilderAppendByte', 2, None),
+    '__pythonj_abs__': ('pythonjAbs', 1, 'object'),
+    '__pythonj_bytes_builder__': ('pythonjBytesBuilder', 1, 'object'),
+    '__pythonj_bytes_builder_append__': ('pythonjBytesBuilderAppend', 2, 'NoneType'),
+    '__pythonj_bytes_builder_append_byte__': ('pythonjBytesBuilderAppendByte', 2, 'NoneType'),
     '__pythonj_bytes_builder_finish__': ('pythonjBytesBuilderFinish', 1, 'bytes'),
-    '__pythonj_delattr__': ('pythonjDelAttr', 2, None),
-    '__pythonj_dict_get__': ('pythonjDictGet', 2, None),
+    '__pythonj_delattr__': ('pythonjDelAttr', 2, 'NoneType'),
+    '__pythonj_dict_get__': ('pythonjDictGet', 2, 'object'),
     '__pythonj_format__': ('pythonjFormat', 2, 'str'),
-    '__pythonj_getattr__': ('pythonjGetAttr', 2, None),
+    '__pythonj_getattr__': ('pythonjGetAttr', 2, 'object'),
     '__pythonj_hash__': ('pythonjHash', 1, 'int'),
     '__pythonj_hasiter__': ('pythonjHasIter', 1, 'bool'),
     '__pythonj_isinstance__': ('pythonjIsInstance', 2, 'bool'),
     '__pythonj_issubclass__': ('pythonjIsSubclass', 2, 'bool'),
-    '__pythonj_iter__': ('pythonjIter', 1, None),
+    '__pythonj_iter__': ('pythonjIter', 1, 'object'),
     '__pythonj_len__': ('pythonjLen', 1, 'int'),
-    '__pythonj_next__': ('pythonjNext', 1, None),
+    '__pythonj_next__': ('pythonjNext', 1, 'object'),
     '__pythonj_repr__': ('pythonjRepr', 1, 'str'),
-    '__pythonj_setattr__': ('pythonjSetAttr', 3, None),
-    '__pythonj_str_builder__': ('pythonjStrBuilder', 1, None),
-    '__pythonj_str_builder_append__': ('pythonjStrBuilderAppend', 2, None),
+    '__pythonj_setattr__': ('pythonjSetAttr', 3, 'NoneType'),
+    '__pythonj_str_builder__': ('pythonjStrBuilder', 1, 'object'),
+    '__pythonj_str_builder_append__': ('pythonjStrBuilderAppend', 2, 'NoneType'),
     '__pythonj_str_builder_finish__': ('pythonjStrBuilderFinish', 1, 'str'),
-    '__pythonj_zip_new__': ('pythonjZipNew', 2, None),
+    '__pythonj_zip_new__': ('pythonjZipNew', 2, 'object'),
 }
 
 EXACT_BUILTIN_FUNCTION_RETURN_TYPES = {
@@ -191,6 +191,13 @@ def _decode_user_function_return_annotation(annotation: Optional[ast.expr]) -> O
     if isinstance(annotation, ast.Name) and annotation.id in extract_spec.BUILTIN_TYPES:
         return annotation.id
     return None
+
+def java_type_for_python_type_name(type_name: str) -> str:
+    if type_name == 'object':
+        return 'PyObject'
+    if type_name == 'NoneType':
+        return 'PyNone'
+    return extract_spec.BUILTIN_TYPES[type_name]
 
 def _get_supported_user_function_call_range(args: ast.arguments) -> Optional[tuple[int, int]]:
     if args.kwonlyargs or args.kw_defaults or args.vararg or args.kwarg:
@@ -769,7 +776,7 @@ class LoweringVisitor(ast.NodeVisitor):
             not any(isinstance(arg, ast.Starred) for arg in node.args)):
             if self.allow_intrinsics and node.func.id in INTRINSIC_SIGNATURES:
                 (_, _, return_type) = INTRINSIC_SIGNATURES[node.func.id]
-                if return_type is not None:
+                if return_type not in {'object', 'NoneType'}:
                     return return_type
             if (self.name_resolves_to_builtin_function(node.func) and
                 (type_name := EXACT_BUILTIN_FUNCTION_RETURN_TYPES.get(node.func.id)) is not None):
@@ -1084,7 +1091,7 @@ class LoweringVisitor(ast.NodeVisitor):
                 ir.Identifier('Runtime'),
                 method_name,
                 [self.visit(node.args[i]) for i in range(n_args)],
-                ir.JAVA_TYPE_UNKNOWN if return_type is None else extract_spec.BUILTIN_TYPES[return_type],
+                java_type_for_python_type_name(return_type),
             )
         if (isinstance(node.func, ast.Attribute) and
             not node.keywords and
