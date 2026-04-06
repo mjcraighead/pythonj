@@ -652,11 +652,12 @@ class LoweringVisitor(ast.NodeVisitor):
         if self.allow_intrinsics and name == '__pythonj_null__':
             return ir.Null()
         if resolution is NameResolution.CELL:
-            return ir.Field(ir.Identifier(f'pycell_{name}'), 'obj')
+            return ir.Field(ir.Identifier(f'pycell_{name}'), 'obj', 'PyObject')
         if resolution is NameResolution.LOCAL:
+            local_java_type = self.java_local_type(name)
             if self.scope.locals_are_fields:
-                return ir.Field(ir.This(), f'pylocal_{name}')
-            return ir.Identifier(f'pylocal_{name}')
+                return ir.Field(ir.This(), f'pylocal_{name}', local_java_type)
+            return ir.Identifier(f'pylocal_{name}', local_java_type)
         if resolution is NameResolution.GLOBAL:
             module_name = self.module_scope().info.initial_builtin_module_locals.get(name)
             if module_name is not None:
@@ -664,7 +665,7 @@ class LoweringVisitor(ast.NodeVisitor):
         if name in extract_spec.BUILTIN_TYPES:
             return ir.PyBuiltinType(name, extract_spec.BUILTIN_TYPES[name])
         if name in extract_spec.EXCEPTION_TYPES:
-            return ir.Field(ir.Identifier(f'Py{name}Type'), 'singleton')
+            return ir.Field(ir.Identifier(f'Py{name}Type'), 'singleton', f'Py{name}Type')
         if name in extract_spec.BUILTIN_FUNCTIONS:
             return ir.PyBuiltinFunction(name)
         return ir.Identifier(f'pyglobal_{name}')
@@ -1076,11 +1077,16 @@ class LoweringVisitor(ast.NodeVisitor):
                         [*([self.visit(arg) for arg in node.args]), *([ir.Null()] * (max_args - len(node.args)))],
                     )
         if self.allow_intrinsics and isinstance(node.func, ast.Name) and node.func.id in INTRINSIC_SIGNATURES:
-            (method_name, n_args, _) = INTRINSIC_SIGNATURES[node.func.id]
+            (method_name, n_args, return_type) = INTRINSIC_SIGNATURES[node.func.id]
             assert len(node.args) == n_args and not node.keywords, (node.func.id, n_args, node.args, node.keywords)
             if node.func.id == '__pythonj_isinstance__':
                 return self.emit_isinstance_condition(node.args[0], node.args[1])
-            return ir.MethodCall(ir.Identifier('Runtime'), method_name, [self.visit(node.args[i]) for i in range(n_args)])
+            return ir.MethodCall(
+                ir.Identifier('Runtime'),
+                method_name,
+                [self.visit(node.args[i]) for i in range(n_args)],
+                ir.JAVA_TYPE_UNKNOWN if return_type is None else extract_spec.BUILTIN_TYPES[return_type],
+            )
         if (isinstance(node.func, ast.Attribute) and
             not node.keywords and
             not any(isinstance(arg, ast.Starred) for arg in node.args)):

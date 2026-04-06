@@ -16,6 +16,7 @@ JAVA_FORBIDDEN_IDENTIFIERS = {
     'synchronized', 'this', 'throw', 'throws', 'to', 'transient', 'transitive', 'true', 'try', 'uses', 'var',
     'void', 'volatile', 'while', 'with', 'yield',
 }
+JAVA_TYPE_UNKNOWN = 'unknown'
 
 def _int_name(i: int) -> str:
     """Return the Java variable name to use for the PyInt singleton with a given value."""
@@ -139,6 +140,9 @@ def with_pooled_fields(class_decl: ClassDecl, pool: ConstantPool) -> ClassDecl:
     return ClassDecl(class_decl.modifiers, class_decl.name, class_decl.extends, [*pool.build_field_decls(), *class_decl.decls])
 
 class Expr(ABC):
+    def java_type(self) -> str:
+        return JAVA_TYPE_UNKNOWN
+
     @abstractmethod
     def emit_java(self, pool: ConstantPool) -> str:
         raise NotImplementedError()
@@ -147,26 +151,35 @@ class Expr(ABC):
 class IntLiteral(Expr):
     value: int
     suffix: str = ''
+    def java_type(self) -> str:
+        return 'long' if self.suffix == 'L' else 'int'
     def emit_java(self, pool: ConstantPool) -> str:
         return f'{self.value}{self.suffix}'
 
 @dataclass(slots=True)
 class FloatLiteral(Expr):
     value: float
+    def java_type(self) -> str:
+        return 'double'
     def emit_java(self, pool: ConstantPool) -> str:
         return f'{self.value!r}'
 
 @dataclass(slots=True)
 class StrLiteral(Expr):
     s: str
+    def java_type(self) -> str:
+        return 'String'
     def emit_java(self, pool: ConstantPool) -> str:
         return _java_string_literal(self.s)
 
 @dataclass(slots=True)
 class Identifier(Expr):
     name: str
+    java_type_hint: str = JAVA_TYPE_UNKNOWN
     def __post_init__(self):
         assert self.name not in JAVA_FORBIDDEN_IDENTIFIERS, self.name
+    def java_type(self) -> str:
+        return self.java_type_hint
     def emit_java(self, pool: ConstantPool) -> str:
         return self.name
 
@@ -174,6 +187,8 @@ class Identifier(Expr):
 class PyBuiltinFunction(Expr):
     name: str
     java_name: Optional[str] = None
+    def java_type(self) -> str:
+        return self.java_name if self.java_name is not None else f'PyBuiltinFunction_{self.name}'
     def emit_java(self, pool: ConstantPool) -> str:
         java_name = self.java_name if self.java_name is not None else f'PyBuiltinFunction_{self.name}'
         return f'{java_name}.singleton'
@@ -182,6 +197,8 @@ class PyBuiltinFunction(Expr):
 class PyBuiltinType(Expr):
     name: str
     java_name: str
+    def java_type(self) -> str:
+        return f'{self.java_name}Type'
     def emit_java(self, pool: ConstantPool) -> str:
         return f'{self.java_name}Type.singleton'
 
@@ -189,11 +206,15 @@ class PyBuiltinType(Expr):
 class PyBuiltinModule(Expr):
     name: str
     java_name: str
+    def java_type(self) -> str:
+        return self.java_name
     def emit_java(self, pool: ConstantPool) -> str:
         return f'{self.java_name}.singleton'
 
 @dataclass(slots=True)
 class Null(Expr):
+    def java_type(self) -> str:
+        return 'null'
     def emit_java(self, pool: ConstantPool) -> str:
         return 'null'
 
@@ -210,6 +231,8 @@ class Super(Expr):
 @dataclass(slots=True)
 class Bool(Expr):
     value: bool
+    def java_type(self) -> str:
+        return 'boolean'
     def emit_java(self, pool: ConstantPool) -> str:
         return 'true' if self.value else 'false'
 
@@ -217,6 +240,9 @@ class Bool(Expr):
 class Field(Expr):
     obj: Expr
     field: str
+    field_type: str = JAVA_TYPE_UNKNOWN
+    def java_type(self) -> str:
+        return self.field_type
     def emit_java(self, pool: ConstantPool) -> str:
         return f'{self.obj.emit_java(pool)}.{self.field}'
 
@@ -231,7 +257,11 @@ class ArrayAccess(Expr):
 class CastExpr(Expr):
     type: str
     expr: Expr
+    def java_type(self) -> str:
+        return self.type
     def emit_java(self, pool: ConstantPool) -> str:
+        if self.expr.java_type() == self.type:
+            return self.expr.emit_java(pool)
         return f'(({self.type}){self.expr.emit_java(pool)})'
 
 @dataclass(slots=True)
@@ -246,6 +276,10 @@ class BinaryOp(Expr):
     op: str
     lhs: Expr
     rhs: Expr
+    def java_type(self) -> str:
+        if self.op in {'==', '!=', '<', '<=', '>', '>=', '&&', '||'}:
+            return 'boolean'
+        return JAVA_TYPE_UNKNOWN
     def emit_java(self, pool: ConstantPool) -> str:
         return f'({self.lhs.emit_java(pool)} {self.op} {self.rhs.emit_java(pool)})'
 
@@ -254,6 +288,12 @@ class CondOp(Expr):
     cond: Expr
     true: Expr
     false: Expr
+    def java_type(self) -> str:
+        true_type = self.true.java_type()
+        false_type = self.false.java_type()
+        if true_type == false_type:
+            return true_type
+        return JAVA_TYPE_UNKNOWN
     def emit_java(self, pool: ConstantPool) -> str:
         return f'({self.cond.emit_java(pool)} ? {self.true.emit_java(pool)} : {self.false.emit_java(pool)})'
 
@@ -261,6 +301,8 @@ class CondOp(Expr):
 class CreateObject(Expr):
     type: str
     args: list[Expr]
+    def java_type(self) -> str:
+        return self.type
     def emit_java(self, pool: ConstantPool) -> str:
         return f"new {self.type}({', '.join(arg.emit_java(pool) for arg in self.args)})"
 
@@ -268,6 +310,8 @@ class CreateObject(Expr):
 class CreateArray(Expr):
     type: str
     elts: list[Expr]
+    def java_type(self) -> str:
+        return f'{self.type}[]'
     def emit_java(self, pool: ConstantPool) -> str:
         return f"new {self.type}[] {{{', '.join(x.emit_java(pool) for x in self.elts)}}}"
 
@@ -276,6 +320,9 @@ class MethodCall(Expr):
     obj: Expr
     method: str
     args: list[Expr]
+    return_type: str = JAVA_TYPE_UNKNOWN
+    def java_type(self) -> str:
+        return self.return_type
     def emit_java(self, pool: ConstantPool) -> str:
         return f"{self.obj.emit_java(pool)}.{self.method}({', '.join(arg.emit_java(pool) for arg in self.args)})"
 
@@ -290,12 +337,33 @@ class MethodRef(Expr):
 class AssignExpr(Expr):
     lhs: Expr
     rhs: Expr
+    def java_type(self) -> str:
+        lhs_type = self.lhs.java_type()
+        if lhs_type != JAVA_TYPE_UNKNOWN:
+            return lhs_type
+        return self.rhs.java_type()
     def emit_java(self, pool: ConstantPool) -> str:
         return f'({self.lhs.emit_java(pool)} = {self.rhs.emit_java(pool)})'
 
 @dataclass(slots=True)
 class PyConstant(Expr):
     value: object
+    def java_type(self) -> str:
+        if self.value is None:
+            return 'PyNone'
+        elif self.value is False or self.value is True:
+            return 'PyBool'
+        elif isinstance(self.value, int):
+            return 'PyInt'
+        elif isinstance(self.value, str):
+            return 'PyString'
+        elif isinstance(self.value, float):
+            return 'PyFloat'
+        elif isinstance(self.value, tuple):
+            return 'PyTuple'
+        else:
+            assert isinstance(self.value, bytes), self.value
+            return 'PyBytes'
     def emit_java(self, pool: ConstantPool) -> str:
         return pool.emit_constant(self.value)
 
