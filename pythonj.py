@@ -740,9 +740,9 @@ class LoweringVisitor(ast.NodeVisitor):
         if isinstance(node, ast.Constant) and isinstance(node.value, int) and not isinstance(node.value, bool):
             return ir.IntLiteral(node.value, 'L')
         expr = self.visit(node)
-        if isinstance(node, ast.Name) and get_name_resolution(node) is NameResolution.LOCAL:
-            return ir.Field(expr, 'value')
-        return ir.Field(ir.CastExpr('PyInt', expr), 'value')
+        if expr.java_type() == 'PyInt':
+            return ir.Field(expr, 'value', 'long')
+        return ir.Field(ir.CastExpr('PyInt', expr), 'value', 'long')
 
     def emit_exact_int_binop(self, op: str, lhs_node: ast.expr, rhs_node: ast.expr) -> Optional[ir.Expr]:
         lhs_int = self.emit_exact_int_value(lhs_node)
@@ -986,23 +986,22 @@ class LoweringVisitor(ast.NodeVisitor):
                     if isinstance(expr, ir.PyConstant) and isinstance(expr.value, str):
                         format_spec = ir.StrLiteral(expr.value)
                     else:
-                        format_spec = ir.Field(expr, 'value')
+                        format_spec = ir.Field(expr, 'value', 'String')
                 else:
                     format_spec = ir.StrLiteral("")
                 expr = self.visit(val.value)
                 if val.conversion == ord('s'):
-                    expr = ir.CreateObject('PyString', [ir.MethodCall(expr, 'str', [])])
+                    expr = ir.CreateObject('PyString', [ir.MethodCall(expr, 'str', [], 'String')])
                 elif val.conversion == ord('r'):
-                    expr = ir.CreateObject('PyString', [ir.MethodCall(expr, 'repr', [])])
+                    expr = ir.CreateObject('PyString', [ir.MethodCall(expr, 'repr', [], 'String')])
                 elif val.conversion == ord('a'):
                     expr = ir.MethodCall(ir.Identifier('PyBuiltinFunctionsImpl'), 'pyfunc_ascii', [expr])
                 elif val.conversion != -1:
                     self.error(val.lineno, f'unsupported f string conversion type {val.conversion}')
-                if isinstance(format_spec, ir.StrLiteral) and not format_spec.s and \
-                    isinstance(expr, ir.CreateObject) and expr.type == 'PyString':
-                    expr = expr.args[0]
+                if isinstance(format_spec, ir.StrLiteral) and not format_spec.s and expr.java_type() == 'PyString':
+                    expr = ir.Field(expr, 'value', 'String')
                 else:
-                    expr = ir.MethodCall(expr, 'format', [format_spec])
+                    expr = ir.MethodCall(expr, 'format', [format_spec], 'String')
                 vals.append(expr)
         expr = ir.chained_binary_op('+', vals)
         if isinstance(expr, ir.StrLiteral):
