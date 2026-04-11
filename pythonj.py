@@ -71,6 +71,7 @@ class NameBindingState(Enum):
 
 NAME_RESOLUTION_ATTR = '_pythonj_resolution'
 BINDING_STATE_ATTR = '_pythonj_binding_state'
+EXPR_EXACT_TYPE_ATTR = '_pythonj_exact_type'
 
 def set_name_resolution(node: ast.Name, resolution: NameResolution) -> None:
     setattr(node, NAME_RESOLUTION_ATTR, resolution)
@@ -83,6 +84,12 @@ def set_name_binding_state(node: ast.Name, state: NameBindingState) -> None:
 
 def get_name_binding_state(node: ast.Name) -> NameBindingState:
     return cast(NameBindingState, getattr(node, BINDING_STATE_ATTR))
+
+def set_expr_exact_builtin_type(node: ast.expr, type_name: str) -> None:
+    setattr(node, EXPR_EXACT_TYPE_ATTR, type_name)
+
+def get_expr_exact_builtin_type(node: ast.expr) -> Optional[str]:
+    return cast(Optional[str], getattr(node, EXPR_EXACT_TYPE_ATTR, None))
 
 @dataclass(frozen=True)
 class InitialBinding:
@@ -715,17 +722,15 @@ def _iter_simple_assignments(node: ast.AST) -> Iterator[tuple[str, ast.expr, int
                   local_node.value is not None):
                 yield (local_node.target.id, local_node.value, local_node.lineno)
 
-def _infer_obvious_exact_builtin_type_expr(node: ast.expr, exact_name_types: dict[str, str],
+def _infer_obvious_exact_builtin_type_expr(node: ast.expr,
                                            available_builtin_function_return_types: dict[str, str],
                                            available_builtin_constructor_names: set[str]) -> Optional[str]:
-    if isinstance(node, ast.Name):
-        return exact_name_types.get(node.id)
     if isinstance(node, ast.Constant):
         type_name = type(node.value).__name__
         return type_name if type_name in extract_spec.BUILTIN_TYPES else None
-    if isinstance(node, ast.List):
+    if isinstance(node, ast.List) and isinstance(node.ctx, ast.Load):
         return 'list'
-    if isinstance(node, ast.Tuple):
+    if isinstance(node, ast.Tuple) and isinstance(node.ctx, ast.Load):
         return 'tuple'
     if isinstance(node, ast.Set):
         return 'set'
@@ -740,22 +745,17 @@ def _infer_obvious_exact_builtin_type_expr(node: ast.expr, exact_name_types: dic
     if isinstance(node, ast.DictComp):
         return 'dict'
     if isinstance(node, ast.IfExp):
-        body_type = _infer_obvious_exact_builtin_type_expr(
-            node.body, exact_name_types, available_builtin_function_return_types, available_builtin_constructor_names)
-        orelse_type = _infer_obvious_exact_builtin_type_expr(
-            node.orelse, exact_name_types, available_builtin_function_return_types, available_builtin_constructor_names)
+        body_type = get_expr_exact_builtin_type(node.body)
+        orelse_type = get_expr_exact_builtin_type(node.orelse)
         return body_type if body_type == orelse_type else None
     if isinstance(node, ast.UnaryOp) and isinstance(node.op, (ast.UAdd, ast.USub, ast.Invert)):
-        operand_type = _infer_obvious_exact_builtin_type_expr(
-            node.operand, exact_name_types, available_builtin_function_return_types, available_builtin_constructor_names)
+        operand_type = get_expr_exact_builtin_type(node.operand)
         if isinstance(node.op, ast.Invert):
             return 'int' if operand_type == 'int' else None
         return operand_type if operand_type in {'int', 'float'} else None
     if isinstance(node, ast.BinOp):
-        lhs_type = _infer_obvious_exact_builtin_type_expr(
-            node.left, exact_name_types, available_builtin_function_return_types, available_builtin_constructor_names)
-        rhs_type = _infer_obvious_exact_builtin_type_expr(
-            node.right, exact_name_types, available_builtin_function_return_types, available_builtin_constructor_names)
+        lhs_type = get_expr_exact_builtin_type(node.left)
+        rhs_type = get_expr_exact_builtin_type(node.right)
         if isinstance(node.op, ast.Add) and lhs_type == rhs_type and lhs_type in {'str', 'bytes', 'list', 'tuple'}:
             return lhs_type
         if isinstance(node.op, ast.Mult):
@@ -788,22 +788,10 @@ def _infer_obvious_exact_builtin_type_expr(node: ast.expr, exact_name_types: dic
 
 def _collect_inferred_exact_types(node: ast.AST, explicit_types: dict[str, str], exact_arg_types: dict[str, str],
                                   cell_vars: set[str], locals: set[str], explicit_globals: set[str],
-                                  module_locals: set[str],
-                                  builtin_function_return_types: dict[str, str]) -> tuple[dict[str, str], dict[str, int]]:
+                                  module_locals: set[str]) -> tuple[dict[str, str], dict[str, int]]:
     if not isinstance(node, (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
         return ({}, {})
     write_counts = _count_scope_writes(node)
-    exact_name_types = {**exact_arg_types, **explicit_types}
-    unavailable_builtin_names = locals | explicit_globals | module_locals
-    available_builtin_function_return_types = {
-        name: type_name
-        for (name, type_name) in builtin_function_return_types.items()
-        if name not in unavailable_builtin_names
-    }
-    available_builtin_constructor_names = {
-        name for name in EXACT_BUILTIN_CONSTRUCTOR_TYPES
-        if name not in unavailable_builtin_names
-    }
     ret: dict[str, str] = {}
     lines: dict[str, int] = {}
     assignments_by_name: dict[str, list[tuple[ast.expr, int]]] = {}
@@ -815,9 +803,7 @@ def _collect_inferred_exact_types(node: ast.AST, explicit_types: dict[str, str],
         if write_counts.get(name) != len(assignments):
             continue
         inferred_types = [
-            _infer_obvious_exact_builtin_type_expr(
-                value, {**exact_name_types, **ret},
-                available_builtin_function_return_types, available_builtin_constructor_names)
+            get_expr_exact_builtin_type(value)
             for (value, _) in assignments
         ]
         if any(type_name is None for type_name in inferred_types):
@@ -831,20 +817,29 @@ def _collect_inferred_exact_types(node: ast.AST, explicit_types: dict[str, str],
     return (ret, lines)
 
 class ScopeAnalyzer(ast.NodeVisitor):
-    __slots__ = ('scope_infos', 'preserved_scope_infos', 'module_locals', 'builtin_function_return_types')
+    __slots__ = ('scope_infos', 'preserved_scope_infos', 'module_locals', 'builtin_function_return_types',
+                 'builtin_method_return_types', 'enable_exact_type_inference')
     scope_infos: dict[ast.AST, ScopeInfo]
     preserved_scope_infos: dict[ast.AST, ScopeInfo]
     module_locals: set[str]
     builtin_function_return_types: dict[str, str]
+    builtin_method_return_types: dict[str, dict[str, str]]
+    enable_exact_type_inference: bool
 
     def __init__(self, preserved_scope_infos: Optional[dict[ast.AST, ScopeInfo]] = None,
-                 builtin_function_return_types: Optional[dict[str, str]] = None):
+                 builtin_function_return_types: Optional[dict[str, str]] = None,
+                 builtin_method_return_types: Optional[dict[str, dict[str, str]]] = None,
+                 enable_exact_type_inference: bool = True):
         self.scope_infos = {}
         self.preserved_scope_infos = {} if preserved_scope_infos is None else preserved_scope_infos
         self.module_locals = set()
         self.builtin_function_return_types = (
             {} if builtin_function_return_types is None else builtin_function_return_types
         )
+        self.builtin_method_return_types = (
+            {} if builtin_method_return_types is None else builtin_method_return_types
+        )
+        self.enable_exact_type_inference = enable_exact_type_inference
 
     def _analyze_scope_node(self, node: ast.AST) -> ScopeInfo:
         if node in self.scope_infos:
@@ -900,18 +895,6 @@ class ScopeAnalyzer(ast.NodeVisitor):
             (exact_local_types, exact_local_lines, local_annotation_errors) = _collect_exact_local_annotations(node)
             annotation_errors.extend(global_annotation_errors)
             annotation_errors.extend(local_annotation_errors)
-            if kind is ScopeKind.MODULE:
-                (inferred_global_types, inferred_global_lines) = _collect_inferred_exact_types(
-                    node, exact_global_types, {}, set(), locals, explicit_globals, self.module_locals,
-                    self.builtin_function_return_types)
-                exact_global_types.update(inferred_global_types)
-                exact_global_lines.update(inferred_global_lines)
-            else:
-                (inferred_local_types, inferred_local_lines) = _collect_inferred_exact_types(
-                    node, exact_local_types, exact_arg_types, cell_vars, locals, explicit_globals, self.module_locals,
-                    self.builtin_function_return_types)
-                exact_local_types.update(inferred_local_types)
-                exact_local_lines.update(inferred_local_lines)
             for name in exact_arg_types:
                 if name in cell_vars:
                     annotation_errors.append((exact_arg_lines[name], f"annotated argument {name!r} may not be captured by an inner scope"))
@@ -1155,6 +1138,144 @@ class ScopeAnalyzer(ast.NodeVisitor):
             else:
                 self._tag_names(node.elt, child_scope_stack)
 
+    def _available_builtin_function_return_types(self, scope_info: ScopeInfo) -> dict[str, str]:
+        unavailable_builtin_names = scope_info.locals | scope_info.explicit_globals | self.module_locals
+        return {
+            name: type_name
+            for (name, type_name) in self.builtin_function_return_types.items()
+            if name not in unavailable_builtin_names
+        }
+
+    def _available_builtin_constructor_names(self, scope_info: ScopeInfo) -> set[str]:
+        unavailable_builtin_names = scope_info.locals | scope_info.explicit_globals | self.module_locals
+        return {
+            name for name in EXACT_BUILTIN_CONSTRUCTOR_TYPES
+            if name not in unavailable_builtin_names
+        }
+
+    def _module_info(self) -> ScopeInfo:
+        return self.scope_infos[next(scope_node for scope_node in self.scope_infos if isinstance(scope_node, ast.Module))]
+
+    def _name_exact_builtin_type(self, node: ast.Name, scope_info: ScopeInfo) -> Optional[str]:
+        resolution = get_name_resolution(node)
+        if resolution is NameResolution.LOCAL:
+            return scope_info.exact_local_types.get(node.id) or scope_info.exact_arg_types.get(node.id)
+        if resolution is NameResolution.GLOBAL:
+            module_info = self._module_info()
+            return (
+                module_info.exact_global_types.get(node.id) or
+                module_info.initial_final_constant_types.get(node.id)
+            )
+        return None
+
+    def _infer_expr_exact_type(self, node: ast.expr, scope_info: ScopeInfo) -> Optional[str]:
+        if isinstance(node, ast.Name):
+            if not isinstance(node.ctx, ast.Load):
+                return None
+            return self._name_exact_builtin_type(node, scope_info)
+        if (isinstance(node, ast.Call) and
+            not node.keywords and
+            not any(isinstance(arg, ast.Starred) for arg in node.args)):
+            if isinstance(node.func, ast.Name) and get_name_resolution(node.func) is NameResolution.GLOBAL:
+                module_info = self._module_info()
+                if node.func.id in module_info.initial_final_function_return_types:
+                    (min_args, max_args) = module_info.initial_final_function_call_ranges[node.func.id]
+                    if min_args <= len(node.args) <= max_args:
+                        return module_info.initial_final_function_return_types[node.func.id]
+            if isinstance(node.func, ast.Attribute):
+                receiver_type = get_expr_exact_builtin_type(node.func.value)
+                if receiver_type is not None:
+                    return self.builtin_method_return_types.get(receiver_type, {}).get(node.func.attr)
+        return _infer_obvious_exact_builtin_type_expr(
+            node,
+            self._available_builtin_function_return_types(scope_info),
+            self._available_builtin_constructor_names(scope_info),
+        )
+
+    def _tag_exact_type_exprs_in_scope(self, node: ast.AST, scope_info: ScopeInfo) -> bool:
+        changed = False
+
+        def tag_expr(expr: ast.expr) -> None:
+            nonlocal changed
+            if not isinstance(expr, (ast.Lambda, ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)):
+                for child in ast.iter_child_nodes(expr):
+                    if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda,
+                                          ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)):
+                        continue
+                    if isinstance(child, ast.expr):
+                        tag_expr(child)
+                    else:
+                        for local_node in _iter_scope_local_nodes(child):
+                            if local_node is not child and isinstance(local_node, ast.expr):
+                                tag_expr(local_node)
+            old_type = get_expr_exact_builtin_type(expr)
+            new_type = self._infer_expr_exact_type(expr, scope_info)
+            if new_type is not None and old_type is None:
+                set_expr_exact_builtin_type(expr, new_type)
+                changed = True
+            elif new_type is not None and old_type != new_type:
+                raise AssertionError(f'conflicting exact expression types: {old_type!r} vs {new_type!r}')
+
+        if isinstance(node, ast.Module):
+            body = node.body
+        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            body = node.body
+        elif isinstance(node, ast.Lambda):
+            tag_expr(node.body)
+            return changed
+        elif isinstance(node, (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)):
+            if isinstance(node, ast.DictComp):
+                tag_expr(node.key)
+                tag_expr(node.value)
+            else:
+                tag_expr(node.elt)
+            for generator in node.generators:
+                tag_expr(generator.iter)
+                tag_expr(generator.target)
+                for _if in generator.ifs:
+                    tag_expr(_if)
+            return changed
+        else:
+            return changed
+
+        for statement in body:
+            for local_node in _iter_scope_local_nodes(statement):
+                if isinstance(local_node, ast.expr):
+                    tag_expr(local_node)
+        return changed
+
+    def _infer_scope_exact_types_once(self, node: ast.AST) -> bool:
+        changed = False
+        scope_info = self.scope_infos[node]
+        changed |= self._tag_exact_type_exprs_in_scope(node, scope_info)
+        if scope_info.kind is ScopeKind.MODULE:
+            (inferred_types, inferred_lines) = _collect_inferred_exact_types(
+                node, scope_info.exact_global_types, {}, set(), scope_info.locals,
+                scope_info.explicit_globals, self.module_locals)
+            for (name, type_name) in inferred_types.items():
+                if name not in scope_info.exact_global_types:
+                    scope_info.exact_global_types[name] = type_name
+                    scope_info.exact_global_lines[name] = inferred_lines[name]
+                    changed = True
+        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            (inferred_types, inferred_lines) = _collect_inferred_exact_types(
+                node, scope_info.exact_local_types, scope_info.exact_arg_types,
+                scope_info.cell_vars, scope_info.locals, scope_info.explicit_globals, self.module_locals)
+            for (name, type_name) in inferred_types.items():
+                if name not in scope_info.exact_local_types:
+                    scope_info.exact_local_types[name] = type_name
+                    scope_info.exact_local_lines[name] = inferred_lines[name]
+                    changed = True
+        for child in _collect_child_scopes(node):
+            changed |= self._infer_scope_exact_types_once(child)
+        return changed
+
+    def _infer_scope_exact_types_to_fixed_point(self, node: ast.Module) -> None:
+        for _ in range(20):
+            if not self._infer_scope_exact_types_once(node):
+                return
+        raise AssertionError('exact type inference failed to converge')
+
     def visit_Module(self, node) -> None:
         if node in self.preserved_scope_infos:
             self.module_locals = set(self.preserved_scope_infos[node].locals)
@@ -1169,6 +1290,8 @@ class ScopeAnalyzer(ast.NodeVisitor):
             self.module_locals = writes - explicit_globals - nonlocals
         self._analyze_scope_tree(node)
         self._tag_names(node, [self.scope_infos[node]])
+        if self.enable_exact_type_inference:
+            self._infer_scope_exact_types_to_fixed_point(node)
         self._tag_load_binding_states(node, self.scope_infos[node])
 
 class Scope:
@@ -2742,11 +2865,16 @@ def parse_python_module(path: str) -> ast.Module:
         return ast.parse(f.read(), resolved_path)
 
 def analyze_and_simplify(node: ast.Module,
-                         builtin_function_return_types: Optional[dict[str, str]] = None) -> tuple[ast.Module, dict[ast.AST, ScopeInfo]]:
-    initial_analyzer = ScopeAnalyzer(builtin_function_return_types=builtin_function_return_types)
+                         builtin_function_return_types: Optional[dict[str, str]] = None,
+                         builtin_method_return_types: Optional[dict[str, dict[str, str]]] = None) -> tuple[ast.Module, dict[ast.AST, ScopeInfo]]:
+    initial_analyzer = ScopeAnalyzer(
+        builtin_function_return_types=builtin_function_return_types,
+        builtin_method_return_types=builtin_method_return_types,
+        enable_exact_type_inference=False,
+    )
     initial_analyzer.visit(node)
     node = cast(ast.Module, simplify_ast(node))
-    analyzer = ScopeAnalyzer(initial_analyzer.scope_infos, builtin_function_return_types)
+    analyzer = ScopeAnalyzer(initial_analyzer.scope_infos, builtin_function_return_types, builtin_method_return_types)
     analyzer.visit(node)
     return (node, analyzer.scope_infos)
 
@@ -2905,7 +3033,7 @@ def translate_python_impl_node(node: ast.Module, func: ast.FunctionDef, emitted_
                                builtin_method_return_types: Optional[dict[str, dict[str, str]]] = None,
                                python_helper_return_java_types: Optional[dict[str, str]] = None) -> tuple[list[ir.ClassDecl], ir.MethodDecl]:
     if scope_infos is None:
-        (node, scope_infos) = analyze_and_simplify(node, builtin_function_return_types)
+        (node, scope_infos) = analyze_and_simplify(node, builtin_function_return_types, builtin_method_return_types)
     visitor = LoweringVisitor(
         display_name,
         scope_infos,
@@ -3270,12 +3398,12 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
     pythonj_builtins_node = parse_python_module('pythonj_builtins.py')
     pythonj_runtime_node = parse_python_module('pythonj_runtime.py')
     pythonj_builtins_return_types = collect_top_level_exact_return_types(pythonj_builtins_node)
-    (pythonj_builtins_node, builtins_scope_infos) = analyze_and_simplify(
-        pythonj_builtins_node, pythonj_builtins_return_types)
-    (pythonj_runtime_node, runtime_scope_infos) = analyze_and_simplify(
-        pythonj_runtime_node, pythonj_builtins_return_types)
-    pythonj_builtins_funcs = get_top_level_functions(pythonj_builtins_node)
     pythonj_builtins_method_return_types = collect_builtin_method_exact_return_types(pythonj_builtins_node)
+    (pythonj_builtins_node, builtins_scope_infos) = analyze_and_simplify(
+        pythonj_builtins_node, pythonj_builtins_return_types, pythonj_builtins_method_return_types)
+    (pythonj_runtime_node, runtime_scope_infos) = analyze_and_simplify(
+        pythonj_runtime_node, pythonj_builtins_return_types, pythonj_builtins_method_return_types)
+    pythonj_builtins_funcs = get_top_level_functions(pythonj_builtins_node)
     pythonj_builtins_method_return_java_types = collect_builtin_method_return_java_types(pythonj_builtins_node)
     pythonj_builtins_classes = {
         class_name: {x.name: x for x in class_node.body if isinstance(x, ast.FunctionDef)}
@@ -3714,9 +3842,11 @@ def translate_python_source_to_java(spec_path: str, py_source: str, source_name:
     load_runtime_spec(spec_path)
     pythonj_builtins_node = parse_python_module('pythonj_builtins.py')
     builtin_function_return_types = collect_top_level_exact_return_types(pythonj_builtins_node)
-    (node, scope_infos) = analyze_and_simplify(ast.parse(py_source, filename=source_name), builtin_function_return_types)
-    (pythonj_builtins_node, _) = analyze_and_simplify(pythonj_builtins_node, builtin_function_return_types)
     builtin_method_return_types = collect_builtin_method_exact_return_types(pythonj_builtins_node)
+    (node, scope_infos) = analyze_and_simplify(
+        ast.parse(py_source, filename=source_name), builtin_function_return_types, builtin_method_return_types)
+    (pythonj_builtins_node, _) = analyze_and_simplify(
+        pythonj_builtins_node, builtin_function_return_types, builtin_method_return_types)
     visitor = LoweringVisitor(
         source_name,
         scope_infos,
