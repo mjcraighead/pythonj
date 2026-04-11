@@ -230,6 +230,14 @@ def collect_builtin_method_return_java_types(node: ast.Module) -> dict[tuple[str
     return ret
 
 class AstSimplifier(ast.NodeTransformer):
+    def _constant_numeric_value(self, node: ast.expr) -> Optional[object]:
+        if not isinstance(node, ast.Constant):
+            return None
+        value = node.value
+        if type(value) not in {int, float}:
+            return None
+        return value
+
     def _constant_truth_value(self, node: ast.expr) -> Optional[bool]:
         if not isinstance(node, ast.Constant):
             return None
@@ -240,45 +248,54 @@ class AstSimplifier(ast.NodeTransformer):
 
     def visit_UnaryOp(self, node):
         node = cast(ast.UnaryOp, self.generic_visit(node))
-        if not isinstance(node.operand, ast.Constant):
+        value = self._constant_numeric_value(node.operand)
+        if value is None:
             return node
-        value = node.operand.value
-        match node.op:
-            case ast.UAdd() if isinstance(value, (int, float)):
-                return ast.copy_location(ast.Constant(+value), node)
-            case ast.USub() if isinstance(value, (int, float)):
-                return ast.copy_location(ast.Constant(-value), node)
+        match (node.op, value):
+            case (ast.Invert(), int()):
+                folded = ~value
+            case (ast.UAdd(), int() | float()):
+                folded = +value
+            case (ast.USub(), int() | float()):
+                folded = -value
             case _:
                 return node
+        return ast.copy_location(ast.Constant(folded), node)
 
     def visit_BinOp(self, node):
         node = cast(ast.BinOp, self.generic_visit(node))
-        if not (isinstance(node.left, ast.Constant) and isinstance(node.right, ast.Constant)):
+        lhs = self._constant_numeric_value(node.left)
+        rhs = self._constant_numeric_value(node.right)
+        if lhs is None or rhs is None:
             return node
-        lhs = node.left.value
-        rhs = node.right.value
-        if not (isinstance(lhs, int) and isinstance(rhs, int)):
-            return node
-        match node.op:
-            case ast.Add():
-                value = lhs + rhs
-            case ast.BitAnd():
-                value = lhs & rhs
-            case ast.BitOr():
-                value = lhs | rhs
-            case ast.BitXor():
-                value = lhs ^ rhs
-            case ast.LShift() if rhs >= 0:
-                value = lhs << rhs
-            case ast.Mult():
-                value = lhs * rhs
-            case ast.RShift() if rhs >= 0:
-                value = lhs >> rhs
-            case ast.Sub():
-                value = lhs - rhs
+        match (node.op, lhs, rhs):
+            case (ast.Add(), int() | float(), int() | float()):
+                folded = lhs + rhs
+            case (ast.BitAnd(), int(), int()):
+                folded = lhs & rhs
+            case (ast.BitOr(), int(), int()):
+                folded = lhs | rhs
+            case (ast.BitXor(), int(), int()):
+                folded = lhs ^ rhs
+            case (ast.Div(), int() | float(), int() | float()) if rhs != 0:
+                folded = lhs / rhs
+            case (ast.FloorDiv(), int() | float(), int() | float()) if rhs != 0:
+                folded = lhs // rhs
+            case (ast.LShift(), int(), int()) if rhs >= 0:
+                folded = lhs << rhs
+            case (ast.Mod(), int() | float(), int() | float()) if rhs != 0:
+                folded = lhs % rhs
+            case (ast.Mult(), int() | float(), int() | float()):
+                folded = lhs * rhs
+            case (ast.Pow(), int(), int()):
+                folded = lhs ** rhs
+            case (ast.RShift(), int(), int()) if rhs >= 0:
+                folded = lhs >> rhs
+            case (ast.Sub(), int() | float(), int() | float()):
+                folded = lhs - rhs
             case _:
                 return node
-        return ast.copy_location(ast.Constant(value), node)
+        return ast.copy_location(ast.Constant(folded), node)
 
     def visit_If(self, node):
         node = cast(ast.If, self.generic_visit(node))
