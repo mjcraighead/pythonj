@@ -32,7 +32,9 @@ STATIC_METHOD_RETURN_TYPES = {
     ('PyInt', 'sub'): 'PyInt',
     ('PyInt', 'trueDiv'): 'PyFloat',
     ('PyInt', 'xor'): 'PyInt',
+    ('Runtime', 'pythonjHash'): 'PyInt',
     ('Runtime', 'pythonjIsInstance'): 'PyBool',
+    ('Runtime', 'pythonjLen'): 'PyInt',
 }
 
 def _int_name(i: int) -> str:
