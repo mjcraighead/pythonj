@@ -28,7 +28,7 @@ def bin(arg) -> str:
 
 def delattr(obj, name) -> None:
     if not __pythonj_isinstance__(name, str):
-        raise TypeError(f'attribute name must be string, not {type(name).__name__!r}')
+        raise TypeError(f'attribute name must be string, not {__pythonj_typename__(type(name))!r}')
     __pythonj_delattr__(obj, name)
     return None
 
@@ -37,12 +37,12 @@ def divmod(a, b) -> tuple:
 
 def format(value, format_spec) -> str:
     if not __pythonj_isinstance__(format_spec, str):
-        raise TypeError('format() argument 2 must be str, not ' + type(format_spec).__name__)
+        raise TypeError(f'format() argument 2 must be str, not {__pythonj_typename__(type(format_spec))}')
     return __pythonj_format__(value, format_spec)
 
 def getattr(obj, name, default):
     if not __pythonj_isinstance__(name, str):
-        raise TypeError(f'attribute name must be string, not {type(name).__name__!r}')
+        raise TypeError(f'attribute name must be string, not {__pythonj_typename__(type(name))!r}')
     try:
         return __pythonj_getattr__(obj, name)
     except AttributeError as e:
@@ -98,7 +98,7 @@ def repr(arg) -> str:
 
 def setattr(obj, name, value) -> None:
     if not __pythonj_isinstance__(name, str):
-        raise TypeError(f'attribute name must be string, not {type(name).__name__!r}')
+        raise TypeError(f'attribute name must be string, not {__pythonj_typename__(type(name))!r}')
     __pythonj_setattr__(obj, name, value)
     return None
 
@@ -187,7 +187,7 @@ class bytes:
                     ret += 1
             return ret
         if not __pythonj_isinstance__(sub, (bytes, bytearray)):
-            raise TypeError(f'argument should be integer or bytes-like object, not {type(sub).__name__!r}')
+            raise TypeError(f'argument should be integer or bytes-like object, not {__pythonj_typename__(type(sub))!r}')
         sub_len = len(sub)
         if sub_len == 0:
             return end - start + 1
@@ -209,7 +209,7 @@ class bytes:
                     return True
             return False
         if not __pythonj_isinstance__(suffix, (bytes, bytearray)):
-            raise TypeError('endswith first arg must be bytes or a tuple of bytes, not ' + type(suffix).__name__)
+            raise TypeError(f'endswith first arg must be bytes or a tuple of bytes, not {__pythonj_typename__(type(suffix))}')
         if len(suffix) == 0 and start is not None and start > len(self):
             return False
         indices = slice(start, end).indices(len(self))
@@ -232,7 +232,7 @@ class bytes:
                     return i
             return -1
         if not __pythonj_isinstance__(sub, (bytes, bytearray)):
-            raise TypeError(f'argument should be integer or bytes-like object, not {type(sub).__name__!r}')
+            raise TypeError(f'argument should be integer or bytes-like object, not {__pythonj_typename__(type(sub))!r}')
         sub_len = len(sub)
         if sub_len == 0:
             return start
@@ -246,7 +246,7 @@ class bytes:
         is_str = __pythonj_isinstance__(string, str)
         is_bytes_like = __pythonj_isinstance__(string, (bytes, bytearray))
         if not (is_str or is_bytes_like):
-            raise TypeError('fromhex() argument must be str or bytes-like, not ' + type(string).__name__)
+            raise TypeError(f'fromhex() argument must be str or bytes-like, not {__pythonj_typename__(type(string))}')
         ret = __pythonj_bytes_builder__(len(string) // 2)
         i = 0
         n = len(string)
@@ -345,7 +345,7 @@ class bytes:
             elif __pythonj_isinstance__(item, bytearray):
                 __pythonj_bytes_builder_append_bytearray__(ret, item)
             else:
-                raise TypeError(f'sequence item {i}: expected a bytes-like object, {type(item).__name__} found')
+                raise TypeError(f'sequence item {i}: expected a bytes-like object, {__pythonj_typename__(type(item))} found')
             i += 1
         return __pythonj_bytes_builder_finish__(ret)
 
@@ -438,7 +438,7 @@ class bytes:
         elif __pythonj_isinstance__(bytes_arg, (bytes, bytearray)):
             strip_set = bytes_arg
         else:
-            raise TypeError(f'a bytes-like object is required, not {type(bytes_arg).__name__!r}')
+            raise TypeError(f'a bytes-like object is required, not {__pythonj_typename__(type(bytes_arg))!r}')
         i: int = 0
         n: int = len(self)
         while i < n and self[i] in strip_set:
@@ -447,7 +447,7 @@ class bytes:
 
     def partition(self: bytes, sep) -> tuple:
         if not __pythonj_isinstance__(sep, (bytes, bytearray)):
-            raise TypeError(f'a bytes-like object is required, not {type(sep).__name__!r}')
+            raise TypeError(f'a bytes-like object is required, not {__pythonj_typename__(type(sep))!r}')
         if len(sep) == 0:
             raise ValueError('empty separator')
         i = self.find(sep)
@@ -477,7 +477,7 @@ class bytes:
                     return i
             return -1
         if not __pythonj_isinstance__(sub, (bytes, bytearray)):
-            raise TypeError(f'argument should be integer or bytes-like object, not {type(sub).__name__!r}')
+            raise TypeError(f'argument should be integer or bytes-like object, not {__pythonj_typename__(type(sub))!r}')
         sub_len = len(sub)
         if sub_len == 0:
             return end
@@ -495,7 +495,7 @@ class bytes:
 
     def rpartition(self: bytes, sep) -> tuple:
         if not __pythonj_isinstance__(sep, (bytes, bytearray)):
-            raise TypeError(f'a bytes-like object is required, not {type(sep).__name__!r}')
+            raise TypeError(f'a bytes-like object is required, not {__pythonj_typename__(type(sep))!r}')
         if len(sep) == 0:
             raise ValueError('empty separator')
         i = self.rfind(sep, None, None)
@@ -509,7 +509,7 @@ class bytes:
         elif __pythonj_isinstance__(bytes_arg, (bytes, bytearray)):
             strip_set = bytes_arg
         else:
-            raise TypeError(f'a bytes-like object is required, not {type(bytes_arg).__name__!r}')
+            raise TypeError(f'a bytes-like object is required, not {__pythonj_typename__(type(bytes_arg))!r}')
         i: int = len(self)
         while i > 0 and self[i - 1] in strip_set:
             i -= 1
@@ -522,7 +522,7 @@ class bytes:
                     return True
             return False
         if not __pythonj_isinstance__(prefix, (bytes, bytearray)):
-            raise TypeError('startswith first arg must be bytes or a tuple of bytes, not ' + type(prefix).__name__)
+            raise TypeError(f'startswith first arg must be bytes or a tuple of bytes, not {__pythonj_typename__(type(prefix))}')
         if len(prefix) == 0 and start is not None and start > len(self):
             return False
         indices = slice(start, end).indices(len(self))
@@ -622,21 +622,21 @@ class str:
             if i != 0:
                 __pythonj_str_builder_append__(ret, self)
             if not __pythonj_isinstance__(item, str):
-                raise TypeError(f'sequence item {i}: expected str instance, {type(item).__name__} found')
+                raise TypeError(f'sequence item {i}: expected str instance, {__pythonj_typename__(type(item))} found')
             __pythonj_str_builder_append__(ret, item)
             i += 1
         return __pythonj_str_builder_finish__(ret)
 
     def removeprefix(self: str, prefix) -> str:
         if not __pythonj_isinstance__(prefix, str):
-            raise TypeError("removeprefix() argument must be str, not " + type(prefix).__name__)
+            raise TypeError(f'removeprefix() argument must be str, not {__pythonj_typename__(type(prefix))}')
         if self.startswith(prefix):
             return self[len(prefix):]
         return self
 
     def removesuffix(self: str, suffix) -> str:
         if not __pythonj_isinstance__(suffix, str):
-            raise TypeError("removesuffix() argument must be str, not " + type(suffix).__name__)
+            raise TypeError(f'removesuffix() argument must be str, not {__pythonj_typename__(type(suffix))}')
         if suffix and self.endswith(suffix):
             return self[:-len(suffix)]
         return self

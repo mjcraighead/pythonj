@@ -50,6 +50,7 @@ INTRINSIC_SIGNATURES = {
     '__pythonj_str_builder__': ('pythonjStrBuilder', 1, 'object'),
     '__pythonj_str_builder_append__': ('pythonjStrBuilderAppend', 2, 'void'),
     '__pythonj_str_builder_finish__': ('pythonjStrBuilderFinish', 1, 'str'),
+    '__pythonj_typename__': ('pythonjTypeName', 1, 'str'),
     '__pythonj_zip_new__': ('pythonjZipNew', 2, 'object'),
 }
 
