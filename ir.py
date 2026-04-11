@@ -32,17 +32,11 @@ STATIC_METHOD_RETURN_TYPES = {
     ('PyInt', 'subUnboxed'): 'long',
     ('PyInt', 'trueDivUnboxed'): 'double',
     ('PyInt', 'xorUnboxed'): 'long',
-    ('Runtime', 'pythonjAbs'): 'PyObject',
+    ('PyZip', 'newObjPositional'): 'PyZip',
     ('Runtime', 'pythonjBytesBuilder'): 'PyBytesBuilder',
-    ('Runtime', 'pythonjDelAttr'): 'void',
-    ('Runtime', 'pythonjDictGet'): 'PyObject',
-    ('Runtime', 'pythonjFormat'): 'PyString',
-    ('Runtime', 'pythonjGetAttr'): 'PyObject',
     ('Runtime', 'pythonjIsInstance'): 'PyBool',
     ('Runtime', 'pythonjIsSubclass'): 'PyBool',
-    ('Runtime', 'pythonjSetAttr'): 'void',
     ('Runtime', 'pythonjStrBuilder'): 'PyStringBuilder',
-    ('Runtime', 'pythonjZipNew'): 'PyZip',
 }
 
 def _int_name(i: int) -> str:
@@ -758,10 +752,12 @@ def unbox_str(expr: Expr) -> Expr:
 
 def static_method_call(class_name: str, method: str, args: list[Expr]) -> Expr:
     match (class_name, method):
-        case ('PyBool', 'create'):
-            (arg,) = args
-            if isinstance(arg, Bool):
-                return PyConstant(arg.value)
+        case ('PyBool', 'create') if isinstance(args[0], Bool):
+            return PyConstant(args[0].value)
+        case ('Runtime', 'pythonjAbs'):
+            return MethodCall(args[0], 'abs', [], 'PyObject')
+        case ('Runtime', 'pythonjBytesBuilder') if isinstance(args[0], PyConstant) and args[0].value is None:
+            return CreateObject('PyBytesBuilder', [])
         case ('Runtime', 'pythonjBytesBuilderAppendByteArray'):
             return MethodCall(
                 Field(CastExpr('PyBytesBuilder', args[0]), 'value'),
@@ -785,6 +781,14 @@ def static_method_call(class_name: str, method: str, args: list[Expr]) -> Expr:
             )
         case ('Runtime', 'pythonjBytesBuilderFinish'):
             return CreateObject('PyBytes', [MethodCall(Field(CastExpr('PyBytesBuilder', args[0]), 'value'), 'toByteArray', [], 'byte[]')])
+        case ('Runtime', 'pythonjDelAttr'):
+            return MethodCall(args[0], 'delAttr', [unbox_str(args[1])], 'void')
+        case ('Runtime', 'pythonjDictGet'):
+            return MethodCall(Field(CastExpr('PyDict', args[0]), 'items'), 'get', [args[1]], 'PyObject')
+        case ('Runtime', 'pythonjFormat'):
+            return CreateObject('PyString', [MethodCall(args[0], 'format', [unbox_str(args[1])], 'String')])
+        case ('Runtime', 'pythonjGetAttr'):
+            return MethodCall(args[0], 'getAttr', [unbox_str(args[1])], 'PyObject')
         case ('Runtime', 'pythonjHash'):
             return CreateObject('PyInt', [CastExpr('long', MethodCall(args[0], 'hashCode', [], 'int'))])
         case ('Runtime', 'pythonjHasIter'):
@@ -797,10 +801,16 @@ def static_method_call(class_name: str, method: str, args: list[Expr]) -> Expr:
             return MethodCall(args[0], 'next', [], 'PyObject')
         case ('Runtime', 'pythonjRepr'):
             return CreateObject('PyString', [MethodCall(args[0], 'repr', [], 'String')])
+        case ('Runtime', 'pythonjSetAttr'):
+            return MethodCall(args[0], 'setAttr', [unbox_str(args[1]), args[2]], 'void')
+        case ('Runtime', 'pythonjStrBuilder') if isinstance(args[0], PyConstant) and args[0].value is None:
+            return CreateObject('PyStringBuilder', [])
         case ('Runtime', 'pythonjStrBuilderAppend'):
             return MethodCall(Field(CastExpr('PyStringBuilder', args[0]), 'value'), 'append', [unbox_str(args[1])], 'void')
         case ('Runtime', 'pythonjStrBuilderFinish'):
             return CreateObject('PyString', [MethodCall(Field(CastExpr('PyStringBuilder', args[0]), 'value'), 'toString', [], 'String')])
+        case ('Runtime', 'pythonjZipNew'):
+            return static_method_call('PyZip', 'newObjPositional', [Field(args[0], 'items'), args[1]])
     return StaticMethodCall(class_name, method, args, STATIC_METHOD_RETURN_TYPES.get((class_name, method), JAVA_TYPE_UNKNOWN))
 
 def chained_binary_op(op: str, exprs: list[Expr]) -> Expr:

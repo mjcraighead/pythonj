@@ -533,9 +533,6 @@ public final class Runtime {
         sysArgv = new PyList(argv);
     }
 
-    public static PyObject pythonjAbs(PyObject obj) {
-        return obj.abs();
-    }
     public static PyBytesBuilder pythonjBytesBuilder(PyObject capacityObj) {
         if (capacityObj == PyNone.singleton) {
             return new PyBytesBuilder();
@@ -548,18 +545,6 @@ public final class Runtime {
             throw PyValueError.raise("bytes builder capacity must be >= 0");
         }
         return new PyBytesBuilder(capacity);
-    }
-    public static void pythonjDelAttr(PyObject obj, PyObject nameObj) {
-        obj.delAttr(((PyString)nameObj).value);
-    }
-    public static PyObject pythonjDictGet(PyObject obj, PyObject key) {
-        return ((PyDict)obj).items.get(key);
-    }
-    public static PyString pythonjFormat(PyObject obj, PyObject formatSpecObj) {
-        return new PyString(obj.format(((PyString)formatSpecObj).value));
-    }
-    public static PyObject pythonjGetAttr(PyObject obj, PyObject nameObj) {
-        return obj.getAttr(((PyString)nameObj).value);
     }
     public static PyBool pythonjIsInstance(PyObject obj, PyObject type) {
         if (type instanceof PyConcreteType typeClass) {
@@ -578,9 +563,6 @@ public final class Runtime {
             throw new UnsupportedOperationException(String.format("issubclass() is unimplemented for types %s and %s", obj.repr(), type.repr()));
         }
     }
-    public static void pythonjSetAttr(PyObject obj, PyObject nameObj, PyObject value) {
-        obj.setAttr(((PyString)nameObj).value, value);
-    }
     public static PyStringBuilder pythonjStrBuilder(PyObject capacityObj) {
         if (capacityObj == PyNone.singleton) {
             return new PyStringBuilder();
@@ -593,9 +575,6 @@ public final class Runtime {
             throw PyValueError.raise("str builder capacity must be >= 0");
         }
         return new PyStringBuilder(capacity);
-    }
-    public static PyZip pythonjZipNew(PyTuple args, PyObject strict) {
-        return PyZip.newObjPositional(args.items, strict);
     }
     public static PyRaise raiseExactArgs(PyObject[] args, int n, String name) {
         return PyTypeError.raiseFormat("%s expected %d argument%s, got %d", name, n, (n == 1) ? "" : "s", args.length);
