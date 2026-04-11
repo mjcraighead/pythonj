@@ -156,18 +156,18 @@ class bytes:
         for c in self:
             if 97 <= c <= 122:
                 if not seen_alpha:
-                    __pythonj_bytes_builder_append_byte__(ret, c - 32)
+                    __pythonj_bytes_builder_append_int__(ret, c - 32)
                     seen_alpha = True
                 else:
-                    __pythonj_bytes_builder_append_byte__(ret, c)
+                    __pythonj_bytes_builder_append_int__(ret, c)
             elif 65 <= c <= 90:
                 if not seen_alpha:
-                    __pythonj_bytes_builder_append_byte__(ret, c)
+                    __pythonj_bytes_builder_append_int__(ret, c)
                     seen_alpha = True
                 else:
-                    __pythonj_bytes_builder_append_byte__(ret, c + 32)
+                    __pythonj_bytes_builder_append_int__(ret, c + 32)
             else:
-                __pythonj_bytes_builder_append_byte__(ret, c)
+                __pythonj_bytes_builder_append_int__(ret, c)
         return __pythonj_bytes_builder_finish__(ret)
 
     def count(self: bytes, sub, start, end) -> int:
@@ -277,7 +277,7 @@ class bytes:
                 value += lo - 65 + 10
             else:
                 raise ValueError('non-hexadecimal number found in fromhex() arg at position ' + str(i + 1))
-            __pythonj_bytes_builder_append_byte__(ret, value)
+            __pythonj_bytes_builder_append_int__(ret, value)
             i += 2
         return __pythonj_bytes_builder_finish__(ret)
 
@@ -336,10 +336,13 @@ class bytes:
         i: int = 0
         for item in iterable:
             if i != 0:
-                __pythonj_bytes_builder_append__(ret, self)
-            if not __pythonj_isinstance__(item, (bytes, bytearray)):
+                __pythonj_bytes_builder_append_bytes__(ret, self)
+            if __pythonj_isinstance__(item, bytes):
+                __pythonj_bytes_builder_append_bytes__(ret, item)
+            elif __pythonj_isinstance__(item, bytearray):
+                __pythonj_bytes_builder_append_bytearray__(ret, item)
+            else:
                 raise TypeError(f'sequence item {i}: expected a bytes-like object, {type(item).__name__} found')
-            __pythonj_bytes_builder_append__(ret, item)
             i += 1
         return __pythonj_bytes_builder_finish__(ret)
 
@@ -420,9 +423,9 @@ class bytes:
         ret = __pythonj_bytes_builder__(__pythonj_len__(self))
         for c in self:
             if 65 <= c <= 90:
-                __pythonj_bytes_builder_append_byte__(ret, c + 32)
+                __pythonj_bytes_builder_append_int__(ret, c + 32)
             else:
-                __pythonj_bytes_builder_append_byte__(ret, c)
+                __pythonj_bytes_builder_append_int__(ret, c)
         return __pythonj_bytes_builder_finish__(ret)
 
     def lstrip(self: bytes, bytes_arg) -> bytes:
@@ -533,11 +536,11 @@ class bytes:
         ret = __pythonj_bytes_builder__(__pythonj_len__(self))
         for c in self:
             if 65 <= c <= 90:
-                __pythonj_bytes_builder_append_byte__(ret, c + 32)
+                __pythonj_bytes_builder_append_int__(ret, c + 32)
             elif 97 <= c <= 122:
-                __pythonj_bytes_builder_append_byte__(ret, c - 32)
+                __pythonj_bytes_builder_append_int__(ret, c - 32)
             else:
-                __pythonj_bytes_builder_append_byte__(ret, c)
+                __pythonj_bytes_builder_append_int__(ret, c)
         return __pythonj_bytes_builder_finish__(ret)
 
     def title(self: bytes) -> bytes:
@@ -546,18 +549,18 @@ class bytes:
         for c in self:
             if 97 <= c <= 122:
                 if in_word:
-                    __pythonj_bytes_builder_append_byte__(ret, c)
+                    __pythonj_bytes_builder_append_int__(ret, c)
                 else:
-                    __pythonj_bytes_builder_append_byte__(ret, c - 32)
+                    __pythonj_bytes_builder_append_int__(ret, c - 32)
                     in_word = True
             elif 65 <= c <= 90:
                 if in_word:
-                    __pythonj_bytes_builder_append_byte__(ret, c + 32)
+                    __pythonj_bytes_builder_append_int__(ret, c + 32)
                 else:
-                    __pythonj_bytes_builder_append_byte__(ret, c)
+                    __pythonj_bytes_builder_append_int__(ret, c)
                     in_word = True
             else:
-                __pythonj_bytes_builder_append_byte__(ret, c)
+                __pythonj_bytes_builder_append_int__(ret, c)
                 in_word = False
         return __pythonj_bytes_builder_finish__(ret)
 
@@ -565,9 +568,9 @@ class bytes:
         ret = __pythonj_bytes_builder__(__pythonj_len__(self))
         for c in self:
             if 97 <= c <= 122:
-                __pythonj_bytes_builder_append_byte__(ret, c - 32)
+                __pythonj_bytes_builder_append_int__(ret, c - 32)
             else:
-                __pythonj_bytes_builder_append_byte__(ret, c)
+                __pythonj_bytes_builder_append_int__(ret, c)
         return __pythonj_bytes_builder_finish__(ret)
 
 class dict:

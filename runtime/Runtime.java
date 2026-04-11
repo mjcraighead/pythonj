@@ -537,21 +537,6 @@ public final class Runtime {
         }
         return new PyBytesBuilder(capacity);
     }
-    public static void pythonjBytesBuilderAppend(PyObject builderObj, PyObject valueObj) {
-        byte[] buffer = requireBytesLikeBuffer(valueObj);
-        ((PyBytesBuilder)builderObj).value.writeBytes(buffer);
-    }
-    public static void pythonjBytesBuilderAppendByte(PyObject builderObj, PyObject valueObj) {
-        PyBytesBuilder builder = (PyBytesBuilder)builderObj;
-        long value = valueObj.indexValue();
-        if ((value < 0) || (value > 255)) {
-            throw PyValueError.raise("byte must be in range(0, 256)");
-        }
-        builder.value.write((int)value);
-    }
-    public static PyBytes pythonjBytesBuilderFinish(PyObject builderObj) {
-        return new PyBytes(((PyBytesBuilder)builderObj).value.toByteArray());
-    }
     public static void pythonjDelAttr(PyObject obj, PyObject nameObj) {
         obj.delAttr(((PyString)nameObj).value);
     }
@@ -599,12 +584,6 @@ public final class Runtime {
             throw PyValueError.raise("str builder capacity must be >= 0");
         }
         return new PyStringBuilder(capacity);
-    }
-    public static void pythonjStrBuilderAppend(PyObject builderObj, PyObject valueObj) {
-        ((PyStringBuilder)builderObj).value.append(((PyString)valueObj).value);
-    }
-    public static PyString pythonjStrBuilderFinish(PyObject builderObj) {
-        return new PyString(((PyStringBuilder)builderObj).value.toString());
     }
     public static PyZip pythonjZipNew(PyTuple args, PyObject strict) {
         return PyZip.newObjPositional(args.items, strict);

@@ -30,8 +30,9 @@ EXACT_INT_BINOPS = {'add', 'and', 'floorDiv', 'lshift', 'mod', 'mul', 'or', 'pow
 INTRINSIC_SIGNATURES = {
     '__pythonj_abs__': ('pythonjAbs', 1, 'object'),
     '__pythonj_bytes_builder__': ('pythonjBytesBuilder', 1, 'object'),
-    '__pythonj_bytes_builder_append__': ('pythonjBytesBuilderAppend', 2, 'void'),
-    '__pythonj_bytes_builder_append_byte__': ('pythonjBytesBuilderAppendByte', 2, 'void'),
+    '__pythonj_bytes_builder_append_bytearray__': ('pythonjBytesBuilderAppendByteArray', 2, 'void'),
+    '__pythonj_bytes_builder_append_bytes__': ('pythonjBytesBuilderAppendBytes', 2, 'void'),
+    '__pythonj_bytes_builder_append_int__': ('pythonjBytesBuilderAppendInt', 2, 'void'),
     '__pythonj_bytes_builder_finish__': ('pythonjBytesBuilderFinish', 1, 'bytes'),
     '__pythonj_delattr__': ('pythonjDelAttr', 2, 'void'),
     '__pythonj_dict_get__': ('pythonjDictGet', 2, 'object'),
