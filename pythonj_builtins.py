@@ -335,7 +335,6 @@ class bytes:
         ret = __pythonj_bytes_builder__(None)
         if not __pythonj_hasiter__(iterable):
             raise TypeError('can only join an iterable')
-        iterable = __pythonj_iter__(iterable)
         i: int = 0
         for item in iterable:
             if i != 0:
@@ -613,7 +612,6 @@ class str:
         ret = __pythonj_str_builder__(None)
         if not __pythonj_hasiter__(iterable):
             raise TypeError('can only join an iterable')
-        iterable = __pythonj_iter__(iterable)
         i: int = 0
         for item in iterable:
             if i != 0:
