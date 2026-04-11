@@ -758,7 +758,7 @@ class LoweringVisitor(ast.NodeVisitor):
             return None
         if op not in EXACT_INT_BINOPS:
             return None
-        return ir.MethodCall(ir.Identifier('PyInt'), op, [lhs_int, rhs_int])
+        return ir.MethodCall(ir.Identifier('PyInt'), op, [lhs_int, rhs_int], 'PyInt')
 
     def infer_exact_builtin_type_expr(self, node: ast.expr) -> Optional[str]:
         if isinstance(node, ast.Name) and get_name_resolution(node) is NameResolution.LOCAL:
@@ -1100,6 +1100,7 @@ class LoweringVisitor(ast.NodeVisitor):
                         ir.Identifier(java_name),
                         'newObjPositional',
                         [*([self.visit(arg) for arg in node.args]), *([ir.Null()] * (max_args - len(node.args)))],
+                        java_name,
                     )
         if self.allow_intrinsics and isinstance(node.func, ast.Name) and node.func.id in INTRINSIC_SIGNATURES:
             assert not node.keywords, (node.func.id, node.keywords)
@@ -1117,7 +1118,7 @@ class LoweringVisitor(ast.NodeVisitor):
                         if min_args <= len(node.args) <= max_args:
                             java_name = extract_spec.BUILTIN_TYPES[type_name]
                             receiver = self.visit(node.func.value)
-                            if not (isinstance(node.func.value, ast.Name) and get_name_resolution(node.func.value) is NameResolution.LOCAL):
+                            if receiver.java_type() != java_name:
                                 receiver = ir.CastExpr(java_name, receiver)
                             return ir.MethodCall(
                                 ir.Identifier(f'{java_name}Method_{node.func.attr}'),
