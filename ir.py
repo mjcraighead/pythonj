@@ -757,49 +757,50 @@ def unbox_str(expr: Expr) -> Expr:
     return Field(CastExpr('PyString', expr), 'value', 'String')
 
 def static_method_call(class_name: str, method: str, args: list[Expr]) -> Expr:
-    if class_name == 'PyBool' and method == 'create':
-        (arg,) = args
-        if isinstance(arg, Bool):
-            return PyConstant(arg.value)
-    if class_name == 'Runtime' and method == 'pythonjBytesBuilderAppendByteArray':
-        return MethodCall(
-            Field(CastExpr('PyBytesBuilder', args[0]), 'value'),
-            'writeBytes',
-            [Field(CastExpr('PyByteArray', args[1]), 'value', 'byte[]')],
-            'void',
-        )
-    if class_name == 'Runtime' and method == 'pythonjBytesBuilderAppendBytes':
-        return MethodCall(
-            Field(CastExpr('PyBytesBuilder', args[0]), 'value'),
-            'writeBytes',
-            [Field(CastExpr('PyBytes', args[1]), 'value', 'byte[]')],
-            'void',
-        )
-    if class_name == 'Runtime' and method == 'pythonjBytesBuilderAppendInt':
-        return MethodCall(
-            Field(CastExpr('PyBytesBuilder', args[0]), 'value'),
-            'write',
-            [CastExpr('int', unbox_int(args[1]))],
-            'void',
-        )
-    if class_name == 'Runtime' and method == 'pythonjBytesBuilderFinish':
-        return CreateObject('PyBytes', [MethodCall(Field(CastExpr('PyBytesBuilder', args[0]), 'value'), 'toByteArray', [], 'byte[]')])
-    if class_name == 'Runtime' and method == 'pythonjHash':
-        return CreateObject('PyInt', [CastExpr('long', MethodCall(args[0], 'hashCode', [], 'int'))])
-    if class_name == 'Runtime' and method == 'pythonjHasIter':
-        return static_method_call('PyBool', 'create', [MethodCall(args[0], 'hasIter', [], 'boolean')])
-    if class_name == 'Runtime' and method == 'pythonjIter':
-        return MethodCall(args[0], 'iter', [], 'PyIter')
-    if class_name == 'Runtime' and method == 'pythonjLen':
-        return CreateObject('PyInt', [MethodCall(args[0], 'len', [], 'long')])
-    if class_name == 'Runtime' and method == 'pythonjNext':
-        return MethodCall(args[0], 'next', [], 'PyObject')
-    if class_name == 'Runtime' and method == 'pythonjRepr':
-        return CreateObject('PyString', [MethodCall(args[0], 'repr', [], 'String')])
-    if class_name == 'Runtime' and method == 'pythonjStrBuilderAppend':
-        return MethodCall(Field(CastExpr('PyStringBuilder', args[0]), 'value'), 'append', [unbox_str(args[1])], 'void')
-    if class_name == 'Runtime' and method == 'pythonjStrBuilderFinish':
-        return CreateObject('PyString', [MethodCall(Field(CastExpr('PyStringBuilder', args[0]), 'value'), 'toString', [], 'String')])
+    match (class_name, method):
+        case ('PyBool', 'create'):
+            (arg,) = args
+            if isinstance(arg, Bool):
+                return PyConstant(arg.value)
+        case ('Runtime', 'pythonjBytesBuilderAppendByteArray'):
+            return MethodCall(
+                Field(CastExpr('PyBytesBuilder', args[0]), 'value'),
+                'writeBytes',
+                [Field(CastExpr('PyByteArray', args[1]), 'value', 'byte[]')],
+                'void',
+            )
+        case ('Runtime', 'pythonjBytesBuilderAppendBytes'):
+            return MethodCall(
+                Field(CastExpr('PyBytesBuilder', args[0]), 'value'),
+                'writeBytes',
+                [Field(CastExpr('PyBytes', args[1]), 'value', 'byte[]')],
+                'void',
+            )
+        case ('Runtime', 'pythonjBytesBuilderAppendInt'):
+            return MethodCall(
+                Field(CastExpr('PyBytesBuilder', args[0]), 'value'),
+                'write',
+                [CastExpr('int', unbox_int(args[1]))],
+                'void',
+            )
+        case ('Runtime', 'pythonjBytesBuilderFinish'):
+            return CreateObject('PyBytes', [MethodCall(Field(CastExpr('PyBytesBuilder', args[0]), 'value'), 'toByteArray', [], 'byte[]')])
+        case ('Runtime', 'pythonjHash'):
+            return CreateObject('PyInt', [CastExpr('long', MethodCall(args[0], 'hashCode', [], 'int'))])
+        case ('Runtime', 'pythonjHasIter'):
+            return static_method_call('PyBool', 'create', [MethodCall(args[0], 'hasIter', [], 'boolean')])
+        case ('Runtime', 'pythonjIter'):
+            return MethodCall(args[0], 'iter', [], 'PyIter')
+        case ('Runtime', 'pythonjLen'):
+            return CreateObject('PyInt', [MethodCall(args[0], 'len', [], 'long')])
+        case ('Runtime', 'pythonjNext'):
+            return MethodCall(args[0], 'next', [], 'PyObject')
+        case ('Runtime', 'pythonjRepr'):
+            return CreateObject('PyString', [MethodCall(args[0], 'repr', [], 'String')])
+        case ('Runtime', 'pythonjStrBuilderAppend'):
+            return MethodCall(Field(CastExpr('PyStringBuilder', args[0]), 'value'), 'append', [unbox_str(args[1])], 'void')
+        case ('Runtime', 'pythonjStrBuilderFinish'):
+            return CreateObject('PyString', [MethodCall(Field(CastExpr('PyStringBuilder', args[0]), 'value'), 'toString', [], 'String')])
     return StaticMethodCall(class_name, method, args, STATIC_METHOD_RETURN_TYPES.get((class_name, method), JAVA_TYPE_UNKNOWN))
 
 def chained_binary_op(op: str, exprs: list[Expr]) -> Expr:
