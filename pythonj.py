@@ -203,6 +203,9 @@ def collect_top_level_exact_return_types(node: ast.Module) -> dict[str, str]:
         if (type_name := _decode_user_function_return_annotation(func.returns)) is not None
     }
 
+def exact_builtin_type_to_java_type(type_name: str) -> str:
+    return extract_spec.BUILTIN_TYPES[type_name]
+
 def collect_builtin_method_exact_return_types(node: ast.Module) -> dict[str, dict[str, str]]:
     ret: dict[str, dict[str, str]] = {}
     for class_node in [x for x in node.body if isinstance(x, ast.ClassDef)]:
@@ -1776,7 +1779,7 @@ class LoweringVisitor(ast.NodeVisitor):
         call_positional_body.extend(ir.block_simplify([*body, implicit_return]))
         func_decls.append(ir.MethodDecl(
             'public',
-            'PyObject',
+            self.scope.expected_return_java_type or 'PyObject',
             'callPositional',
             [f'PyObject {name}' for name in bind_arg_names],
             call_positional_body,
@@ -2928,11 +2931,18 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                     )
                     if kind == 'classmethod':
                         bind_args = [ir.Identifier('self')] + bind_args
+                    call_positional_return_java_type = 'PyObject'
+                    if method_impl_target is not None:
+                        call_positional_return_java_type = pythonj_builtins_method_return_java_types.get(
+                            (name.rsplit('.', 1)[-1], method_name),
+                            'PyObject',
+                        )
                     if call_positional_shape is not None:
                         call_expr = ir.StaticMethodCall(
                             method_class_name,
                             'callPositional',
                             bind_args if kind == 'classmethod' else [ir.Identifier('self'), *bind_args],
+                            call_positional_return_java_type,
                         )
                     elif method_impl_target is not None:
                         call_args = bind_args if kind == 'classmethod' else [ir.Identifier('self'), *bind_args]
@@ -2966,7 +2976,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                                 call_positional_expr = ir.MethodCall(ir.Identifier(method_target), f'pymethod_{method_name}', call_positional_args)
                         decls.append(ir.MethodDecl(
                             'public static',
-                            'PyObject',
+                            call_positional_return_java_type,
                             'callPositional',
                             call_positional_method_args,
                             [*call_positional_statements, ir.ReturnStatement(call_positional_expr)],
@@ -3104,10 +3114,14 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
             )
             if func_name in PYTHON_AUTHORED_IMPLS['builtins']:
                 call_target = 'PyRuntime'
+                call_positional_return_java_type = exact_builtin_type_to_java_type(type_name) if (
+                    (type_name := pythonj_builtins_return_types.get(func_name)) is not None
+                ) else 'PyObject'
             else:
                 call_target = 'PyBuiltinFunctionsImpl'
+                call_positional_return_java_type = 'PyObject'
             if call_positional_shape is not None:
-                call_expr = ir.MethodCall(ir.This(), 'callPositional', bind_args)
+                call_expr = ir.MethodCall(ir.This(), 'callPositional', bind_args, call_positional_return_java_type)
             else:
                 call_expr = ir.StaticMethodCall(call_target, f'pyfunc_{func_name}', bind_args)
             call_body.append(ir.ReturnStatement(call_expr))
@@ -3116,13 +3130,18 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                 (call_positional_method_args, call_positional_statements, call_positional_args) = build_call_positional_ir(call_positional_shape)
                 decls.append(ir.MethodDecl(
                     'public',
-                    'PyObject',
+                    call_positional_return_java_type,
                     'callPositional',
                     call_positional_method_args,
                     [
                         *call_positional_statements,
                         ir.ReturnStatement(
-                            ir.StaticMethodCall(call_target, f'pyfunc_{func_name}', call_positional_args)
+                            ir.StaticMethodCall(
+                                call_target,
+                                f'pyfunc_{func_name}',
+                                call_positional_args,
+                                call_positional_return_java_type,
+                            )
                         ),
                     ],
                 ))
