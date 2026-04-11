@@ -208,6 +208,12 @@ def collect_top_level_exact_return_types(node: ast.Module) -> dict[str, str]:
 def exact_builtin_type_to_java_type(type_name: str) -> str:
     return extract_spec.BUILTIN_TYPES[type_name]
 
+JAVA_BUILTIN_TYPES = {
+    java_type: type_name
+    for (type_name, java_type) in extract_spec.BUILTIN_TYPES.items()
+    if type_name != 'object'
+}
+
 def collect_builtin_method_exact_return_types(node: ast.Module) -> dict[str, dict[str, str]]:
     ret: dict[str, dict[str, str]] = {}
     for class_node in [x for x in node.body if isinstance(x, ast.ClassDef)]:
@@ -1414,79 +1420,29 @@ class LoweringVisitor(ast.NodeVisitor):
                 return ir.CastExpr(extract_spec.BUILTIN_TYPES[type_name], value)
         return value
 
-    def emit_exact_type_binop(self, op: str, lhs_node: ast.expr, rhs_node: ast.expr) -> Optional[ir.Expr]:
-        lhs_type = self.infer_exact_builtin_type_expr(lhs_node)
-        rhs_type = self.infer_exact_builtin_type_expr(rhs_node)
+    def exact_builtin_type_of_expr(self, expr: ir.Expr) -> Optional[str]:
+        return JAVA_BUILTIN_TYPES.get(expr.java_type())
+
+    def emit_exact_type_binop(self, op: str, lhs: ir.Expr, rhs: ir.Expr) -> Optional[ir.Expr]:
+        lhs_type = self.exact_builtin_type_of_expr(lhs)
+        rhs_type = self.exact_builtin_type_of_expr(rhs)
         if lhs_type == 'int' and rhs_type == 'int' and op in EXACT_INT_BINOPS:
-            lhs_int = ir.unbox_int(self.visit(lhs_node))
-            rhs_int = ir.unbox_int(self.visit(rhs_node))
+            lhs_int = ir.unbox_int(lhs)
+            rhs_int = ir.unbox_int(rhs)
             if op == 'pow':
                 return ir.static_method_call('PyInt', op, [lhs_int, rhs_int])
             else:
                 assert op != 'trueDiv'
                 return ir.CreateObject('PyInt', [ir.static_method_call('PyInt', f'{op}Unboxed', [lhs_int, rhs_int])])
         elif lhs_type == 'float' and rhs_type == 'float' and op in {'add', 'mul', 'sub'}:
-            lhs_float = ir.unbox_float(self.visit(lhs_node))
-            rhs_float = ir.unbox_float(self.visit(rhs_node))
+            lhs_float = ir.unbox_float(lhs)
+            rhs_float = ir.unbox_float(rhs)
             return ir.CreateObject('PyFloat', [ir.static_method_call('PyFloat', f'{op}Unboxed', [lhs_float, rhs_float])])
         elif lhs_type == 'str' and rhs_type == 'str' and op == 'add':
-            lhs_str = ir.unbox_str(self.visit(lhs_node))
-            rhs_str = ir.unbox_str(self.visit(rhs_node))
+            lhs_str = ir.unbox_str(lhs)
+            rhs_str = ir.unbox_str(rhs)
             return ir.CreateObject('PyString', [ir.BinaryOp('+', lhs_str, rhs_str)])
         return None
-
-    def infer_exact_builtin_type_expr(self, node: ast.expr) -> Optional[str]:
-        if isinstance(node, ast.Name):
-            if get_name_resolution(node) is NameResolution.LOCAL:
-                if (type_name := self.local_exact_builtin_type(node.id)) is not None:
-                    return type_name
-            elif get_name_resolution(node) is NameResolution.GLOBAL:
-                if (type_name := self.global_exact_builtin_type(node.id)) is not None:
-                    return type_name
-                if (type_name := self.module_scope().info.initial_final_constant_types.get(node.id)) is not None:
-                    return type_name
-        if isinstance(node, ast.BinOp):
-            op = self.visit(node.op)
-            if (op in EXACT_INT_BINOPS and
-                self.infer_exact_builtin_type_expr(node.left) == 'int' and
-                self.infer_exact_builtin_type_expr(node.right) == 'int'):
-                return 'int'
-            if (op in {'add', 'mul', 'sub'} and
-                self.infer_exact_builtin_type_expr(node.left) == 'float' and
-                self.infer_exact_builtin_type_expr(node.right) == 'float'):
-                return 'float'
-        if (isinstance(node, ast.Call) and
-            isinstance(node.func, ast.Name) and
-            not node.keywords and
-            not any(isinstance(arg, ast.Starred) for arg in node.args)):
-            if self.allow_intrinsics and node.func.id in INTRINSIC_SIGNATURES:
-                (_, _, return_type) = INTRINSIC_SIGNATURES[node.func.id]
-                if return_type not in {'object', 'NoneType'}:
-                    return return_type
-            if (self.name_resolves_to_builtin_function(node.func) and
-                (type_name := self.builtin_function_return_types.get(node.func.id)) is not None):
-                return type_name
-        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
-            if self.name_resolves_to_final_top_level_function(node.func):
-                type_name = self.module_scope().info.initial_final_function_return_types.get(node.func.id)
-                if type_name is not None and not node.keywords and not any(isinstance(arg, ast.Starred) for arg in node.args):
-                    return type_name
-        if (isinstance(node, ast.Call) and
-            isinstance(node.func, ast.Name) and
-            node.func.id in DIRECT_NEWOBJ_POSITIONAL_BUILTIN_TYPES and
-            self.name_resolves_to_builtin_type(node.func) and
-            not node.keywords and
-            not any(isinstance(arg, ast.Starred) for arg in node.args)):
-            (min_args, max_args) = DIRECT_NEWOBJ_POSITIONAL_BUILTIN_TYPES[node.func.id]
-            if min_args <= len(node.args) <= max_args:
-                return node.func.id
-        if (isinstance(node, ast.Call) and
-            isinstance(node.func, ast.Attribute) and
-            not node.keywords and
-            not any(isinstance(arg, ast.Starred) for arg in node.args)):
-            if (receiver_type := self.infer_exact_builtin_type_expr(node.func.value)) is not None:
-                return self.builtin_method_return_types.get(receiver_type, {}).get(node.func.attr)
-        return infer_exact_builtin_type(node)
 
     def resolve_free_vars(self, lineno: int, scope_info: ScopeInfo, func_type: str) -> set[str]:
         free_vars = set()
@@ -1536,11 +1492,11 @@ class LoweringVisitor(ast.NodeVisitor):
     def visit_Sub(self, node): return 'sub'
     def visit_BinOp(self, node) -> ir.Expr:
         op = self.visit(node.op)
-        exact_int_expr = self.emit_exact_type_binop(op, node.left, node.right)
-        if exact_int_expr is not None:
-            return exact_int_expr
         lhs = self.visit(node.left)
         rhs = self.visit(node.right)
+        exact_int_expr = self.emit_exact_type_binop(op, lhs, rhs)
+        if exact_int_expr is not None:
+            return exact_int_expr
         return ir.MethodCall(lhs, op, [rhs])
 
     def visit_Lt(self, node): return 'lt'
@@ -1551,14 +1507,14 @@ class LoweringVisitor(ast.NodeVisitor):
         n_compares = len(node.comparators)
         assert n_compares == len(node.ops), node # should have consistent number of these
         assert n_compares >= 1, node # should always have at least one
-        exact_compare_type = self.infer_exact_builtin_type_expr(node.left)
+        lhs_expr = self.visit(node.left)
+        comparator_exprs = [self.visit(comparator) for comparator in node.comparators]
+        exact_compare_type = self.exact_builtin_type_of_expr(lhs_expr)
         if (exact_compare_type in {'int', 'float'} and
             all(isinstance(op, (ast.Lt, ast.LtE, ast.Gt, ast.GtE, ast.Eq, ast.NotEq)) for op in node.ops) and
-            all(self.infer_exact_builtin_type_expr(term) == exact_compare_type for term in node.comparators)):
-            lhs_expr = self.visit(node.left)
+            all(self.exact_builtin_type_of_expr(expr) == exact_compare_type for expr in comparator_exprs)):
             exprs: list[ir.Expr] = []
-            for (i, (op, comparator)) in enumerate(zip(node.ops, node.comparators)):
-                rhs_expr = self.visit(comparator)
+            for (i, (op, rhs_expr)) in enumerate(zip(node.ops, comparator_exprs)):
                 if i < n_compares - 1:
                     temp_name = self.scope.make_temp()
                     java_type = 'PyInt' if exact_compare_type == 'int' else 'PyFloat'
@@ -1577,10 +1533,9 @@ class LoweringVisitor(ast.NodeVisitor):
                 lhs_expr = rhs_expr
             return ir.static_method_call('PyBool', 'create', [ir.chained_binary_op('&&', exprs)])
 
-        lhs = self.visit(node.left)
+        lhs = lhs_expr
         exprs: list[ir.Expr] = []
-        for (i, (op, comparator)) in enumerate(zip(node.ops, node.comparators)):
-            rhs = self.visit(comparator)
+        for (i, (op, rhs)) in enumerate(zip(node.ops, comparator_exprs)):
             if i < n_compares - 1:
                 temp_name = self.scope.make_temp()
                 self.code.append(ir.LocalDecl('PyObject', temp_name, None))
@@ -1749,6 +1704,9 @@ class LoweringVisitor(ast.NodeVisitor):
                     self.final_top_level_function_expr(node.func.id),
                     'callPositional',
                     [*([self.visit(arg) for arg in node.args]), *([ir.Null()] * (max_args - len(node.args)))],
+                    exact_builtin_type_to_java_type(type_name) if (
+                        (type_name := self.module_scope().info.initial_final_function_return_types.get(node.func.id)) is not None
+                    ) else ir.JAVA_TYPE_UNKNOWN,
                 )
         if (isinstance(node.func, ast.Name) and
             not node.keywords and
@@ -1773,10 +1731,12 @@ class LoweringVisitor(ast.NodeVisitor):
         if self.allow_intrinsics and isinstance(node.func, ast.Name) and node.func.id in INTRINSIC_SIGNATURES:
             assert not node.keywords, (node.func.id, node.keywords)
             return self.emit_intrinsic_call(node.func.id, node.args)
+        func: Optional[ir.Expr] = None
         if (isinstance(node.func, ast.Attribute) and
             not node.keywords and
             not any(isinstance(arg, ast.Starred) for arg in node.args)):
-            type_name = self.infer_exact_builtin_type_expr(node.func.value)
+            receiver = self.visit(node.func.value)
+            type_name = self.exact_builtin_type_of_expr(receiver)
             if type_name is not None and RUNTIME_SPEC is not None:
                 attr_kind = DIRECT_GETATTR_BUILTIN_TYPE_ATTRS.get(type_name, {}).get(node.func.attr)
                 if attr_kind == 'method':
@@ -1785,15 +1745,22 @@ class LoweringVisitor(ast.NodeVisitor):
                         (min_args, max_args) = call_range
                         if min_args <= len(node.args) <= max_args:
                             java_name = extract_spec.BUILTIN_TYPES[type_name]
-                            receiver = self.visit(node.func.value)
                             if receiver.java_type() != java_name:
                                 receiver = ir.CastExpr(java_name, receiver)
+                            return_type = (
+                                exact_builtin_type_to_java_type(method_return_type)
+                                if (method_return_type := self.builtin_method_return_types.get(type_name, {}).get(node.func.attr)) is not None
+                                else ir.JAVA_TYPE_UNKNOWN
+                            )
                             return ir.MethodCall(
                                 ir.Identifier(f'{java_name}Method_{node.func.attr}'),
                                 'callPositional',
                                 [receiver, *([self.visit(arg) for arg in node.args]), *([ir.Null()] * (max_args - len(node.args)))],
+                                return_type,
                             )
-        func = self.visit(node.func)
+            func = self.emit_attribute(receiver, node.func.attr)
+        if func is None:
+            func = self.visit(node.func)
         if (isinstance(func, ir.PyBuiltinFunction) and
             func.name in DIRECT_CALL_POSITIONAL_BUILTINS and
             not node.keywords and
@@ -1807,6 +1774,9 @@ class LoweringVisitor(ast.NodeVisitor):
                     func,
                     'callPositional',
                     [*([self.visit(arg) for arg in node.args]), *([ir.Null()] * (max_args - len(node.args)))],
+                    exact_builtin_type_to_java_type(type_name) if (
+                        (type_name := self.builtin_function_return_types.get(func.name)) is not None
+                    ) else ir.JAVA_TYPE_UNKNOWN,
                 )
         if (isinstance(func, ir.PyBuiltinFunction) and
             '.' in func.name and
@@ -1871,23 +1841,25 @@ class LoweringVisitor(ast.NodeVisitor):
     def visit_Subscript(self, node) -> ir.Expr:
         return ir.MethodCall(self.visit(node.value), 'getItem', [self.visit(node.slice)])
 
-    def visit_Attribute(self, node) -> ir.Expr:
-        value = self.visit(node.value)
+    def emit_attribute(self, value: ir.Expr, attr: str) -> ir.Expr:
         if isinstance(value, ir.PyBuiltinModule):
-            attr_kind = DIRECT_GETATTR_BUILTIN_MODULE_ATTRS.get(value.name, {}).get(node.attr)
+            attr_kind = DIRECT_GETATTR_BUILTIN_MODULE_ATTRS.get(value.name, {}).get(attr)
             if attr_kind is not None:
-                return get_builtin_module_attr_expr(value.name, node.attr, attr_kind)
-            return ir.MethodCall(value, 'getAttr', [ir.StrLiteral(node.attr)])
+                return get_builtin_module_attr_expr(value.name, attr, attr_kind)
+            return ir.MethodCall(value, 'getAttr', [ir.StrLiteral(attr)])
         if isinstance(value, ir.PyBuiltinType):
-            attr_kind = DIRECT_GETATTR_BUILTIN_TYPE_ATTRS.get(value.name, {}).get(node.attr)
+            attr_kind = DIRECT_GETATTR_BUILTIN_TYPE_ATTRS.get(value.name, {}).get(attr)
             if attr_kind is not None:
-                return get_builtin_type_attr_expr(value.name, node.attr, attr_kind, None)
-        type_name = self.infer_exact_builtin_type_expr(node.value)
+                return get_builtin_type_attr_expr(value.name, attr, attr_kind, None)
+        type_name = self.exact_builtin_type_of_expr(value)
         if type_name is not None:
-            attr_kind = DIRECT_GETATTR_BUILTIN_TYPE_ATTRS.get(type_name, {}).get(node.attr)
+            attr_kind = DIRECT_GETATTR_BUILTIN_TYPE_ATTRS.get(type_name, {}).get(attr)
             if attr_kind is not None:
-                return get_builtin_type_attr_expr(type_name, node.attr, attr_kind, value)
-        return ir.MethodCall(value, 'getAttr', [ir.StrLiteral(node.attr)])
+                return get_builtin_type_attr_expr(type_name, attr, attr_kind, value)
+        return ir.MethodCall(value, 'getAttr', [ir.StrLiteral(attr)])
+
+    def visit_Attribute(self, node) -> ir.Expr:
+        return self.emit_attribute(self.visit(node.value), node.attr)
 
     def visit_Import(self, node) -> None:
         for alias in node.names:
@@ -1967,13 +1939,14 @@ class LoweringVisitor(ast.NodeVisitor):
         op = f'{base_op}InPlace'
 
         if isinstance(node.target, ast.Name):
-            exact_int_expr = self.emit_exact_type_binop(base_op, node.target, node.value)
-            if exact_int_expr is not None:
-                value = exact_int_expr
+            binding_state = get_name_binding_state(node.target) if hasattr(node.target, BINDING_STATE_ATTR) else None
+            lhs = self.load_expr(node.target.id, get_name_resolution(node.target), binding_state)
+            rhs = self.visit(node.value)
+            exact_expr = self.emit_exact_type_binop(base_op, lhs, rhs)
+            if exact_expr is not None:
+                value = exact_expr
             else:
-                binding_state = get_name_binding_state(node.target) if hasattr(node.target, BINDING_STATE_ATTR) else None
-                lhs = self.load_expr(node.target.id, get_name_resolution(node.target), binding_state)
-                value = ir.MethodCall(lhs, op, [self.visit(node.value)])
+                value = ir.MethodCall(lhs, op, [rhs])
             resolution = get_name_resolution(node.target)
             value = self.cast_assignment(node.target.id, resolution, value)
             code = ir.AssignStatement(self.ident_expr_by_resolution(node.target.id, resolution), value)
@@ -2835,23 +2808,6 @@ def get_builtin_type_attr_expr(type_name: str, attr_name: str, attr_kind: str, r
     if attr_kind == 'string':
         return attr_expr
     return ir.MethodCall(attr_expr, 'get', [receiver])
-
-def infer_exact_builtin_type(node: ast.expr) -> Optional[str]:
-    if isinstance(node, ast.Constant):
-        type_name = type(node.value).__name__
-    elif isinstance(node, (ast.List, ast.ListComp)):
-        type_name = 'list'
-    elif isinstance(node, ast.Tuple):
-        type_name = 'tuple'
-    elif isinstance(node, (ast.Set, ast.SetComp)):
-        type_name = 'set'
-    elif isinstance(node, (ast.Dict, ast.DictComp)):
-        type_name = 'dict'
-    elif isinstance(node, ast.JoinedStr):
-        type_name = 'str'
-    else:
-        return None
-    return type_name if type_name in extract_spec.BUILTIN_TYPES else None
 
 SUPPORTED_HELPER_RETURN_TYPES = {'bool', 'bytes', 'dict', 'float', 'int', 'list', 'str', 'tuple'}
 
