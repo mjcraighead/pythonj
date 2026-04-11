@@ -79,10 +79,6 @@ final class PyAssertionError extends PyException {
     PyAssertionError(PyObject... _args) { super(_args); }
     @Override public PyConcreteType type() { return PyAssertionErrorType.singleton; }
 
-    static PyRaise raise(String msg) {
-        return new PyRaise(new PyAssertionError(new PyString(msg)));
-    }
-
     public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, type.name());
         return new PyAssertionError(args);

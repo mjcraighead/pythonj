@@ -893,6 +893,19 @@ class LoweringVisitor(ast.NodeVisitor):
             return get_name_binding_state(node) is NameBindingState.DEFINITELY_UNBOUND
         return node.id not in self.module_scope().info.locals
 
+    def name_resolves_to_builtin_exception_type(self, node: ast.Name) -> bool:
+        if node.id not in extract_spec.EXCEPTION_TYPES:
+            return False
+        if get_name_resolution(node) is not NameResolution.GLOBAL:
+            return False
+        if node.id in self.module_scope().info.locals:
+            return False
+        if self.allow_intrinsics:
+            return True
+        if hasattr(node, BINDING_STATE_ATTR):
+            return get_name_binding_state(node) is NameBindingState.DEFINITELY_UNBOUND
+        return True
+
     def name_resolves_to_final_top_level_function(self, node: ast.Name) -> bool:
         if node.id not in self.module_scope().info.initial_final_function_call_ranges:
             return False
@@ -1236,6 +1249,8 @@ class LoweringVisitor(ast.NodeVisitor):
         return ir.CreateObject('PyDict', [ir.Null() if x is None else self.visit(x) for x in kv_iter])
 
     def visit_Call(self, node) -> ir.Expr:
+        if (exception := self.emit_builtin_exception_call(node)) is not None:
+            return exception
         if (isinstance(node.func, ast.Lambda) and
             not node.keywords and
             not any(isinstance(arg, ast.Starred) for arg in node.args)):
@@ -1355,6 +1370,19 @@ class LoweringVisitor(ast.NodeVisitor):
         else:
             kwargs = ir.Null()
         return ir.MethodCall(func, 'call', [args, kwargs])
+
+    def emit_builtin_exception_call(self, node: ast.Call) -> Optional[ir.Expr]:
+        if not (
+            isinstance(node.func, ast.Name) and
+            self.name_resolves_to_builtin_exception_type(node.func) and
+            not node.keywords and
+            not any(isinstance(arg, ast.Starred) for arg in node.args)
+        ):
+            return None
+        args = [self.visit(arg) for arg in node.args]
+        if node.func.id in {'BaseException', 'Exception'}:
+            args = [ir.CreateArray('PyObject', args)]
+        return ir.CreateObject(f'Py{node.func.id}', args)
 
     def visit_Name(self, node) -> ir.Expr:
         return self.ident_expr_by_resolution(node.id, get_name_resolution(node))
@@ -1529,7 +1557,7 @@ class LoweringVisitor(ast.NodeVisitor):
         if node.msg:
             msg.s += ': '
             msg = ir.BinaryOp('+', msg, ir.MethodCall(self.visit(node.msg), 'repr', []))
-        exception = ir.StaticMethodCall('PyAssertionError', 'raise', [msg])
+        exception = ir.CreateObject('PyRaise', [ir.CreateObject('PyAssertionError', [ir.CreateObject('PyString', [msg])])])
         self.code.extend(ir.if_statement(cond, [ir.ThrowStatement(exception)], []))
 
     def visit_Delete(self, node) -> None:
@@ -1560,6 +1588,9 @@ class LoweringVisitor(ast.NodeVisitor):
             self.error(node.lineno, "'raise ... from ...' is unsupported")
             self.visit(node.exc)
             self.visit(node.cause)
+            return
+        if isinstance(node.exc, ast.Call) and (exception := self.emit_builtin_exception_call(node.exc)) is not None:
+            self.code.append(ir.ThrowStatement(ir.CreateObject('PyRaise', [exception])))
             return
         self.code.append(ir.ThrowStatement(ir.StaticMethodCall('Runtime', 'raiseExpr', [self.visit(node.exc)])))
 
