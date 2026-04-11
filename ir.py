@@ -32,6 +32,7 @@ STATIC_METHOD_RETURN_TYPES = {
     ('PyInt', 'subUnboxed'): 'long',
     ('PyInt', 'trueDivUnboxed'): 'double',
     ('PyInt', 'xorUnboxed'): 'long',
+    ('PyType', 'newObjPositional'): 'PyType',
     ('PyZip', 'newObjPositional'): 'PyZip',
     ('Runtime', 'pythonjIsInstance'): 'PyBool',
     ('Runtime', 'pythonjIsSubclass'): 'PyBool',
@@ -766,6 +767,8 @@ def static_method_call(class_name: str, method: str, args: list[Expr]) -> Expr:
     match (class_name, method):
         case ('PyBool', 'create') if isinstance(args[0], Bool):
             return PyConstant(args[0].value)
+        case ('PyType', 'newObjPositional') if isinstance(args[1], Null) and isinstance(args[2], Null):
+            return MethodCall(args[0], 'type', [], 'PyType')
         case ('Runtime', 'pythonjAbs'):
             return MethodCall(args[0], 'abs', [], 'PyObject')
         case ('Runtime', 'pythonjBytesBuilder'):
