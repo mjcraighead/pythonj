@@ -16,7 +16,7 @@ REAL_SPAN: float = IMAG_SPAN * WIDTH / HEIGHT * CHAR_ASPECT
 def main():
     y: int
     for y in range(HEIGHT):
-        line: list = []
+        line = []
         x: int
         for x in range(WIDTH):
             total_i: int = 0
