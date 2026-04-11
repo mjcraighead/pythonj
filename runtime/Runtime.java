@@ -626,7 +626,7 @@ public final class Runtime {
     public static PyString pythonjStrBuilderFinish(PyObject builderObj) {
         return new PyString(((PyStringBuilder)builderObj).value.toString());
     }
-    public static PyObject pythonjZipNew(PyTuple args, PyObject strict) {
+    public static PyZip pythonjZipNew(PyTuple args, PyObject strict) {
         return PyZip.newObjPositional(args.items, strict);
     }
     public static PyRaise raiseExactArgs(PyObject[] args, int n, String name) {

@@ -52,7 +52,7 @@ STATIC_METHOD_RETURN_TYPES = {
     ('Runtime', 'pythonjStrBuilder'): 'PyStringBuilder',
     ('Runtime', 'pythonjStrBuilderAppend'): 'PyNone',
     ('Runtime', 'pythonjStrBuilderFinish'): 'PyString',
-    ('Runtime', 'pythonjZipNew'): 'PyObject',
+    ('Runtime', 'pythonjZipNew'): 'PyZip',
 }
 
 def _int_name(i: int) -> str:
