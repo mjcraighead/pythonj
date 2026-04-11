@@ -679,49 +679,6 @@ EXACT_BUILTIN_CONSTRUCTOR_TYPES = {
     'zip',
 }
 
-def _count_scope_writes(node: ast.AST) -> dict[str, int]:
-    if isinstance(node, ast.Module):
-        body = node.body
-    elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
-        body = node.body
-    else:
-        return {}
-    ret: dict[str, int] = {}
-    if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-        for name in _param_names(node.args):
-            ret[name] = ret.get(name, 0) + 1
-    for statement in body:
-        for local_node in _iter_scope_local_nodes(statement):
-            if isinstance(local_node, ast.Name) and isinstance(local_node.ctx, (ast.Store, ast.Del)):
-                ret[local_node.id] = ret.get(local_node.id, 0) + 1
-            elif isinstance(local_node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
-                ret[local_node.name] = ret.get(local_node.name, 0) + 1
-            elif isinstance(local_node, ast.ExceptHandler) and local_node.name is not None:
-                ret[local_node.name] = ret.get(local_node.name, 0) + 1
-            elif isinstance(local_node, (ast.Import, ast.ImportFrom)):
-                for alias in local_node.names:
-                    name = alias.asname if alias.asname is not None else alias.name
-                    ret[name] = ret.get(name, 0) + 1
-    return ret
-
-def _iter_simple_assignments(node: ast.AST) -> Iterator[tuple[str, ast.expr, int]]:
-    if isinstance(node, ast.Module):
-        body = node.body
-    elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
-        body = node.body
-    else:
-        return
-    for statement in body:
-        for local_node in _iter_scope_local_nodes(statement):
-            if (isinstance(local_node, ast.Assign) and
-                len(local_node.targets) == 1 and
-                isinstance(local_node.targets[0], ast.Name)):
-                yield (local_node.targets[0].id, local_node.value, local_node.lineno)
-            elif (isinstance(local_node, ast.AnnAssign) and
-                  isinstance(local_node.target, ast.Name) and
-                  local_node.value is not None):
-                yield (local_node.target.id, local_node.value, local_node.lineno)
-
 def _infer_obvious_exact_builtin_type_expr(node: ast.expr,
                                            available_builtin_function_return_types: dict[str, str],
                                            available_builtin_constructor_names: set[str]) -> Optional[str]:
@@ -785,36 +742,6 @@ def _infer_obvious_exact_builtin_type_expr(node: ast.expr,
         not any(isinstance(arg, ast.Starred) for arg in node.args)):
         return INTRINSIC_RETURN_EXACT_TYPES[node.func.id]
     return None
-
-def _collect_inferred_exact_types(node: ast.AST, explicit_types: dict[str, str], exact_arg_types: dict[str, str],
-                                  cell_vars: set[str], locals: set[str], explicit_globals: set[str],
-                                  module_locals: set[str]) -> tuple[dict[str, str], dict[str, int]]:
-    if not isinstance(node, (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
-        return ({}, {})
-    write_counts = _count_scope_writes(node)
-    ret: dict[str, str] = {}
-    lines: dict[str, int] = {}
-    assignments_by_name: dict[str, list[tuple[ast.expr, int]]] = {}
-    for (name, value, lineno) in _iter_simple_assignments(node):
-        assignments_by_name.setdefault(name, []).append((value, lineno))
-    for (name, assignments) in assignments_by_name.items():
-        if name in explicit_types or name in exact_arg_types or name in cell_vars:
-            continue
-        if write_counts.get(name) != len(assignments):
-            continue
-        inferred_types = [
-            get_expr_exact_builtin_type(value)
-            for (value, _) in assignments
-        ]
-        if any(type_name is None for type_name in inferred_types):
-            continue
-        type_names = {type_name for type_name in inferred_types if type_name is not None}
-        if len(type_names) != 1:
-            continue
-        (type_name,) = type_names
-        ret[name] = type_name
-        lines[name] = assignments[0][1]
-    return (ret, lines)
 
 class ScopeAnalyzer(ast.NodeVisitor):
     __slots__ = ('scope_infos', 'preserved_scope_infos', 'module_locals', 'builtin_function_return_types',
@@ -1153,6 +1080,52 @@ class ScopeAnalyzer(ast.NodeVisitor):
             if name not in unavailable_builtin_names
         }
 
+    def _scope_body(self, node: ast.AST) -> Optional[list[ast.stmt]]:
+        if isinstance(node, ast.Module):
+            return node.body
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            return node.body
+        return None
+
+    def _count_scope_writes(self, node: ast.AST) -> dict[str, int]:
+        body = self._scope_body(node)
+        if body is None:
+            return {}
+        ret: dict[str, int] = {}
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            for name in _param_names(node.args):
+                ret[name] = ret.get(name, 0) + 1
+        for statement in body:
+            for local_node in _iter_scope_local_nodes(statement):
+                if isinstance(local_node, ast.Name) and isinstance(local_node.ctx, (ast.Store, ast.Del)):
+                    ret[local_node.id] = ret.get(local_node.id, 0) + 1
+                elif isinstance(local_node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                    ret[local_node.name] = ret.get(local_node.name, 0) + 1
+                elif isinstance(local_node, ast.ExceptHandler) and local_node.name is not None:
+                    ret[local_node.name] = ret.get(local_node.name, 0) + 1
+                elif isinstance(local_node, (ast.Import, ast.ImportFrom)):
+                    for alias in local_node.names:
+                        name = alias.asname if alias.asname is not None else alias.name
+                        ret[name] = ret.get(name, 0) + 1
+        return ret
+
+    def _simple_assignments_by_name(self, node: ast.AST) -> dict[str, list[tuple[ast.expr, int]]]:
+        body = self._scope_body(node)
+        if body is None:
+            return {}
+        ret: dict[str, list[tuple[ast.expr, int]]] = {}
+        for statement in body:
+            for local_node in _iter_scope_local_nodes(statement):
+                if (isinstance(local_node, ast.Assign) and
+                    len(local_node.targets) == 1 and
+                    isinstance(local_node.targets[0], ast.Name)):
+                    ret.setdefault(local_node.targets[0].id, []).append((local_node.value, local_node.lineno))
+                elif (isinstance(local_node, ast.AnnAssign) and
+                      isinstance(local_node.target, ast.Name) and
+                      local_node.value is not None):
+                    ret.setdefault(local_node.target.id, []).append((local_node.value, local_node.lineno))
+        return ret
+
     def _module_info(self) -> ScopeInfo:
         return self.scope_infos[next(scope_node for scope_node in self.scope_infos if isinstance(scope_node, ast.Module))]
 
@@ -1248,24 +1221,35 @@ class ScopeAnalyzer(ast.NodeVisitor):
         changed = False
         scope_info = self.scope_infos[node]
         changed |= self._tag_exact_type_exprs_in_scope(node, scope_info)
+        write_counts = self._count_scope_writes(node)
+        assignments_by_name = self._simple_assignments_by_name(node)
         if scope_info.kind is ScopeKind.MODULE:
-            (inferred_types, inferred_lines) = _collect_inferred_exact_types(
-                node, scope_info.exact_global_types, {}, set(), scope_info.locals,
-                scope_info.explicit_globals, self.module_locals)
-            for (name, type_name) in inferred_types.items():
-                if name not in scope_info.exact_global_types:
-                    scope_info.exact_global_types[name] = type_name
-                    scope_info.exact_global_lines[name] = inferred_lines[name]
-                    changed = True
+            target_types = scope_info.exact_global_types
+            target_lines = scope_info.exact_global_lines
+            blocked_names = set()
         elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
-            (inferred_types, inferred_lines) = _collect_inferred_exact_types(
-                node, scope_info.exact_local_types, scope_info.exact_arg_types,
-                scope_info.cell_vars, scope_info.locals, scope_info.explicit_globals, self.module_locals)
-            for (name, type_name) in inferred_types.items():
-                if name not in scope_info.exact_local_types:
-                    scope_info.exact_local_types[name] = type_name
-                    scope_info.exact_local_lines[name] = inferred_lines[name]
-                    changed = True
+            target_types = scope_info.exact_local_types
+            target_lines = scope_info.exact_local_lines
+            blocked_names = set(scope_info.exact_arg_types) | scope_info.cell_vars
+        else:
+            target_types = {}
+            target_lines = {}
+            blocked_names = set()
+        for (name, assignments) in assignments_by_name.items():
+            if name in target_types or name in blocked_names:
+                continue
+            if write_counts.get(name) != len(assignments):
+                continue
+            inferred_types = [get_expr_exact_builtin_type(value) for (value, _) in assignments]
+            if any(type_name is None for type_name in inferred_types):
+                continue
+            type_names = {type_name for type_name in inferred_types if type_name is not None}
+            if len(type_names) != 1:
+                continue
+            (type_name,) = type_names
+            target_types[name] = type_name
+            target_lines[name] = assignments[0][1]
+            changed = True
         for child in _collect_child_scopes(node):
             changed |= self._infer_scope_exact_types_once(child)
         return changed
@@ -1335,7 +1319,7 @@ class LoweringVisitor(ast.NodeVisitor):
     __slots__ = ('path', 'n_errors', 'n_functions', 'n_lambdas', 'scope', 'global_code', 'code',
                  'scope_infos', 'pool', 'break_name', 'classes', 'allow_intrinsics',
                  'python_helper_names', 'python_helper_class', 'python_helper_return_java_types',
-                 'builtin_function_return_types', 'builtin_method_return_types', 'final_global_function_classes')
+                 'final_global_function_classes')
     path: str
     n_errors: int
     n_functions: int
@@ -1351,8 +1335,6 @@ class LoweringVisitor(ast.NodeVisitor):
     python_helper_names: set[str]
     python_helper_class: Optional[str]
     python_helper_return_java_types: dict[str, str]
-    builtin_function_return_types: dict[str, str]
-    builtin_method_return_types: dict[str, dict[str, str]]
     final_global_function_classes: dict[str, str]
 
     def __init__(self, path: str, scope_infos: dict[ast.AST, ScopeInfo], module_info: ScopeInfo,
@@ -1373,8 +1355,6 @@ class LoweringVisitor(ast.NodeVisitor):
         self.python_helper_names = set()
         self.python_helper_class = None
         self.python_helper_return_java_types = {}
-        self.builtin_function_return_types = {} if builtin_function_return_types is None else builtin_function_return_types
-        self.builtin_method_return_types = {} if builtin_method_return_types is None else builtin_method_return_types
         self.final_global_function_classes = {}
 
     # Note: if n_errors > 0, the generated Java code is not expected to be valid or executable.
@@ -1838,7 +1818,7 @@ class LoweringVisitor(ast.NodeVisitor):
                     'callPositional',
                     [*([self.visit(arg) for arg in node.args]), *([ir.Null()] * (max_args - len(node.args)))],
                     exact_builtin_type_to_java_type(type_name) if (
-                        (type_name := self.module_scope().info.initial_final_function_return_types.get(node.func.id)) is not None
+                        (type_name := get_expr_exact_builtin_type(node)) is not None
                     ) else ir.JAVA_TYPE_UNKNOWN,
                 )
         if (isinstance(node.func, ast.Name) and
@@ -1869,7 +1849,7 @@ class LoweringVisitor(ast.NodeVisitor):
             not node.keywords and
             not any(isinstance(arg, ast.Starred) for arg in node.args)):
             receiver = self.visit(node.func.value)
-            type_name = self.exact_builtin_type_of_expr(receiver)
+            type_name = get_expr_exact_builtin_type(node.func.value)
             if type_name is not None and RUNTIME_SPEC is not None:
                 attr_kind = DIRECT_GETATTR_BUILTIN_TYPE_ATTRS.get(type_name, {}).get(node.func.attr)
                 if attr_kind == 'method':
@@ -1880,18 +1860,15 @@ class LoweringVisitor(ast.NodeVisitor):
                             java_name = extract_spec.BUILTIN_TYPES[type_name]
                             if receiver.java_type() != java_name:
                                 receiver = ir.CastExpr(java_name, receiver)
-                            return_type = (
-                                exact_builtin_type_to_java_type(method_return_type)
-                                if (method_return_type := self.builtin_method_return_types.get(type_name, {}).get(node.func.attr)) is not None
-                                else ir.JAVA_TYPE_UNKNOWN
-                            )
                             return ir.MethodCall(
                                 ir.Identifier(f'{java_name}Method_{node.func.attr}'),
                                 'callPositional',
                                 [receiver, *([self.visit(arg) for arg in node.args]), *([ir.Null()] * (max_args - len(node.args)))],
-                                return_type,
+                                exact_builtin_type_to_java_type(method_return_type) if (
+                                    (method_return_type := get_expr_exact_builtin_type(node)) is not None
+                                ) else ir.JAVA_TYPE_UNKNOWN,
                             )
-            func = self.emit_attribute(receiver, node.func.attr)
+            func = self.emit_attribute(receiver, node.func.attr, type_name)
         if func is None:
             func = self.visit(node.func)
         if (isinstance(func, ir.PyBuiltinFunction) and
@@ -1908,7 +1885,7 @@ class LoweringVisitor(ast.NodeVisitor):
                     'callPositional',
                     [*([self.visit(arg) for arg in node.args]), *([ir.Null()] * (max_args - len(node.args)))],
                     exact_builtin_type_to_java_type(type_name) if (
-                        (type_name := self.builtin_function_return_types.get(func.name)) is not None
+                        (type_name := get_expr_exact_builtin_type(node)) is not None
                     ) else ir.JAVA_TYPE_UNKNOWN,
                 )
         if (isinstance(func, ir.PyBuiltinFunction) and
@@ -1974,7 +1951,7 @@ class LoweringVisitor(ast.NodeVisitor):
     def visit_Subscript(self, node) -> ir.Expr:
         return ir.MethodCall(self.visit(node.value), 'getItem', [self.visit(node.slice)])
 
-    def emit_attribute(self, value: ir.Expr, attr: str) -> ir.Expr:
+    def emit_attribute(self, value: ir.Expr, attr: str, type_name: Optional[str] = None) -> ir.Expr:
         if isinstance(value, ir.PyBuiltinModule):
             attr_kind = DIRECT_GETATTR_BUILTIN_MODULE_ATTRS.get(value.name, {}).get(attr)
             if attr_kind is not None:
@@ -1984,7 +1961,8 @@ class LoweringVisitor(ast.NodeVisitor):
             attr_kind = DIRECT_GETATTR_BUILTIN_TYPE_ATTRS.get(value.name, {}).get(attr)
             if attr_kind is not None:
                 return get_builtin_type_attr_expr(value.name, attr, attr_kind, None)
-        type_name = self.exact_builtin_type_of_expr(value)
+        if type_name is None:
+            type_name = self.exact_builtin_type_of_expr(value)
         if type_name is not None:
             attr_kind = DIRECT_GETATTR_BUILTIN_TYPE_ATTRS.get(type_name, {}).get(attr)
             if attr_kind is not None:
@@ -1992,7 +1970,7 @@ class LoweringVisitor(ast.NodeVisitor):
         return ir.MethodCall(value, 'getAttr', [ir.StrLiteral(attr)])
 
     def visit_Attribute(self, node) -> ir.Expr:
-        return self.emit_attribute(self.visit(node.value), node.attr)
+        return self.emit_attribute(self.visit(node.value), node.attr, get_expr_exact_builtin_type(node.value))
 
     def visit_Import(self, node) -> None:
         for alias in node.names:
