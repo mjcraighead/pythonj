@@ -33,10 +33,8 @@ STATIC_METHOD_RETURN_TYPES = {
     ('PyInt', 'trueDivUnboxed'): 'double',
     ('PyInt', 'xorUnboxed'): 'long',
     ('PyZip', 'newObjPositional'): 'PyZip',
-    ('Runtime', 'pythonjBytesBuilder'): 'PyBytesBuilder',
     ('Runtime', 'pythonjIsInstance'): 'PyBool',
     ('Runtime', 'pythonjIsSubclass'): 'PyBool',
-    ('Runtime', 'pythonjStrBuilder'): 'PyStringBuilder',
 }
 
 def _int_name(i: int) -> str:
@@ -756,8 +754,11 @@ def static_method_call(class_name: str, method: str, args: list[Expr]) -> Expr:
             return PyConstant(args[0].value)
         case ('Runtime', 'pythonjAbs'):
             return MethodCall(args[0], 'abs', [], 'PyObject')
-        case ('Runtime', 'pythonjBytesBuilder') if isinstance(args[0], PyConstant) and args[0].value is None:
-            return CreateObject('PyBytesBuilder', [])
+        case ('Runtime', 'pythonjBytesBuilder'):
+            if isinstance(args[0], PyConstant) and args[0].value is None:
+                return CreateObject('PyBytesBuilder', [])
+            else:
+                return CreateObject('PyBytesBuilder', [unbox_int(args[0])])
         case ('Runtime', 'pythonjBytesBuilderAppendByteArray'):
             return MethodCall(
                 Field(CastExpr('PyBytesBuilder', args[0]), 'value'),
@@ -803,8 +804,11 @@ def static_method_call(class_name: str, method: str, args: list[Expr]) -> Expr:
             return CreateObject('PyString', [MethodCall(args[0], 'repr', [], 'String')])
         case ('Runtime', 'pythonjSetAttr'):
             return MethodCall(args[0], 'setAttr', [unbox_str(args[1]), args[2]], 'void')
-        case ('Runtime', 'pythonjStrBuilder') if isinstance(args[0], PyConstant) and args[0].value is None:
-            return CreateObject('PyStringBuilder', [])
+        case ('Runtime', 'pythonjStrBuilder'):
+            if isinstance(args[0], PyConstant) and args[0].value is None:
+                return CreateObject('PyStringBuilder', [])
+            else:
+                return CreateObject('PyStringBuilder', [unbox_int(args[0])])
         case ('Runtime', 'pythonjStrBuilderAppend'):
             return MethodCall(Field(CastExpr('PyStringBuilder', args[0]), 'value'), 'append', [unbox_str(args[1])], 'void')
         case ('Runtime', 'pythonjStrBuilderFinish'):

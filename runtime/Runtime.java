@@ -36,8 +36,8 @@ final class PyStringBuilder extends PyTruthyObject {
     PyStringBuilder() {
         value = new StringBuilder();
     }
-    PyStringBuilder(int capacity) {
-        value = new StringBuilder(capacity);
+    PyStringBuilder(long capacity) {
+        value = new StringBuilder(Math.toIntExact(capacity));
     }
 
     @Override public int hashCode() { return defaultHashCode(); }
@@ -51,8 +51,8 @@ final class PyBytesBuilder extends PyTruthyObject {
     PyBytesBuilder() {
         value = new ByteArrayOutputStream();
     }
-    PyBytesBuilder(int capacity) {
-        value = new ByteArrayOutputStream(capacity);
+    PyBytesBuilder(long capacity) {
+        value = new ByteArrayOutputStream(Math.toIntExact(capacity));
     }
 
     @Override public int hashCode() { return defaultHashCode(); }
@@ -533,19 +533,6 @@ public final class Runtime {
         sysArgv = new PyList(argv);
     }
 
-    public static PyBytesBuilder pythonjBytesBuilder(PyObject capacityObj) {
-        if (capacityObj == PyNone.singleton) {
-            return new PyBytesBuilder();
-        }
-        if (!(capacityObj instanceof PyInt capacityInt)) {
-            throw PyTypeError.raise("bytes builder capacity must be int or None");
-        }
-        int capacity = Math.toIntExact(capacityInt.value);
-        if (capacity < 0) {
-            throw PyValueError.raise("bytes builder capacity must be >= 0");
-        }
-        return new PyBytesBuilder(capacity);
-    }
     public static PyBool pythonjIsInstance(PyObject obj, PyObject type) {
         if (type instanceof PyConcreteType typeClass) {
             return PyBool.create(typeClass.instanceClass.isInstance(obj));
@@ -562,19 +549,6 @@ public final class Runtime {
         } else {
             throw new UnsupportedOperationException(String.format("issubclass() is unimplemented for types %s and %s", obj.repr(), type.repr()));
         }
-    }
-    public static PyStringBuilder pythonjStrBuilder(PyObject capacityObj) {
-        if (capacityObj == PyNone.singleton) {
-            return new PyStringBuilder();
-        }
-        if (!(capacityObj instanceof PyInt capacityInt)) {
-            throw PyTypeError.raise("str builder capacity must be int or None");
-        }
-        int capacity = Math.toIntExact(capacityInt.value);
-        if (capacity < 0) {
-            throw PyValueError.raise("str builder capacity must be >= 0");
-        }
-        return new PyStringBuilder(capacity);
     }
     public static PyRaise raiseExactArgs(PyObject[] args, int n, String name) {
         return PyTypeError.raiseFormat("%s expected %d argument%s, got %d", name, n, (n == 1) ? "" : "s", args.length);
