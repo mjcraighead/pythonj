@@ -192,13 +192,6 @@ def _decode_user_function_return_annotation(annotation: Optional[ast.expr]) -> O
         return annotation.id
     return None
 
-def java_type_for_python_type_name(type_name: str) -> str:
-    if type_name == 'object':
-        return 'PyObject'
-    if type_name == 'NoneType':
-        return 'PyNone'
-    return extract_spec.BUILTIN_TYPES[type_name]
-
 def _get_supported_user_function_call_range(args: ast.arguments) -> Optional[tuple[int, int]]:
     if args.kwonlyargs or args.kw_defaults or args.vararg or args.kwarg:
         return None
@@ -963,24 +956,13 @@ class LoweringVisitor(ast.NodeVisitor):
             ])
         return ir.static_method_call('Runtime', 'pythonjIsInstance', [obj_expr, self.visit(class_or_tuple)])
 
-    def build_intrinsic_call(self, name: str, args: list[ir.Expr]) -> ir.Expr:
-        assert name in INTRINSIC_SIGNATURES, name
-        (method_name, n_args, return_type) = INTRINSIC_SIGNATURES[name]
-        assert len(args) == n_args, (name, n_args, args)
-        return ir.StaticMethodCall(
-            'Runtime',
-            method_name,
-            args,
-            java_type_for_python_type_name(return_type),
-        )
-
     def emit_intrinsic_call(self, name: str, args: list[ast.expr]) -> ir.Expr:
         assert self.allow_intrinsics and name in INTRINSIC_SIGNATURES, name
         (method_name, n_args, _) = INTRINSIC_SIGNATURES[name]
         assert len(args) == n_args, (name, n_args, args)
         if name == '__pythonj_isinstance__':
             return self.emit_isinstance_condition(args[0], args[1])
-        return self.build_intrinsic_call(name, [self.visit(arg) for arg in args])
+        return ir.static_method_call('Runtime', method_name, [self.visit(arg) for arg in args])
 
     def visit_Constant(self, node) -> ir.Expr:
         if isinstance(node.value, (types.NoneType, bool, int, float, str, bytes)):
@@ -1014,7 +996,7 @@ class LoweringVisitor(ast.NodeVisitor):
                 if val.conversion == ord('s'):
                     expr = ir.CreateObject('PyString', [ir.MethodCall(expr, 'str', [], 'String')])
                 elif val.conversion == ord('r'):
-                    expr = self.build_intrinsic_call('__pythonj_repr__', [expr])
+                    expr = ir.static_method_call('Runtime', 'pythonjRepr', [expr])
                 elif val.conversion == ord('a'):
                     expr = ir.static_method_call('PyBuiltinFunctionsImpl', 'pyfunc_ascii', [expr])
                 elif val.conversion != -1:
