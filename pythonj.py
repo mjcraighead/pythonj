@@ -1308,10 +1308,9 @@ class LoweringVisitor(ast.NodeVisitor):
             not any(isinstance(arg, ast.Starred) for arg in node.args)):
             (min_args, max_args) = DIRECT_CALL_POSITIONAL_BUILTINS[func.name]
             if min_args <= len(node.args) <= max_args:
-                if func.name == 'hash':
-                    return ir.static_method_call('Runtime', 'pythonjHash', [self.visit(node.args[0])])
-                if func.name == 'len':
-                    return ir.static_method_call('Runtime', 'pythonjLen', [self.visit(node.args[0])])
+                if func.name in {'abs', 'hash', 'len', 'repr'}:
+                    method_name = INTRINSIC_SIGNATURES[f'__pythonj_{func.name}__'][0]
+                    return ir.static_method_call('Runtime', method_name, [self.visit(node.args[0])])
                 return ir.MethodCall(
                     func,
                     'callPositional',
