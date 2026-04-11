@@ -21,12 +21,12 @@ def any(iterable) -> bool:
     return False
 
 def bin(arg) -> str:
-    value = _operator.index(arg)
+    value: int = _operator.index(arg)
     if value < 0:
         return '-0b' + format(-value, 'b')
     return '0b' + format(value, 'b')
 
-def delattr(obj, name):
+def delattr(obj, name) -> None:
     if not __pythonj_isinstance__(name, str):
         raise TypeError('attribute name must be string, not ' + repr(type(name).__name__))
     __pythonj_delattr__(obj, name)
@@ -85,7 +85,7 @@ def next(iterator, default):
     return ret
 
 def oct(arg) -> str:
-    value = _operator.index(arg)
+    value: int = _operator.index(arg)
     if value < 0:
         return '-0o' + format(-value, 'o')
     return '0o' + format(value, 'o')
@@ -93,7 +93,7 @@ def oct(arg) -> str:
 def repr(arg) -> str:
     return __pythonj_repr__(arg)
 
-def setattr(obj, name, value):
+def setattr(obj, name, value) -> None:
     if not __pythonj_isinstance__(name, str):
         raise TypeError('attribute name must be string, not ' + repr(type(name).__name__))
     __pythonj_setattr__(obj, name, value)
