@@ -2,7 +2,7 @@
 # Copyright (c) 2012-2026 Matt Craighead
 # SPDX-License-Identifier: MIT
 
-def _init_bound_args(args, max_total: int):
+def _init_bound_args(args, max_total: int) -> list:
     args_len: int = len(args)
     bound_args: list = []
     i: int = 0
@@ -14,7 +14,7 @@ def _init_bound_args(args, max_total: int):
         i += 1
     return bound_args
 
-def _find_name(names, kw, start: int):
+def _find_name(names, kw, start: int) -> int:
     names_len: int = len(names)
     i: int = start
     while i < names_len:

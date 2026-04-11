@@ -52,11 +52,6 @@ INTRINSIC_SIGNATURES = {
     '__pythonj_zip_new__': ('pythonjZipNew', 2, 'object'),
 }
 
-EXACT_BUILTIN_FUNCTION_RETURN_TYPES = {
-    'hash': 'int',
-    'len': 'int',
-}
-
 class ScopeKind(Enum):
     MODULE = 1
     FUNCTION = 2
@@ -191,6 +186,36 @@ def _decode_user_function_return_annotation(annotation: Optional[ast.expr]) -> O
     if isinstance(annotation, ast.Name) and annotation.id in extract_spec.BUILTIN_TYPES:
         return annotation.id
     return None
+
+def collect_top_level_exact_return_types(node: ast.Module) -> dict[str, str]:
+    return {
+        func_name: type_name
+        for (func_name, func) in get_top_level_functions(node).items()
+        if (type_name := _decode_user_function_return_annotation(func.returns)) is not None
+    }
+
+def collect_builtin_method_exact_return_types(node: ast.Module) -> dict[str, dict[str, str]]:
+    ret: dict[str, dict[str, str]] = {}
+    for class_node in [x for x in node.body if isinstance(x, ast.ClassDef)]:
+        method_types = {
+            func.name: type_name
+            for func in class_node.body if isinstance(func, ast.FunctionDef)
+            if (type_name := _decode_user_function_return_annotation(func.returns)) is not None
+        }
+        if method_types:
+            ret[class_node.name] = method_types
+    return ret
+
+def collect_builtin_method_return_java_types(node: ast.Module) -> dict[tuple[str, str], str]:
+    ret: dict[tuple[str, str], str] = {}
+    for class_node in [x for x in node.body if isinstance(x, ast.ClassDef)]:
+        for func in [x for x in class_node.body if isinstance(x, ast.FunctionDef)]:
+            try:
+                ret_type = decode_helper_return_annotation(func.returns)
+            except ValueError:
+                continue
+            ret[(class_node.name, func.name)] = ret_type
+    return ret
 
 def _get_supported_user_function_call_range(args: ast.arguments) -> Optional[tuple[int, int]]:
     if args.kwonlyargs or args.kw_defaults or args.vararg or args.kwarg:
@@ -606,7 +631,8 @@ class Scope:
 class LoweringVisitor(ast.NodeVisitor):
     __slots__ = ('path', 'n_errors', 'n_functions', 'n_lambdas', 'scope', 'global_code', 'code',
                  'scope_infos', 'pool', 'break_name', 'classes', 'allow_intrinsics',
-                 'python_helper_names', 'python_helper_class', 'final_global_function_classes')
+                 'python_helper_names', 'python_helper_class', 'python_helper_return_java_types',
+                 'builtin_function_return_types', 'builtin_method_return_types', 'final_global_function_classes')
     path: str
     n_errors: int
     n_functions: int
@@ -621,9 +647,14 @@ class LoweringVisitor(ast.NodeVisitor):
     allow_intrinsics: bool # enables special internal-only codegen features for builtins
     python_helper_names: set[str]
     python_helper_class: Optional[str]
+    python_helper_return_java_types: dict[str, str]
+    builtin_function_return_types: dict[str, str]
+    builtin_method_return_types: dict[str, dict[str, str]]
     final_global_function_classes: dict[str, str]
 
-    def __init__(self, path: str, scope_infos: dict[ast.AST, ScopeInfo], module_info: ScopeInfo):
+    def __init__(self, path: str, scope_infos: dict[ast.AST, ScopeInfo], module_info: ScopeInfo,
+                 builtin_function_return_types: Optional[dict[str, str]] = None,
+                 builtin_method_return_types: Optional[dict[str, dict[str, str]]] = None):
         self.path = path
         self.n_errors = 0
         self.n_functions = 0
@@ -638,6 +669,9 @@ class LoweringVisitor(ast.NodeVisitor):
         self.allow_intrinsics = False
         self.python_helper_names = set()
         self.python_helper_class = None
+        self.python_helper_return_java_types = {}
+        self.builtin_function_return_types = {} if builtin_function_return_types is None else builtin_function_return_types
+        self.builtin_method_return_types = {} if builtin_method_return_types is None else builtin_method_return_types
         self.final_global_function_classes = {}
 
     # Note: if n_errors > 0, the generated Java code is not expected to be valid or executable.
@@ -767,7 +801,7 @@ class LoweringVisitor(ast.NodeVisitor):
                 if return_type not in {'object', 'NoneType'}:
                     return return_type
             if (self.name_resolves_to_builtin_function(node.func) and
-                (type_name := EXACT_BUILTIN_FUNCTION_RETURN_TYPES.get(node.func.id)) is not None):
+                (type_name := self.builtin_function_return_types.get(node.func.id)) is not None):
                 return type_name
         if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
             if self.name_resolves_to_final_top_level_function(node.func):
@@ -783,6 +817,12 @@ class LoweringVisitor(ast.NodeVisitor):
             (min_args, max_args) = DIRECT_NEWOBJ_POSITIONAL_BUILTIN_TYPES[node.func.id]
             if min_args <= len(node.args) <= max_args:
                 return node.func.id
+        if (isinstance(node, ast.Call) and
+            isinstance(node.func, ast.Attribute) and
+            not node.keywords and
+            not any(isinstance(arg, ast.Starred) for arg in node.args)):
+            if (receiver_type := self.infer_exact_builtin_type_expr(node.func.value)) is not None:
+                return self.builtin_method_return_types.get(receiver_type, {}).get(node.func.attr)
         return infer_exact_builtin_type(node)
 
     def resolve_free_vars(self, lineno: int, scope_info: ScopeInfo, func_type: str) -> set[str]:
@@ -1135,7 +1175,12 @@ class LoweringVisitor(ast.NodeVisitor):
             if node.keywords or any(isinstance(arg, ast.Starred) for arg in node.args):
                 self.error(node.lineno, 'same-file helper calls only support plain positional args')
             assert self.python_helper_class is not None, node.func.id
-            return ir.StaticMethodCall(self.python_helper_class, f'pyfunc_{node.func.id}', [self.visit(arg) for arg in node.args])
+            return ir.StaticMethodCall(
+                self.python_helper_class,
+                f'pyfunc_{node.func.id}',
+                [self.visit(arg) for arg in node.args],
+                self.python_helper_return_java_types.get(node.func.id, ir.JAVA_TYPE_UNKNOWN),
+            )
 
         args = self.emit_star_expanded(node.args)
         if node.keywords:
@@ -2033,8 +2078,11 @@ class LoweringVisitor(ast.NodeVisitor):
         )
 
 def parse_python_module(path: str) -> ast.Module:
-    with open(path, encoding='utf-8') as f:
-        return ast.parse(f.read(), path)
+    resolved_path = path
+    if not os.path.isabs(resolved_path):
+        resolved_path = os.path.join(os.path.dirname(__file__), resolved_path)
+    with open(resolved_path, encoding='utf-8') as f:
+        return ast.parse(f.read(), resolved_path)
 
 def get_top_level_functions(node: ast.Module) -> dict[str, ast.FunctionDef]:
     return {x.name: x for x in node.body if isinstance(x, ast.FunctionDef)}
@@ -2122,7 +2170,7 @@ def infer_exact_builtin_type(node: ast.expr) -> Optional[str]:
         return None
     return type_name if type_name in extract_spec.BUILTIN_TYPES else None
 
-SUPPORTED_HELPER_RETURN_TYPES = {'bool', 'bytes', 'float', 'int', 'list', 'str', 'tuple'}
+SUPPORTED_HELPER_RETURN_TYPES = {'bool', 'bytes', 'dict', 'float', 'int', 'list', 'str', 'tuple'}
 
 def decode_helper_return_annotation(annotation: Optional[ast.expr]) -> str:
     if annotation is None:
@@ -2203,18 +2251,29 @@ def translate_python_impl_node(node: ast.Module, func: ast.FunctionDef, emitted_
                                role: str, pool: ir.ConstantPool,
                                scope_infos: Optional[dict[ast.AST, ScopeInfo]] = None,
                                python_helper_names: Optional[set[str]] = None,
-                               python_helper_class: Optional[str] = None) -> tuple[list[ir.ClassDecl], ir.MethodDecl]:
+                               python_helper_class: Optional[str] = None,
+                               builtin_function_return_types: Optional[dict[str, str]] = None,
+                               builtin_method_return_types: Optional[dict[str, dict[str, str]]] = None,
+                               python_helper_return_java_types: Optional[dict[str, str]] = None) -> tuple[list[ir.ClassDecl], ir.MethodDecl]:
     if scope_infos is None:
         analyzer = ScopeAnalyzer()
         analyzer.visit(node)
         scope_infos = analyzer.scope_infos
-    visitor = LoweringVisitor(display_name, scope_infos, scope_infos[node])
+    visitor = LoweringVisitor(
+        display_name,
+        scope_infos,
+        scope_infos[node],
+        builtin_function_return_types,
+        builtin_method_return_types,
+    )
     visitor.pool = pool
     visitor.allow_intrinsics = True
     if python_helper_names is not None:
         visitor.python_helper_names = python_helper_names
         assert python_helper_class is not None, python_helper_class
         visitor.python_helper_class = python_helper_class
+        if python_helper_return_java_types is not None:
+            visitor.python_helper_return_java_types = python_helper_return_java_types
     try:
         return_java_type = decode_helper_return_annotation(func.returns)
     except ValueError as e:
@@ -2239,41 +2298,68 @@ def translate_python_impl_node(node: ast.Module, func: ast.FunctionDef, emitted_
 
 def translate_python_builtin_impl(node: ast.Module, func_name: str, pool: ir.ConstantPool,
                                   funcs: Optional[dict[str, ast.FunctionDef]] = None,
-                                  scope_infos: Optional[dict[ast.AST, ScopeInfo]] = None) -> tuple[list[ir.ClassDecl], ir.MethodDecl]:
+                                  scope_infos: Optional[dict[ast.AST, ScopeInfo]] = None,
+                                  builtin_function_return_types: Optional[dict[str, str]] = None,
+                                  builtin_method_return_types: Optional[dict[str, dict[str, str]]] = None) -> tuple[list[ir.ClassDecl], ir.MethodDecl]:
     if funcs is None:
         funcs = get_top_level_functions(node)
     func = funcs[func_name]
-    return translate_python_impl_node(node, func, func_name, f'<builtin {func_name}>', 'builtin function', pool, scope_infos=scope_infos)
+    return translate_python_impl_node(
+        node, func, func_name, f'<builtin {func_name}>', 'builtin function', pool,
+        scope_infos=scope_infos,
+        builtin_function_return_types=builtin_function_return_types,
+        builtin_method_return_types=builtin_method_return_types,
+    )
 
 def translate_python_method_impl(node: ast.Module, type_name: str, method_name: str, pool: ir.ConstantPool,
                                  class_funcs: Optional[dict[str, dict[str, ast.FunctionDef]]] = None,
-                                 scope_infos: Optional[dict[ast.AST, ScopeInfo]] = None) -> tuple[list[ir.ClassDecl], ir.MethodDecl]:
+                                 scope_infos: Optional[dict[ast.AST, ScopeInfo]] = None,
+                                 builtin_function_return_types: Optional[dict[str, str]] = None,
+                                 builtin_method_return_types: Optional[dict[str, dict[str, str]]] = None) -> tuple[list[ir.ClassDecl], ir.MethodDecl]:
     func_name = f'{type_name}__{method_name}'
     if class_funcs is None:
         func = get_class_functions(node, type_name)[method_name]
     else:
         func = class_funcs[type_name][method_name]
-    return translate_python_impl_node(node, func, func_name, f'<method {type_name}.{method_name}>', 'builtin method', pool, scope_infos=scope_infos)
+    return translate_python_impl_node(
+        node, func, func_name, f'<method {type_name}.{method_name}>', 'builtin method', pool,
+        scope_infos=scope_infos,
+        builtin_function_return_types=builtin_function_return_types,
+        builtin_method_return_types=builtin_method_return_types,
+    )
 
 def translate_python_constructor_impl(node: ast.Module, type_name: str, pool: ir.ConstantPool,
                                       funcs: Optional[dict[str, ast.FunctionDef]] = None,
-                                      scope_infos: Optional[dict[ast.AST, ScopeInfo]] = None) -> tuple[list[ir.ClassDecl], ir.MethodDecl]:
+                                      scope_infos: Optional[dict[ast.AST, ScopeInfo]] = None,
+                                      builtin_function_return_types: Optional[dict[str, str]] = None,
+                                      builtin_method_return_types: Optional[dict[str, dict[str, str]]] = None) -> tuple[list[ir.ClassDecl], ir.MethodDecl]:
     if funcs is None:
         funcs = get_top_level_functions(node)
     func_name = f'{type_name}__newobj'
     func = funcs[func_name]
     emitted_name = f'{func_name}_impl'
-    return translate_python_impl_node(node, func, emitted_name, f'<constructor {type_name}>', 'builtin constructor', pool, scope_infos=scope_infos)
+    return translate_python_impl_node(
+        node, func, emitted_name, f'<constructor {type_name}>', 'builtin constructor', pool,
+        scope_infos=scope_infos,
+        builtin_function_return_types=builtin_function_return_types,
+        builtin_method_return_types=builtin_method_return_types,
+    )
 
 def translate_python_runtime_impl(node: ast.Module, func_name: str, pool: ir.ConstantPool,
                                   funcs: Optional[dict[str, ast.FunctionDef]] = None,
-                                  scope_infos: Optional[dict[ast.AST, ScopeInfo]] = None) -> tuple[list[ir.ClassDecl], ir.MethodDecl]:
+                                  scope_infos: Optional[dict[ast.AST, ScopeInfo]] = None,
+                                  builtin_function_return_types: Optional[dict[str, str]] = None,
+                                  builtin_method_return_types: Optional[dict[str, dict[str, str]]] = None,
+                                  python_helper_return_java_types: Optional[dict[str, str]] = None) -> tuple[list[ir.ClassDecl], ir.MethodDecl]:
     if funcs is None:
         funcs = get_top_level_functions(node)
     return translate_python_impl_node(
         node, funcs[func_name], func_name, f'<runtime {func_name}>', 'runtime helper', pool,
         scope_infos=scope_infos,
         python_helper_names=set(funcs), python_helper_class='PyRuntime',
+        builtin_function_return_types=builtin_function_return_types,
+        builtin_method_return_types=builtin_method_return_types,
+        python_helper_return_java_types=python_helper_return_java_types,
     )
 
 def emit_default_java_expr(default: object) -> ir.Expr:
@@ -2537,11 +2623,18 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
     pythonj_builtins_node = parse_python_module('pythonj_builtins.py')
     pythonj_runtime_node = parse_python_module('pythonj_runtime.py')
     pythonj_builtins_funcs = get_top_level_functions(pythonj_builtins_node)
+    pythonj_builtins_return_types = collect_top_level_exact_return_types(pythonj_builtins_node)
+    pythonj_builtins_method_return_types = collect_builtin_method_exact_return_types(pythonj_builtins_node)
+    pythonj_builtins_method_return_java_types = collect_builtin_method_return_java_types(pythonj_builtins_node)
     pythonj_builtins_classes = {
         class_name: {x.name: x for x in class_node.body if isinstance(x, ast.FunctionDef)}
         for (class_name, class_node) in {x.name: x for x in pythonj_builtins_node.body if isinstance(x, ast.ClassDef)}.items()
     }
     pythonj_runtime_funcs = get_top_level_functions(pythonj_runtime_node)
+    pythonj_runtime_return_java_types = {
+        func_name: decode_helper_return_annotation(func.returns)
+        for (func_name, func) in pythonj_runtime_funcs.items()
+    }
     builtins_analyzer = ScopeAnalyzer()
     builtins_analyzer.visit(pythonj_builtins_node)
     runtime_analyzer = ScopeAnalyzer()
@@ -2716,6 +2809,8 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                         (helper_classes, helper_method) = translate_python_method_impl(
                             pythonj_builtins_node, name, method_name, pool,
                             class_funcs=pythonj_builtins_classes, scope_infos=builtins_analyzer.scope_infos,
+                            builtin_function_return_types=pythonj_builtins_return_types,
+                            builtin_method_return_types=pythonj_builtins_method_return_types,
                         )
                         python_helper_classes.extend(helper_classes)
                         python_helper_methods.append(helper_method)
@@ -2753,6 +2848,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                             method_impl_target.rsplit('.', 1)[0],
                             method_impl_target.rsplit('.', 1)[1],
                             call_args,
+                            pythonj_builtins_method_return_java_types.get((name.rsplit('.', 1)[-1], method_name), ir.JAVA_TYPE_UNKNOWN),
                         )
                     else:
                         call_expr = ir.MethodCall(ir.Identifier(method_target), f'pymethod_{method_name}', bind_args)
@@ -2763,10 +2859,11 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                         call_positional_method_args = [f'{self_type} self', *call_positional_method_args]
                         if method_impl_target is not None:
                             call_args = [ir.Identifier('self'), *call_positional_args]
-                            call_positional_expr = ir.MethodCall(
-                                ir.Identifier(method_impl_target.rsplit('.', 1)[0]),
+                            call_positional_expr = ir.StaticMethodCall(
+                                method_impl_target.rsplit('.', 1)[0],
                                 method_impl_target.rsplit('.', 1)[1],
                                 call_args,
+                                pythonj_builtins_method_return_java_types.get((name.rsplit('.', 1)[-1], method_name), ir.JAVA_TYPE_UNKNOWN),
                             )
                         else:
                             if kind == 'method':
@@ -2787,6 +2884,9 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
         for func_name in sorted(pythonj_runtime_funcs):
             (helper_classes, helper_method) = translate_python_runtime_impl(
                 pythonj_runtime_node, func_name, pool, funcs=pythonj_runtime_funcs, scope_infos=runtime_analyzer.scope_infos,
+                builtin_function_return_types=pythonj_builtins_return_types,
+                builtin_method_return_types=pythonj_builtins_method_return_types,
+                python_helper_return_java_types=pythonj_runtime_return_java_types,
             )
             python_helper_classes.extend(helper_classes)
             python_helper_methods.append(helper_method)
@@ -2794,6 +2894,8 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
         for type_name in sorted(PYTHON_AUTHORED_CONSTRUCTOR_IMPLS):
             (helper_classes, helper_method) = translate_python_constructor_impl(
                 pythonj_builtins_node, type_name, pool, funcs=pythonj_builtins_funcs, scope_infos=builtins_analyzer.scope_infos,
+                builtin_function_return_types=pythonj_builtins_return_types,
+                builtin_method_return_types=pythonj_builtins_method_return_types,
             )
             python_helper_classes.extend(helper_classes)
             emitted_name = f'{type_name}__newobj_impl'
@@ -2823,6 +2925,8 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
         for func_name in sorted(PYTHON_AUTHORED_IMPLS['builtins']):
             (helper_classes, helper_method) = translate_python_builtin_impl(
                 pythonj_builtins_node, func_name, pool, funcs=pythonj_builtins_funcs, scope_infos=builtins_analyzer.scope_infos,
+                builtin_function_return_types=pythonj_builtins_return_types,
+                builtin_method_return_types=pythonj_builtins_method_return_types,
             )
             python_helper_classes.extend(helper_classes)
             python_helper_methods.append(helper_method)
@@ -2949,10 +3053,15 @@ def translate_python_source_to_java(spec_path: str, py_source: str, source_name:
     node = ast.parse(py_source, filename=source_name)
     analyzer = ScopeAnalyzer()
     analyzer.visit(node)
+    pythonj_builtins_node = parse_python_module('pythonj_builtins.py')
+    builtin_function_return_types = collect_top_level_exact_return_types(pythonj_builtins_node)
+    builtin_method_return_types = collect_builtin_method_exact_return_types(pythonj_builtins_node)
     visitor = LoweringVisitor(
         source_name,
         analyzer.scope_infos,
         analyzer.scope_infos[node],
+        builtin_function_return_types,
+        builtin_method_return_types,
     )
     visitor.visit(node)
     if visitor.n_errors:

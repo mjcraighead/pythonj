@@ -8,19 +8,19 @@ import _operator
 def abs(arg):
     return __pythonj_abs__(arg)
 
-def all(iterable):
+def all(iterable) -> bool:
     for item in iterable:
         if not item:
             return False
     return True
 
-def any(iterable):
+def any(iterable) -> bool:
     for item in iterable:
         if item:
             return True
     return False
 
-def bin(arg):
+def bin(arg) -> str:
     value = _operator.index(arg)
     if value < 0:
         return '-0b' + format(-value, 'b')
@@ -31,7 +31,7 @@ def delattr(obj, name):
         raise TypeError('attribute name must be string, not ' + repr(type(name).__name__))
     return __pythonj_delattr__(obj, name)
 
-def format(value, format_spec):
+def format(value, format_spec) -> str:
     if not __pythonj_isinstance__(format_spec, str):
         raise TypeError('format() argument 2 must be str, not ' + type(format_spec).__name__)
     return __pythonj_format__(value, format_spec)
@@ -46,7 +46,7 @@ def getattr(obj, name, default):
             return default
         raise e
 
-def hasattr(obj, name):
+def hasattr(obj, name) -> bool:
     try:
         getattr(obj, name)
     except AttributeError:
@@ -56,7 +56,7 @@ def hasattr(obj, name):
 def hash(arg) -> int:
     return __pythonj_hash__(arg)
 
-def isinstance(obj, class_or_tuple):
+def isinstance(obj, class_or_tuple) -> bool:
     if __pythonj_isinstance__(class_or_tuple, tuple):
         for x in class_or_tuple:
             if isinstance(obj, x):
@@ -64,7 +64,7 @@ def isinstance(obj, class_or_tuple):
         return False
     return __pythonj_isinstance__(obj, class_or_tuple)
 
-def issubclass(obj, class_or_tuple):
+def issubclass(obj, class_or_tuple) -> bool:
     if __pythonj_isinstance__(class_or_tuple, tuple):
         for x in class_or_tuple:
             if issubclass(obj, x):
@@ -83,13 +83,13 @@ def next(iterator, default):
         raise StopIteration()
     return ret
 
-def oct(arg):
+def oct(arg) -> str:
     value = _operator.index(arg)
     if value < 0:
         return '-0o' + format(-value, 'o')
     return '0o' + format(value, 'o')
 
-def repr(arg):
+def repr(arg) -> str:
     return __pythonj_repr__(arg)
 
 def setattr(obj, name, value):
@@ -148,7 +148,7 @@ def zip__newobj(type, args: tuple, kwargs: dict):
 
 # Builtin classes
 class bytes:
-    def capitalize(self: bytes):
+    def capitalize(self: bytes) -> bytes:
         ret = __pythonj_bytes_builder__(__pythonj_len__(self))
         seen_alpha = False
         for c in self:
@@ -168,7 +168,7 @@ class bytes:
                 __pythonj_bytes_builder_append_byte__(ret, c)
         return __pythonj_bytes_builder_finish__(ret)
 
-    def count(self: bytes, sub, start, end):
+    def count(self: bytes, sub, start, end) -> int:
         indices = slice(start, end).indices(len(self))
         start = indices[0]
         end = indices[1]
@@ -196,7 +196,7 @@ class bytes:
                 i += 1
         return ret
 
-    def endswith(self: bytes, suffix, start, end):
+    def endswith(self: bytes, suffix, start, end) -> bool:
         if __pythonj_isinstance__(suffix, tuple):
             for item in suffix:
                 if self.endswith(item, start, end):
@@ -214,7 +214,7 @@ class bytes:
             return False
         return self[end - suffix_len:end] == suffix
 
-    def find(self: bytes, sub, start, end):
+    def find(self: bytes, sub, start, end) -> int:
         indices = slice(start, end).indices(len(self))
         start = indices[0]
         end = indices[1]
@@ -236,7 +236,7 @@ class bytes:
                 return i
         return -1
 
-    def fromhex(self, string):
+    def fromhex(self, string) -> bytes:
         is_str = __pythonj_isinstance__(string, str)
         is_bytes_like = __pythonj_isinstance__(string, (bytes, bytearray))
         if not (is_str or is_bytes_like):
@@ -279,7 +279,7 @@ class bytes:
             i += 2
         return __pythonj_bytes_builder_finish__(ret)
 
-    def hex(self: bytes, sep, bytes_per_sep):
+    def hex(self: bytes, sep, bytes_per_sep) -> str:
         if sep is __pythonj_null__:
             sep = ''
         elif __pythonj_isinstance__(sep, bytes):
@@ -320,13 +320,13 @@ class bytes:
                 __pythonj_str_builder_append__(ret, format(c, '02x'))
         return __pythonj_str_builder_finish__(ret)
 
-    def index(self: bytes, sub, start, end):
+    def index(self: bytes, sub, start, end) -> int:
         ret = self.find(sub, start, end)
         if ret == -1:
             raise ValueError('subsection not found')
         return ret
 
-    def join(self: bytes, iterable):
+    def join(self: bytes, iterable) -> bytes:
         ret = __pythonj_bytes_builder__(None)
         if not __pythonj_hasiter__(iterable):
             raise TypeError('can only join an iterable')
@@ -341,7 +341,7 @@ class bytes:
             i += 1
         return __pythonj_bytes_builder_finish__(ret)
 
-    def isalnum(self: bytes):
+    def isalnum(self: bytes) -> bool:
         if not self:
             return False
         for c in self:
@@ -349,7 +349,7 @@ class bytes:
                 return False
         return True
 
-    def isalpha(self: bytes):
+    def isalpha(self: bytes) -> bool:
         if not self:
             return False
         for c in self:
@@ -357,13 +357,13 @@ class bytes:
                 return False
         return True
 
-    def isascii(self: bytes):
+    def isascii(self: bytes) -> bool:
         for c in self:
             if c >= 128:
                 return False
         return True
 
-    def isdigit(self: bytes):
+    def isdigit(self: bytes) -> bool:
         if not self:
             return False
         for c in self:
@@ -371,7 +371,7 @@ class bytes:
                 return False
         return True
 
-    def islower(self: bytes):
+    def islower(self: bytes) -> bool:
         has_cased = False
         for c in self:
             if 65 <= c <= 90:
@@ -380,7 +380,7 @@ class bytes:
                 has_cased = True
         return has_cased
 
-    def isspace(self: bytes):
+    def isspace(self: bytes) -> bool:
         if not self:
             return False
         for c in self:
@@ -388,7 +388,7 @@ class bytes:
                 return False
         return True
 
-    def istitle(self: bytes):
+    def istitle(self: bytes) -> bool:
         has_cased = False
         in_word = False
         for c in self:
@@ -405,7 +405,7 @@ class bytes:
                 in_word = False
         return has_cased
 
-    def isupper(self: bytes):
+    def isupper(self: bytes) -> bool:
         has_cased = False
         for c in self:
             if 97 <= c <= 122:
@@ -414,7 +414,7 @@ class bytes:
                 has_cased = True
         return has_cased
 
-    def lower(self: bytes):
+    def lower(self: bytes) -> bytes:
         ret = __pythonj_bytes_builder__(__pythonj_len__(self))
         for c in self:
             if 65 <= c <= 90:
@@ -423,7 +423,7 @@ class bytes:
                 __pythonj_bytes_builder_append_byte__(ret, c)
         return __pythonj_bytes_builder_finish__(ret)
 
-    def lstrip(self: bytes, bytes_arg):
+    def lstrip(self: bytes, bytes_arg) -> bytes:
         if bytes_arg is None:
             strip_set = b' \t\n\r\x0b\x0c'
         elif __pythonj_isinstance__(bytes_arg, (bytes, bytearray)):
@@ -436,7 +436,7 @@ class bytes:
             i += 1
         return self[i:]
 
-    def partition(self: bytes, sep):
+    def partition(self: bytes, sep) -> tuple:
         if not __pythonj_isinstance__(sep, (bytes, bytearray)):
             raise TypeError('a bytes-like object is required, not ' + repr(type(sep).__name__))
         if len(sep) == 0:
@@ -446,17 +446,17 @@ class bytes:
             return (self, b'', b'')
         return (self[:i], sep, self[i + len(sep):])
 
-    def removeprefix(self: bytes, prefix):
+    def removeprefix(self: bytes, prefix) -> bytes:
         if self.startswith(prefix):
             return self[len(prefix):]
         return self
 
-    def removesuffix(self: bytes, suffix):
+    def removesuffix(self: bytes, suffix) -> bytes:
         if suffix and self.endswith(suffix):
             return self[:-len(suffix)]
         return self
 
-    def rfind(self: bytes, sub, start, end):
+    def rfind(self: bytes, sub, start, end) -> int:
         indices = slice(start, end).indices(len(self))
         start = indices[0]
         end = indices[1]
@@ -478,13 +478,13 @@ class bytes:
                 return i
         return -1
 
-    def rindex(self: bytes, sub, start, end):
+    def rindex(self: bytes, sub, start, end) -> int:
         ret = self.rfind(sub, start, end)
         if ret == -1:
             raise ValueError('subsection not found')
         return ret
 
-    def rpartition(self: bytes, sep):
+    def rpartition(self: bytes, sep) -> tuple:
         if not __pythonj_isinstance__(sep, (bytes, bytearray)):
             raise TypeError('a bytes-like object is required, not ' + repr(type(sep).__name__))
         if len(sep) == 0:
@@ -494,7 +494,7 @@ class bytes:
             return (b'', b'', self)
         return (self[:i], sep, self[i + len(sep):])
 
-    def rstrip(self: bytes, bytes_arg):
+    def rstrip(self: bytes, bytes_arg) -> bytes:
         if bytes_arg is None:
             strip_set = b' \t\n\r\x0b\x0c'
         elif __pythonj_isinstance__(bytes_arg, (bytes, bytearray)):
@@ -506,7 +506,7 @@ class bytes:
             i -= 1
         return self[:i]
 
-    def startswith(self: bytes, prefix, start, end):
+    def startswith(self: bytes, prefix, start, end) -> bool:
         if __pythonj_isinstance__(prefix, tuple):
             for item in prefix:
                 if self.startswith(item, start, end):
@@ -524,10 +524,10 @@ class bytes:
             return False
         return self[start:start + prefix_len] == prefix
 
-    def strip(self: bytes, bytes_arg):
+    def strip(self: bytes, bytes_arg) -> bytes:
         return self.lstrip(bytes_arg).rstrip(bytes_arg)
 
-    def swapcase(self: bytes):
+    def swapcase(self: bytes) -> bytes:
         ret = __pythonj_bytes_builder__(__pythonj_len__(self))
         for c in self:
             if 65 <= c <= 90:
@@ -538,7 +538,7 @@ class bytes:
                 __pythonj_bytes_builder_append_byte__(ret, c)
         return __pythonj_bytes_builder_finish__(ret)
 
-    def title(self: bytes):
+    def title(self: bytes) -> bytes:
         ret = __pythonj_bytes_builder__(__pythonj_len__(self))
         in_word = False
         for c in self:
@@ -559,7 +559,7 @@ class bytes:
                 in_word = False
         return __pythonj_bytes_builder_finish__(ret)
 
-    def upper(self: bytes):
+    def upper(self: bytes) -> bytes:
         ret = __pythonj_bytes_builder__(__pythonj_len__(self))
         for c in self:
             if 97 <= c <= 122:
@@ -569,7 +569,7 @@ class bytes:
         return __pythonj_bytes_builder_finish__(ret)
 
 class dict:
-    def fromkeys(self, iterable, value):
+    def fromkeys(self, iterable, value) -> dict:
         ret = {}
         for key in iterable:
             ret[key] = value
@@ -583,25 +583,25 @@ class dict:
         return defaultValue
 
 class float:
-    def conjugate(self):
+    def conjugate(self) -> float:
         return self
 
 class int:
-    def as_integer_ratio(self):
+    def as_integer_ratio(self) -> tuple:
         return (self, 1)
 
-    def conjugate(self):
+    def conjugate(self) -> int:
         return self
 
-    def is_integer(self):
+    def is_integer(self) -> bool:
         return True
 
 class range:
-    def count(self, value):
+    def count(self, value) -> int:
         return 1 if value in self else 0
 
 class str:
-    def join(self: str, iterable):
+    def join(self: str, iterable) -> str:
         ret = __pythonj_str_builder__(None)
         if not __pythonj_hasiter__(iterable):
             raise TypeError('can only join an iterable')
@@ -616,14 +616,14 @@ class str:
             i += 1
         return __pythonj_str_builder_finish__(ret)
 
-    def removeprefix(self: str, prefix):
+    def removeprefix(self: str, prefix) -> str:
         if not __pythonj_isinstance__(prefix, str):
             raise TypeError("removeprefix() argument must be str, not " + type(prefix).__name__)
         if self.startswith(prefix):
             return self[len(prefix):]
         return self
 
-    def removesuffix(self: str, suffix):
+    def removesuffix(self: str, suffix) -> str:
         if not __pythonj_isinstance__(suffix, str):
             raise TypeError("removesuffix() argument must be str, not " + type(suffix).__name__)
         if suffix and self.endswith(suffix):
