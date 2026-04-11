@@ -502,16 +502,12 @@ def pyj_str_parse_spec(spec) -> tuple:
 
     return (fill, align, width, precision)
 
-def pyj_float_special_text(value, type_char):
-    import math
-    if math.isfinite(value):
-        return None
-    if math.isnan(value):
-        text = 'nan'
+def pyj_float_special_text(value: float, type_char: str) -> str:
+    upper: bool = type_char == 'E' or type_char == 'F' or type_char == 'G'
+    if value != value:
+        text = 'NAN' if upper else 'nan'
     else:
-        text = 'inf'
-    if type_char in ('E', 'F', 'G'):
-        text = text.upper()
+        text = 'INF' if upper else 'inf'
     if type_char == '%':
         text += '%'
     return text
@@ -592,17 +588,18 @@ def pyj_float_finish_text(fill, align, sign, z, width, grouping, value, magnitud
         return _pyj_float_apply_zero_fill(text, grouping, width)
     return _pyj_format_apply_width(text, fill, align, width, '>')
 
-def pyj_float_format(value, format_spec) -> str:
+def pyj_float_format(value: float, format_spec: str) -> str:
+    import math
     fill, align, sign, z, alt, width, grouping, precision, type_char = pyj_float_parse_spec(format_spec)
 
-    magnitude_text = pyj_float_special_text(value, type_char)
-    if magnitude_text is None:
+    if not math.isfinite(value):
+        magnitude_text = pyj_float_special_text(value, type_char)
+    else:
         core_value = abs(value)
         if type_char == '%':
             core_value *= 100.0
-            percent_special_text = pyj_float_special_text(core_value, type_char)
-            if percent_special_text is not None:
-                magnitude_text = percent_special_text
+            if not math.isfinite(core_value):
+                magnitude_text = pyj_float_special_text(core_value, type_char)
                 return pyj_float_finish_text(fill, align, sign, z, width, grouping, value, magnitude_text)
 
         core_type_char = 'f' if type_char == '%' else type_char
