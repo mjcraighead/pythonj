@@ -248,8 +248,8 @@ class bytes:
         if not (is_str or is_bytes_like):
             raise TypeError(f'fromhex() argument must be str or bytes-like, not {__pythonj_typename__(type(string))}')
         ret = __pythonj_bytes_builder__(len(string) // 2)
-        i = 0
-        n = len(string)
+        i: int = 0
+        n: int = len(string)
         while i < n:
             c = string[i]
             if is_str:
@@ -271,7 +271,7 @@ class bytes:
             elif 65 <= hi <= 70:
                 value = hi - 65 + 10
             else:
-                raise ValueError('non-hexadecimal number found in fromhex() arg at position ' + str(i))
+                raise ValueError(f'non-hexadecimal number found in fromhex() arg at position {i}')
             value *= 16
             if 48 <= lo <= 57:
                 value += lo - 48
@@ -280,7 +280,7 @@ class bytes:
             elif 65 <= lo <= 70:
                 value += lo - 65 + 10
             else:
-                raise ValueError('non-hexadecimal number found in fromhex() arg at position ' + str(i + 1))
+                raise ValueError(f'non-hexadecimal number found in fromhex() arg at position {i+1}')
             __pythonj_bytes_builder_append_int__(ret, value)
             i += 2
         return __pythonj_bytes_builder_finish__(ret)
