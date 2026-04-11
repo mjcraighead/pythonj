@@ -536,7 +536,25 @@ def _collect_exact_local_annotations(node: ast.AST) -> tuple[dict[str, str], dic
 def _collect_exact_global_annotations(node: ast.AST) -> tuple[dict[str, str], dict[str, int], list[tuple[int, str]]]:
     if not isinstance(node, ast.Module):
         return ({}, {}, [])
-    return ({}, {}, [])
+    exact_global_types: dict[str, str] = {}
+    exact_global_lines: dict[str, int] = {}
+    errors: list[tuple[int, str]] = []
+    for statement in node.body:
+        for local_node in _iter_scope_local_nodes(statement):
+            if not isinstance(local_node, ast.AnnAssign):
+                continue
+            if not isinstance(local_node.target, ast.Name):
+                errors.append((local_node.lineno, 'only simple global variable annotations are supported'))
+                continue
+            if local_node.target.id in exact_global_types:
+                errors.append((local_node.lineno, f"duplicate global annotation for {local_node.target.id!r}"))
+                continue
+            if not isinstance(local_node.annotation, ast.Name) or local_node.annotation.id not in extract_spec.BUILTIN_TYPES:
+                errors.append((local_node.lineno, 'only exact builtin-type global annotations are supported'))
+                continue
+            exact_global_types[local_node.target.id] = local_node.annotation.id
+            exact_global_lines[local_node.target.id] = local_node.lineno
+    return (exact_global_types, exact_global_lines, errors)
 
 def _collect_exact_arg_annotations(node: ast.AST) -> tuple[dict[str, str], dict[str, int], list[tuple[int, str]]]:
     if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
@@ -979,6 +997,8 @@ class LoweringVisitor(ast.NodeVisitor):
             module_name = self.module_scope().info.initial_builtin_module_locals.get(name)
             if module_name is not None:
                 return ir.PyBuiltinModule(module_name, extract_spec.BUILTIN_MODULES[module_name])
+            if (type_name := self.global_exact_builtin_type(name)) is not None:
+                return ir.Identifier(f'pyglobal_{name}', extract_spec.BUILTIN_TYPES[type_name])
         if (type_name := self.module_scope().info.initial_final_constant_types.get(name)) is not None:
             return ir.Identifier(f'pyglobal_{name}', extract_spec.BUILTIN_TYPES[type_name])
         return ir.Identifier(f'pyglobal_{name}')
@@ -1027,11 +1047,14 @@ class LoweringVisitor(ast.NodeVisitor):
             return self.ident_expr_by_resolution(name, resolution)
         if self.scope.info.kind is ScopeKind.MODULE and binding_state is NameBindingState.DEFINITELY_UNBOUND and builtin is not None:
             return builtin
-        return ir.StaticMethodCall('Runtime', 'getGlobal', [
+        ret = ir.StaticMethodCall('Runtime', 'getGlobal', [
             self.ident_expr_by_resolution(name, resolution),
             ir.StrLiteral(name),
             builtin if builtin is not None else ir.Null(),
         ], 'PyObject')
+        if (type_name := self.global_exact_builtin_type(name)) is not None:
+            return ir.CastExpr(extract_spec.BUILTIN_TYPES[type_name], ret)
+        return ret
 
     def ident_expr(self, name: str) -> ir.Expr:
         if self.scope.info.kind is ScopeKind.FUNCTION and (name in self.scope.info.cell_vars or name in self.scope.free_vars):
@@ -1110,10 +1133,23 @@ class LoweringVisitor(ast.NodeVisitor):
             return 'PyObject'
         return extract_spec.BUILTIN_TYPES[type_name]
 
+    def java_global_type(self, name: str) -> str:
+        if (type_name := self.global_exact_builtin_type(name)) is None:
+            return 'PyObject'
+        return extract_spec.BUILTIN_TYPES[type_name]
+
     def cast_local_assignment(self, name: str, value: ir.Expr) -> ir.Expr:
         if (type_name := self.local_exact_builtin_type(name)) is None:
             return value
         return ir.CastExpr(extract_spec.BUILTIN_TYPES[type_name], value)
+
+    def cast_assignment(self, name: str, resolution: NameResolution, value: ir.Expr) -> ir.Expr:
+        if resolution is NameResolution.LOCAL:
+            return self.cast_local_assignment(name, value)
+        if resolution is NameResolution.GLOBAL:
+            if (type_name := self.global_exact_builtin_type(name)) is not None:
+                return ir.CastExpr(extract_spec.BUILTIN_TYPES[type_name], value)
+        return value
 
     def emit_exact_type_binop(self, op: str, lhs_node: ast.expr, rhs_node: ast.expr) -> Optional[ir.Expr]:
         lhs_type = self.infer_exact_builtin_type_expr(lhs_node)
@@ -1138,6 +1174,8 @@ class LoweringVisitor(ast.NodeVisitor):
                 if (type_name := self.local_exact_builtin_type(node.id)) is not None:
                     return type_name
             elif get_name_resolution(node) is NameResolution.GLOBAL:
+                if (type_name := self.global_exact_builtin_type(node.id)) is not None:
+                    return type_name
                 if (type_name := self.module_scope().info.initial_final_constant_types.get(node.id)) is not None:
                     return type_name
         if isinstance(node, ast.BinOp):
@@ -1617,8 +1655,8 @@ class LoweringVisitor(ast.NodeVisitor):
 
     def emit_bind(self, target: ast.expr, value: ir.Expr) -> Iterator[ir.Statement]:
         if isinstance(target, ast.Name):
-            if get_name_resolution(target) is NameResolution.LOCAL:
-                value = self.cast_local_assignment(target.id, value)
+            resolution = get_name_resolution(target)
+            value = self.cast_assignment(target.id, resolution, value)
             yield ir.AssignStatement(self.visit(target), value)
         elif isinstance(target, ast.Attribute):
             temp_name = self.scope.make_temp()
@@ -1658,11 +1696,6 @@ class LoweringVisitor(ast.NodeVisitor):
             if node.value is not None:
                 self.visit(node.value)
             return
-        if self.scope.info.kind is ScopeKind.MODULE:
-            self.error(node.lineno, 'global variable annotations are unsupported')
-            if node.value is not None:
-                self.code.extend(self.emit_bind(node.target, self.visit(node.value)))
-            return
         if not isinstance(node.annotation, ast.Name) or node.annotation.id not in extract_spec.BUILTIN_TYPES:
             msg = 'only exact builtin-type global annotations are supported' if self.scope.info.kind is ScopeKind.MODULE else 'only exact builtin-type local annotations are supported'
             self.error(node.lineno, msg)
@@ -1690,9 +1723,9 @@ class LoweringVisitor(ast.NodeVisitor):
                 binding_state = get_name_binding_state(node.target) if hasattr(node.target, BINDING_STATE_ATTR) else None
                 lhs = self.load_expr(node.target.id, get_name_resolution(node.target), binding_state)
                 value = ir.MethodCall(lhs, op, [self.visit(node.value)])
-            if get_name_resolution(node.target) is NameResolution.LOCAL:
-                value = self.cast_local_assignment(node.target.id, value)
-            code = ir.AssignStatement(self.ident_expr_by_resolution(node.target.id, get_name_resolution(node.target)), value)
+            resolution = get_name_resolution(node.target)
+            value = self.cast_assignment(node.target.id, resolution, value)
+            code = ir.AssignStatement(self.ident_expr_by_resolution(node.target.id, resolution), value)
         elif isinstance(node.target, ast.Attribute):
             temp_name = self.scope.make_temp()
             self.code.append(ir.LocalDecl('var', temp_name, self.visit(node.target.value)))
@@ -2441,7 +2474,7 @@ class LoweringVisitor(ast.NodeVisitor):
               for (name, java_name) in sorted(final_function_fields.items())),
             *(ir.FieldDecl('private static final', extract_spec.BUILTIN_TYPES[self.scope.info.initial_final_constant_types[name]], f'pyglobal_{name}', ir.PyConstant(value))
               for (name, value) in sorted(final_constant_fields.items())),
-            *(ir.FieldDecl('private static', 'PyObject', f'pyglobal_{name}', ir.Null())
+            *(ir.FieldDecl('private static', self.java_global_type(name), f'pyglobal_{name}', ir.Null())
               for name in sorted(self.scope.info.locals - set(final_import_fields) - set(final_function_fields) - set(final_constant_fields))),
             ir.MethodDecl(
                 'public static',
