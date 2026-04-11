@@ -28,7 +28,7 @@ def bin(arg) -> str:
 
 def delattr(obj, name) -> None:
     if not __pythonj_isinstance__(name, str):
-        raise TypeError('attribute name must be string, not ' + repr(type(name).__name__))
+        raise TypeError(f'attribute name must be string, not {type(name).__name__!r}')
     __pythonj_delattr__(obj, name)
     return None
 
@@ -42,7 +42,7 @@ def format(value, format_spec) -> str:
 
 def getattr(obj, name, default):
     if not __pythonj_isinstance__(name, str):
-        raise TypeError('attribute name must be string, not ' + repr(type(name).__name__))
+        raise TypeError(f'attribute name must be string, not {type(name).__name__!r}')
     try:
         return __pythonj_getattr__(obj, name)
     except AttributeError as e:
@@ -98,7 +98,7 @@ def repr(arg) -> str:
 
 def setattr(obj, name, value) -> None:
     if not __pythonj_isinstance__(name, str):
-        raise TypeError('attribute name must be string, not ' + repr(type(name).__name__))
+        raise TypeError(f'attribute name must be string, not {type(name).__name__!r}')
     __pythonj_setattr__(obj, name, value)
     return None
 
@@ -187,7 +187,7 @@ class bytes:
                     ret += 1
             return ret
         if not __pythonj_isinstance__(sub, (bytes, bytearray)):
-            raise TypeError('argument should be integer or bytes-like object, not ' + repr(type(sub).__name__))
+            raise TypeError(f'argument should be integer or bytes-like object, not {type(sub).__name__!r}')
         sub_len = len(sub)
         if sub_len == 0:
             return end - start + 1
@@ -232,7 +232,7 @@ class bytes:
                     return i
             return -1
         if not __pythonj_isinstance__(sub, (bytes, bytearray)):
-            raise TypeError('argument should be integer or bytes-like object, not ' + repr(type(sub).__name__))
+            raise TypeError(f'argument should be integer or bytes-like object, not {type(sub).__name__!r}')
         sub_len = len(sub)
         if sub_len == 0:
             return start
@@ -438,7 +438,7 @@ class bytes:
         elif __pythonj_isinstance__(bytes_arg, (bytes, bytearray)):
             strip_set = bytes_arg
         else:
-            raise TypeError('a bytes-like object is required, not ' + repr(type(bytes_arg).__name__))
+            raise TypeError(f'a bytes-like object is required, not {type(bytes_arg).__name__!r}')
         i: int = 0
         n: int = len(self)
         while i < n and self[i] in strip_set:
@@ -447,7 +447,7 @@ class bytes:
 
     def partition(self: bytes, sep) -> tuple:
         if not __pythonj_isinstance__(sep, (bytes, bytearray)):
-            raise TypeError('a bytes-like object is required, not ' + repr(type(sep).__name__))
+            raise TypeError(f'a bytes-like object is required, not {type(sep).__name__!r}')
         if len(sep) == 0:
             raise ValueError('empty separator')
         i = self.find(sep)
@@ -477,7 +477,7 @@ class bytes:
                     return i
             return -1
         if not __pythonj_isinstance__(sub, (bytes, bytearray)):
-            raise TypeError('argument should be integer or bytes-like object, not ' + repr(type(sub).__name__))
+            raise TypeError(f'argument should be integer or bytes-like object, not {type(sub).__name__!r}')
         sub_len = len(sub)
         if sub_len == 0:
             return end
@@ -495,7 +495,7 @@ class bytes:
 
     def rpartition(self: bytes, sep) -> tuple:
         if not __pythonj_isinstance__(sep, (bytes, bytearray)):
-            raise TypeError('a bytes-like object is required, not ' + repr(type(sep).__name__))
+            raise TypeError(f'a bytes-like object is required, not {type(sep).__name__!r}')
         if len(sep) == 0:
             raise ValueError('empty separator')
         i = self.rfind(sep, None, None)
@@ -509,7 +509,7 @@ class bytes:
         elif __pythonj_isinstance__(bytes_arg, (bytes, bytearray)):
             strip_set = bytes_arg
         else:
-            raise TypeError('a bytes-like object is required, not ' + repr(type(bytes_arg).__name__))
+            raise TypeError(f'a bytes-like object is required, not {type(bytes_arg).__name__!r}')
         i: int = len(self)
         while i > 0 and self[i - 1] in strip_set:
             i -= 1
