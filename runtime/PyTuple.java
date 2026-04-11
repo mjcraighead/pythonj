@@ -36,7 +36,7 @@ public final class PyTuple extends PyObject {
         Runtime.requireMinMaxPositional(args, kwargs, type.name(), 0, 1);
         return newObjPositional((args.length == 0) ? null : args[0]);
     }
-    public static PyObject newObjPositional(PyObject arg) {
+    public static PyTuple newObjPositional(PyObject arg) {
         if (arg == null) {
             return empty_singleton;
         }

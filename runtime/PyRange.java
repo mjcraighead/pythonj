@@ -51,7 +51,7 @@ public final class PyRange extends PyObject {
         PyObject arg2 = (args.length >= 3) ? args[2] : null;
         return newObjPositional(arg0, arg1, arg2);
     }
-    public static PyObject newObjPositional(PyObject arg0, PyObject arg1, PyObject arg2) {
+    public static PyRange newObjPositional(PyObject arg0, PyObject arg1, PyObject arg2) {
         long start = 0;
         long stop;
         long step = 1;

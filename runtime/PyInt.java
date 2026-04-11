@@ -100,7 +100,7 @@ public final class PyInt extends PyObject {
         PyObject arg1 = (args.length >= 2) ? args[1] : null;
         return newObjPositional(arg0, arg1);
     }
-    public static PyObject newObjPositional(PyObject arg0, PyObject arg1) {
+    public static PyInt newObjPositional(PyObject arg0, PyObject arg1) {
         if (arg0 == null) {
             return PyInt.singleton_0;
         }

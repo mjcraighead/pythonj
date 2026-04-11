@@ -205,7 +205,7 @@ public final class PyFloat extends PyObject {
         Runtime.requireMinMaxPositional(args, kwargs, type.name(), 0, 1);
         return newObjPositional((args.length == 0) ? null : args[0]);
     }
-    public static PyObject newObjPositional(PyObject arg) {
+    public static PyFloat newObjPositional(PyObject arg) {
         if (arg == null) {
             return new PyFloat(0.0);
         }

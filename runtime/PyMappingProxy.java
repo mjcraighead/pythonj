@@ -16,7 +16,7 @@ public final class PyMappingProxy extends PyObject {
         var boundArgs = Runtime.bindMinMaxPositionalOrKeyword(args, kwargs, type.name(), constructor_positional_names, 0, PyTuple.empty_singleton, 1, 1, 1, false, false);
         return newObjPositional(boundArgs.get(0));
     }
-    public static PyObject newObjPositional(PyObject arg) {
+    public static PyMappingProxy newObjPositional(PyObject arg) {
         if (arg instanceof PyDict dict) {
             return new PyMappingProxy(dict.items);
         } else if (arg instanceof PyMappingProxy proxy) {

@@ -37,7 +37,7 @@ public final class PyString extends PyObject {
         var boundArgs = Runtime.bindMinMaxPositionalOrKeyword(args, kwargs, type.name(), constructor_positional_names, 0, PyTuple.empty_singleton, 0, 3, 3, false, false);
         return newObjPositional(boundArgs.get(0), boundArgs.get(1), boundArgs.get(2));
     }
-    public static PyObject newObjPositional(PyObject object, PyObject encoding, PyObject errors) {
+    public static PyString newObjPositional(PyObject object, PyObject encoding, PyObject errors) {
         if (object == null) {
             return PyString.empty_singleton;
         }

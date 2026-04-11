@@ -16,7 +16,7 @@ public final class PyZip extends PyIter {
     public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
         return PyRuntime.pyfunc_zip__newobj(type, args, kwargs);
     }
-    public static PyObject newObjPositional(PyObject[] args, PyObject strict) {
+    public static PyZip newObjPositional(PyObject[] args, PyObject strict) {
         boolean strictBool = (strict != null) && strict.boolValue();
         PyIter[] iters = new PyIter[args.length];
         for (int i = 0; i < args.length; i++) {

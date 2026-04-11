@@ -42,7 +42,7 @@ public final class PyList extends PyObject {
         Runtime.requireMinMaxPositional(args, kwargs, type.name(), 0, 1);
         return newObjPositional((args.length == 0) ? null : args[0]);
     }
-    public static PyObject newObjPositional(PyObject arg) {
+    public static PyList newObjPositional(PyObject arg) {
         var ret = new PyList();
         if (arg == null) {
             return ret;

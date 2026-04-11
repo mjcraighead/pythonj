@@ -38,7 +38,7 @@ public final class PyBytes extends PyObject {
         PyObject errors = (args.length >= 3) ? args[2] : null;
         return newObjPositional(arg, encoding, errors);
     }
-    public static PyObject newObjPositional(PyObject arg, PyObject encodingObj, PyObject errorsObj) {
+    public static PyBytes newObjPositional(PyObject arg, PyObject encodingObj, PyObject errorsObj) {
         if (arg == null) {
             return empty_singleton;
         }

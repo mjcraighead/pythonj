@@ -20,7 +20,7 @@ public final class PyBool extends PyObject {
         Runtime.requireMinMaxPositional(args, kwargs, type.name(), 0, 1);
         return newObjPositional((args.length == 1) ? args[0] : null);
     }
-    public static PyObject newObjPositional(PyObject arg) {
+    public static PyBool newObjPositional(PyObject arg) {
         return (arg != null) ? PyBool.create(arg.boolValue()) : PyBool.false_singleton;
     }
 

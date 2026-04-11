@@ -18,7 +18,7 @@ public final class PySlice extends PyTruthyObject {
         PyObject arg2 = (args.length >= 3) ? args[2] : null;
         return newObjPositional(arg0, arg1, arg2);
     }
-    public static PyObject newObjPositional(PyObject arg0, PyObject arg1, PyObject arg2) {
+    public static PySlice newObjPositional(PyObject arg0, PyObject arg1, PyObject arg2) {
         PyObject start;
         PyObject stop;
         PyObject step = (arg2 != null) ? arg2 : PyNone.singleton;
