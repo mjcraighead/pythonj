@@ -744,12 +744,7 @@ class LoweringVisitor(ast.NodeVisitor):
     def emit_exact_int_value(self, node: ast.expr) -> Optional[ir.Expr]:
         if self.infer_exact_builtin_type_expr(node) != 'int':
             return None
-        if isinstance(node, ast.Constant) and isinstance(node.value, int) and not isinstance(node.value, bool):
-            return ir.IntLiteral(node.value, 'L')
-        expr = self.visit(node)
-        if expr.java_type() == 'PyInt':
-            return ir.Field(expr, 'value', 'long')
-        return ir.Field(ir.CastExpr('PyInt', expr), 'value', 'long')
+        return ir.unbox_int(self.visit(node))
 
     def emit_exact_int_binop(self, op: str, lhs_node: ast.expr, rhs_node: ast.expr) -> Optional[ir.Expr]:
         lhs_int = self.emit_exact_int_value(lhs_node)
@@ -1012,7 +1007,7 @@ class LoweringVisitor(ast.NodeVisitor):
                     if isinstance(expr, ir.PyConstant) and isinstance(expr.value, str):
                         format_spec = ir.StrLiteral(expr.value)
                     else:
-                        format_spec = ir.Field(expr, 'value', 'String')
+                        format_spec = ir.unbox_str(expr)
                 else:
                     format_spec = ir.StrLiteral("")
                 expr = self.visit(val.value)
@@ -1025,7 +1020,7 @@ class LoweringVisitor(ast.NodeVisitor):
                 elif val.conversion != -1:
                     self.error(val.lineno, f'unsupported f string conversion type {val.conversion}')
                 if isinstance(format_spec, ir.StrLiteral) and not format_spec.s and expr.java_type() == 'PyString':
-                    expr = ir.Field(expr, 'value', 'String')
+                    expr = ir.unbox_str(expr)
                 else:
                     expr = ir.MethodCall(expr, 'format', [format_spec], 'String')
                 vals.append(expr)

@@ -729,6 +729,24 @@ def bool_value(expr: Expr) -> Expr:
         return Bool(bool(expr.value))
     return MethodCall(expr, 'boolValue', [], 'boolean')
 
+def unbox_int(expr: Expr) -> Expr:
+    if isinstance(expr, PyConstant) and isinstance(expr.value, int) and not isinstance(expr.value, bool):
+        return IntLiteral(expr.value, 'L')
+    if isinstance(expr, CreateObject) and expr.type == 'PyInt':
+        return expr.args[0]
+    if expr.java_type() == 'PyInt':
+        return Field(expr, 'value', 'long')
+    return Field(CastExpr('PyInt', expr), 'value', 'long')
+
+def unbox_str(expr: Expr) -> Expr:
+    if isinstance(expr, PyConstant) and isinstance(expr.value, str):
+        return StrLiteral(expr.value)
+    if isinstance(expr, CreateObject) and expr.type == 'PyString':
+        return expr.args[0]
+    if expr.java_type() == 'PyString':
+        return Field(expr, 'value', 'String')
+    return Field(CastExpr('PyString', expr), 'value', 'String')
+
 def static_method_call(class_name: str, method: str, args: list[Expr]) -> Expr:
     if class_name == 'PyBool' and method == 'create':
         (arg,) = args
