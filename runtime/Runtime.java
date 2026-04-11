@@ -261,10 +261,22 @@ final class PyZlibModule extends PyModule {
 abstract class PyType extends PyTruthyObject {
     public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, type.name());
-        if (args.length != 1) {
-            throw Runtime.raiseExactArgs(args, 1, type.name());
+        if (args.length == 1) {
+            return newObjPositional(args[0], null, null);
         }
-        return args[0].type();
+        if (args.length == 3) {
+            return newObjPositional(args[0], args[1], args[2]);
+        }
+        throw PyTypeError.raise("type() takes 1 or 3 arguments");
+    }
+    public static PyType newObjPositional(PyObject arg0, PyObject arg1, PyObject arg2) {
+        if ((arg1 == null) && (arg2 == null)) {
+            return arg0.type();
+        }
+        if ((arg1 != null) && (arg2 != null)) {
+            throw new UnsupportedOperationException("type(name, bases, dict) is unsupported");
+        }
+        throw PyTypeError.raise("type() takes 1 or 3 arguments");
     }
 
     @Override public PyObject or(PyObject rhs) {

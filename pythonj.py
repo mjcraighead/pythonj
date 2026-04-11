@@ -1179,6 +1179,13 @@ class LoweringVisitor(ast.NodeVisitor):
             not node.keywords and
             not any(isinstance(arg, ast.Starred) for arg in node.args)):
             func = self.visit(node.func)
+            if isinstance(func, ir.PyBuiltinType) and func.name == 'type' and len(node.args) <= 3:
+                return ir.StaticMethodCall(
+                    'PyType',
+                    'newObjPositional',
+                    [*([self.visit(arg) for arg in node.args]), *([ir.Null()] * (3 - len(node.args)))],
+                    'PyType',
+                )
             if isinstance(func, ir.PyBuiltinType) and func.name in DIRECT_NEWOBJ_POSITIONAL_BUILTIN_TYPES:
                 (min_args, max_args) = DIRECT_NEWOBJ_POSITIONAL_BUILTIN_TYPES[func.name]
                 if min_args <= len(node.args) <= max_args:
