@@ -229,6 +229,52 @@ def collect_builtin_method_return_java_types(node: ast.Module) -> dict[tuple[str
             ret[(class_node.name, func.name)] = ret_type
     return ret
 
+class AstSimplifier(ast.NodeTransformer):
+    def visit_UnaryOp(self, node):
+        node = cast(ast.UnaryOp, self.generic_visit(node))
+        if not isinstance(node.operand, ast.Constant):
+            return node
+        value = node.operand.value
+        match node.op:
+            case ast.UAdd() if isinstance(value, (int, float)):
+                return ast.copy_location(ast.Constant(+value), node)
+            case ast.USub() if isinstance(value, (int, float)):
+                return ast.copy_location(ast.Constant(-value), node)
+            case _:
+                return node
+
+    def visit_BinOp(self, node):
+        node = cast(ast.BinOp, self.generic_visit(node))
+        if not (isinstance(node.left, ast.Constant) and isinstance(node.right, ast.Constant)):
+            return node
+        lhs = node.left.value
+        rhs = node.right.value
+        if not (isinstance(lhs, int) and isinstance(rhs, int)):
+            return node
+        match node.op:
+            case ast.Add():
+                value = lhs + rhs
+            case ast.BitAnd():
+                value = lhs & rhs
+            case ast.BitOr():
+                value = lhs | rhs
+            case ast.BitXor():
+                value = lhs ^ rhs
+            case ast.LShift() if rhs >= 0:
+                value = lhs << rhs
+            case ast.Mult():
+                value = lhs * rhs
+            case ast.RShift() if rhs >= 0:
+                value = lhs >> rhs
+            case ast.Sub():
+                value = lhs - rhs
+            case _:
+                return node
+        return ast.copy_location(ast.Constant(value), node)
+
+def simplify_ast(node: ast.AST) -> ast.AST:
+    return ast.fix_missing_locations(AstSimplifier().visit(node))
+
 def _get_supported_user_function_call_range(args: ast.arguments) -> Optional[tuple[int, int]]:
     if args.kwonlyargs or args.kw_defaults or args.vararg or args.kwarg:
         return None
@@ -919,10 +965,6 @@ class LoweringVisitor(ast.NodeVisitor):
             return ir.static_method_call('PyBool', 'create', [ir.unary_op('!', self.emit_condition(node.operand))])
         op = self.visit(node.op)
         operand = self.visit(node.operand)
-        if isinstance(operand, ir.PyConstant) and isinstance(operand.value, int):
-            match op:
-                case 'pos': return ir.PyConstant(+operand.value)
-                case 'neg': return ir.PyConstant(-operand.value)
         return ir.MethodCall(operand, op, [])
 
     def visit_Add(self, node): return 'add'
@@ -942,25 +984,6 @@ class LoweringVisitor(ast.NodeVisitor):
         op = self.visit(node.op)
         lhs = self.visit(node.left)
         rhs = self.visit(node.right)
-        if (isinstance(lhs, ir.PyConstant) and isinstance(lhs.value, int) and
-            isinstance(rhs, ir.PyConstant) and isinstance(rhs.value, int)):
-            match op: # be careful to not raise an exception here or do anything platform-dependent
-                case 'add':
-                    return ir.PyConstant(lhs.value + rhs.value)
-                case 'and':
-                    return ir.PyConstant(lhs.value & rhs.value)
-                case 'or':
-                    return ir.PyConstant(lhs.value | rhs.value)
-                case 'xor':
-                    return ir.PyConstant(lhs.value ^ rhs.value)
-                case 'lshift' if rhs.value >= 0:
-                    return ir.PyConstant(lhs.value << rhs.value)
-                case 'mul':
-                    return ir.PyConstant(lhs.value * rhs.value)
-                case 'rshift' if rhs.value >= 0:
-                    return ir.PyConstant(lhs.value >> rhs.value)
-                case 'sub':
-                    return ir.PyConstant(lhs.value - rhs.value)
         exact_int_expr = self.emit_exact_int_binop(op, node.left, node.right)
         if exact_int_expr is not None:
             return exact_int_expr
@@ -2177,7 +2200,7 @@ def parse_python_module(path: str) -> ast.Module:
     if not os.path.isabs(resolved_path):
         resolved_path = os.path.join(os.path.dirname(__file__), resolved_path)
     with open(resolved_path, encoding='utf-8') as f:
-        return ast.parse(f.read(), resolved_path)
+        return cast(ast.Module, simplify_ast(ast.parse(f.read(), resolved_path)))
 
 def get_top_level_functions(node: ast.Module) -> dict[str, ast.FunctionDef]:
     return {x.name: x for x in node.body if isinstance(x, ast.FunctionDef)}
@@ -3161,7 +3184,7 @@ def translate_python_to_java(spec_path: str, py_path: str, java_path: str) -> No
 def translate_python_source_to_java(spec_path: str, py_source: str, source_name: str, java_path: str,
                                     argv0: Optional[str] = None) -> None:
     load_runtime_spec(spec_path)
-    node = ast.parse(py_source, filename=source_name)
+    node = cast(ast.Module, simplify_ast(ast.parse(py_source, filename=source_name)))
     analyzer = ScopeAnalyzer()
     analyzer.visit(node)
     pythonj_builtins_node = parse_python_module('pythonj_builtins.py')
