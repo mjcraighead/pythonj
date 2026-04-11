@@ -360,13 +360,22 @@ def _get_initial_bindings(node: ast.stmt) -> Optional[list[InitialBinding]]:
     if (isinstance(node, ast.Assign) and
         len(node.targets) == 1 and
         isinstance(node.targets[0], ast.Name) and
-        isinstance(node.value, ast.Constant)):
-        type_name = type(node.value.value).__name__
+        isinstance(node.value, (ast.Constant, ast.Tuple))):
+        if isinstance(node.value, ast.Constant):
+            constant_value = node.value.value
+        else:
+            try:
+                constant_value = ast.literal_eval(node.value)
+            except (TypeError, ValueError):
+                return None
+            if not is_constant_default(constant_value):
+                return None
+        type_name = type(constant_value).__name__
         if type_name not in extract_spec.BUILTIN_TYPES:
             return None
         return [InitialBinding(
             node.targets[0].id,
-            constant_value=node.value.value,
+            constant_value=constant_value,
             constant_type=type_name,
         )]
     return None
@@ -375,6 +384,15 @@ def _collect_initial_final_bindings(node: ast.AST) -> tuple[set[str], dict[str, 
     if not isinstance(node, (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef)):
         return (set(), {}, {}, {}, {}, {})
     prefix_bindings: dict[str, InitialBinding] = {}
+    function_bindings: dict[str, InitialBinding] = {}
+    write_counts: dict[str, int] = {}
+    for statement in node.body:
+        (stores, dels) = _collect_statement_store_del_names(statement)
+        for name in stores | dels:
+            write_counts[name] = write_counts.get(name, 0) + 1
+        if isinstance(statement, ast.FunctionDef) and (bindings := _get_initial_bindings(statement)) is not None:
+            for binding in bindings:
+                function_bindings[binding.name] = binding
     prefix_end = 0
     for statement in node.body:
         bindings = _get_initial_bindings(statement)
@@ -388,33 +406,36 @@ def _collect_initial_final_bindings(node: ast.AST) -> tuple[set[str], dict[str, 
     later_writes: set[str] = set()
     for statement in node.body[prefix_end:]:
         _walk_local(statement, set(), later_writes, set(), set(), [])
-    final_bindings = {name for name in prefix_bindings if name not in later_writes}
+    final_prefix_bindings = {name for name in prefix_bindings if name not in later_writes}
+    final_function_bindings = {name for name in function_bindings if write_counts.get(name) == 1}
+    final_bindings = final_prefix_bindings | final_function_bindings
+    all_bindings = {**prefix_bindings, **function_bindings}
     return (
         final_bindings,
         {
             name: binding.builtin_module
             for (name, binding) in prefix_bindings.items()
-            if name in final_bindings and binding.builtin_module is not None
+            if name in final_prefix_bindings and binding.builtin_module is not None
         },
         {
             name: binding.function_call_range
-            for (name, binding) in prefix_bindings.items()
+            for (name, binding) in all_bindings.items()
             if name in final_bindings and binding.function_call_range is not None
         },
         {
             name: binding.function_return_type
-            for (name, binding) in prefix_bindings.items()
+            for (name, binding) in all_bindings.items()
             if name in final_bindings and binding.function_return_type is not None
         },
         {
             name: binding.constant_value
             for (name, binding) in prefix_bindings.items()
-            if name in final_bindings and binding.constant_value is not None
+            if name in final_prefix_bindings and binding.constant_value is not None
         },
         {
             name: binding.constant_type
             for (name, binding) in prefix_bindings.items()
-            if name in final_bindings and binding.constant_type is not None
+            if name in final_prefix_bindings and binding.constant_type is not None
         },
     )
 
@@ -660,7 +681,17 @@ class ScopeAnalyzer(ast.NodeVisitor):
         for child in _collect_child_scopes(node):
             self._analyze_scope_tree(child)
 
-    def _tag_load_binding_states(self, node: ast.AST, scope_info: ScopeInfo) -> None:
+    def _tag_load_binding_states(self, node: ast.AST, scope_info: ScopeInfo, default_global_states: Optional[dict[str, NameBindingState]] = None) -> None:
+        if default_global_states is None:
+            default_global_states = {}
+        module_deleted_names: set[str] = set()
+        if isinstance(node, ast.Module):
+            module_deleted_names = {
+                subnode.id for subnode in ast.walk(node)
+                if (isinstance(subnode, ast.Name) and
+                    isinstance(subnode.ctx, ast.Del) and
+                    get_name_resolution(subnode) is NameResolution.GLOBAL)
+            }
         states: dict[str, NameBindingState] = {}
         for name in scope_info.locals | scope_info.cell_vars | scope_info.explicit_globals:
             states[name] = NameBindingState.DEFINITELY_UNBOUND
@@ -674,13 +705,16 @@ class ScopeAnalyzer(ast.NodeVisitor):
                 if isinstance(local_node, ast.Name) and isinstance(local_node.ctx, ast.Load):
                     resolution = get_name_resolution(local_node)
                     if resolution is NameResolution.GLOBAL:
-                        state = local_states.get(local_node.id, default_global_state)
+                        if scope_info.kind is ScopeKind.MODULE:
+                            state = local_states.get(local_node.id, default_global_state)
+                        else:
+                            state = default_global_states.get(local_node.id, default_global_state)
                     else:
                         state = local_states.get(local_node.id, NameBindingState.DEFINITELY_UNBOUND)
                     set_name_binding_state(local_node, state)
                 elif local_node is not expr and isinstance(local_node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda,
                                                                         ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)):
-                    self._tag_load_binding_states(local_node, self.scope_infos[local_node])
+                    self._tag_load_binding_states(local_node, self.scope_infos[local_node], default_global_states)
 
         def merge_states(lhs: dict[str, NameBindingState], rhs: dict[str, NameBindingState]) -> dict[str, NameBindingState]:
             merged = dict(lhs)
@@ -719,7 +753,10 @@ class ScopeAnalyzer(ast.NodeVisitor):
             if isinstance(statement, ast.AugAssign):
                 if isinstance(statement.target, ast.Name):
                     resolution = get_name_resolution(statement.target)
-                    state = local_states.get(statement.target.id, default_global_state if resolution is NameResolution.GLOBAL else NameBindingState.DEFINITELY_UNBOUND)
+                    if resolution is NameResolution.GLOBAL:
+                        state = local_states.get(statement.target.id, default_global_state) if scope_info.kind is ScopeKind.MODULE else default_global_states.get(statement.target.id, default_global_state)
+                    else:
+                        state = local_states.get(statement.target.id, NameBindingState.DEFINITELY_UNBOUND)
                     set_name_binding_state(statement.target, state)
                 else:
                     tag_loads(statement.target, local_states)
@@ -773,7 +810,10 @@ class ScopeAnalyzer(ast.NodeVisitor):
                 return process_block(statement.body, local_states)
             if isinstance(statement, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
                 tag_loads(statement, local_states)
-                self._tag_load_binding_states(statement, self.scope_infos[statement])
+                child_default_global_states = dict(local_states) if scope_info.kind is ScopeKind.MODULE else default_global_states
+                for name in module_deleted_names:
+                    child_default_global_states[name] = NameBindingState.UNKNOWN
+                self._tag_load_binding_states(statement, self.scope_infos[statement], child_default_global_states)
                 local_states[statement.name] = NameBindingState.DEFINITELY_BOUND
                 return local_states
             tag_loads(statement, local_states)
@@ -2361,14 +2401,10 @@ class LoweringVisitor(ast.NodeVisitor):
 
     def visit_Module(self, node) -> None:
         for statement in node.body:
-            if isinstance(statement, ast.Import):
-                continue
             if isinstance(statement, ast.FunctionDef) and statement.name in self.scope.info.initial_final_function_call_ranges:
                 java_name = f'pyfunc_{statement.name}_{self.n_functions}'
                 self.n_functions += 1
                 self.final_global_function_classes[statement.name] = java_name
-                continue
-            break
         for statement in node.body:
             self.visit(statement)
 
