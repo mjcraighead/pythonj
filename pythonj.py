@@ -780,7 +780,11 @@ class LoweringVisitor(ast.NodeVisitor):
             return None
         if op not in EXACT_INT_BINOPS:
             return None
-        return ir.static_method_call('PyInt', op, [lhs_int, rhs_int])
+        if op == 'pow':
+            return ir.static_method_call('PyInt', op, [lhs_int, rhs_int])
+        else:
+            assert op != 'trueDiv'
+            return ir.CreateObject('PyInt', [ir.static_method_call('PyInt', f'{op}Unboxed', [lhs_int, rhs_int])])
 
     def infer_exact_builtin_type_expr(self, node: ast.expr) -> Optional[str]:
         if isinstance(node, ast.Name) and get_name_resolution(node) is NameResolution.LOCAL:

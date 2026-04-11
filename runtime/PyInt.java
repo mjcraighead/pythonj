@@ -195,6 +195,20 @@ public final class PyInt extends PyObject {
     public static long orUnboxed(long lhs, long rhs) {
         return lhs | rhs;
     }
+    public static PyObject pow(long lhs, long rhs) {
+        if (rhs < 0) {
+            throw new ArithmeticException("negative exponent");
+        }
+        long ret = 1; // note 0 ** 0 -> 1
+        while (rhs > 0) {
+            if ((rhs & 1) == 1) {
+                ret = Math.multiplyExact(ret, lhs);
+            }
+            lhs = Math.multiplyExact(lhs, lhs);
+            rhs >>= 1;
+        }
+        return new PyInt(ret);
+    }
     public static long rshiftUnboxed(long lhs, long rhs) {
         if (rhs < 0) {
             throw PyValueError.raise("negative shift count");
@@ -217,54 +231,6 @@ public final class PyInt extends PyObject {
         return lhs ^ rhs;
     }
 
-    public static PyInt add(long lhs, long rhs) {
-        return new PyInt(Math.addExact(lhs, rhs));
-    }
-    public static PyInt and(long lhs, long rhs) {
-        return new PyInt(lhs & rhs);
-    }
-    public static PyInt floorDiv(long lhs, long rhs) {
-        return new PyInt(floorDivUnboxed(lhs, rhs));
-    }
-    public static PyInt lshift(long lhs, long rhs) {
-        return new PyInt(lshiftUnboxed(lhs, rhs));
-    }
-    public static PyInt mod(long lhs, long rhs) {
-        return new PyInt(modUnboxed(lhs, rhs));
-    }
-    public static PyInt mul(long lhs, long rhs) {
-        return new PyInt(Math.multiplyExact(lhs, rhs));
-    }
-    public static PyInt or(long lhs, long rhs) {
-        return new PyInt(lhs | rhs);
-    }
-    public static PyInt pow(long lhs, long rhs) {
-        if (rhs < 0) {
-            throw new ArithmeticException("negative exponent");
-        }
-        long ret = 1; // note 0 ** 0 -> 1
-        while (rhs > 0) {
-            if ((rhs & 1) == 1) {
-                ret = Math.multiplyExact(ret, lhs);
-            }
-            lhs = Math.multiplyExact(lhs, lhs);
-            rhs >>= 1;
-        }
-        return new PyInt(ret);
-    }
-    public static PyInt rshift(long lhs, long rhs) {
-        return new PyInt(rshiftUnboxed(lhs, rhs));
-    }
-    public static PyInt sub(long lhs, long rhs) {
-        return new PyInt(Math.subtractExact(lhs, rhs));
-    }
-    public static PyFloat trueDiv(long lhs, long rhs) {
-        return new PyFloat(trueDivUnboxed(lhs, rhs));
-    }
-    public static PyInt xor(long lhs, long rhs) {
-        return new PyInt(lhs ^ rhs);
-    }
-
     // XXX Make sure that all of these throw an exception if the value wraps/overflows/etc.
     @Override public PyInt invert() { return new PyInt(~value); }
     @Override public PyInt pos() { return this; }
@@ -273,63 +239,63 @@ public final class PyInt extends PyObject {
 
     @Override public PyObject add(PyObject rhs) {
         if (rhs instanceof PyInt rhsInt) {
-            return add(value, rhsInt.value);
+            return new PyInt(addUnboxed(value, rhsInt.value));
         } else if (rhs instanceof PyBool rhsBool) {
-            return add(value, rhsBool.asInt());
+            return new PyInt(addUnboxed(value, rhsBool.asInt()));
         } else {
             return super.add(rhs);
         }
     }
     @Override public PyObject and(PyObject rhs) {
         if (rhs instanceof PyInt rhsInt) {
-            return and(value, rhsInt.value);
+            return new PyInt(andUnboxed(value, rhsInt.value));
         } else if (rhs instanceof PyBool rhsBool) {
-            return and(value, rhsBool.asInt());
+            return new PyInt(andUnboxed(value, rhsBool.asInt()));
         } else {
             return super.and(rhs);
         }
     }
     @Override public PyObject floorDiv(PyObject rhs) {
         if (rhs instanceof PyInt rhsInt) {
-            return floorDiv(value, rhsInt.value);
+            return new PyInt(floorDivUnboxed(value, rhsInt.value));
         } else if (rhs instanceof PyBool rhsBool) {
-            return floorDiv(value, rhsBool.asInt());
+            return new PyInt(floorDivUnboxed(value, rhsBool.asInt()));
         } else {
             return super.floorDiv(rhs);
         }
     }
     @Override public PyObject lshift(PyObject rhs) {
         if (rhs instanceof PyInt rhsInt) {
-            return lshift(value, rhsInt.value);
+            return new PyInt(lshiftUnboxed(value, rhsInt.value));
         } else if (rhs instanceof PyBool rhsBool) {
-            return lshift(value, rhsBool.asInt());
+            return new PyInt(lshiftUnboxed(value, rhsBool.asInt()));
         } else {
             return super.lshift(rhs);
         }
     }
     @Override public PyObject mod(PyObject rhs) {
         if (rhs instanceof PyInt rhsInt) {
-            return mod(value, rhsInt.value);
+            return new PyInt(modUnboxed(value, rhsInt.value));
         } else if (rhs instanceof PyBool rhsBool) {
-            return mod(value, rhsBool.asInt());
+            return new PyInt(modUnboxed(value, rhsBool.asInt()));
         } else {
             return super.mod(rhs);
         }
     }
     @Override public PyObject mul(PyObject rhs) {
         if (rhs instanceof PyInt rhsInt) {
-            return mul(value, rhsInt.value);
+            return new PyInt(mulUnboxed(value, rhsInt.value));
         } else if (rhs instanceof PyBool rhsBool) {
-            return mul(value, rhsBool.asInt());
+            return new PyInt(mulUnboxed(value, rhsBool.asInt()));
         } else {
             return super.mul(rhs);
         }
     }
     @Override public PyObject or(PyObject rhs) {
         if (rhs instanceof PyInt rhsInt) {
-            return or(value, rhsInt.value);
+            return new PyInt(orUnboxed(value, rhsInt.value));
         } else if (rhs instanceof PyBool rhsBool) {
-            return or(value, rhsBool.asInt());
+            return new PyInt(orUnboxed(value, rhsBool.asInt()));
         } else {
             return super.or(rhs);
         }
@@ -345,36 +311,36 @@ public final class PyInt extends PyObject {
     }
     @Override public PyObject rshift(PyObject rhs) {
         if (rhs instanceof PyInt rhsInt) {
-            return rshift(value, rhsInt.value);
+            return new PyInt(rshiftUnboxed(value, rhsInt.value));
         } else if (rhs instanceof PyBool rhsBool) {
-            return rshift(value, rhsBool.asInt());
+            return new PyInt(rshiftUnboxed(value, rhsBool.asInt()));
         } else {
             return super.rshift(rhs);
         }
     }
     @Override public PyObject sub(PyObject rhs) {
         if (rhs instanceof PyInt rhsInt) {
-            return sub(value, rhsInt.value);
+            return new PyInt(subUnboxed(value, rhsInt.value));
         } else if (rhs instanceof PyBool rhsBool) {
-            return sub(value, rhsBool.asInt());
+            return new PyInt(subUnboxed(value, rhsBool.asInt()));
         } else {
             return super.sub(rhs);
         }
     }
     @Override public PyObject trueDiv(PyObject rhs) {
         if (rhs instanceof PyInt rhsInt) {
-            return trueDiv(value, rhsInt.value);
+            return new PyFloat(trueDivUnboxed(value, rhsInt.value));
         } else if (rhs instanceof PyBool rhsBool) {
-            return trueDiv(value, rhsBool.asInt());
+            return new PyFloat(trueDivUnboxed(value, rhsBool.asInt()));
         } else {
             return super.trueDiv(rhs);
         }
     }
     @Override public PyObject xor(PyObject rhs) {
         if (rhs instanceof PyInt rhsInt) {
-            return xor(value, rhsInt.value);
+            return new PyInt(xorUnboxed(value, rhsInt.value));
         } else if (rhs instanceof PyBool rhsBool) {
-            return xor(value, rhsBool.asInt());
+            return new PyInt(xorUnboxed(value, rhsBool.asInt()));
         } else {
             return super.xor(rhs);
         }

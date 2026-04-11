@@ -455,9 +455,9 @@ public final class PyFloat extends PyObject {
         }
         PyInt denominator = PyInt.singleton_1;
         if (exponent > 0) {
-            numerator = PyInt.lshift(numerator, exponent).value;
+            numerator = PyInt.lshiftUnboxed(numerator, exponent);
         } else if (exponent < 0) {
-            denominator = PyInt.lshift(1, -exponent);
+            denominator = new PyInt(PyInt.lshiftUnboxed(1, -exponent));
         }
         if (negative) {
             numerator = Math.negateExact(numerator);
