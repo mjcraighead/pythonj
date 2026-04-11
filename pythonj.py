@@ -926,23 +926,22 @@ class LoweringVisitor(ast.NodeVisitor):
             return value
         return ir.CastExpr(extract_spec.BUILTIN_TYPES[type_name], value)
 
-    def emit_exact_int_value(self, node: ast.expr) -> Optional[ir.Expr]:
-        if self.infer_exact_builtin_type_expr(node) != 'int':
-            return None
-        return ir.unbox_int(self.visit(node))
-
-    def emit_exact_int_binop(self, op: str, lhs_node: ast.expr, rhs_node: ast.expr) -> Optional[ir.Expr]:
-        lhs_int = self.emit_exact_int_value(lhs_node)
-        rhs_int = self.emit_exact_int_value(rhs_node)
-        if lhs_int is None or rhs_int is None:
-            return None
-        if op not in EXACT_INT_BINOPS:
-            return None
-        if op == 'pow':
-            return ir.static_method_call('PyInt', op, [lhs_int, rhs_int])
-        else:
-            assert op != 'trueDiv'
-            return ir.CreateObject('PyInt', [ir.static_method_call('PyInt', f'{op}Unboxed', [lhs_int, rhs_int])])
+    def emit_exact_type_binop(self, op: str, lhs_node: ast.expr, rhs_node: ast.expr) -> Optional[ir.Expr]:
+        lhs_type = self.infer_exact_builtin_type_expr(lhs_node)
+        rhs_type = self.infer_exact_builtin_type_expr(rhs_node)
+        if lhs_type == 'int' and rhs_type == 'int' and op in EXACT_INT_BINOPS:
+            lhs_int = ir.unbox_int(self.visit(lhs_node))
+            rhs_int = ir.unbox_int(self.visit(rhs_node))
+            if op == 'pow':
+                return ir.static_method_call('PyInt', op, [lhs_int, rhs_int])
+            else:
+                assert op != 'trueDiv'
+                return ir.CreateObject('PyInt', [ir.static_method_call('PyInt', f'{op}Unboxed', [lhs_int, rhs_int])])
+        elif lhs_type == 'str' and rhs_type == 'str' and op == 'add':
+            lhs_str = ir.unbox_str(self.visit(lhs_node))
+            rhs_str = ir.unbox_str(self.visit(rhs_node))
+            return ir.CreateObject('PyString', [ir.BinaryOp('+', lhs_str, rhs_str)])
+        return None
 
     def infer_exact_builtin_type_expr(self, node: ast.expr) -> Optional[str]:
         if isinstance(node, ast.Name):
@@ -1039,11 +1038,11 @@ class LoweringVisitor(ast.NodeVisitor):
     def visit_Sub(self, node): return 'sub'
     def visit_BinOp(self, node) -> ir.Expr:
         op = self.visit(node.op)
-        lhs = self.visit(node.left)
-        rhs = self.visit(node.right)
-        exact_int_expr = self.emit_exact_int_binop(op, node.left, node.right)
+        exact_int_expr = self.emit_exact_type_binop(op, node.left, node.right)
         if exact_int_expr is not None:
             return exact_int_expr
+        lhs = self.visit(node.left)
+        rhs = self.visit(node.right)
         return ir.MethodCall(lhs, op, [rhs])
 
     def visit_Lt(self, node): return 'lt'
@@ -1485,7 +1484,7 @@ class LoweringVisitor(ast.NodeVisitor):
         op = f'{base_op}InPlace'
 
         if isinstance(node.target, ast.Name):
-            exact_int_expr = self.emit_exact_int_binop(base_op, node.target, node.value)
+            exact_int_expr = self.emit_exact_type_binop(base_op, node.target, node.value)
             if exact_int_expr is not None:
                 value = exact_int_expr
             else:
