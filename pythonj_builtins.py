@@ -32,6 +32,9 @@ def delattr(obj, name) -> None:
     __pythonj_delattr__(obj, name)
     return None
 
+def divmod(a, b) -> tuple:
+    return (a // b, a % b)
+
 def format(value, format_spec) -> str:
     if not __pythonj_isinstance__(format_spec, str):
         raise TypeError('format() argument 2 must be str, not ' + type(format_spec).__name__)
