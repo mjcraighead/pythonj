@@ -232,6 +232,20 @@ def collect_builtin_method_return_java_types(node: ast.Module) -> dict[tuple[str
     return ret
 
 class AstSimplifier(ast.NodeTransformer):
+    def _is_inert_literal_expr(self, node: ast.expr) -> bool:
+        match node:
+            case ast.Constant():
+                return True
+            case ast.Tuple(elts=elts) | ast.List(elts=elts) | ast.Set(elts=elts):
+                return all(self._is_inert_literal_expr(elt) for elt in elts)
+            case ast.Dict(keys=keys, values=values):
+                return all(
+                    key is not None and self._is_inert_literal_expr(key)
+                    for key in keys
+                ) and all(self._is_inert_literal_expr(value) for value in values)
+            case _:
+                return False
+
     def _constant_numeric_value(self, node: ast.expr) -> Optional[object]:
         if not isinstance(node, ast.Constant):
             return None
@@ -248,8 +262,44 @@ class AstSimplifier(ast.NodeTransformer):
     def visit_Pass(self, node):
         return None
 
+    def visit_Global(self, node):
+        return None
+
+    def visit_Nonlocal(self, node):
+        return None
+
+    def visit_Expr(self, node):
+        node = cast(ast.Expr, self.generic_visit(node))
+        if self._is_inert_literal_expr(node.value):
+            return None
+        return node
+
+    def visit_AnnAssign(self, node):
+        node = cast(ast.AnnAssign, self.generic_visit(node))
+        if node.value is None:
+            return None
+        return ast.copy_location(ast.Assign([node.target], node.value), node)
+
+    def visit_Assert(self, node):
+        node = cast(ast.Assert, self.generic_visit(node))
+        truth_value = self._constant_truth_value(node.test)
+        if truth_value is True:
+            return None
+        if truth_value is False:
+            return ast.copy_location(ast.Assert(ast.Constant(False), node.msg), node)
+        return ast.copy_location(ast.If(
+            ast.copy_location(ast.UnaryOp(ast.Not(), node.test), node.test),
+            [ast.copy_location(ast.Assert(ast.Constant(False), node.msg), node)],
+            [],
+        ), node)
+
     def visit_UnaryOp(self, node):
         node = cast(ast.UnaryOp, self.generic_visit(node))
+        if isinstance(node.op, ast.Not):
+            truth_value = self._constant_truth_value(node.operand)
+            if truth_value is not None:
+                return ast.copy_location(ast.Constant(not truth_value), node)
+            return node
         value = self._constant_numeric_value(node.operand)
         if value is None:
             return node
@@ -263,6 +313,17 @@ class AstSimplifier(ast.NodeTransformer):
             case _:
                 return node
         return ast.copy_location(ast.Constant(folded), node)
+
+    def visit_BoolOp(self, node):
+        node = cast(ast.BoolOp, self.generic_visit(node))
+        values: list[ast.expr] = []
+        for value in node.values:
+            if isinstance(value, ast.BoolOp) and type(value.op) is type(node.op):
+                values.extend(value.values)
+            else:
+                values.append(value)
+        node.values = values
+        return node
 
     def visit_BinOp(self, node):
         node = cast(ast.BinOp, self.generic_visit(node))
@@ -1655,13 +1716,13 @@ class LoweringVisitor(ast.NodeVisitor):
 
     # XXX Change all statements to -> Iterator[ir.Statement] and yield statements?
     def visit_Pass(self, node) -> None:
-        pass
+        assert False, 'Pass should have been removed by AstSimplifier'
 
     def visit_Global(self, node) -> None:
-        pass # handled by SymbolTableVisitor
+        assert False, 'Global should have been removed by AstSimplifier'
 
     def visit_Nonlocal(self, node) -> None:
-        pass # handled by SymbolTableVisitor
+        assert False, 'Nonlocal should have been removed by AstSimplifier'
 
     def emit_bind(self, target: ast.expr, value: ir.Expr) -> Iterator[ir.Statement]:
         if isinstance(target, ast.Name):
@@ -1697,29 +1758,7 @@ class LoweringVisitor(ast.NodeVisitor):
         self.code.extend(self.emit_bind(target, self.visit(node.value)))
 
     def visit_AnnAssign(self, node) -> None:
-        self.report_annotation_errors()
-        if any(lineno == node.lineno for (lineno, _) in self.scope.info.annotation_errors):
-            return
-        if not isinstance(node.target, ast.Name):
-            msg = 'only simple global variable annotations are supported' if self.scope.info.kind is ScopeKind.MODULE else 'only simple local variable annotations are supported'
-            self.error(node.lineno, msg)
-            if node.value is not None:
-                self.visit(node.value)
-            return
-        if not isinstance(node.annotation, ast.Name) or node.annotation.id not in extract_spec.BUILTIN_TYPES:
-            msg = 'only exact builtin-type global annotations are supported' if self.scope.info.kind is ScopeKind.MODULE else 'only exact builtin-type local annotations are supported'
-            self.error(node.lineno, msg)
-            if node.value is not None:
-                self.visit(node.value)
-            return
-        supported_ann_names = self.scope.info.exact_global_types if self.scope.info.kind is ScopeKind.MODULE else self.scope.info.exact_local_types
-        if node.target.id not in supported_ann_names:
-            self.error(node.lineno, 'unsupported global annotation' if self.scope.info.kind is ScopeKind.MODULE else 'unsupported local annotation')
-            if node.value is not None:
-                self.visit(node.value)
-            return
-        if node.value is not None:
-            self.code.extend(self.emit_bind(node.target, self.visit(node.value)))
+        assert False, 'AnnAssign should have been removed by AstSimplifier'
 
     def visit_AugAssign(self, node) -> None:
         base_op = self.visit(node.op)
@@ -1767,13 +1806,13 @@ class LoweringVisitor(ast.NodeVisitor):
         self.code.append(code)
 
     def visit_Assert(self, node) -> None:
-        cond = ir.unary_op('!', self.emit_condition(node.test))
+        assert isinstance(node.test, ast.Constant) and node.test.value is False, 'Assert should have been normalized by AstSimplifier'
         msg = ir.StrLiteral(self.path + f':{node.lineno}: assertion failure')
         if node.msg:
             msg.s += ': '
             msg = ir.BinaryOp('+', msg, ir.MethodCall(self.visit(node.msg), 'repr', []))
         exception = ir.CreateObject('PyRaise', [ir.CreateObject('PyAssertionError', [ir.CreateObject('PyString', [msg])])])
-        self.code.extend(ir.if_statement(cond, [ir.ThrowStatement(exception)], []))
+        self.code.append(ir.ThrowStatement(exception))
 
     def visit_Delete(self, node) -> None:
         for target in node.targets:
@@ -2443,6 +2482,7 @@ class LoweringVisitor(ast.NodeVisitor):
         return ir.CreateObject(java_name, [*(ir.Identifier(f'pycell_{name}') for name in sorted(free_vars)), self.visit(generator.iter)])
 
     def visit_Module(self, node) -> None:
+        self.report_annotation_errors()
         for statement in node.body:
             if isinstance(statement, ast.FunctionDef) and statement.name in self.scope.info.initial_final_function_call_ranges:
                 java_name = f'pyfunc_{statement.name}_{self.n_functions}'
