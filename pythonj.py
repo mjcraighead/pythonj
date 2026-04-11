@@ -1288,19 +1288,21 @@ class LoweringVisitor(ast.NodeVisitor):
         n_compares = len(node.comparators)
         assert n_compares == len(node.ops), node # should have consistent number of these
         assert n_compares >= 1, node # should always have at least one
-        if (all(isinstance(op, (ast.Lt, ast.LtE, ast.Gt, ast.GtE, ast.Eq, ast.NotEq)) for op in node.ops) and
-            self.infer_exact_builtin_type_expr(node.left) == 'int' and
-            all(self.infer_exact_builtin_type_expr(term) == 'int' for term in node.comparators)):
+        exact_compare_type = self.infer_exact_builtin_type_expr(node.left)
+        if (exact_compare_type in {'int', 'float'} and
+            all(isinstance(op, (ast.Lt, ast.LtE, ast.Gt, ast.GtE, ast.Eq, ast.NotEq)) for op in node.ops) and
+            all(self.infer_exact_builtin_type_expr(term) == exact_compare_type for term in node.comparators)):
             lhs_expr = self.visit(node.left)
             exprs: list[ir.Expr] = []
             for (i, (op, comparator)) in enumerate(zip(node.ops, node.comparators)):
                 rhs_expr = self.visit(comparator)
                 if i < n_compares - 1:
                     temp_name = self.scope.make_temp()
-                    self.code.append(ir.LocalDecl('PyInt', temp_name, ir.CastExpr('PyInt', rhs_expr)))
-                    rhs_expr = ir.Identifier(temp_name, 'PyInt')
-                lhs_int = ir.unbox_int(lhs_expr)
-                rhs_int = ir.unbox_int(rhs_expr)
+                    java_type = 'PyInt' if exact_compare_type == 'int' else 'PyFloat'
+                    self.code.append(ir.LocalDecl(java_type, temp_name, ir.CastExpr(java_type, rhs_expr)))
+                    rhs_expr = ir.Identifier(temp_name, java_type)
+                lhs_unboxed = ir.unbox_int(lhs_expr) if exact_compare_type == 'int' else ir.unbox_float(lhs_expr)
+                rhs_unboxed = ir.unbox_int(rhs_expr) if exact_compare_type == 'int' else ir.unbox_float(rhs_expr)
                 exprs.append(ir.BinaryOp({
                     ast.Lt: '<',
                     ast.LtE: '<=',
@@ -1308,7 +1310,7 @@ class LoweringVisitor(ast.NodeVisitor):
                     ast.GtE: '>=',
                     ast.Eq: '==',
                     ast.NotEq: '!=',
-                }[type(op)], lhs_int, rhs_int))
+                }[type(op)], lhs_unboxed, rhs_unboxed))
                 lhs_expr = rhs_expr
             return ir.static_method_call('PyBool', 'create', [ir.chained_binary_op('&&', exprs)])
 
