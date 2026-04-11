@@ -156,6 +156,7 @@ class bytes:
     def capitalize(self: bytes) -> bytes:
         ret = __pythonj_bytes_builder__(__pythonj_len__(self))
         seen_alpha = False
+        c: int
         for c in self:
             if 97 <= c <= 122:
                 if not seen_alpha:
@@ -423,6 +424,7 @@ class bytes:
 
     def lower(self: bytes) -> bytes:
         ret = __pythonj_bytes_builder__(__pythonj_len__(self))
+        c: int
         for c in self:
             if 65 <= c <= 90:
                 __pythonj_bytes_builder_append_int__(ret, c + 32)
@@ -536,6 +538,7 @@ class bytes:
 
     def swapcase(self: bytes) -> bytes:
         ret = __pythonj_bytes_builder__(__pythonj_len__(self))
+        c: int
         for c in self:
             if 65 <= c <= 90:
                 __pythonj_bytes_builder_append_int__(ret, c + 32)
@@ -548,6 +551,7 @@ class bytes:
     def title(self: bytes) -> bytes:
         ret = __pythonj_bytes_builder__(__pythonj_len__(self))
         in_word = False
+        c: int
         for c in self:
             if 97 <= c <= 122:
                 if in_word:
@@ -568,6 +572,7 @@ class bytes:
 
     def upper(self: bytes) -> bytes:
         ret = __pythonj_bytes_builder__(__pythonj_len__(self))
+        c: int
         for c in self:
             if 97 <= c <= 122:
                 __pythonj_bytes_builder_append_int__(ret, c - 32)
