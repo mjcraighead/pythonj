@@ -101,7 +101,9 @@ class ScopeInfo:
     initial_final_function_call_ranges: dict[str, tuple[int, int]]
     initial_final_function_return_types: dict[str, str]
     exact_arg_types: dict[str, str]
+    exact_arg_lines: dict[str, int]
     exact_local_types: dict[str, str]
+    exact_local_lines: dict[str, int]
     annotation_errors: list[tuple[int, str]]
 
 @dataclass(frozen=True)
@@ -358,7 +360,7 @@ def _collect_statement_store_del_names(node: ast.stmt) -> tuple[set[str], set[st
         stores.add(node.name)
     return (stores, dels)
 
-def _collect_exact_local_annotations(node: ast.AST) -> tuple[dict[str, str], list[tuple[int, str]]]:
+def _collect_exact_local_annotations(node: ast.AST) -> tuple[dict[str, str], dict[str, int], list[tuple[int, str]]]:
     if isinstance(node, ast.Module):
         body = node.body
         arg_names: set[str] = set()
@@ -369,9 +371,10 @@ def _collect_exact_local_annotations(node: ast.AST) -> tuple[dict[str, str], lis
         body = node.body
         arg_names = set()
     else:
-        return ({}, [])
+        return ({}, {}, [])
 
     exact_local_types: dict[str, str] = {}
+    exact_local_lines: dict[str, int] = {}
     errors: list[tuple[int, str]] = []
     for statement in body:
         for local_node in _iter_scope_local_nodes(statement):
@@ -390,13 +393,15 @@ def _collect_exact_local_annotations(node: ast.AST) -> tuple[dict[str, str], lis
                 errors.append((local_node.lineno, 'only exact builtin-type local annotations are supported'))
                 continue
             exact_local_types[local_node.target.id] = local_node.annotation.id
-    return (exact_local_types, errors)
+            exact_local_lines[local_node.target.id] = local_node.lineno
+    return (exact_local_types, exact_local_lines, errors)
 
-def _collect_exact_arg_annotations(node: ast.AST) -> tuple[dict[str, str], list[tuple[int, str]]]:
+def _collect_exact_arg_annotations(node: ast.AST) -> tuple[dict[str, str], dict[str, int], list[tuple[int, str]]]:
     if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-        return ({}, [])
+        return ({}, {}, [])
 
     exact_arg_types: dict[str, str] = {}
+    exact_arg_lines: dict[str, int] = {}
     errors: list[tuple[int, str]] = []
     positional_args = [*node.args.posonlyargs, *node.args.args]
     first_default = len(positional_args) - len(node.args.defaults)
@@ -410,10 +415,11 @@ def _collect_exact_arg_annotations(node: ast.AST) -> tuple[dict[str, str], list[
             errors.append((arg.lineno, 'only exact builtin-type argument annotations are supported'))
             continue
         exact_arg_types[arg.arg] = arg.annotation.id
+        exact_arg_lines[arg.arg] = arg.lineno
     for arg in [*node.args.kwonlyargs, node.args.vararg, node.args.kwarg]:
         if arg is not None and arg.annotation is not None:
             errors.append((arg.lineno, 'only required positional argument annotations are supported'))
-    return (exact_arg_types, errors)
+    return (exact_arg_types, exact_arg_lines, errors)
 
 class ScopeAnalyzer(ast.NodeVisitor):
     __slots__ = ('scope_infos',)
@@ -469,15 +475,15 @@ class ScopeAnalyzer(ast.NodeVisitor):
                 elif name not in explicit_globals:
                     needs_from_outer.add(name)
         kind = ScopeKind.MODULE if isinstance(node, ast.Module) else ScopeKind.FUNCTION
-        (exact_arg_types, annotation_errors) = _collect_exact_arg_annotations(node)
-        (exact_local_types, local_annotation_errors) = _collect_exact_local_annotations(node)
+        (exact_arg_types, exact_arg_lines, annotation_errors) = _collect_exact_arg_annotations(node)
+        (exact_local_types, exact_local_lines, local_annotation_errors) = _collect_exact_local_annotations(node)
         annotation_errors.extend(local_annotation_errors)
         for name in exact_arg_types:
             if name in cell_vars:
-                annotation_errors.append((getattr(node, 'lineno', 0), f"annotated argument {name!r} may not be captured by an inner scope"))
+                annotation_errors.append((exact_arg_lines[name], f"annotated argument {name!r} may not be captured by an inner scope"))
         for name in exact_local_types:
             if name in cell_vars:
-                annotation_errors.append((getattr(node, 'lineno', 0), f"annotated local {name!r} may not be captured by an inner scope"))
+                annotation_errors.append((exact_local_lines[name], f"annotated local {name!r} may not be captured by an inner scope"))
         (initial_final_bindings,
          initial_builtin_module_locals,
          initial_final_function_call_ranges,
@@ -494,7 +500,9 @@ class ScopeAnalyzer(ast.NodeVisitor):
             initial_final_function_call_ranges,
             initial_final_function_return_types,
             exact_arg_types,
+            exact_arg_lines,
             exact_local_types,
+            exact_local_lines,
             annotation_errors,
         )
         self.scope_infos[node] = scope_info
@@ -1294,6 +1302,8 @@ class LoweringVisitor(ast.NodeVisitor):
 
     def visit_AnnAssign(self, node) -> None:
         self.report_annotation_errors()
+        if any(lineno == node.lineno for (lineno, _) in self.scope.info.annotation_errors):
+            return
         if not isinstance(node.target, ast.Name):
             self.error(node.lineno, 'only simple local variable annotations are supported')
             if node.value is not None:
@@ -1303,8 +1313,6 @@ class LoweringVisitor(ast.NodeVisitor):
             self.error(node.lineno, 'only exact builtin-type local annotations are supported')
             if node.value is not None:
                 self.visit(node.value)
-            return
-        if any(lineno == node.lineno for (lineno, _) in self.scope.info.annotation_errors):
             return
         if node.target.id not in self.scope.info.exact_local_types:
             self.error(node.lineno, 'unsupported local annotation')
@@ -1558,11 +1566,6 @@ class LoweringVisitor(ast.NodeVisitor):
             else:
                 self.error(lineno, 'only constant argument defaults are supported')
         positional_args = [*args.posonlyargs, *args.args]
-        for arg in positional_args:
-            # arg.type_comment is ignored; we only plan to support "real" type annotations.
-            if arg.annotation:
-                if not isinstance(arg.annotation, ast.Name) or arg.annotation.id not in extract_spec.BUILTIN_TYPES:
-                    self.error(lineno, 'only exact builtin-type argument annotations are supported')
         params: list[inspect.Parameter] = []
         n_args = len(positional_args)
         n_defaults = len(defaults)
