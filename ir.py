@@ -766,6 +766,8 @@ def static_method_call(class_name: str, method: str, args: list[Expr]) -> Expr:
         (arg,) = args
         if isinstance(arg, Bool):
             return PyConstant(arg.value)
+    if class_name == 'PyInt' and method in {'add', 'and', 'floorDiv', 'lshift', 'mod', 'mul', 'or', 'rshift', 'sub', 'xor'}:
+        return CreateObject('PyInt', [StaticMethodCall('PyInt', f'{method}Unboxed', args, 'long')])
     if class_name == 'Runtime' and method == 'pythonjHash':
         return CreateObject('PyInt', [CastExpr('long', MethodCall(args[0], 'hashCode', [], 'int'))])
     if class_name == 'Runtime' and method == 'pythonjIter':

@@ -148,28 +148,29 @@ public final class PyInt extends PyObject {
         throw PyTypeError.raise("int() argument must be a string, a bytes-like object or a number, not " + PyString.reprOf(arg0.type().name()));
     }
 
-    public static PyInt add(long lhs, long rhs) {
-        return new PyInt(Math.addExact(lhs, rhs));
+    // Some of these wrappers may seem a bit pointless, but it's important to be very careful here about int vs. long
+    public static long addUnboxed(long lhs, long rhs) {
+        return Math.addExact(lhs, rhs);
     }
-    public static PyInt and(long lhs, long rhs) {
-        return new PyInt(lhs & rhs);
+    public static long andUnboxed(long lhs, long rhs) {
+        return lhs & rhs;
     }
-    public static PyInt floorDiv(long lhs, long rhs) {
+    public static long floorDivUnboxed(long lhs, long rhs) {
         if ((lhs == Long.MIN_VALUE) && (rhs == -1)) {
             throw new ArithmeticException("integer overflow");
         }
         if (rhs == 0) {
             throw PyZeroDivisionError.raise("division by zero");
         }
-        return new PyInt(Math.floorDiv(lhs, rhs));
+        return Math.floorDiv(lhs, rhs);
     }
-    public static PyInt lshift(long lhs, long rhs) {
+    public static long lshiftUnboxed(long lhs, long rhs) {
         if (rhs < 0) {
             throw PyValueError.raise("negative shift count");
         }
         if (rhs >= 64) {
             if (lhs == 0) {
-                return PyInt.singleton_0; // 0 << N -> 0 for any N >= 0
+                return 0; // 0 << N -> 0 for any N >= 0
             }
             throw new ArithmeticException("shift count too large");
         }
@@ -177,16 +178,59 @@ public final class PyInt extends PyObject {
         if ((ret >> rhs) != lhs) {
             throw new ArithmeticException("integer overflow");
         }
-        return new PyInt(ret);
+        return ret;
     }
-    public static PyInt mod(long lhs, long rhs) {
+    public static long modUnboxed(long lhs, long rhs) {
         if ((lhs == Long.MIN_VALUE) && (rhs == -1)) {
             throw new ArithmeticException("integer overflow");
         }
         if (rhs == 0) {
             throw PyZeroDivisionError.raise("division by zero");
         }
-        return new PyInt(Math.floorMod(lhs, rhs));
+        return Math.floorMod(lhs, rhs);
+    }
+    public static long mulUnboxed(long lhs, long rhs) {
+        return Math.multiplyExact(lhs, rhs);
+    }
+    public static long orUnboxed(long lhs, long rhs) {
+        return lhs | rhs;
+    }
+    public static long rshiftUnboxed(long lhs, long rhs) {
+        if (rhs < 0) {
+            throw PyValueError.raise("negative shift count");
+        }
+        if (rhs > 63) {
+            rhs = 63; // for all longs, rshift of >=63 yields the sign bit replicated into all bits
+        }
+        return lhs >> rhs;
+    }
+    public static long subUnboxed(long lhs, long rhs) {
+        return Math.subtractExact(lhs, rhs);
+    }
+    public static double trueDivUnboxed(long lhs, long rhs) {
+        if (rhs == 0) {
+            throw PyZeroDivisionError.raise("division by zero");
+        }
+        return ((double)lhs) / rhs;
+    }
+    public static long xorUnboxed(long lhs, long rhs) {
+        return lhs ^ rhs;
+    }
+
+    public static PyInt add(long lhs, long rhs) {
+        return new PyInt(Math.addExact(lhs, rhs));
+    }
+    public static PyInt and(long lhs, long rhs) {
+        return new PyInt(lhs & rhs);
+    }
+    public static PyInt floorDiv(long lhs, long rhs) {
+        return new PyInt(floorDivUnboxed(lhs, rhs));
+    }
+    public static PyInt lshift(long lhs, long rhs) {
+        return new PyInt(lshiftUnboxed(lhs, rhs));
+    }
+    public static PyInt mod(long lhs, long rhs) {
+        return new PyInt(modUnboxed(lhs, rhs));
     }
     public static PyInt mul(long lhs, long rhs) {
         return new PyInt(Math.multiplyExact(lhs, rhs));
@@ -209,22 +253,13 @@ public final class PyInt extends PyObject {
         return new PyInt(ret);
     }
     public static PyInt rshift(long lhs, long rhs) {
-        if (rhs < 0) {
-            throw PyValueError.raise("negative shift count");
-        }
-        if (rhs > 63) {
-            rhs = 63; // for all longs, rshift of >=63 yields the sign bit replicated into all bits
-        }
-        return new PyInt(lhs >> rhs);
+        return new PyInt(rshiftUnboxed(lhs, rhs));
     }
     public static PyInt sub(long lhs, long rhs) {
         return new PyInt(Math.subtractExact(lhs, rhs));
     }
     public static PyFloat trueDiv(long lhs, long rhs) {
-        if (rhs == 0) {
-            throw PyZeroDivisionError.raise("division by zero");
-        }
-        return new PyFloat(((double)lhs) / rhs);
+        return new PyFloat(trueDivUnboxed(lhs, rhs));
     }
     public static PyInt xor(long lhs, long rhs) {
         return new PyInt(lhs ^ rhs);
