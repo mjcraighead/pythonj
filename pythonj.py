@@ -1324,15 +1324,10 @@ class LoweringVisitor(ast.NodeVisitor):
                 assert isinstance(val, ast.FormattedValue), val
                 # XXX Need to double check evaluation order here
                 if val.format_spec is not None:
-                    # Need to extract the String back out of the PyString
                     assert isinstance(val.format_spec, ast.JoinedStr), val.format_spec
-                    expr = self.visit(val.format_spec)
-                    if isinstance(expr, ir.PyConstant) and isinstance(expr.value, str):
-                        format_spec = ir.StrLiteral(expr.value)
-                    else:
-                        format_spec = ir.unbox_str(expr)
+                    format_spec = self.visit(val.format_spec)
                 else:
-                    format_spec = ir.StrLiteral("")
+                    format_spec = ir.PyConstant('')
                 expr = self.visit(val.value)
                 if val.conversion == ord('s'):
                     expr = ir.CreateObject('PyString', [ir.MethodCall(expr, 'str', [], 'String')])
@@ -1342,11 +1337,7 @@ class LoweringVisitor(ast.NodeVisitor):
                     expr = ir.static_method_call('PyBuiltinFunctionsImpl', 'pyfunc_ascii', [expr])
                 elif val.conversion != -1:
                     self.error(val.lineno, f'unsupported f string conversion type {val.conversion}')
-                if isinstance(format_spec, ir.StrLiteral) and not format_spec.s and expr.java_type() == 'PyString':
-                    expr = ir.unbox_str(expr)
-                else:
-                    expr = ir.MethodCall(expr, 'format', [format_spec], 'String')
-                vals.append(expr)
+                vals.append(ir.py_format(expr, format_spec))
         expr = ir.chained_binary_op('+', vals)
         if isinstance(expr, ir.StrLiteral):
             return ir.PyConstant(expr.s)

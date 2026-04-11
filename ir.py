@@ -37,6 +37,7 @@ STATIC_METHOD_RETURN_TYPES = {
     ('PyZip', 'newObjPositional'): 'PyZip',
     ('Runtime', 'pythonjIsInstance'): 'PyBool',
     ('Runtime', 'pythonjIsSubclass'): 'PyBool',
+    ('String', 'valueOf'): 'String',
 }
 
 def _int_name(i: int) -> str:
@@ -764,6 +765,15 @@ def iter(obj: Expr) -> Expr:
             return CreateObject('PyTupleIter', [obj])
     return MethodCall(obj, 'iter', [], 'PyIter')
 
+def py_format(obj: Expr, spec: Expr) -> Expr:
+    if isinstance(spec, PyConstant) and isinstance(spec.value, str) and not spec.value:
+        java_type = obj.java_type()
+        if java_type == 'PyInt':
+            return static_method_call('String', 'valueOf', [unbox_int(obj)])
+        if java_type == 'PyString':
+            return unbox_str(obj)
+    return MethodCall(obj, 'format', [unbox_str(spec)], 'String')
+
 def static_method_call(class_name: str, method: str, args: list[Expr]) -> Expr:
     match (class_name, method):
         case ('PyBool', 'create') if isinstance(args[0], Bool):
@@ -807,7 +817,7 @@ def static_method_call(class_name: str, method: str, args: list[Expr]) -> Expr:
         case ('Runtime', 'pythonjFloatFormatFiniteCore'):
             return StaticMethodCall('PyFloat', 'formatFiniteCore', args, 'PyString')
         case ('Runtime', 'pythonjFormat'):
-            return CreateObject('PyString', [MethodCall(args[0], 'format', [unbox_str(args[1])], 'String')])
+            return CreateObject('PyString', [py_format(args[0], args[1])])
         case ('Runtime', 'pythonjGetAttr'):
             return MethodCall(args[0], 'getAttr', [unbox_str(args[1])], 'PyObject')
         case ('Runtime', 'pythonjHash'):
