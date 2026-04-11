@@ -748,6 +748,9 @@ def unbox_str(expr: Expr) -> Expr:
         return Field(expr, 'value', 'String')
     return Field(CastExpr('PyString', expr), 'value', 'String')
 
+def iter(obj: Expr) -> Expr:
+    return MethodCall(obj, 'iter', [], 'PyIter')
+
 def static_method_call(class_name: str, method: str, args: list[Expr]) -> Expr:
     match (class_name, method):
         case ('PyBool', 'create') if isinstance(args[0], Bool):
@@ -795,7 +798,7 @@ def static_method_call(class_name: str, method: str, args: list[Expr]) -> Expr:
         case ('Runtime', 'pythonjHasIter'):
             return static_method_call('PyBool', 'create', [MethodCall(args[0], 'hasIter', [], 'boolean')])
         case ('Runtime', 'pythonjIter'):
-            return MethodCall(args[0], 'iter', [], 'PyIter')
+            return iter(args[0])
         case ('Runtime', 'pythonjLen'):
             return CreateObject('PyInt', [MethodCall(args[0], 'len', [], 'long')])
         case ('Runtime', 'pythonjNext'):
