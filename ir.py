@@ -40,14 +40,9 @@ STATIC_METHOD_RETURN_TYPES = {
     ('Runtime', 'pythonjDelAttr'): 'PyNone',
     ('Runtime', 'pythonjDictGet'): 'PyObject',
     ('Runtime', 'pythonjFormat'): 'PyString',
-    ('Runtime', 'pythonjHash'): 'PyInt',
     ('Runtime', 'pythonjGetAttr'): 'PyObject',
     ('Runtime', 'pythonjIsInstance'): 'PyBool',
     ('Runtime', 'pythonjIsSubclass'): 'PyBool',
-    ('Runtime', 'pythonjIter'): 'PyIter',
-    ('Runtime', 'pythonjLen'): 'PyInt',
-    ('Runtime', 'pythonjNext'): 'PyObject',
-    ('Runtime', 'pythonjRepr'): 'PyString',
     ('Runtime', 'pythonjSetAttr'): 'PyNone',
     ('Runtime', 'pythonjStrBuilder'): 'PyStringBuilder',
     ('Runtime', 'pythonjStrBuilderAppend'): 'PyNone',
@@ -751,7 +746,8 @@ def unbox_int(expr: Expr) -> Expr:
     if isinstance(expr, PyConstant) and isinstance(expr.value, int) and not isinstance(expr.value, bool):
         return IntLiteral(expr.value, 'L')
     if isinstance(expr, CreateObject) and expr.type == 'PyInt':
-        return expr.args[0]
+        arg = expr.args[0]
+        return arg if arg.java_type() == 'long' else CastExpr('long', arg)
     if expr.java_type() == 'PyInt':
         return Field(expr, 'value', 'long')
     return Field(CastExpr('PyInt', expr), 'value', 'long')
@@ -770,6 +766,16 @@ def static_method_call(class_name: str, method: str, args: list[Expr]) -> Expr:
         (arg,) = args
         if isinstance(arg, Bool):
             return PyConstant(arg.value)
+    if class_name == 'Runtime' and method == 'pythonjHash':
+        return CreateObject('PyInt', [CastExpr('long', MethodCall(args[0], 'hashCode', [], 'int'))])
+    if class_name == 'Runtime' and method == 'pythonjIter':
+        return MethodCall(args[0], 'iter', [], 'PyIter')
+    if class_name == 'Runtime' and method == 'pythonjLen':
+        return CreateObject('PyInt', [MethodCall(args[0], 'len', [], 'long')])
+    if class_name == 'Runtime' and method == 'pythonjNext':
+        return MethodCall(args[0], 'next', [], 'PyObject')
+    if class_name == 'Runtime' and method == 'pythonjRepr':
+        return CreateObject('PyString', [MethodCall(args[0], 'repr', [], 'String')])
     return StaticMethodCall(class_name, method, args, STATIC_METHOD_RETURN_TYPES.get((class_name, method), JAVA_TYPE_UNKNOWN))
 
 def chained_binary_op(op: str, exprs: list[Expr]) -> Expr:

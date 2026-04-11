@@ -567,9 +567,6 @@ public final class Runtime {
     public static PyObject pythonjGetAttr(PyObject obj, PyObject nameObj) {
         return obj.getAttr(((PyString)nameObj).value);
     }
-    public static PyInt pythonjHash(PyObject obj) {
-        return new PyInt(obj.hashCode());
-    }
     public static PyBool pythonjHasIter(PyObject obj) {
         return PyBool.create(obj.hasIter());
     }
@@ -589,18 +586,6 @@ public final class Runtime {
         } else {
             throw new UnsupportedOperationException(String.format("issubclass() is unimplemented for types %s and %s", obj.repr(), type.repr()));
         }
-    }
-    public static PyIter pythonjIter(PyObject obj) {
-        return obj.iter();
-    }
-    public static PyInt pythonjLen(PyObject obj) {
-        return new PyInt(obj.len());
-    }
-    public static PyObject pythonjNext(PyObject obj) {
-        return obj.next();
-    }
-    public static PyString pythonjRepr(PyObject obj) {
-        return new PyString(obj.repr());
     }
     public static PyNone pythonjSetAttr(PyObject obj, PyObject nameObj, PyObject value) {
         obj.setAttr(((PyString)nameObj).value, value);
