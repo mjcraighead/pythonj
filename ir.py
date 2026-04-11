@@ -786,6 +786,8 @@ def static_method_call(class_name: str, method: str, args: list[Expr]) -> Expr:
         return CreateObject('PyBytes', [MethodCall(Field(CastExpr('PyBytesBuilder', args[0]), 'value'), 'toByteArray', [], 'byte[]')])
     if class_name == 'Runtime' and method == 'pythonjHash':
         return CreateObject('PyInt', [CastExpr('long', MethodCall(args[0], 'hashCode', [], 'int'))])
+    if class_name == 'Runtime' and method == 'pythonjHasIter':
+        return static_method_call('PyBool', 'create', [MethodCall(args[0], 'hasIter', [], 'boolean')])
     if class_name == 'Runtime' and method == 'pythonjIter':
         return MethodCall(args[0], 'iter', [], 'PyIter')
     if class_name == 'Runtime' and method == 'pythonjLen':

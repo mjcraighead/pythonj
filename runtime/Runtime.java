@@ -561,9 +561,6 @@ public final class Runtime {
     public static PyObject pythonjGetAttr(PyObject obj, PyObject nameObj) {
         return obj.getAttr(((PyString)nameObj).value);
     }
-    public static PyBool pythonjHasIter(PyObject obj) {
-        return PyBool.create(obj.hasIter());
-    }
     public static PyBool pythonjIsInstance(PyObject obj, PyObject type) {
         if (type instanceof PyConcreteType typeClass) {
             return PyBool.create(typeClass.instanceClass.isInstance(obj));
