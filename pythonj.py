@@ -758,7 +758,7 @@ class LoweringVisitor(ast.NodeVisitor):
             return None
         if op not in EXACT_INT_BINOPS:
             return None
-        return ir.StaticMethodCall('PyInt', op, [lhs_int, rhs_int], 'PyInt')
+        return ir.static_method_call('PyInt', op, [lhs_int, rhs_int])
 
     def infer_exact_builtin_type_expr(self, node: ast.expr) -> Optional[str]:
         if isinstance(node, ast.Name) and get_name_resolution(node) is NameResolution.LOCAL:
@@ -825,7 +825,7 @@ class LoweringVisitor(ast.NodeVisitor):
     def visit_USub(self, node): return 'neg'
     def visit_UnaryOp(self, node) -> ir.Expr:
         if isinstance(node.op, ast.Not):
-            return ir.py_bool_create(ir.unary_op('!', self.emit_condition(node.operand)))
+            return ir.static_method_call('PyBool', 'create', [ir.unary_op('!', self.emit_condition(node.operand))])
         op = self.visit(node.op)
         operand = self.visit(node.operand)
         if isinstance(operand, ir.PyConstant) and isinstance(operand.value, int):
@@ -895,7 +895,7 @@ class LoweringVisitor(ast.NodeVisitor):
                     ast.Eq: '==',
                     ast.NotEq: '!=',
                 }[type(node.ops[0])]
-                return ir.py_bool_create(ir.BinaryOp(op, lhs_int, rhs_int))
+                return ir.static_method_call('PyBool', 'create', [ir.BinaryOp(op, lhs_int, rhs_int)])
 
         lhs = self.visit(node.left)
         exprs: list[ir.Expr] = []
@@ -924,7 +924,7 @@ class LoweringVisitor(ast.NodeVisitor):
             exprs.append(term)
             if i < n_compares - 1:
                 lhs = ir.Identifier(temp_name)
-        return ir.py_bool_create(ir.chained_binary_op('&&', exprs))
+        return ir.static_method_call('PyBool', 'create', [ir.chained_binary_op('&&', exprs)])
 
     def emit_bool_op(self, op: ast.boolop, values: list[ast.expr]) -> ir.Expr:
         if len(values) == 1:
@@ -957,16 +957,16 @@ class LoweringVisitor(ast.NodeVisitor):
         if isinstance(class_or_tuple, ast.Name) and class_or_tuple.id in ISINSTANCE_SINGLE_FASTPATH_BUILTIN_TYPES:
             builtin_type = class_or_tuple.id
             assert builtin_type in extract_spec.BUILTIN_TYPES, builtin_type
-            return ir.py_bool_create(
+            return ir.static_method_call('PyBool', 'create', [
                 ir.BinaryOp('instanceof', obj_expr, ir.Identifier(extract_spec.BUILTIN_TYPES[builtin_type]))
-            )
+            ])
         if isinstance(class_or_tuple, ast.Tuple):
             if not class_or_tuple.elts:
                 return ir.PyConstant(False)
-            return ir.py_bool_create(
+            return ir.static_method_call('PyBool', 'create', [
                 ir.chained_binary_op('||', [ir.bool_value(self.emit_isinstance_condition(obj, elt)) for elt in class_or_tuple.elts])
-            )
-        return ir.StaticMethodCall('Runtime', 'pythonjIsInstance', [obj_expr, self.visit(class_or_tuple)], 'PyBool')
+            ])
+        return ir.static_method_call('Runtime', 'pythonjIsInstance', [obj_expr, self.visit(class_or_tuple)])
 
     def build_intrinsic_call(self, name: str, args: list[ir.Expr]) -> ir.Expr:
         assert name in INTRINSIC_SIGNATURES, name
@@ -1021,7 +1021,7 @@ class LoweringVisitor(ast.NodeVisitor):
                 elif val.conversion == ord('r'):
                     expr = self.build_intrinsic_call('__pythonj_repr__', [expr])
                 elif val.conversion == ord('a'):
-                    expr = ir.StaticMethodCall('PyBuiltinFunctionsImpl', 'pyfunc_ascii', [expr], 'PyString')
+                    expr = ir.static_method_call('PyBuiltinFunctionsImpl', 'pyfunc_ascii', [expr])
                 elif val.conversion != -1:
                     self.error(val.lineno, f'unsupported f string conversion type {val.conversion}')
                 if isinstance(format_spec, ir.StrLiteral) and not format_spec.s and expr.java_type() == 'PyString':

@@ -17,6 +17,23 @@ JAVA_FORBIDDEN_IDENTIFIERS = {
     'void', 'volatile', 'while', 'with', 'yield',
 }
 JAVA_TYPE_UNKNOWN = 'unknown'
+STATIC_METHOD_RETURN_TYPES = {
+    ('PyBool', 'create'): 'PyBool',
+    ('PyBuiltinFunctionsImpl', 'pyfunc_ascii'): 'PyString',
+    ('PyInt', 'add'): 'PyInt',
+    ('PyInt', 'and'): 'PyInt',
+    ('PyInt', 'floorDiv'): 'PyInt',
+    ('PyInt', 'lshift'): 'PyInt',
+    ('PyInt', 'mod'): 'PyInt',
+    ('PyInt', 'mul'): 'PyInt',
+    ('PyInt', 'or'): 'PyInt',
+    ('PyInt', 'pow'): 'PyInt',
+    ('PyInt', 'rshift'): 'PyInt',
+    ('PyInt', 'sub'): 'PyInt',
+    ('PyInt', 'trueDiv'): 'PyFloat',
+    ('PyInt', 'xor'): 'PyInt',
+    ('Runtime', 'pythonjIsInstance'): 'PyBool',
+}
 
 def _int_name(i: int) -> str:
     """Return the Java variable name to use for the PyInt singleton with a given value."""
@@ -710,8 +727,12 @@ def bool_value(expr: Expr) -> Expr:
         return Bool(bool(expr.value))
     return MethodCall(expr, 'boolValue', [], 'boolean')
 
-def py_bool_create(expr: Expr) -> Expr:
-    return StaticMethodCall('PyBool', 'create', [expr], 'PyBool')
+def static_method_call(class_name: str, method: str, args: list[Expr]) -> Expr:
+    if class_name == 'PyBool' and method == 'create':
+        (arg,) = args
+        if isinstance(arg, Bool):
+            return PyConstant(arg.value)
+    return StaticMethodCall(class_name, method, args, STATIC_METHOD_RETURN_TYPES.get((class_name, method), JAVA_TYPE_UNKNOWN))
 
 def chained_binary_op(op: str, exprs: list[Expr]) -> Expr:
     assert len(exprs) >= 1, exprs
@@ -724,7 +745,7 @@ def method_call_statement(obj: Expr, method: str, args: list[Expr]) -> ExprState
     return ExprStatement(MethodCall(obj, method, args))
 
 def static_method_call_statement(class_name: str, method: str, args: list[Expr]) -> ExprStatement:
-    return ExprStatement(StaticMethodCall(class_name, method, args))
+    return ExprStatement(static_method_call(class_name, method, args))
 
 def if_statement(cond: Expr, body: list[Statement], orelse: list[Statement]) -> Iterator[Statement]:
     if isinstance(cond, Bool) and cond.value:
