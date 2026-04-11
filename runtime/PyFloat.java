@@ -200,6 +200,14 @@ public final class PyFloat extends PyObject {
         }
         return ret;
     }
+    public static PyString formatFiniteCore(PyObject valueObj, PyObject altObj, PyObject groupingObj, PyObject precisionObj, PyObject typeCharObj) {
+        double value = ((PyFloat)valueObj).value;
+        boolean alt = altObj.boolValue();
+        String grouping = (groupingObj == PyNone.singleton) ? null : ((PyString)groupingObj).value;
+        Long precision = (precisionObj == PyNone.singleton) ? null : precisionObj.indexValue();
+        String typeChar = ((PyString)typeCharObj).value;
+        return new PyString(formatFiniteCore(value, alt, grouping, precision, typeChar));
+    }
 
     public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
         Runtime.requireMinMaxPositional(args, kwargs, type.name(), 0, 1);
@@ -375,61 +383,7 @@ public final class PyFloat extends PyObject {
     @Override public String str() { return strOf(value); }
     @Override public PyConcreteType type() { return PyFloatType.singleton; }
     @Override public String format(String formatSpec) {
-        PyTuple parsed = PyRuntime.pyfunc_pyj_float_parse_spec(new PyString(formatSpec));
-        String fill = ((PyString)parsed.items[0]).value;
-        PyObject alignObj = parsed.items[1];
-        String sign = ((PyString)parsed.items[2]).value;
-        boolean z = parsed.items[3].boolValue();
-        boolean alt = parsed.items[4].boolValue();
-        PyObject widthObj = parsed.items[5];
-        PyObject groupingObj = parsed.items[6];
-        PyObject precisionObj = parsed.items[7];
-        String typeChar = ((PyString)parsed.items[8]).value;
-        String magnitudeText;
-        PyObject specialText = PyRuntime.pyfunc_pyj_float_special_text(this, new PyString(typeChar));
-        if (specialText != PyNone.singleton) {
-            magnitudeText = ((PyString)specialText).value;
-        } else {
-            double coreValue = Math.abs(value);
-            if (typeChar.equals("%")) {
-                coreValue *= 100.0;
-                if (!Double.isFinite(coreValue)) {
-                    magnitudeText = ((PyString)PyRuntime.pyfunc_pyj_float_special_text(new PyFloat(coreValue), new PyString(typeChar))).value;
-                    return PyRuntime.pyfunc_pyj_float_finish_text(
-                        new PyString(fill),
-                        alignObj,
-                        new PyString(sign),
-                        PyBool.create(z),
-                        widthObj,
-                        groupingObj,
-                        this,
-                        new PyString(magnitudeText)
-                    ).value;
-                }
-            }
-            String coreTypeChar = typeChar.equals("%") ? "f" : typeChar;
-            PyObject coreGroupingObj = groupingObj;
-            if ((widthObj != PyNone.singleton) && (groupingObj != PyNone.singleton) &&
-                (alignObj instanceof PyString alignStr) && alignStr.value.equals("=") && fill.equals("0")) {
-                coreGroupingObj = PyNone.singleton;
-            }
-            String grouping = (coreGroupingObj == PyNone.singleton) ? null : ((PyString)coreGroupingObj).value;
-            Long precision = (precisionObj == PyNone.singleton) ? null : precisionObj.indexValue();
-            magnitudeText = formatFiniteCore(coreValue, alt, grouping, precision, coreTypeChar);
-            if (typeChar.equals("%")) {
-                magnitudeText += "%";
-            }
-        }
-        return PyRuntime.pyfunc_pyj_float_finish_text(
-            new PyString(fill),
-            alignObj,
-            new PyString(sign),
-            PyBool.create(z),
-            widthObj,
-            groupingObj,
-            this,
-            new PyString(magnitudeText)
-        ).value;
+        return PyRuntime.pyfunc_pyj_float_format(this, new PyString(formatSpec)).value;
     }
 
     public PyObject pymethod_as_integer_ratio() {

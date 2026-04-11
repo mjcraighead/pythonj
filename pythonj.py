@@ -36,6 +36,7 @@ INTRINSIC_SIGNATURES = {
     '__pythonj_bytes_builder_finish__': ('pythonjBytesBuilderFinish', 1, 'bytes'),
     '__pythonj_delattr__': ('pythonjDelAttr', 2, 'void'),
     '__pythonj_dict_get__': ('pythonjDictGet', 2, 'object'),
+    '__pythonj_float_format_finite_core__': ('pythonjFloatFormatFiniteCore', 5, 'str'),
     '__pythonj_format__': ('pythonjFormat', 2, 'str'),
     '__pythonj_getattr__': ('pythonjGetAttr', 2, 'object'),
     '__pythonj_hash__': ('pythonjHash', 1, 'int'),

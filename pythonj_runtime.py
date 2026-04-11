@@ -589,6 +589,30 @@ def pyj_float_finish_text(fill, align, sign, z, width, grouping, value, magnitud
         return _pyj_float_apply_zero_fill(text, grouping, width)
     return _pyj_format_apply_width(text, fill, align, width, '>')
 
+def pyj_float_format(value, format_spec) -> str:
+    fill, align, sign, z, alt, width, grouping, precision, type_char = pyj_float_parse_spec(format_spec)
+
+    magnitude_text = pyj_float_special_text(value, type_char)
+    if magnitude_text is None:
+        core_value = abs(value)
+        if type_char == '%':
+            core_value *= 100.0
+            percent_special_text = pyj_float_special_text(core_value, type_char)
+            if percent_special_text is not None:
+                magnitude_text = percent_special_text
+                return pyj_float_finish_text(fill, align, sign, z, width, grouping, value, magnitude_text)
+
+        core_type_char = 'f' if type_char == '%' else type_char
+        core_grouping = grouping
+        if width is not None and grouping is not None and align == '=' and fill == '0':
+            core_grouping = None
+
+        magnitude_text = __pythonj_float_format_finite_core__(core_value, alt, core_grouping, precision, core_type_char)
+        if type_char == '%':
+            magnitude_text += '%'
+
+    return pyj_float_finish_text(fill, align, sign, z, width, grouping, value, magnitude_text)
+
 def pyj_int_format(value, spec) -> str:
     fill, align, sign, alt, width, grouping, type_char = pyj_int_parse_spec(spec)
 
