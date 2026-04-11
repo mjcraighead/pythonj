@@ -749,6 +749,17 @@ def unbox_str(expr: Expr) -> Expr:
     return Field(CastExpr('PyString', expr), 'value', 'String')
 
 def iter(obj: Expr) -> Expr:
+    match obj.java_type():
+        case 'PyBytes':
+            return CreateObject('PyBytesIter', [obj])
+        case 'PyEnumerate':
+            return obj
+        case 'PyList':
+            return CreateObject('PyListIter', [MethodCall(Field(obj, 'items'), 'iterator', [])])
+        case 'PyRange':
+            return CreateObject('PyRangeIter', [obj])
+        case 'PyTuple':
+            return CreateObject('PyTupleIter', [obj])
     return MethodCall(obj, 'iter', [], 'PyIter')
 
 def static_method_call(class_name: str, method: str, args: list[Expr]) -> Expr:

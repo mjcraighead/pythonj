@@ -7,24 +7,24 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 
+final class PyListIter extends PyIter {
+    private static final PyConcreteType type_singleton = new PyConcreteType("list_iterator", PyListIter.class);
+
+    private final Iterator<PyObject> it;
+
+    PyListIter(Iterator<PyObject> _it) { it = _it; }
+
+    @Override public PyObject next() { return it.hasNext() ? it.next() : null; }
+    @Override public String repr() { return defaultRepr(); }
+    @Override public PyConcreteType type() { return type_singleton; }
+};
+
 public final class PyList extends PyObject {
     record SortKeyedItem(PyObject item, PyObject key) implements Comparable<SortKeyedItem> {
         @Override public int compareTo(SortKeyedItem rhs) {
             return key.compareTo(rhs.key);
         }
     }
-
-    static final class PyListIter extends PyIter {
-        private static final PyConcreteType type_singleton = new PyConcreteType("list_iterator", PyListIter.class);
-
-        private final Iterator<PyObject> it;
-
-        PyListIter(Iterator<PyObject> _it) { it = _it; }
-
-        @Override public PyObject next() { return it.hasNext() ? it.next() : null; }
-        @Override public String repr() { return defaultRepr(); }
-        @Override public PyConcreteType type() { return type_singleton; }
-    };
 
     public final ArrayList<PyObject> items;
 

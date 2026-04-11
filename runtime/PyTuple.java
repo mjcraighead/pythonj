@@ -5,26 +5,26 @@
 import java.util.Arrays;
 import java.util.ArrayList;
 
+final class PyTupleIter extends PyIter {
+    private static final PyConcreteType type_singleton = new PyConcreteType("tuple_iterator", PyTupleIter.class);
+
+    private final PyObject[] items;
+    private int index = 0;
+
+    PyTupleIter(PyTuple t) { items = t.items; }
+
+    @Override public PyObject next() {
+        if (index >= items.length) {
+            return null;
+        }
+        return items[index++];
+    }
+    @Override public String repr() { return defaultRepr(); }
+    @Override public PyConcreteType type() { return type_singleton; }
+};
+
 public final class PyTuple extends PyObject {
     public static final PyTuple empty_singleton = new PyTuple();
-
-    static final class PyTupleIter extends PyIter {
-        private static final PyConcreteType type_singleton = new PyConcreteType("tuple_iterator", PyTupleIter.class);
-
-        private final PyObject[] items;
-        private int index = 0;
-
-        PyTupleIter(PyTuple t) { items = t.items; }
-
-        @Override public PyObject next() {
-            if (index >= items.length) {
-                return null;
-            }
-            return items[index++];
-        }
-        @Override public String repr() { return defaultRepr(); }
-        @Override public PyConcreteType type() { return type_singleton; }
-    };
 
     public final PyObject[] items;
 

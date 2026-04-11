@@ -6,26 +6,26 @@ import java.io.ByteArrayOutputStream;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 
+final class PyBytesIter extends PyIter {
+    private static final PyConcreteType type_singleton = new PyConcreteType("bytes_iterator", PyBytesIter.class);
+
+    private final byte[] b;
+    private int index = 0;
+
+    PyBytesIter(PyBytes _b) { b = _b.value; }
+
+    @Override public PyInt next() {
+        if (index >= b.length) {
+            return null;
+        }
+        return new PyInt(b[index++] & 0xFF);
+    }
+    @Override public String repr() { return defaultRepr(); }
+    @Override public PyConcreteType type() { return type_singleton; }
+};
+
 public final class PyBytes extends PyObject {
     public static final PyBytes empty_singleton = new PyBytes(new byte[0]);
-
-    static final class PyBytesIter extends PyIter {
-        private static final PyConcreteType type_singleton = new PyConcreteType("bytes_iterator", PyBytesIter.class);
-
-        private final byte[] b;
-        private int index = 0;
-
-        PyBytesIter(PyBytes _b) { b = _b.value; }
-
-        @Override public PyInt next() {
-            if (index >= b.length) {
-                return null;
-            }
-            return new PyInt(b[index++] & 0xFF);
-        }
-        @Override public String repr() { return defaultRepr(); }
-        @Override public PyConcreteType type() { return type_singleton; }
-    };
 
     public final byte[] value;
 

@@ -2,37 +2,37 @@
 // Copyright (c) 2012-2026 Matt Craighead
 // SPDX-License-Identifier: MIT
 
-public final class PyRange extends PyObject {
-    static final class PyRangeIter extends PyIter {
-        private static final PyConcreteType type_singleton = new PyConcreteType("range_iterator", PyRangeIter.class);
+final class PyRangeIter extends PyIter {
+    private static final PyConcreteType type_singleton = new PyConcreteType("range_iterator", PyRangeIter.class);
 
-        private long start;
-        private final long stop, step;
+    private long start;
+    private final long stop, step;
 
-        PyRangeIter(PyRange r) {
-            start = r.start;
-            stop = r.stop;
-            step = r.step;
-        }
+    PyRangeIter(PyRange r) {
+        start = r.start;
+        stop = r.stop;
+        step = r.step;
+    }
 
-        @Override public PyInt next() {
-            if (step > 0) {
-                if (start >= stop) {
-                    return null;
-                }
-            } else {
-                if (start <= stop) {
-                    return null;
-                }
+    @Override public PyInt next() {
+        if (step > 0) {
+            if (start >= stop) {
+                return null;
             }
-            var ret = new PyInt(start);
-            start += step;
-            return ret;
+        } else {
+            if (start <= stop) {
+                return null;
+            }
         }
-        @Override public String repr() { return defaultRepr(); }
-        @Override public PyConcreteType type() { return type_singleton; }
-    };
+        var ret = new PyInt(start);
+        start += step;
+        return ret;
+    }
+    @Override public String repr() { return defaultRepr(); }
+    @Override public PyConcreteType type() { return type_singleton; }
+};
 
+public final class PyRange extends PyObject {
     protected final long start, stop, step;
 
     PyRange(long _start, long _stop, long _step) {
