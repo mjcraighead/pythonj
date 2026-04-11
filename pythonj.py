@@ -758,7 +758,7 @@ class LoweringVisitor(ast.NodeVisitor):
             return None
         if op not in EXACT_INT_BINOPS:
             return None
-        return ir.MethodCall(ir.Identifier('PyInt'), op, [lhs_int, rhs_int], 'PyInt')
+        return ir.StaticMethodCall('PyInt', op, [lhs_int, rhs_int], 'PyInt')
 
     def infer_exact_builtin_type_expr(self, node: ast.expr) -> Optional[str]:
         if isinstance(node, ast.Name) and get_name_resolution(node) is NameResolution.LOCAL:
@@ -966,14 +966,14 @@ class LoweringVisitor(ast.NodeVisitor):
             return ir.py_bool_create(
                 ir.chained_binary_op('||', [ir.bool_value(self.emit_isinstance_condition(obj, elt)) for elt in class_or_tuple.elts])
             )
-        return ir.MethodCall(ir.Identifier('Runtime'), 'pythonjIsInstance', [obj_expr, self.visit(class_or_tuple)], 'PyBool')
+        return ir.StaticMethodCall('Runtime', 'pythonjIsInstance', [obj_expr, self.visit(class_or_tuple)], 'PyBool')
 
     def build_intrinsic_call(self, name: str, args: list[ir.Expr]) -> ir.Expr:
         assert name in INTRINSIC_SIGNATURES, name
         (method_name, n_args, return_type) = INTRINSIC_SIGNATURES[name]
         assert len(args) == n_args, (name, n_args, args)
-        return ir.MethodCall(
-            ir.Identifier('Runtime'),
+        return ir.StaticMethodCall(
+            'Runtime',
             method_name,
             args,
             java_type_for_python_type_name(return_type),
@@ -1021,7 +1021,7 @@ class LoweringVisitor(ast.NodeVisitor):
                 elif val.conversion == ord('r'):
                     expr = self.build_intrinsic_call('__pythonj_repr__', [expr])
                 elif val.conversion == ord('a'):
-                    expr = ir.MethodCall(ir.Identifier('PyBuiltinFunctionsImpl'), 'pyfunc_ascii', [expr], 'PyString')
+                    expr = ir.StaticMethodCall('PyBuiltinFunctionsImpl', 'pyfunc_ascii', [expr], 'PyString')
                 elif val.conversion != -1:
                     self.error(val.lineno, f'unsupported f string conversion type {val.conversion}')
                 if isinstance(format_spec, ir.StrLiteral) and not format_spec.s and expr.java_type() == 'PyString':
@@ -1039,11 +1039,11 @@ class LoweringVisitor(ast.NodeVisitor):
             args = ir.CreateObject('java.util.ArrayList<PyObject>', [])
             for arg in nodes:
                 if isinstance(arg, ast.Starred):
-                    args = ir.MethodCall(ir.Identifier('Runtime'), 'addStarToArrayList', [args, self.visit(arg.value)])
+                    args = ir.StaticMethodCall('Runtime', 'addStarToArrayList', [args, self.visit(arg.value)])
                 else:
-                    args = ir.MethodCall(ir.Identifier('Runtime'), 'addPyObjectToArrayList', [args, self.visit(arg)])
+                    args = ir.StaticMethodCall('Runtime', 'addPyObjectToArrayList', [args, self.visit(arg)])
             if not array_list_allowed:
-                args = ir.MethodCall(ir.Identifier('Runtime'), 'arrayListToArray', [args])
+                args = ir.StaticMethodCall('Runtime', 'arrayListToArray', [args])
             return args
         else:
             return ir.CreateArray('PyObject', [self.visit(x) for x in nodes])
@@ -1096,12 +1096,12 @@ class LoweringVisitor(ast.NodeVisitor):
                 (min_args, max_args) = DIRECT_NEWOBJ_POSITIONAL_BUILTIN_TYPES[func.name]
                 if min_args <= len(node.args) <= max_args:
                     java_name = func.java_name
-                    return ir.MethodCall(
-                        ir.Identifier(java_name),
-                        'newObjPositional',
-                        [*([self.visit(arg) for arg in node.args]), *([ir.Null()] * (max_args - len(node.args)))],
-                        java_name,
-                    )
+                return ir.StaticMethodCall(
+                    java_name,
+                    'newObjPositional',
+                    [*([self.visit(arg) for arg in node.args]), *([ir.Null()] * (max_args - len(node.args)))],
+                    java_name,
+                )
         if self.allow_intrinsics and isinstance(node.func, ast.Name) and node.func.id in INTRINSIC_SIGNATURES:
             assert not node.keywords, (node.func.id, node.keywords)
             return self.emit_intrinsic_call(node.func.id, node.args)
@@ -1154,7 +1154,7 @@ class LoweringVisitor(ast.NodeVisitor):
             if node.keywords or any(isinstance(arg, ast.Starred) for arg in node.args):
                 self.error(node.lineno, 'same-file helper calls only support plain positional args')
             assert self.python_helper_class is not None, node.func.id
-            return ir.MethodCall(ir.Identifier(self.python_helper_class), f'pyfunc_{node.func.id}', [self.visit(arg) for arg in node.args])
+            return ir.StaticMethodCall(self.python_helper_class, f'pyfunc_{node.func.id}', [self.visit(arg) for arg in node.args])
 
         args = self.emit_star_expanded(node.args)
         if node.keywords:
@@ -1167,7 +1167,7 @@ class LoweringVisitor(ast.NodeVisitor):
                     assert isinstance(kwarg.arg, str), kwarg.arg
                     kv_list.append(ir.PyConstant(kwarg.arg))
                     kv_list.append(self.visit(kwarg.value))
-            kwargs = ir.MethodCall(ir.Identifier('Runtime'), 'requireKwStrings', [ir.CreateObject('PyDict', kv_list)])
+            kwargs = ir.StaticMethodCall('Runtime', 'requireKwStrings', [ir.CreateObject('PyDict', kv_list)])
         else:
             kwargs = ir.Null()
         return ir.MethodCall(func, 'call', [args, kwargs])
@@ -1251,7 +1251,7 @@ class LoweringVisitor(ast.NodeVisitor):
             yield ir.LocalDecl('var', temp_name, ir.MethodCall(value, 'iter', []))
             # XXX This is not atomic if an exception is thrown; a subset of LHS's will be left assigned
             for subtarget in target.elts:
-                yield from self.emit_bind(subtarget, ir.MethodCall(ir.Identifier('Runtime'), 'nextRequireNonNull', [ir.Identifier(temp_name)]))
+                yield from self.emit_bind(subtarget, ir.StaticMethodCall('Runtime', 'nextRequireNonNull', [ir.Identifier(temp_name)]))
             yield ir.method_call_statement(ir.Identifier('Runtime'), 'nextRequireNull', [ir.Identifier(temp_name)])
         else:
             self.error(target.lineno, f'binding to {type(target).__name__} is unsupported')
@@ -1331,7 +1331,7 @@ class LoweringVisitor(ast.NodeVisitor):
         if node.msg:
             msg.s += ': '
             msg = ir.BinaryOp('+', msg, ir.MethodCall(self.visit(node.msg), 'repr', []))
-        exception = ir.MethodCall(ir.Identifier('PyAssertionError'), 'raise', [msg])
+        exception = ir.StaticMethodCall('PyAssertionError', 'raise', [msg])
         self.code.extend(ir.if_statement(cond, [ir.ThrowStatement(exception)], []))
 
     def visit_Delete(self, node) -> None:
@@ -1363,7 +1363,7 @@ class LoweringVisitor(ast.NodeVisitor):
             self.visit(node.exc)
             self.visit(node.cause)
             return
-        self.code.append(ir.ThrowStatement(ir.MethodCall(ir.Identifier('Runtime'), 'raiseExpr', [self.visit(node.exc)])))
+        self.code.append(ir.ThrowStatement(ir.StaticMethodCall('Runtime', 'raiseExpr', [self.visit(node.exc)])))
 
     @contextmanager
     def new_block(self) -> Iterator[list[ir.Statement]]:
@@ -1493,7 +1493,7 @@ class LoweringVisitor(ast.NodeVisitor):
 
     def visit_Expr(self, node) -> None:
         value = self.visit(node.value)
-        if isinstance(value, (ir.MethodCall, ir.CreateObject)): # allowed by Java grammar as statements
+        if isinstance(value, (ir.MethodCall, ir.StaticMethodCall, ir.CreateObject)): # allowed by Java grammar as statements
             self.code.append(ir.ExprStatement(value))
         else:
             # Avoid "not a statement" javac errors by assigning otherwise-unused values to a temp.
@@ -1624,7 +1624,7 @@ class LoweringVisitor(ast.NodeVisitor):
                 ]
         else:
             call_body = [
-                ir.LocalDecl('var', 'boundArgs', ir.Field(ir.MethodCall(ir.Identifier('PyRuntime'), 'pyfunc_bind_user_function', [
+                ir.LocalDecl('var', 'boundArgs', ir.Field(ir.StaticMethodCall('PyRuntime', 'pyfunc_bind_user_function', [
                     ir.CreateObject('PyTuple', [ir.Identifier('args')]),
                     ir.Identifier('kwargs'),
                     ir.PyConstant(py_name),
@@ -1749,7 +1749,7 @@ class LoweringVisitor(ast.NodeVisitor):
                 ]),
                 ir.IfStatement(
                     ir.BinaryOp('!=', ir.Field(ir.Identifier('args'), 'length'), ir.IntLiteral(0)),
-                    [ir.ThrowStatement(ir.MethodCall(ir.Identifier('PyTypeError'), 'raise', [
+                    [ir.ThrowStatement(ir.StaticMethodCall('PyTypeError', 'raise', [
                         ir.BinaryOp('+', ir.MethodCall(ir.Identifier('type'), 'name', []), ir.StrLiteral('() takes no arguments')),
                     ]))],
                     [],
@@ -1799,7 +1799,7 @@ class LoweringVisitor(ast.NodeVisitor):
                     ir.ThrowStatement(ir.MethodCall(ir.This(), 'raiseMissingAttr', [ir.StrLiteral('__dict__')])),
                 ]),
                 ir.MethodDecl('private', 'void', 'pyraise_readonly___class__', ['String key'], [
-                    ir.ThrowStatement(ir.MethodCall(ir.Identifier('Runtime'), 'raiseNamedReadOnlyAttr', [
+                    ir.ThrowStatement(ir.StaticMethodCall('Runtime', 'raiseNamedReadOnlyAttr', [
                         ir.MethodCall(ir.This(), 'type', []),
                         ir.Identifier('key'),
                     ])),
@@ -1829,7 +1829,7 @@ class LoweringVisitor(ast.NodeVisitor):
                 ir.SuperConstructorCall([ir.StrLiteral(node.name), ir.Field(ir.Identifier(java_name), 'class')]),
             ]),
             ir.MethodDecl('@Override public', 'PyObject', 'call', ['PyObject[] args', 'PyDict kwargs'], [
-                ir.ReturnStatement(ir.MethodCall(ir.Identifier(java_name), 'newObj', [ir.This(), ir.Identifier('args'), ir.Identifier('kwargs')])),
+                ir.ReturnStatement(ir.StaticMethodCall(java_name, 'newObj', [ir.This(), ir.Identifier('args'), ir.Identifier('kwargs')])),
             ]),
         ]))
         for class_decl in class_decls:
@@ -1915,7 +1915,7 @@ class LoweringVisitor(ast.NodeVisitor):
                 ),
             ])
 
-        return ir.MethodCall(ir.Identifier(java_name), 'invoke', [
+        return ir.StaticMethodCall(java_name, 'invoke', [
             *(ir.Identifier(f'pycell_{name}') for name in sorted(free_vars)),
             self.visit(generators[0].iter),
         ])
@@ -2034,12 +2034,12 @@ class LoweringVisitor(ast.NodeVisitor):
                 'main',
                 ['String[] args'],
                 ir.block_simplify([
-                    ir.ExprStatement(ir.MethodCall(ir.Identifier('Runtime'), 'setArgv', [ir.StrLiteral(argv0), ir.Identifier('args')])),
+                    ir.static_method_call_statement('Runtime', 'setArgv', [ir.StrLiteral(argv0), ir.Identifier('args')]),
                     ir.TryStatement(
                         self.global_code,
                         'PyRaise',
                         'exc',
-                        [ir.ExprStatement(ir.MethodCall(ir.Identifier('Runtime'), 'handleTopLevelPyRaise', [ir.Identifier('exc')]))],
+                        [ir.static_method_call_statement('Runtime', 'handleTopLevelPyRaise', [ir.Identifier('exc')])],
                         [],
                     ),
                 ]),
@@ -2428,7 +2428,7 @@ def build_wrapper_binding_ir(
         assert kwarg_params is not None
         (min_args, max_args) = cast(tuple[int, int], extract_spec.get_positional_call_range(kwarg_params.params))
         statements.append(ir.LocalDecl('var', 'boundArgs',
-            ir.MethodCall(ir.Identifier('Runtime'), 'bindMinMaxPositionalOrKeyword', [
+            ir.StaticMethodCall('Runtime', 'bindMinMaxPositionalOrKeyword', [
                 ir.Identifier('args'),
                 ir.Identifier('kwargs'),
                 ir.PyConstant(poskw_kw_name),
@@ -2447,7 +2447,7 @@ def build_wrapper_binding_ir(
     elif plan.mode == 'pos_kwonly_python':
         assert kwarg_params is not None
         statements.append(ir.LocalDecl('var', 'boundArgs',
-            ir.MethodCall(ir.Identifier('Runtime'), 'bindMinMaxPositionalOrKeyword', [
+            ir.StaticMethodCall('Runtime', 'bindMinMaxPositionalOrKeyword', [
                 ir.Identifier('args'),
                 ir.Identifier('kwargs'),
                 ir.PyConstant(poskw_kw_name),
@@ -2466,7 +2466,7 @@ def build_wrapper_binding_ir(
     elif plan.mode == 'vararg_kwonly_python':
         assert kwarg_params is not None
         statements.append(ir.LocalDecl('var', 'boundArgs',
-            ir.Field(ir.MethodCall(ir.Identifier('PyRuntime'), 'pyfunc_bind_varargs_and_kwonly', [
+            ir.Field(ir.StaticMethodCall('PyRuntime', 'pyfunc_bind_varargs_and_kwonly', [
                 ir.Identifier('kwargs'),
                 ir.PyConstant(general_kw_name),
                 ir.PyConstant(tuple(param.name for param in kwarg_params.kwonly_params)),
@@ -2761,15 +2761,15 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                     if kind == 'classmethod':
                         bind_args = [ir.Identifier('self')] + bind_args
                     if call_positional_shape is not None:
-                        call_expr = ir.MethodCall(
-                            ir.Identifier(method_class_name),
+                        call_expr = ir.StaticMethodCall(
+                            method_class_name,
                             'callPositional',
                             bind_args if kind == 'classmethod' else [ir.Identifier('self'), *bind_args],
                         )
                     elif method_impl_target is not None:
                         call_args = bind_args if kind == 'classmethod' else [ir.Identifier('self'), *bind_args]
-                        call_expr = ir.MethodCall(
-                            ir.Identifier(method_impl_target.rsplit('.', 1)[0]),
+                        call_expr = ir.StaticMethodCall(
+                            method_impl_target.rsplit('.', 1)[0],
                             method_impl_target.rsplit('.', 1)[1],
                             call_args,
                         )
@@ -2879,7 +2879,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                 if call_positional_shape is not None:
                     call_expr = ir.MethodCall(ir.This(), 'callPositional', bind_args)
                 else:
-                    call_expr = ir.MethodCall(ir.Identifier('PyBuiltinFunctionsImpl'), f'pyfunc_{module_name.removeprefix("_")}_{func_name}', bind_args)
+                    call_expr = ir.StaticMethodCall('PyBuiltinFunctionsImpl', f'pyfunc_{module_name.removeprefix("_")}_{func_name}', bind_args)
                 call_body.append(ir.ReturnStatement(call_expr))
                 decls.append(ir.MethodDecl('@Override public', 'PyObject', 'call', ['PyObject[] args', 'PyDict kwargs'], call_body))
                 if call_positional_shape is not None:
@@ -2892,7 +2892,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                         [
                             *call_positional_statements,
                             ir.ReturnStatement(
-                                ir.MethodCall(ir.Identifier('PyBuiltinFunctionsImpl'), f'pyfunc_{module_name.removeprefix("_")}_{func_name}', call_positional_args)
+                                ir.StaticMethodCall('PyBuiltinFunctionsImpl', f'pyfunc_{module_name.removeprefix("_")}_{func_name}', call_positional_args)
                             ),
                         ],
                     ))
@@ -2932,7 +2932,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
             if call_positional_shape is not None:
                 call_expr = ir.MethodCall(ir.This(), 'callPositional', bind_args)
             else:
-                call_expr = ir.MethodCall(ir.Identifier(call_target), f'pyfunc_{func_name}', bind_args)
+                call_expr = ir.StaticMethodCall(call_target, f'pyfunc_{func_name}', bind_args)
             call_body.append(ir.ReturnStatement(call_expr))
             decls.append(ir.MethodDecl('@Override public', 'PyObject', 'call', ['PyObject[] args', 'PyDict kwargs'], call_body))
             if call_positional_shape is not None:
@@ -2945,7 +2945,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                     [
                         *call_positional_statements,
                         ir.ReturnStatement(
-                            ir.MethodCall(ir.Identifier(call_target), f'pyfunc_{func_name}', call_positional_args)
+                            ir.StaticMethodCall(call_target, f'pyfunc_{func_name}', call_positional_args)
                         ),
                     ],
                 ))

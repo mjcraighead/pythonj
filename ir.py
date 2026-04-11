@@ -331,6 +331,17 @@ class MethodCall(Expr):
         return f"{self.obj.emit_java(pool)}.{self.method}({', '.join(arg.emit_java(pool) for arg in self.args)})"
 
 @dataclass(slots=True)
+class StaticMethodCall(Expr):
+    class_name: str
+    method: str
+    args: list[Expr]
+    return_type: str = JAVA_TYPE_UNKNOWN
+    def java_type(self) -> str:
+        return self.return_type
+    def emit_java(self, pool: ConstantPool) -> str:
+        return f"{self.class_name}.{self.method}({', '.join(arg.emit_java(pool) for arg in self.args)})"
+
+@dataclass(slots=True)
 class MethodRef(Expr):
     obj: str
     method: str
@@ -399,7 +410,7 @@ class AssignStatement(Statement):
 
 @dataclass(slots=True)
 class ExprStatement(Statement):
-    call: CreateObject | MethodCall # only limited types of expressions allowed by Java grammar
+    call: CreateObject | MethodCall | StaticMethodCall # only limited types of expressions allowed by Java grammar
     def emit_java(self, pool: ConstantPool) -> Iterator[str]:
         yield f'{self.call.emit_java(pool)};'
 
@@ -693,15 +704,14 @@ def unary_op(op: str, operand: Expr) -> Expr:
     return UnaryOp(op, operand)
 
 def bool_value(expr: Expr) -> Expr:
-    if (isinstance(expr, MethodCall) and isinstance(expr.obj, Identifier) and
-        expr.obj.name == 'PyBool' and expr.method == 'create' and len(expr.args) == 1):
+    if isinstance(expr, StaticMethodCall) and expr.class_name == 'PyBool' and expr.method == 'create':
         return expr.args[0] # return the raw boolean instead of box/unbox
     if isinstance(expr, PyConstant):
         return Bool(bool(expr.value))
     return MethodCall(expr, 'boolValue', [], 'boolean')
 
 def py_bool_create(expr: Expr) -> Expr:
-    return MethodCall(Identifier('PyBool'), 'create', [expr], 'PyBool')
+    return StaticMethodCall('PyBool', 'create', [expr], 'PyBool')
 
 def chained_binary_op(op: str, exprs: list[Expr]) -> Expr:
     assert len(exprs) >= 1, exprs
@@ -712,6 +722,9 @@ def chained_binary_op(op: str, exprs: list[Expr]) -> Expr:
 
 def method_call_statement(obj: Expr, method: str, args: list[Expr]) -> ExprStatement:
     return ExprStatement(MethodCall(obj, method, args))
+
+def static_method_call_statement(class_name: str, method: str, args: list[Expr]) -> ExprStatement:
+    return ExprStatement(StaticMethodCall(class_name, method, args))
 
 def if_statement(cond: Expr, body: list[Statement], orelse: list[Statement]) -> Iterator[Statement]:
     if isinstance(cond, Bool) and cond.value:
