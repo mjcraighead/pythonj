@@ -23,18 +23,18 @@ def _find_name(names, kw, start: int) -> int:
         i += 1
     return __pythonj_null__
 
-def _type_error_at_most_args(positional_name, max_total: int, given) -> TypeError:
+def _type_error_at_most_args(positional_name: str, max_total: int, given) -> TypeError:
     suffix = '' if max_total == 1 else 's'
     return TypeError(f'{positional_name}() takes at most {max_total} argument{suffix} ({given} given)')
 
-def _type_error_at_most_keyword_args(kw_name, max_total: int, kwargs_len) -> TypeError:
+def _type_error_at_most_keyword_args(kw_name: str, max_total: int, kwargs_len) -> TypeError:
     suffix = '' if max_total == 1 else 's'
     return TypeError(f'{kw_name}() takes at most {max_total} keyword argument{suffix} ({kwargs_len} given)')
 
-def _type_error_unexpected_kw_arg(kw_name, unknown_kw) -> TypeError:
+def _type_error_unexpected_kw_arg(kw_name: str, unknown_kw) -> TypeError:
     return TypeError(f'{kw_name}() got an unexpected keyword argument {unknown_kw!r}')
 
-def _type_error_user_missing_args(name, missing_arg_names) -> TypeError:
+def _type_error_user_missing_args(name: str, missing_arg_names) -> TypeError:
     missing: int = len(missing_arg_names)
     ret = f'{name}() missing {missing} required positional argument'
     if missing != 1:
@@ -52,7 +52,7 @@ def _type_error_user_missing_args(name, missing_arg_names) -> TypeError:
         i += 1
     return TypeError(ret)
 
-def _type_error_user_posonly_as_keyword(name, arg_names) -> TypeError:
+def _type_error_user_posonly_as_keyword(name: str, arg_names) -> TypeError:
     joined = ''
     arg_names_len: int = len(arg_names)
     i: int = 0
@@ -63,9 +63,9 @@ def _type_error_user_posonly_as_keyword(name, arg_names) -> TypeError:
         i += 1
     return TypeError(f"{name}() got some positional-only arguments passed as keyword arguments: {joined!r}")
 
-def require_exact_positional(args_len: int, kwargs, kw_name, positional_name, n: int, generic_exact_args_style) -> None:
+def require_exact_positional(args_len: int, kwargs, kw_name: str, positional_name: str, n: int, generic_exact_args_style) -> None:
     if kwargs is not __pythonj_null__ and kwargs:
-        raise TypeError(kw_name + '() takes no keyword arguments')
+        raise TypeError(f'{kw_name}() takes no keyword arguments')
     if args_len != n:
         if n == 0:
             raise TypeError(f'{positional_name}() takes no arguments ({args_len} given)')
@@ -74,9 +74,9 @@ def require_exact_positional(args_len: int, kwargs, kw_name, positional_name, n:
         suffix = '' if n == 1 else 's'
         raise TypeError(f'{positional_name} expected {n} argument{suffix}, got {args_len}')
 
-def require_min_max_positional(args_len: int, kwargs, kw_name, positional_name, min_args: int, max_args: int) -> None:
+def require_min_max_positional(args_len: int, kwargs, kw_name: str, positional_name: str, min_args: int, max_args: int) -> None:
     if kwargs is not __pythonj_null__ and kwargs:
-        raise TypeError(kw_name + '() takes no keyword arguments')
+        raise TypeError(f'{kw_name}() takes no keyword arguments')
     if args_len < min_args:
         suffix = '' if min_args == 1 else 's'
         raise TypeError(f'{positional_name} expected at least {min_args} argument{suffix}, got {args_len}')
@@ -84,7 +84,7 @@ def require_min_max_positional(args_len: int, kwargs, kw_name, positional_name, 
         suffix = '' if max_args == 1 else 's'
         raise TypeError(f'{positional_name} expected at most {max_args} argument{suffix}, got {args_len}')
 
-def bind_min_max_positional_or_keyword(args, kwargs: dict, kw_name, positional_name, positional_names, posonly_count: int, kwonly_names, min_args: int, max_positional: int, max_total: int, min_positional_style, exact_args_style) -> list:
+def bind_min_max_positional_or_keyword(args, kwargs: dict, kw_name: str, positional_name: str, positional_names, posonly_count: int, kwonly_names, min_args: int, max_positional: int, max_total: int, min_positional_style, exact_args_style) -> list:
     args_len: int = len(args)
     if exact_args_style and args_len != min_args:
         suffix = '' if min_args == 1 else 's'
@@ -136,7 +136,7 @@ def bind_min_max_positional_or_keyword(args, kwargs: dict, kw_name, positional_n
 
     return bound_args
 
-def bind_varargs_and_kwonly(kwargs: dict, kw_name, kwonly_names) -> list:
+def bind_varargs_and_kwonly(kwargs: dict, kw_name: str, kwonly_names) -> list:
     bound_args = [__pythonj_null__] * len(kwonly_names)
 
     if kwargs is not __pythonj_null__ and kwargs:
@@ -149,7 +149,7 @@ def bind_varargs_and_kwonly(kwargs: dict, kw_name, kwonly_names) -> list:
 
     return bound_args
 
-def require_user_exact_positional(args_len: int, kwargs, name, arg_names) -> None:
+def require_user_exact_positional(args_len: int, kwargs, name: str, arg_names) -> None:
     n_args: int = len(arg_names)
 
     if kwargs is not __pythonj_null__ and kwargs:
@@ -172,7 +172,7 @@ def require_user_exact_positional(args_len: int, kwargs, name, arg_names) -> Non
             raise TypeError(f'{name}() takes {n_args} positional argument{arg_s} but {args_len} {was_were} given')
         raise _type_error_user_missing_args(name, arg_names[args_len:n_args])
 
-def require_user_min_max_positional(args_len: int, kwargs, name, arg_names, n_required: int) -> None:
+def require_user_min_max_positional(args_len: int, kwargs, name: str, arg_names, n_required: int) -> None:
     n_args: int = len(arg_names)
 
     if kwargs is not __pythonj_null__ and kwargs:
@@ -194,7 +194,7 @@ def require_user_min_max_positional(args_len: int, kwargs, name, arg_names, n_re
         was_were = 'was' if args_len == 1 else 'were'
         raise TypeError(f'{name}() takes from {n_required} to {n_args} positional arguments but {args_len} {was_were} given')
 
-def bind_user_function(args, kwargs: dict, name, arg_names, n_required: int, posonly_count: int) -> list:
+def bind_user_function(args, kwargs: dict, name: str, arg_names, n_required: int, posonly_count: int) -> list:
     args_len: int = len(args)
     n_args: int = len(arg_names)
     bound_args = _init_bound_args(args, n_args)
