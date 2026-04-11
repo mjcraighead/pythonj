@@ -230,6 +230,14 @@ def collect_builtin_method_return_java_types(node: ast.Module) -> dict[tuple[str
     return ret
 
 class AstSimplifier(ast.NodeTransformer):
+    def _constant_truth_value(self, node: ast.expr) -> Optional[bool]:
+        if not isinstance(node, ast.Constant):
+            return None
+        return bool(node.value)
+
+    def visit_Pass(self, node):
+        return None
+
     def visit_UnaryOp(self, node):
         node = cast(ast.UnaryOp, self.generic_visit(node))
         if not isinstance(node.operand, ast.Constant):
@@ -271,6 +279,20 @@ class AstSimplifier(ast.NodeTransformer):
             case _:
                 return node
         return ast.copy_location(ast.Constant(value), node)
+
+    def visit_If(self, node):
+        node = cast(ast.If, self.generic_visit(node))
+        truth_value = self._constant_truth_value(node.test)
+        if truth_value is None:
+            return node
+        return node.body if truth_value else node.orelse
+
+    def visit_While(self, node):
+        node = cast(ast.While, self.generic_visit(node))
+        truth_value = self._constant_truth_value(node.test)
+        if truth_value is False:
+            return node.orelse
+        return node
 
 def simplify_ast(node: ast.AST) -> ast.AST:
     return ast.fix_missing_locations(AstSimplifier().visit(node))
@@ -502,70 +524,88 @@ def _collect_exact_arg_annotations(node: ast.AST) -> tuple[dict[str, str], dict[
     return (exact_arg_types, exact_arg_lines, errors)
 
 class ScopeAnalyzer(ast.NodeVisitor):
-    __slots__ = ('scope_infos',)
+    __slots__ = ('scope_infos', 'preserved_scope_infos')
     scope_infos: dict[ast.AST, ScopeInfo]
+    preserved_scope_infos: dict[ast.AST, ScopeInfo]
 
-    def __init__(self):
+    def __init__(self, preserved_scope_infos: Optional[dict[ast.AST, ScopeInfo]] = None):
         self.scope_infos = {}
+        self.preserved_scope_infos = {} if preserved_scope_infos is None else preserved_scope_infos
 
     def _analyze_scope_node(self, node: ast.AST) -> ScopeInfo:
         if node in self.scope_infos:
             return self.scope_infos[node]
 
-        reads: set[str] = set()
-        writes: set[str] = set()
-        explicit_globals: set[str] = set()
-        nonlocals: set[str] = set()
-        children: list[ast.AST] = []
+        preserved_scope_info = self.preserved_scope_infos.get(node)
+        if preserved_scope_info is None:
+            reads: set[str] = set()
+            writes: set[str] = set()
+            explicit_globals: set[str] = set()
+            nonlocals: set[str] = set()
+            children: list[ast.AST] = []
 
-        if isinstance(node, ast.Module):
-            for statement in node.body:
-                _walk_local(statement, reads, writes, explicit_globals, nonlocals, children)
-        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            writes.update(_param_names(node.args))
-            for statement in node.body:
-                _walk_local(statement, reads, writes, explicit_globals, nonlocals, children)
-        elif isinstance(node, ast.ClassDef):
-            for statement in node.body:
-                _walk_local(statement, reads, writes, explicit_globals, nonlocals, children)
-        elif isinstance(node, ast.Lambda):
-            writes.update(_param_names(node.args))
-            _walk_local(node.body, reads, writes, explicit_globals, nonlocals, children)
+            if isinstance(node, ast.Module):
+                for statement in node.body:
+                    _walk_local(statement, reads, writes, explicit_globals, nonlocals, children)
+            elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                writes.update(_param_names(node.args))
+                for statement in node.body:
+                    _walk_local(statement, reads, writes, explicit_globals, nonlocals, children)
+            elif isinstance(node, ast.ClassDef):
+                for statement in node.body:
+                    _walk_local(statement, reads, writes, explicit_globals, nonlocals, children)
+            elif isinstance(node, ast.Lambda):
+                writes.update(_param_names(node.args))
+                _walk_local(node.body, reads, writes, explicit_globals, nonlocals, children)
+            else:
+                assert isinstance(node, (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)), node
+                generators = node.generators
+                elts: list[ast.expr] = [node.elt] if not isinstance(node, ast.DictComp) else [node.key, node.value]
+                for (i, generator) in enumerate(generators):
+                    if i != 0:
+                        _walk_local(generator.iter, reads, writes, explicit_globals, nonlocals, children)
+                    _walk_local(generator.target, reads, writes, explicit_globals, nonlocals, children)
+                    for _if in generator.ifs:
+                        _walk_local(_if, reads, writes, explicit_globals, nonlocals, children)
+                for elt in elts:
+                    _walk_local(elt, reads, writes, explicit_globals, nonlocals, children)
+
+            locals = writes - explicit_globals - nonlocals
+            needs_from_outer = (reads | nonlocals) - locals - explicit_globals
+            cell_vars = set()
+            for child in children:
+                child_info = self._analyze_scope_node(child)
+                for name in child_info.needs_from_outer:
+                    if name in locals:
+                        cell_vars.add(name)
+                    elif name not in explicit_globals:
+                        needs_from_outer.add(name)
+            kind = ScopeKind.MODULE if isinstance(node, ast.Module) else ScopeKind.FUNCTION
+            (exact_global_types, exact_global_lines, global_annotation_errors) = _collect_exact_global_annotations(node)
+            (exact_arg_types, exact_arg_lines, annotation_errors) = _collect_exact_arg_annotations(node)
+            (exact_local_types, exact_local_lines, local_annotation_errors) = _collect_exact_local_annotations(node)
+            annotation_errors.extend(global_annotation_errors)
+            annotation_errors.extend(local_annotation_errors)
+            for name in exact_arg_types:
+                if name in cell_vars:
+                    annotation_errors.append((exact_arg_lines[name], f"annotated argument {name!r} may not be captured by an inner scope"))
+            for name in exact_local_types:
+                if name in cell_vars:
+                    annotation_errors.append((exact_local_lines[name], f"annotated local {name!r} may not be captured by an inner scope"))
         else:
-            assert isinstance(node, (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)), node
-            generators = node.generators
-            elts: list[ast.expr] = [node.elt] if not isinstance(node, ast.DictComp) else [node.key, node.value]
-            for (i, generator) in enumerate(generators):
-                if i != 0:
-                    _walk_local(generator.iter, reads, writes, explicit_globals, nonlocals, children)
-                _walk_local(generator.target, reads, writes, explicit_globals, nonlocals, children)
-                for _if in generator.ifs:
-                    _walk_local(_if, reads, writes, explicit_globals, nonlocals, children)
-            for elt in elts:
-                _walk_local(elt, reads, writes, explicit_globals, nonlocals, children)
-
-        locals = writes - explicit_globals - nonlocals
-        needs_from_outer = (reads | nonlocals) - locals - explicit_globals
-        cell_vars = set()
-        for child in children:
-            child_info = self._analyze_scope_node(child)
-            for name in child_info.needs_from_outer:
-                if name in locals:
-                    cell_vars.add(name)
-                elif name not in explicit_globals:
-                    needs_from_outer.add(name)
-        kind = ScopeKind.MODULE if isinstance(node, ast.Module) else ScopeKind.FUNCTION
-        (exact_global_types, exact_global_lines, global_annotation_errors) = _collect_exact_global_annotations(node)
-        (exact_arg_types, exact_arg_lines, annotation_errors) = _collect_exact_arg_annotations(node)
-        (exact_local_types, exact_local_lines, local_annotation_errors) = _collect_exact_local_annotations(node)
-        annotation_errors.extend(global_annotation_errors)
-        annotation_errors.extend(local_annotation_errors)
-        for name in exact_arg_types:
-            if name in cell_vars:
-                annotation_errors.append((exact_arg_lines[name], f"annotated argument {name!r} may not be captured by an inner scope"))
-        for name in exact_local_types:
-            if name in cell_vars:
-                annotation_errors.append((exact_local_lines[name], f"annotated local {name!r} may not be captured by an inner scope"))
+            kind = preserved_scope_info.kind
+            locals = set(preserved_scope_info.locals)
+            explicit_globals = set(preserved_scope_info.explicit_globals)
+            nonlocals = set(preserved_scope_info.nonlocals)
+            cell_vars = set(preserved_scope_info.cell_vars)
+            needs_from_outer = set(preserved_scope_info.needs_from_outer)
+            exact_global_types = dict(preserved_scope_info.exact_global_types)
+            exact_global_lines = dict(preserved_scope_info.exact_global_lines)
+            exact_arg_types = dict(preserved_scope_info.exact_arg_types)
+            exact_arg_lines = dict(preserved_scope_info.exact_arg_lines)
+            exact_local_types = dict(preserved_scope_info.exact_local_types)
+            exact_local_lines = dict(preserved_scope_info.exact_local_lines)
+            annotation_errors = list(preserved_scope_info.annotation_errors)
         (initial_final_bindings,
          initial_builtin_module_locals,
          initial_final_function_call_ranges,
@@ -1871,7 +1911,7 @@ class LoweringVisitor(ast.NodeVisitor):
                         if elt.value in slots:
                             self.error(node.lineno, 'duplicate name in __slots__')
                         slots.append(elt.value)
-        elif len(node.body) != 1 or not isinstance(node.body[0], ast.Pass):
+        elif node.body:
             self.error(node.lineno, "only 'class X: pass' and 'class X: __slots__ = (...)' are supported")
 
         java_name = f'pyclass_{node.name}'
@@ -2200,7 +2240,15 @@ def parse_python_module(path: str) -> ast.Module:
     if not os.path.isabs(resolved_path):
         resolved_path = os.path.join(os.path.dirname(__file__), resolved_path)
     with open(resolved_path, encoding='utf-8') as f:
-        return cast(ast.Module, simplify_ast(ast.parse(f.read(), resolved_path)))
+        return ast.parse(f.read(), resolved_path)
+
+def analyze_and_simplify(node: ast.Module) -> tuple[ast.Module, dict[ast.AST, ScopeInfo]]:
+    initial_analyzer = ScopeAnalyzer()
+    initial_analyzer.visit(node)
+    node = cast(ast.Module, simplify_ast(node))
+    analyzer = ScopeAnalyzer(initial_analyzer.scope_infos)
+    analyzer.visit(node)
+    return (node, analyzer.scope_infos)
 
 def get_top_level_functions(node: ast.Module) -> dict[str, ast.FunctionDef]:
     return {x.name: x for x in node.body if isinstance(x, ast.FunctionDef)}
@@ -2374,9 +2422,7 @@ def translate_python_impl_node(node: ast.Module, func: ast.FunctionDef, emitted_
                                builtin_method_return_types: Optional[dict[str, dict[str, str]]] = None,
                                python_helper_return_java_types: Optional[dict[str, str]] = None) -> tuple[list[ir.ClassDecl], ir.MethodDecl]:
     if scope_infos is None:
-        analyzer = ScopeAnalyzer()
-        analyzer.visit(node)
-        scope_infos = analyzer.scope_infos
+        (node, scope_infos) = analyze_and_simplify(node)
     visitor = LoweringVisitor(
         display_name,
         scope_infos,
@@ -2740,6 +2786,8 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
 
     pythonj_builtins_node = parse_python_module('pythonj_builtins.py')
     pythonj_runtime_node = parse_python_module('pythonj_runtime.py')
+    (pythonj_builtins_node, builtins_scope_infos) = analyze_and_simplify(pythonj_builtins_node)
+    (pythonj_runtime_node, runtime_scope_infos) = analyze_and_simplify(pythonj_runtime_node)
     pythonj_builtins_funcs = get_top_level_functions(pythonj_builtins_node)
     pythonj_builtins_return_types = collect_top_level_exact_return_types(pythonj_builtins_node)
     pythonj_builtins_method_return_types = collect_builtin_method_exact_return_types(pythonj_builtins_node)
@@ -2753,11 +2801,6 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
         func_name: decode_helper_return_annotation(func.returns)
         for (func_name, func) in pythonj_runtime_funcs.items()
     }
-    builtins_analyzer = ScopeAnalyzer()
-    builtins_analyzer.visit(pythonj_builtins_node)
-    runtime_analyzer = ScopeAnalyzer()
-    runtime_analyzer.visit(pythonj_runtime_node)
-
     pool = ir.ConstantPool('PyRuntime')
     with open(java_path, 'w') as f:
         top_level_decls: list[ir.Decl] = []
@@ -2926,7 +2969,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
                         method_impl_target = f'PyRuntime.pyfunc_{helper_name}'
                         (helper_classes, helper_method) = translate_python_method_impl(
                             pythonj_builtins_node, name, method_name, pool,
-                            class_funcs=pythonj_builtins_classes, scope_infos=builtins_analyzer.scope_infos,
+                            class_funcs=pythonj_builtins_classes, scope_infos=builtins_scope_infos,
                             builtin_function_return_types=pythonj_builtins_return_types,
                             builtin_method_return_types=pythonj_builtins_method_return_types,
                         )
@@ -3008,7 +3051,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
 
         for func_name in sorted(pythonj_runtime_funcs):
             (helper_classes, helper_method) = translate_python_runtime_impl(
-                pythonj_runtime_node, func_name, pool, funcs=pythonj_runtime_funcs, scope_infos=runtime_analyzer.scope_infos,
+                pythonj_runtime_node, func_name, pool, funcs=pythonj_runtime_funcs, scope_infos=runtime_scope_infos,
                 builtin_function_return_types=pythonj_builtins_return_types,
                 builtin_method_return_types=pythonj_builtins_method_return_types,
                 python_helper_return_java_types=pythonj_runtime_return_java_types,
@@ -3018,7 +3061,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
 
         for type_name in sorted(PYTHON_AUTHORED_CONSTRUCTOR_IMPLS):
             (helper_classes, helper_method) = translate_python_constructor_impl(
-                pythonj_builtins_node, type_name, pool, funcs=pythonj_builtins_funcs, scope_infos=builtins_analyzer.scope_infos,
+                pythonj_builtins_node, type_name, pool, funcs=pythonj_builtins_funcs, scope_infos=builtins_scope_infos,
                 builtin_function_return_types=pythonj_builtins_return_types,
                 builtin_method_return_types=pythonj_builtins_method_return_types,
             )
@@ -3049,7 +3092,7 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
 
         for func_name in sorted(PYTHON_AUTHORED_IMPLS['builtins']):
             (helper_classes, helper_method) = translate_python_builtin_impl(
-                pythonj_builtins_node, func_name, pool, funcs=pythonj_builtins_funcs, scope_infos=builtins_analyzer.scope_infos,
+                pythonj_builtins_node, func_name, pool, funcs=pythonj_builtins_funcs, scope_infos=builtins_scope_infos,
                 builtin_function_return_types=pythonj_builtins_return_types,
                 builtin_method_return_types=pythonj_builtins_method_return_types,
             )
@@ -3184,16 +3227,15 @@ def translate_python_to_java(spec_path: str, py_path: str, java_path: str) -> No
 def translate_python_source_to_java(spec_path: str, py_source: str, source_name: str, java_path: str,
                                     argv0: Optional[str] = None) -> None:
     load_runtime_spec(spec_path)
-    node = cast(ast.Module, simplify_ast(ast.parse(py_source, filename=source_name)))
-    analyzer = ScopeAnalyzer()
-    analyzer.visit(node)
+    (node, scope_infos) = analyze_and_simplify(ast.parse(py_source, filename=source_name))
     pythonj_builtins_node = parse_python_module('pythonj_builtins.py')
+    (pythonj_builtins_node, _) = analyze_and_simplify(pythonj_builtins_node)
     builtin_function_return_types = collect_top_level_exact_return_types(pythonj_builtins_node)
     builtin_method_return_types = collect_builtin_method_exact_return_types(pythonj_builtins_node)
     visitor = LoweringVisitor(
         source_name,
-        analyzer.scope_infos,
-        analyzer.scope_infos[node],
+        scope_infos,
+        scope_infos[node],
         builtin_function_return_types,
         builtin_method_return_types,
     )
