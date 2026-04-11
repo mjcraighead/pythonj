@@ -971,19 +971,29 @@ class LoweringVisitor(ast.NodeVisitor):
         n_compares = len(node.comparators)
         assert n_compares == len(node.ops), node # should have consistent number of these
         assert n_compares >= 1, node # should always have at least one
-        if n_compares == 1 and isinstance(node.ops[0], (ast.Lt, ast.LtE, ast.Gt, ast.GtE, ast.Eq, ast.NotEq)):
-            lhs_int = self.emit_exact_int_value(node.left)
-            rhs_int = self.emit_exact_int_value(node.comparators[0])
-            if lhs_int is not None and rhs_int is not None:
-                op = {
+        if (all(isinstance(op, (ast.Lt, ast.LtE, ast.Gt, ast.GtE, ast.Eq, ast.NotEq)) for op in node.ops) and
+            self.infer_exact_builtin_type_expr(node.left) == 'int' and
+            all(self.infer_exact_builtin_type_expr(term) == 'int' for term in node.comparators)):
+            lhs_expr = self.visit(node.left)
+            exprs: list[ir.Expr] = []
+            for (i, (op, comparator)) in enumerate(zip(node.ops, node.comparators)):
+                rhs_expr = self.visit(comparator)
+                if i < n_compares - 1:
+                    temp_name = self.scope.make_temp()
+                    self.code.append(ir.LocalDecl('PyInt', temp_name, ir.CastExpr('PyInt', rhs_expr)))
+                    rhs_expr = ir.Identifier(temp_name, 'PyInt')
+                lhs_int = ir.unbox_int(lhs_expr)
+                rhs_int = ir.unbox_int(rhs_expr)
+                exprs.append(ir.BinaryOp({
                     ast.Lt: '<',
                     ast.LtE: '<=',
                     ast.Gt: '>',
                     ast.GtE: '>=',
                     ast.Eq: '==',
                     ast.NotEq: '!=',
-                }[type(node.ops[0])]
-                return ir.static_method_call('PyBool', 'create', [ir.BinaryOp(op, lhs_int, rhs_int)])
+                }[type(op)], lhs_int, rhs_int))
+                lhs_expr = rhs_expr
+            return ir.static_method_call('PyBool', 'create', [ir.chained_binary_op('&&', exprs)])
 
         lhs = self.visit(node.left)
         exprs: list[ir.Expr] = []
