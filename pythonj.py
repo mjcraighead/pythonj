@@ -87,6 +87,8 @@ class InitialBinding:
     builtin_module: Optional[str] = None
     function_call_range: Optional[tuple[int, int]] = None
     function_return_type: Optional[str] = None
+    constant_value: Optional[object] = None
+    constant_type: Optional[str] = None
 
 @dataclass
 class ScopeInfo:
@@ -100,6 +102,8 @@ class ScopeInfo:
     initial_builtin_module_locals: dict[str, str]
     initial_final_function_call_ranges: dict[str, tuple[int, int]]
     initial_final_function_return_types: dict[str, str]
+    initial_final_constant_values: dict[str, object]
+    initial_final_constant_types: dict[str, str]
     exact_global_types: dict[str, str]
     exact_global_lines: dict[str, int]
     exact_arg_types: dict[str, str]
@@ -262,11 +266,23 @@ def _get_initial_bindings(node: ast.stmt) -> Optional[list[InitialBinding]]:
             function_call_range=function_call_range,
             function_return_type=_decode_user_function_return_annotation(node.returns),
         )]
+    if (isinstance(node, ast.Assign) and
+        len(node.targets) == 1 and
+        isinstance(node.targets[0], ast.Name) and
+        isinstance(node.value, ast.Constant)):
+        type_name = type(node.value.value).__name__
+        if type_name not in extract_spec.BUILTIN_TYPES:
+            return None
+        return [InitialBinding(
+            node.targets[0].id,
+            constant_value=node.value.value,
+            constant_type=type_name,
+        )]
     return None
 
-def _collect_initial_final_bindings(node: ast.AST) -> tuple[set[str], dict[str, str], dict[str, tuple[int, int]], dict[str, str]]:
+def _collect_initial_final_bindings(node: ast.AST) -> tuple[set[str], dict[str, str], dict[str, tuple[int, int]], dict[str, str], dict[str, object], dict[str, str]]:
     if not isinstance(node, (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef)):
-        return (set(), {}, {}, {})
+        return (set(), {}, {}, {}, {}, {})
     prefix_bindings: dict[str, InitialBinding] = {}
     prefix_end = 0
     for statement in node.body:
@@ -277,7 +293,7 @@ def _collect_initial_final_bindings(node: ast.AST) -> tuple[set[str], dict[str, 
         for binding in bindings:
             prefix_bindings[binding.name] = binding
     if not prefix_bindings:
-        return (set(), {}, {}, {})
+        return (set(), {}, {}, {}, {}, {})
     later_writes: set[str] = set()
     for statement in node.body[prefix_end:]:
         _walk_local(statement, set(), later_writes, set(), set(), [])
@@ -298,6 +314,16 @@ def _collect_initial_final_bindings(node: ast.AST) -> tuple[set[str], dict[str, 
             name: binding.function_return_type
             for (name, binding) in prefix_bindings.items()
             if name in final_bindings and binding.function_return_type is not None
+        },
+        {
+            name: binding.constant_value
+            for (name, binding) in prefix_bindings.items()
+            if name in final_bindings and binding.constant_value is not None
+        },
+        {
+            name: binding.constant_type
+            for (name, binding) in prefix_bindings.items()
+            if name in final_bindings and binding.constant_type is not None
         },
     )
 
@@ -493,7 +519,9 @@ class ScopeAnalyzer(ast.NodeVisitor):
         (initial_final_bindings,
          initial_builtin_module_locals,
          initial_final_function_call_ranges,
-         initial_final_function_return_types) = _collect_initial_final_bindings(node)
+         initial_final_function_return_types,
+         initial_final_constant_values,
+         initial_final_constant_types) = _collect_initial_final_bindings(node)
         scope_info = ScopeInfo(
             kind,
             locals,
@@ -505,6 +533,8 @@ class ScopeAnalyzer(ast.NodeVisitor):
             initial_builtin_module_locals,
             initial_final_function_call_ranges,
             initial_final_function_return_types,
+            initial_final_constant_values,
+            initial_final_constant_types,
             exact_global_types,
             exact_global_lines,
             exact_arg_types,
@@ -718,6 +748,8 @@ class LoweringVisitor(ast.NodeVisitor):
             return ir.Field(ir.Identifier(f'Py{name}Type'), 'singleton', f'Py{name}Type')
         if name in extract_spec.BUILTIN_FUNCTIONS:
             return ir.PyBuiltinFunction(name)
+        if (type_name := self.module_scope().info.initial_final_constant_types.get(name)) is not None:
+            return ir.Identifier(f'pyglobal_{name}', extract_spec.BUILTIN_TYPES[type_name])
         return ir.Identifier(f'pyglobal_{name}')
 
     def ident_expr(self, name: str) -> ir.Expr:
@@ -809,6 +841,9 @@ class LoweringVisitor(ast.NodeVisitor):
         if isinstance(node, ast.Name):
             if get_name_resolution(node) is NameResolution.LOCAL:
                 if (type_name := self.local_exact_builtin_type(node.id)) is not None:
+                    return type_name
+            elif get_name_resolution(node) is NameResolution.GLOBAL:
+                if (type_name := self.module_scope().info.initial_final_constant_types.get(node.id)) is not None:
                     return type_name
         if isinstance(node, ast.BinOp):
             op = self.visit(node.op)
@@ -1309,6 +1344,10 @@ class LoweringVisitor(ast.NodeVisitor):
     def visit_Assign(self, node) -> None:
         if len(node.targets) != 1:
             self.error(node.lineno, 'chained assignment (a = b = c) is unsupported')
+        if (self.scope.info.kind is ScopeKind.MODULE and
+            isinstance(node.targets[0], ast.Name) and
+            node.targets[0].id in self.scope.info.initial_final_constant_values):
+            return
         target = node.targets[0]
         self.code.extend(self.emit_bind(target, self.visit(node.value)))
 
@@ -2062,6 +2101,10 @@ class LoweringVisitor(ast.NodeVisitor):
             name: java_name for (name, java_name) in self.final_global_function_classes.items()
             if name in self.scope.info.locals
         }
+        final_constant_fields = {
+            name: value for (name, value) in self.scope.info.initial_final_constant_values.items()
+            if name in self.scope.info.locals
+        }
         predefined_global_fields: list[ir.Decl] = []
         if '__name__' not in self.scope.info.locals:
             predefined_global_fields.append(
@@ -2081,8 +2124,10 @@ class LoweringVisitor(ast.NodeVisitor):
               for (name, module_name) in sorted(final_import_fields.items())),
             *(ir.FieldDecl('private static final', java_name, f'pyglobal_{name}', ir.CreateObject(java_name, []))
               for (name, java_name) in sorted(final_function_fields.items())),
+            *(ir.FieldDecl('private static final', extract_spec.BUILTIN_TYPES[self.scope.info.initial_final_constant_types[name]], f'pyglobal_{name}', ir.PyConstant(value))
+              for (name, value) in sorted(final_constant_fields.items())),
             *(ir.FieldDecl('private static', 'PyObject', f'pyglobal_{name}', ir.PyConstant(None))
-              for name in sorted(self.scope.info.locals - set(final_import_fields) - set(final_function_fields))),
+              for name in sorted(self.scope.info.locals - set(final_import_fields) - set(final_function_fields) - set(final_constant_fields))),
             ir.MethodDecl(
                 'public static',
                 'void',
