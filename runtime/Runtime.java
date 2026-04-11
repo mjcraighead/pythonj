@@ -28,6 +28,31 @@ final class PyCell {
     PyCell(PyObject _obj) {
         obj = _obj;
     }
+
+    PyObject get(String name) {
+        if (obj == null) {
+            throw PyNameError.raise("cannot access free variable '" + name + "' where it is not associated with a value in enclosing scope");
+        }
+        return obj;
+    }
+    PyObject getLocal(String name) {
+        if (obj == null) {
+            throw PyUnboundLocalError.raise("cannot access local variable '" + name + "' where it is not associated with a value");
+        }
+        return obj;
+    }
+    void delete(String name) {
+        if (obj == null) {
+            throw PyNameError.raise("cannot access free variable '" + name + "' where it is not associated with a value in enclosing scope");
+        }
+        obj = null;
+    }
+    void deleteLocal(String name) {
+        if (obj == null) {
+            throw PyUnboundLocalError.raise("cannot access local variable '" + name + "' where it is not associated with a value");
+        }
+        obj = null;
+    }
 }
 
 final class PyStringBuilder extends PyTruthyObject {
@@ -570,6 +595,31 @@ public final class Runtime {
     }
     public static PyRaise raiseUnexpectedKwArg(String name, String kwName) {
         return PyTypeError.raiseFormat("%s() got an unexpected keyword argument %s", name, PyString.reprOf(kwName));
+    }
+    public static PyObject getLocal(PyObject value, String name) {
+        if (value == null) {
+            throw PyUnboundLocalError.raise("cannot access local variable '" + name + "' where it is not associated with a value");
+        }
+        return value;
+    }
+    public static PyObject getGlobal(PyObject value, String name, PyObject builtin) {
+        if (value != null) {
+            return value;
+        }
+        if (builtin != null) {
+            return builtin;
+        }
+        throw PyNameError.raise("name '" + name + "' is not defined");
+    }
+    public static PyObject delLocal(PyObject value, String name) {
+        getLocal(value, name);
+        return null;
+    }
+    public static PyObject delGlobal(PyObject value, String name) {
+        if (value == null) {
+            throw PyNameError.raise("name '" + name + "' is not defined");
+        }
+        return null;
     }
     public static PyRaise raiseExpr(PyObject exc) {
         if (exc instanceof PyBaseException baseExc) {

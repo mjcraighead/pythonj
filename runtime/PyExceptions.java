@@ -195,6 +195,35 @@ final class PyKeyError extends PyLookupError {
     }
 }
 
+class PyNameError extends PyException {
+    PyNameError(PyObject... _args) { super(_args); }
+    @Override public PyConcreteType type() { return PyNameErrorType.singleton; }
+
+    static PyRaise raise(String msg) {
+        return new PyRaise(new PyNameError(new PyString(msg)));
+    }
+
+    static PyObject pymember_name(PyObject obj) { throw new UnsupportedOperationException(); }
+
+    public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
+        Runtime.requireNoKwArgs(kwargs, type.name());
+        return new PyNameError(args);
+    }
+}
+final class PyUnboundLocalError extends PyNameError {
+    PyUnboundLocalError(PyObject... _args) { super(_args); }
+    @Override public PyConcreteType type() { return PyUnboundLocalErrorType.singleton; }
+
+    static PyRaise raise(String msg) {
+        return new PyRaise(new PyUnboundLocalError(new PyString(msg)));
+    }
+
+    public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
+        Runtime.requireNoKwArgs(kwargs, type.name());
+        return new PyUnboundLocalError(args);
+    }
+}
+
 final class PyStopIteration extends PyException {
     PyStopIteration(PyObject... _args) { super(_args); }
     @Override public PyConcreteType type() { return PyStopIterationType.singleton; }

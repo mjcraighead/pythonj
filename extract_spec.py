@@ -58,7 +58,8 @@ BUILTIN_TYPES = {
 
 EXCEPTION_TYPES = {
     'ArithmeticError', 'AssertionError', 'AttributeError', 'BaseException', 'Exception', 'IndexError',
-    'KeyError', 'LookupError', 'OverflowError', 'RuntimeError', 'StopIteration', 'SystemExit', 'TypeError', 'ValueError', 'ZeroDivisionError',
+    'KeyError', 'LookupError', 'NameError', 'OverflowError', 'RuntimeError', 'StopIteration', 'SystemExit',
+    'TypeError', 'UnboundLocalError', 'ValueError', 'ZeroDivisionError',
 }
 
 NULL = object()

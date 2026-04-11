@@ -660,24 +660,6 @@ class ScopeAnalyzer(ast.NodeVisitor):
             self._analyze_scope_tree(child)
 
     def _tag_load_binding_states(self, node: ast.AST, scope_info: ScopeInfo) -> None:
-        if isinstance(node, ast.Module):
-            ordered_nodes: list[ast.AST] = list(node.body)
-        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
-            ordered_nodes = list(node.body)
-        elif isinstance(node, ast.Lambda):
-            ordered_nodes = [node.body]
-        else:
-            assert isinstance(node, (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)), node
-            ordered_nodes = []
-            for generator in node.generators:
-                ordered_nodes.append(generator.target)
-                for _if in generator.ifs:
-                    ordered_nodes.append(_if)
-            if isinstance(node, ast.DictComp):
-                ordered_nodes.extend([node.key, node.value])
-            else:
-                ordered_nodes.append(node.elt)
-
         states: dict[str, NameBindingState] = {}
         for name in scope_info.locals | scope_info.cell_vars | scope_info.explicit_globals:
             states[name] = NameBindingState.DEFINITELY_UNBOUND
@@ -686,28 +668,134 @@ class ScopeAnalyzer(ast.NodeVisitor):
             for name in _param_names(node.args):
                 states[name] = NameBindingState.DEFINITELY_BOUND
 
-        for statement in ordered_nodes:
-            for local_node in _iter_scope_local_nodes(statement):
+        def tag_loads(expr: ast.AST, local_states: dict[str, NameBindingState]) -> None:
+            for local_node in _iter_scope_local_nodes(expr):
                 if isinstance(local_node, ast.Name) and isinstance(local_node.ctx, ast.Load):
                     resolution = get_name_resolution(local_node)
                     if resolution is NameResolution.GLOBAL:
-                        state = states.get(local_node.id, default_global_state)
+                        state = local_states.get(local_node.id, default_global_state)
                     else:
-                        state = states.get(local_node.id, NameBindingState.DEFINITELY_UNBOUND)
+                        state = local_states.get(local_node.id, NameBindingState.DEFINITELY_UNBOUND)
                     set_name_binding_state(local_node, state)
-                elif local_node is not statement and isinstance(local_node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda,
-                                                                            ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)):
+                elif local_node is not expr and isinstance(local_node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda,
+                                                                        ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)):
                     self._tag_load_binding_states(local_node, self.scope_infos[local_node])
-            if isinstance(statement, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda,
-                                      ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)):
-                self._tag_load_binding_states(statement, self.scope_infos[statement])
 
-            if isinstance(statement, ast.stmt):
-                (stores, dels) = _collect_statement_store_del_names(statement)
-                for name in stores:
-                    states[name] = NameBindingState.DEFINITELY_BOUND
+        def merge_states(lhs: dict[str, NameBindingState], rhs: dict[str, NameBindingState]) -> dict[str, NameBindingState]:
+            merged = dict(lhs)
+            for name in rhs.keys() - merged.keys():
+                merged[name] = NameBindingState.DEFINITELY_UNBOUND
+            for name in merged:
+                other = rhs.get(name, NameBindingState.DEFINITELY_UNBOUND)
+                if merged[name] is not other:
+                    merged[name] = NameBindingState.UNKNOWN
+            return merged
+
+        def store_target(target: ast.expr, local_states: dict[str, NameBindingState]) -> None:
+            tag_loads(target, local_states)
+            (stores, dels) = _collect_statement_store_del_names(ast.Assign([target], ast.Constant(None)))
+            for name in stores:
+                local_states[name] = NameBindingState.DEFINITELY_BOUND
+            for name in dels:
+                local_states[name] = NameBindingState.DEFINITELY_UNBOUND
+
+        def process_block(statements: list[ast.stmt], local_states: dict[str, NameBindingState]) -> dict[str, NameBindingState]:
+            for statement in statements:
+                local_states = process_statement(statement, local_states)
+            return local_states
+
+        def process_statement(statement: ast.stmt, local_states: dict[str, NameBindingState]) -> dict[str, NameBindingState]:
+            if isinstance(statement, ast.Assign):
+                tag_loads(statement.value, local_states)
+                for target in statement.targets:
+                    store_target(target, local_states)
+                return local_states
+            if isinstance(statement, ast.AnnAssign):
+                if statement.value is not None:
+                    tag_loads(statement.value, local_states)
+                store_target(statement.target, local_states)
+                return local_states
+            if isinstance(statement, ast.AugAssign):
+                if isinstance(statement.target, ast.Name):
+                    resolution = get_name_resolution(statement.target)
+                    state = local_states.get(statement.target.id, default_global_state if resolution is NameResolution.GLOBAL else NameBindingState.DEFINITELY_UNBOUND)
+                    set_name_binding_state(statement.target, state)
+                else:
+                    tag_loads(statement.target, local_states)
+                tag_loads(statement.value, local_states)
+                store_target(statement.target, local_states)
+                return local_states
+            if isinstance(statement, ast.Delete):
+                for target in statement.targets:
+                    tag_loads(target, local_states)
+                (_, dels) = _collect_statement_store_del_names(statement)
                 for name in dels:
-                    states[name] = NameBindingState.DEFINITELY_UNBOUND
+                    local_states[name] = NameBindingState.DEFINITELY_UNBOUND
+                return local_states
+            if isinstance(statement, ast.If):
+                tag_loads(statement.test, local_states)
+                body_states = process_block(statement.body, dict(local_states))
+                orelse_states = process_block(statement.orelse, dict(local_states))
+                return merge_states(body_states, orelse_states)
+            if isinstance(statement, ast.For):
+                tag_loads(statement.iter, local_states)
+                body_states = dict(local_states)
+                store_target(statement.target, body_states)
+                body_states = process_block(statement.body, body_states)
+                orelse_states = process_block(statement.orelse, dict(local_states))
+                return merge_states(merge_states(local_states, body_states), orelse_states)
+            if isinstance(statement, ast.While):
+                tag_loads(statement.test, local_states)
+                body_states = process_block(statement.body, dict(local_states))
+                orelse_states = process_block(statement.orelse, dict(local_states))
+                return merge_states(merge_states(local_states, body_states), orelse_states)
+            if isinstance(statement, ast.Try):
+                try_states = process_block(statement.body, dict(local_states))
+                handler_states = []
+                for handler in statement.handlers:
+                    hs = dict(local_states)
+                    if handler.type is not None:
+                        tag_loads(handler.type, hs)
+                    if handler.name is not None:
+                        hs[handler.name] = NameBindingState.DEFINITELY_BOUND
+                    handler_states.append(process_block(handler.body, hs))
+                merged = try_states
+                for hs in handler_states:
+                    merged = merge_states(merged, hs)
+                merged = merge_states(merged, process_block(statement.orelse, dict(try_states)))
+                return process_block(statement.finalbody, merged)
+            if isinstance(statement, ast.With):
+                for item in statement.items:
+                    tag_loads(item.context_expr, local_states)
+                    if item.optional_vars is not None:
+                        store_target(item.optional_vars, local_states)
+                return process_block(statement.body, local_states)
+            if isinstance(statement, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                tag_loads(statement, local_states)
+                self._tag_load_binding_states(statement, self.scope_infos[statement])
+                local_states[statement.name] = NameBindingState.DEFINITELY_BOUND
+                return local_states
+            tag_loads(statement, local_states)
+            return local_states
+
+        if isinstance(node, ast.Module):
+            process_block(list(node.body), states)
+        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            process_block(list(node.body), states)
+        elif isinstance(node, ast.Lambda):
+            tag_loads(node.body, states)
+        else:
+            assert isinstance(node, (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)), node
+            for generator in node.generators:
+                tag_loads(generator.iter, states)
+                store_target(generator.target, states)
+                for _if in generator.ifs:
+                    tag_loads(_if, states)
+            if isinstance(node, ast.DictComp):
+                tag_loads(node.key, states)
+                tag_loads(node.value, states)
+            else:
+                tag_loads(node.elt, states)
 
     def _tag_names(self, node: ast.AST, scope_stack: list[ScopeInfo]) -> None:
         for subnode in _iter_scope_local_nodes(node):
@@ -840,7 +928,7 @@ class LoweringVisitor(ast.NodeVisitor):
         if self.allow_intrinsics and name == '__pythonj_null__':
             return ir.Null()
         if resolution is NameResolution.CELL:
-            return ir.Field(ir.Identifier(f'pycell_{name}'), 'obj', 'PyObject')
+            return ir.Field(self.cell_expr(name), 'obj', 'PyObject')
         if resolution is NameResolution.LOCAL:
             local_java_type = self.java_local_type(name)
             if self.scope.locals_are_fields:
@@ -850,15 +938,59 @@ class LoweringVisitor(ast.NodeVisitor):
             module_name = self.module_scope().info.initial_builtin_module_locals.get(name)
             if module_name is not None:
                 return ir.PyBuiltinModule(module_name, extract_spec.BUILTIN_MODULES[module_name])
+        if (type_name := self.module_scope().info.initial_final_constant_types.get(name)) is not None:
+            return ir.Identifier(f'pyglobal_{name}', extract_spec.BUILTIN_TYPES[type_name])
+        return ir.Identifier(f'pyglobal_{name}')
+
+    def builtin_expr(self, name: str) -> Optional[ir.Expr]:
         if name in extract_spec.BUILTIN_TYPES:
             return ir.PyBuiltinType(name, extract_spec.BUILTIN_TYPES[name])
         if name in extract_spec.EXCEPTION_TYPES:
             return ir.Field(ir.Identifier(f'Py{name}Type'), 'singleton', f'Py{name}Type')
         if name in extract_spec.BUILTIN_FUNCTIONS:
             return ir.PyBuiltinFunction(name)
+        return None
+
+    def cell_expr(self, name: str) -> ir.Expr:
+        return ir.Identifier(f'pycell_{name}')
+
+    def load_expr(self, name: str, resolution: NameResolution, binding_state: Optional[NameBindingState]) -> ir.Expr:
+        if self.allow_intrinsics and name == '__pythonj_null__':
+            return ir.Null()
+        if resolution is NameResolution.CELL:
+            method = 'getLocal' if name in self.scope.info.cell_vars else 'get'
+            return ir.MethodCall(self.cell_expr(name), method, [ir.StrLiteral(name)], 'PyObject')
+        if resolution is NameResolution.LOCAL:
+            value = self.ident_expr_by_resolution(name, resolution)
+            if binding_state is NameBindingState.DEFINITELY_BOUND:
+                return value
+            ret = ir.StaticMethodCall('Runtime', 'getLocal', [value, ir.StrLiteral(name)], 'PyObject')
+            return ir.CastExpr(value.java_type(), ret) if value.java_type() != 'PyObject' else ret
+
+        assert resolution is NameResolution.GLOBAL, resolution
         if (type_name := self.module_scope().info.initial_final_constant_types.get(name)) is not None:
             return ir.Identifier(f'pyglobal_{name}', extract_spec.BUILTIN_TYPES[type_name])
-        return ir.Identifier(f'pyglobal_{name}')
+        if name in self.final_global_function_classes:
+            return self.ident_expr_by_resolution(name, resolution)
+        if name in self.module_scope().info.initial_builtin_module_locals:
+            return self.ident_expr_by_resolution(name, resolution)
+
+        builtin = self.builtin_expr(name)
+        if self.allow_intrinsics and builtin is not None:
+            return builtin
+        if name not in self.module_scope().info.locals:
+            if builtin is not None:
+                return builtin
+            return ir.StaticMethodCall('Runtime', 'getGlobal', [ir.Null(), ir.StrLiteral(name), ir.Null()], 'PyObject')
+        if binding_state is NameBindingState.DEFINITELY_BOUND:
+            return self.ident_expr_by_resolution(name, resolution)
+        if self.scope.info.kind is ScopeKind.MODULE and binding_state is NameBindingState.DEFINITELY_UNBOUND and builtin is not None:
+            return builtin
+        return ir.StaticMethodCall('Runtime', 'getGlobal', [
+            self.ident_expr_by_resolution(name, resolution),
+            ir.StrLiteral(name),
+            builtin if builtin is not None else ir.Null(),
+        ], 'PyObject')
 
     def ident_expr(self, name: str) -> ir.Expr:
         if self.scope.info.kind is ScopeKind.FUNCTION and (name in self.scope.info.cell_vars or name in self.scope.free_vars):
@@ -880,7 +1012,9 @@ class LoweringVisitor(ast.NodeVisitor):
             return True
         if get_name_resolution(node) is not NameResolution.GLOBAL:
             return False
-        return get_name_binding_state(node) is NameBindingState.DEFINITELY_UNBOUND
+        if hasattr(node, BINDING_STATE_ATTR):
+            return get_name_binding_state(node) is NameBindingState.DEFINITELY_UNBOUND
+        return node.id not in self.module_scope().info.locals
 
     def name_resolves_to_builtin_type(self, node: ast.Name) -> bool:
         if node.id not in extract_spec.BUILTIN_TYPES:
@@ -1385,7 +1519,11 @@ class LoweringVisitor(ast.NodeVisitor):
         return ir.CreateObject(f'Py{node.func.id}', args)
 
     def visit_Name(self, node) -> ir.Expr:
-        return self.ident_expr_by_resolution(node.id, get_name_resolution(node))
+        resolution = get_name_resolution(node)
+        if isinstance(node.ctx, ast.Load):
+            binding_state = get_name_binding_state(node) if hasattr(node, BINDING_STATE_ATTR) else None
+            return self.load_expr(node.id, resolution, binding_state)
+        return self.ident_expr_by_resolution(node.id, resolution)
 
     def visit_Subscript(self, node) -> ir.Expr:
         return ir.MethodCall(self.visit(node.value), 'getItem', [self.visit(node.slice)])
@@ -1517,10 +1655,12 @@ class LoweringVisitor(ast.NodeVisitor):
             if exact_int_expr is not None:
                 value = exact_int_expr
             else:
-                value = ir.MethodCall(self.visit(node.target), op, [self.visit(node.value)])
+                binding_state = get_name_binding_state(node.target) if hasattr(node.target, BINDING_STATE_ATTR) else None
+                lhs = self.load_expr(node.target.id, get_name_resolution(node.target), binding_state)
+                value = ir.MethodCall(lhs, op, [self.visit(node.value)])
             if get_name_resolution(node.target) is NameResolution.LOCAL:
                 value = self.cast_local_assignment(node.target.id, value)
-            code = ir.AssignStatement(self.visit(node.target), value)
+            code = ir.AssignStatement(self.ident_expr_by_resolution(node.target.id, get_name_resolution(node.target)), value)
         elif isinstance(node.target, ast.Attribute):
             temp_name = self.scope.make_temp()
             self.code.append(ir.LocalDecl('var', temp_name, self.visit(node.target.value)))
@@ -1562,7 +1702,25 @@ class LoweringVisitor(ast.NodeVisitor):
 
     def visit_Delete(self, node) -> None:
         for target in node.targets:
-            if isinstance(target, ast.Attribute):
+            if isinstance(target, ast.Name):
+                resolution = get_name_resolution(target)
+                if resolution is NameResolution.CELL:
+                    method = 'deleteLocal' if target.id in self.scope.info.cell_vars else 'delete'
+                    code = ir.method_call_statement(self.cell_expr(target.id), method, [ir.StrLiteral(target.id)])
+                elif resolution is NameResolution.LOCAL:
+                    storage = self.ident_expr_by_resolution(target.id, resolution)
+                    code = ir.AssignStatement(
+                        storage,
+                        ir.CastExpr(storage.java_type(), ir.StaticMethodCall('Runtime', 'delLocal', [storage, ir.StrLiteral(target.id)], 'PyObject')),
+                    )
+                else:
+                    assert resolution is NameResolution.GLOBAL, resolution
+                    if target.id not in self.module_scope().info.locals:
+                        code = ir.static_method_call_statement('Runtime', 'delGlobal', [ir.Null(), ir.StrLiteral(target.id)])
+                    else:
+                        storage = self.ident_expr_by_resolution(target.id, resolution)
+                        code = ir.AssignStatement(storage, ir.StaticMethodCall('Runtime', 'delGlobal', [storage, ir.StrLiteral(target.id)], 'PyObject'))
+            elif isinstance(target, ast.Attribute):
                 code = ir.method_call_statement(self.visit(target.value), 'delAttr', [ir.StrLiteral(target.attr)])
             elif isinstance(target, ast.Subscript):
                 code = ir.method_call_statement(self.visit(target.value), 'delItem', [self.visit(target.slice)])
@@ -1878,10 +2036,10 @@ class LoweringVisitor(ast.NodeVisitor):
             else:
                 call_positional_body.append(ir.LocalDecl(self.java_local_type(arg_name), f'pylocal_{arg_name}', self.cast_local_assignment(arg_name, ir.Identifier(bind_arg_name))))
         for name in sorted(self.scope.info.cell_vars - set(arg_names)):
-            call_positional_body.append(ir.LocalDecl('PyCell', f'pycell_{name}', ir.CreateObject('PyCell', [ir.PyConstant(None)])))
+            call_positional_body.append(ir.LocalDecl('PyCell', f'pycell_{name}', ir.CreateObject('PyCell', [ir.Null()])))
         for name in sorted(self.scope.info.locals - self.scope.info.cell_vars - set(arg_names) - set(self.scope.info.initial_builtin_module_locals)):
             if name not in arg_names:
-                call_positional_body.append(ir.LocalDecl(self.java_local_type(name), f'pylocal_{name}', None))
+                call_positional_body.append(ir.LocalDecl(self.java_local_type(name), f'pylocal_{name}', ir.Null()))
         implicit_return: ir.Statement = ir.ReturnStatement(ir.PyConstant(None))
         if self.scope.expected_return_java_type is not None and self.scope.expected_return_java_type != 'PyObject':
             implicit_return = ir.ReturnStatement(ir.CastExpr(self.scope.expected_return_java_type, ir.PyConstant(None)))
@@ -2127,9 +2285,9 @@ class LoweringVisitor(ast.NodeVisitor):
             if self.scope.used_expr_discard:
                 call_body.append(ir.LocalDecl('PyObject', 'expr_discard', None))
             for name in sorted(self.scope.info.cell_vars):
-                call_body.append(ir.LocalDecl('PyCell', f'pycell_{name}', ir.CreateObject('PyCell', [ir.PyConstant(None)])))
+                call_body.append(ir.LocalDecl('PyCell', f'pycell_{name}', ir.CreateObject('PyCell', [ir.Null()])))
             for name in sorted(self.scope.info.locals - self.scope.info.cell_vars - set(self.scope.info.initial_builtin_module_locals)):
-                call_body.append(ir.LocalDecl(self.java_local_type(name), f'pylocal_{name}', None))
+                call_body.append(ir.LocalDecl(self.java_local_type(name), f'pylocal_{name}', ir.Null()))
             call_body.extend(ir.block_simplify(body))
             assert java_name not in self.classes
             self.classes[java_name] = ir.ClassDecl('private static final', java_name, None, [
@@ -2199,8 +2357,8 @@ class LoweringVisitor(ast.NodeVisitor):
                 ir.FieldDecl('private static final', 'PyConcreteType', 'type_singleton', ir.CreateObject('PyConcreteType', [ir.StrLiteral('generator'), ir.Field(ir.Identifier(java_name), 'class')])),
                 *(ir.FieldDecl('private final', 'PyCell', f'pycell_{name}', None) for name in free_var_names),
                 ir.FieldDecl('private final', 'PyIter', 'pyiter_iterable', None),
-                *(ir.FieldDecl('private final', 'PyCell', f'pycell_{name}', ir.CreateObject('PyCell', [ir.PyConstant(None)])) for name in sorted(self.scope.info.cell_vars)),
-                *(ir.FieldDecl('private', 'PyObject', f'pylocal_{name}', ir.PyConstant(None)) for name in sorted(self.scope.info.locals - self.scope.info.cell_vars)),
+                *(ir.FieldDecl('private final', 'PyCell', f'pycell_{name}', ir.CreateObject('PyCell', [ir.Null()])) for name in sorted(self.scope.info.cell_vars)),
+                *(ir.FieldDecl('private', 'PyObject', f'pylocal_{name}', ir.Null()) for name in sorted(self.scope.info.locals - self.scope.info.cell_vars)),
                 ir.ConstructorDecl('', java_name, ctor_args, ctor_body),
                 ir.MethodDecl('@Override public', 'PyObject', 'next', [], next_body),
                 ir.MethodDecl('@Override public', 'String', 'repr', [], [ir.ReturnStatement(ir.StrLiteral(f'<generator object {qualname}>'))]),
@@ -2249,14 +2407,13 @@ class LoweringVisitor(ast.NodeVisitor):
         body_decls: list[ir.Decl] = [
             *self.classes.values(),
             *predefined_global_fields,
-            # XXX Initializing all globals to None is weird, but we don't have a better option yet
             *(ir.FieldDecl('private static final', 'PyObject', f'pyglobal_{name}', ir.Field(ir.Identifier(extract_spec.BUILTIN_MODULES[module_name]), 'singleton'))
               for (name, module_name) in sorted(final_import_fields.items())),
             *(ir.FieldDecl('private static final', java_name, f'pyglobal_{name}', ir.CreateObject(java_name, []))
               for (name, java_name) in sorted(final_function_fields.items())),
             *(ir.FieldDecl('private static final', extract_spec.BUILTIN_TYPES[self.scope.info.initial_final_constant_types[name]], f'pyglobal_{name}', ir.PyConstant(value))
               for (name, value) in sorted(final_constant_fields.items())),
-            *(ir.FieldDecl('private static', 'PyObject', f'pyglobal_{name}', ir.PyConstant(None))
+            *(ir.FieldDecl('private static', 'PyObject', f'pyglobal_{name}', ir.Null())
               for name in sorted(self.scope.info.locals - set(final_import_fields) - set(final_function_fields) - set(final_constant_fields))),
             ir.MethodDecl(
                 'public static',
@@ -2447,9 +2604,9 @@ def emit_python_function_static(visitor: LoweringVisitor, func_name: str, arg_na
         else:
             func_code.append(ir.LocalDecl(visitor.java_local_type(arg_name), f'pylocal_{arg_name}', visitor.cast_local_assignment(arg_name, ir.Identifier(f'pyarg_{arg_name}'))))
     for name in sorted(visitor.scope.info.cell_vars - set(arg_names)):
-        func_code.append(ir.LocalDecl('PyCell', f'pycell_{name}', ir.CreateObject('PyCell', [ir.PyConstant(None)])))
+        func_code.append(ir.LocalDecl('PyCell', f'pycell_{name}', ir.CreateObject('PyCell', [ir.Null()])))
     for name in sorted(visitor.scope.info.locals - visitor.scope.info.cell_vars - set(arg_names) - set(visitor.scope.info.initial_builtin_module_locals)):
-        func_code.append(ir.LocalDecl(visitor.java_local_type(name), f'pylocal_{name}', None))
+        func_code.append(ir.LocalDecl(visitor.java_local_type(name), f'pylocal_{name}', ir.Null()))
     if return_java_type == 'NoReturn':
         func_code.extend(ir.block_simplify(body))
     else:
