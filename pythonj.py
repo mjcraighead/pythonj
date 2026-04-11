@@ -100,6 +100,8 @@ class ScopeInfo:
     initial_builtin_module_locals: dict[str, str]
     initial_final_function_call_ranges: dict[str, tuple[int, int]]
     initial_final_function_return_types: dict[str, str]
+    exact_global_types: dict[str, str]
+    exact_global_lines: dict[str, int]
     exact_arg_types: dict[str, str]
     exact_arg_lines: dict[str, int]
     exact_local_types: dict[str, str]
@@ -361,10 +363,7 @@ def _collect_statement_store_del_names(node: ast.stmt) -> tuple[set[str], set[st
     return (stores, dels)
 
 def _collect_exact_local_annotations(node: ast.AST) -> tuple[dict[str, str], dict[str, int], list[tuple[int, str]]]:
-    if isinstance(node, ast.Module):
-        body = node.body
-        arg_names: set[str] = set()
-    elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+    if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
         body = node.body
         arg_names = set(_param_names(node.args))
     elif isinstance(node, ast.ClassDef):
@@ -395,6 +394,11 @@ def _collect_exact_local_annotations(node: ast.AST) -> tuple[dict[str, str], dic
             exact_local_types[local_node.target.id] = local_node.annotation.id
             exact_local_lines[local_node.target.id] = local_node.lineno
     return (exact_local_types, exact_local_lines, errors)
+
+def _collect_exact_global_annotations(node: ast.AST) -> tuple[dict[str, str], dict[str, int], list[tuple[int, str]]]:
+    if not isinstance(node, ast.Module):
+        return ({}, {}, [])
+    return ({}, {}, [])
 
 def _collect_exact_arg_annotations(node: ast.AST) -> tuple[dict[str, str], dict[str, int], list[tuple[int, str]]]:
     if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
@@ -475,8 +479,10 @@ class ScopeAnalyzer(ast.NodeVisitor):
                 elif name not in explicit_globals:
                     needs_from_outer.add(name)
         kind = ScopeKind.MODULE if isinstance(node, ast.Module) else ScopeKind.FUNCTION
+        (exact_global_types, exact_global_lines, global_annotation_errors) = _collect_exact_global_annotations(node)
         (exact_arg_types, exact_arg_lines, annotation_errors) = _collect_exact_arg_annotations(node)
         (exact_local_types, exact_local_lines, local_annotation_errors) = _collect_exact_local_annotations(node)
+        annotation_errors.extend(global_annotation_errors)
         annotation_errors.extend(local_annotation_errors)
         for name in exact_arg_types:
             if name in cell_vars:
@@ -499,6 +505,8 @@ class ScopeAnalyzer(ast.NodeVisitor):
             initial_builtin_module_locals,
             initial_final_function_call_ranges,
             initial_final_function_return_types,
+            exact_global_types,
+            exact_global_lines,
             exact_arg_types,
             exact_arg_lines,
             exact_local_types,
@@ -766,6 +774,9 @@ class LoweringVisitor(ast.NodeVisitor):
     def local_exact_builtin_type(self, name: str) -> Optional[str]:
         return self.scope.info.exact_local_types.get(name) or self.scope.info.exact_arg_types.get(name)
 
+    def global_exact_builtin_type(self, name: str) -> Optional[str]:
+        return self.module_scope().info.exact_global_types.get(name)
+
     def java_local_type(self, name: str) -> str:
         if (type_name := self.local_exact_builtin_type(name)) is None:
             return 'PyObject'
@@ -795,9 +806,10 @@ class LoweringVisitor(ast.NodeVisitor):
             return ir.CreateObject('PyInt', [ir.static_method_call('PyInt', f'{op}Unboxed', [lhs_int, rhs_int])])
 
     def infer_exact_builtin_type_expr(self, node: ast.expr) -> Optional[str]:
-        if isinstance(node, ast.Name) and get_name_resolution(node) is NameResolution.LOCAL:
-            if (type_name := self.local_exact_builtin_type(node.id)) is not None:
-                return type_name
+        if isinstance(node, ast.Name):
+            if get_name_resolution(node) is NameResolution.LOCAL:
+                if (type_name := self.local_exact_builtin_type(node.id)) is not None:
+                    return type_name
         if isinstance(node, ast.BinOp):
             op = self.visit(node.op)
             if (op in EXACT_INT_BINOPS and
@@ -1305,17 +1317,25 @@ class LoweringVisitor(ast.NodeVisitor):
         if any(lineno == node.lineno for (lineno, _) in self.scope.info.annotation_errors):
             return
         if not isinstance(node.target, ast.Name):
-            self.error(node.lineno, 'only simple local variable annotations are supported')
+            msg = 'only simple global variable annotations are supported' if self.scope.info.kind is ScopeKind.MODULE else 'only simple local variable annotations are supported'
+            self.error(node.lineno, msg)
             if node.value is not None:
                 self.visit(node.value)
+            return
+        if self.scope.info.kind is ScopeKind.MODULE:
+            self.error(node.lineno, 'global variable annotations are unsupported')
+            if node.value is not None:
+                self.code.extend(self.emit_bind(node.target, self.visit(node.value)))
             return
         if not isinstance(node.annotation, ast.Name) or node.annotation.id not in extract_spec.BUILTIN_TYPES:
-            self.error(node.lineno, 'only exact builtin-type local annotations are supported')
+            msg = 'only exact builtin-type global annotations are supported' if self.scope.info.kind is ScopeKind.MODULE else 'only exact builtin-type local annotations are supported'
+            self.error(node.lineno, msg)
             if node.value is not None:
                 self.visit(node.value)
             return
-        if node.target.id not in self.scope.info.exact_local_types:
-            self.error(node.lineno, 'unsupported local annotation')
+        supported_ann_names = self.scope.info.exact_global_types if self.scope.info.kind is ScopeKind.MODULE else self.scope.info.exact_local_types
+        if node.target.id not in supported_ann_names:
+            self.error(node.lineno, 'unsupported global annotation' if self.scope.info.kind is ScopeKind.MODULE else 'unsupported local annotation')
             if node.value is not None:
                 self.visit(node.value)
             return
@@ -1332,7 +1352,9 @@ class LoweringVisitor(ast.NodeVisitor):
                 value = exact_int_expr
             else:
                 value = ir.MethodCall(self.visit(node.target), op, [self.visit(node.value)])
-            code = ir.AssignStatement(self.visit(node.target), self.cast_local_assignment(node.target.id, value))
+            if get_name_resolution(node.target) is NameResolution.LOCAL:
+                value = self.cast_local_assignment(node.target.id, value)
+            code = ir.AssignStatement(self.visit(node.target), value)
         elif isinstance(node.target, ast.Attribute):
             temp_name = self.scope.make_temp()
             self.code.append(ir.LocalDecl('var', temp_name, self.visit(node.target.value)))
