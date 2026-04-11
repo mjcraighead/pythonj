@@ -806,18 +806,28 @@ def _collect_inferred_exact_types(node: ast.AST, explicit_types: dict[str, str],
     }
     ret: dict[str, str] = {}
     lines: dict[str, int] = {}
+    assignments_by_name: dict[str, list[tuple[ast.expr, int]]] = {}
     for (name, value, lineno) in _iter_simple_assignments(node):
+        assignments_by_name.setdefault(name, []).append((value, lineno))
+    for (name, assignments) in assignments_by_name.items():
         if name in explicit_types or name in exact_arg_types or name in cell_vars:
             continue
-        if write_counts.get(name) != 1:
+        if write_counts.get(name) != len(assignments):
             continue
-        type_name = _infer_obvious_exact_builtin_type_expr(
-            value, {**exact_name_types, **ret},
-            available_builtin_function_return_types, available_builtin_constructor_names)
-        if type_name is None:
+        inferred_types = [
+            _infer_obvious_exact_builtin_type_expr(
+                value, {**exact_name_types, **ret},
+                available_builtin_function_return_types, available_builtin_constructor_names)
+            for (value, _) in assignments
+        ]
+        if any(type_name is None for type_name in inferred_types):
             continue
+        type_names = {type_name for type_name in inferred_types if type_name is not None}
+        if len(type_names) != 1:
+            continue
+        (type_name,) = type_names
         ret[name] = type_name
-        lines[name] = lineno
+        lines[name] = assignments[0][1]
     return (ret, lines)
 
 class ScopeAnalyzer(ast.NodeVisitor):
