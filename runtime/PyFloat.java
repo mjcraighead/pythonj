@@ -68,6 +68,10 @@ public final class PyFloat extends PyObject {
         return sign + mantissa + "e" + ((exponent >= 0) ? "+" : "-") + expDigits;
     }
 
+    public static double addUnboxed(double lhs, double rhs) { return lhs + rhs; }
+    public static double mulUnboxed(double lhs, double rhs) { return lhs * rhs; }
+    public static double subUnboxed(double lhs, double rhs) { return lhs - rhs; }
+
     private static PyFloat parseString(String s, String repr) {
         String sl = s.toLowerCase();
         if (sl.equals("inf") || sl.equals("+inf") || sl.equals("infinity") || sl.equals("+infinity")) {

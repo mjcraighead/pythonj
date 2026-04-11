@@ -1162,6 +1162,10 @@ class LoweringVisitor(ast.NodeVisitor):
             else:
                 assert op != 'trueDiv'
                 return ir.CreateObject('PyInt', [ir.static_method_call('PyInt', f'{op}Unboxed', [lhs_int, rhs_int])])
+        elif lhs_type == 'float' and rhs_type == 'float' and op in {'add', 'mul', 'sub'}:
+            lhs_float = ir.unbox_float(self.visit(lhs_node))
+            rhs_float = ir.unbox_float(self.visit(rhs_node))
+            return ir.CreateObject('PyFloat', [ir.static_method_call('PyFloat', f'{op}Unboxed', [lhs_float, rhs_float])])
         elif lhs_type == 'str' and rhs_type == 'str' and op == 'add':
             lhs_str = ir.unbox_str(self.visit(lhs_node))
             rhs_str = ir.unbox_str(self.visit(rhs_node))
@@ -1184,6 +1188,10 @@ class LoweringVisitor(ast.NodeVisitor):
                 self.infer_exact_builtin_type_expr(node.left) == 'int' and
                 self.infer_exact_builtin_type_expr(node.right) == 'int'):
                 return 'int'
+            if (op in {'add', 'mul', 'sub'} and
+                self.infer_exact_builtin_type_expr(node.left) == 'float' and
+                self.infer_exact_builtin_type_expr(node.right) == 'float'):
+                return 'float'
         if (isinstance(node, ast.Call) and
             isinstance(node.func, ast.Name) and
             not node.keywords and

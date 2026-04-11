@@ -742,6 +742,15 @@ def unbox_int(expr: Expr) -> Expr:
         return Field(expr, 'value', 'long')
     return Field(CastExpr('PyInt', expr), 'value', 'long')
 
+def unbox_float(expr: Expr) -> Expr:
+    if isinstance(expr, PyConstant) and isinstance(expr.value, float):
+        return FloatLiteral(expr.value)
+    if isinstance(expr, CreateObject) and expr.type == 'PyFloat':
+        return expr.args[0]
+    if expr.java_type() == 'PyFloat':
+        return Field(expr, 'value', 'double')
+    return Field(CastExpr('PyFloat', expr), 'value', 'double')
+
 def unbox_str(expr: Expr) -> Expr:
     if isinstance(expr, PyConstant) and isinstance(expr.value, str):
         return StrLiteral(expr.value)
