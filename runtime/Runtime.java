@@ -537,26 +537,23 @@ public final class Runtime {
         }
         return new PyBytesBuilder(capacity);
     }
-    public static PyNone pythonjBytesBuilderAppend(PyObject builderObj, PyObject valueObj) {
+    public static void pythonjBytesBuilderAppend(PyObject builderObj, PyObject valueObj) {
         byte[] buffer = requireBytesLikeBuffer(valueObj);
         ((PyBytesBuilder)builderObj).value.writeBytes(buffer);
-        return PyNone.singleton;
     }
-    public static PyNone pythonjBytesBuilderAppendByte(PyObject builderObj, PyObject valueObj) {
+    public static void pythonjBytesBuilderAppendByte(PyObject builderObj, PyObject valueObj) {
         PyBytesBuilder builder = (PyBytesBuilder)builderObj;
         long value = valueObj.indexValue();
         if ((value < 0) || (value > 255)) {
             throw PyValueError.raise("byte must be in range(0, 256)");
         }
         builder.value.write((int)value);
-        return PyNone.singleton;
     }
     public static PyBytes pythonjBytesBuilderFinish(PyObject builderObj) {
         return new PyBytes(((PyBytesBuilder)builderObj).value.toByteArray());
     }
-    public static PyNone pythonjDelAttr(PyObject obj, PyObject nameObj) {
+    public static void pythonjDelAttr(PyObject obj, PyObject nameObj) {
         obj.delAttr(((PyString)nameObj).value);
-        return PyNone.singleton;
     }
     public static PyObject pythonjDictGet(PyObject obj, PyObject key) {
         return ((PyDict)obj).items.get(key);
@@ -587,9 +584,8 @@ public final class Runtime {
             throw new UnsupportedOperationException(String.format("issubclass() is unimplemented for types %s and %s", obj.repr(), type.repr()));
         }
     }
-    public static PyNone pythonjSetAttr(PyObject obj, PyObject nameObj, PyObject value) {
+    public static void pythonjSetAttr(PyObject obj, PyObject nameObj, PyObject value) {
         obj.setAttr(((PyString)nameObj).value, value);
-        return PyNone.singleton;
     }
     public static PyStringBuilder pythonjStrBuilder(PyObject capacityObj) {
         if (capacityObj == PyNone.singleton) {
@@ -604,9 +600,8 @@ public final class Runtime {
         }
         return new PyStringBuilder(capacity);
     }
-    public static PyNone pythonjStrBuilderAppend(PyObject builderObj, PyObject valueObj) {
+    public static void pythonjStrBuilderAppend(PyObject builderObj, PyObject valueObj) {
         ((PyStringBuilder)builderObj).value.append(((PyString)valueObj).value);
-        return PyNone.singleton;
     }
     public static PyString pythonjStrBuilderFinish(PyObject builderObj) {
         return new PyString(((PyStringBuilder)builderObj).value.toString());

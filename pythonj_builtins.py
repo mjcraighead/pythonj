@@ -29,7 +29,8 @@ def bin(arg) -> str:
 def delattr(obj, name):
     if not __pythonj_isinstance__(name, str):
         raise TypeError('attribute name must be string, not ' + repr(type(name).__name__))
-    return __pythonj_delattr__(obj, name)
+    __pythonj_delattr__(obj, name)
+    return None
 
 def format(value, format_spec) -> str:
     if not __pythonj_isinstance__(format_spec, str):
@@ -95,7 +96,8 @@ def repr(arg) -> str:
 def setattr(obj, name, value):
     if not __pythonj_isinstance__(name, str):
         raise TypeError('attribute name must be string, not ' + repr(type(name).__name__))
-    return __pythonj_setattr__(obj, name, value)
+    __pythonj_setattr__(obj, name, value)
+    return None
 
 def sum(iterable, start):
     if __pythonj_isinstance__(start, str):
