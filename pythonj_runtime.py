@@ -789,6 +789,68 @@ def _pyj_slice_index_allow_null(obj, default_index: int, n: int) -> int:
         return adjusted if adjusted > 0 else 0
     return raw if raw < n else n
 
+def pyj_int_parse_stringlike(s: str, original_obj, base_obj: int) -> int:
+    base: int = base_obj
+    i: int = 0
+    end: int = len(s)
+    while i < end and s[i] == ' ':
+        i += 1
+    while end > i and s[end - 1] == ' ':
+        end -= 1
+    sign: int = 1
+    if i < end:
+        if s[i] == '-':
+            i += 1
+            sign = -1
+        elif s[i] == '+':
+            i += 1
+    if i == end:
+        raise ValueError(f'invalid literal for int() with base {base}: {original_obj!r}')
+    if end - i >= 2 and s[i] == '0':
+        prefix = s[i + 1]
+        if prefix in {'x', 'X'}:
+            if base == 0 or base == 16:
+                base = 16
+                i += 2
+        elif prefix in {'o', 'O'}:
+            if base == 0 or base == 8:
+                base = 8
+                i += 2
+        elif prefix in {'b', 'B'}:
+            if base == 0 or base == 2:
+                base = 2
+                i += 2
+    if base == 0:
+        base = 10
+        if i < end and s[i] == '0' and end - i > 1:
+            all_zero = True
+            j: int = i + 1
+            while j < end:
+                if s[j] != '0':
+                    all_zero = False
+                    break
+                j += 1
+            if not all_zero:
+                raise ValueError(f'invalid literal for int() with base {base_obj}: {original_obj!r}')
+    if i == end:
+        raise ValueError(f'invalid literal for int() with base {base}: {original_obj!r}')
+    value: int = 0
+    while i < end:
+        c = s[i]
+        i += 1
+        if '0' <= c <= '9':
+            digit = ord(c) - ord('0')
+        elif 'a' <= c <= 'z':
+            digit = ord(c) - ord('a') + 10
+        elif 'A' <= c <= 'Z':
+            digit = ord(c) - ord('A') + 10
+        else:
+            digit = 36
+        if digit >= base:
+            raise ValueError(f'invalid literal for int() with base {base}: {original_obj!r}')
+        value = value * base + digit
+    return sign * value
+
 def pyj_str_format(value, spec) -> str:
     fill, align, width, precision = pyj_str_parse_spec(spec)
     text = value if precision is None else value[:precision]
