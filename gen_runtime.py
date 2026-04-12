@@ -22,7 +22,7 @@ PYTHON_AUTHORED_IMPLS = {
     'dict': {'fromkeys', 'setdefault'},
     'str': {'join', 'removeprefix', 'removesuffix'},
 }
-HIDDEN_PYTHON_AUTHORED_METHODS = {'__format__', '__repr__'}
+HIDDEN_PYTHON_AUTHORED_METHODS = {'__contains__', '__format__', '__repr__'}
 PYTHON_AUTHORED_CONSTRUCTOR_IMPLS = {'enumerate', 'zip'}
 SUPPORTED_HELPER_RETURN_TYPES = {'bool', 'bytes', 'dict', 'float', 'int', 'list', 'str', 'tuple'}
 

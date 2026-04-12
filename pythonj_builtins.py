@@ -880,6 +880,24 @@ class range:
     def stop(self) -> int:
         return __pythonj_range_stop__(self)
 
+    def __contains__(self, rhs) -> bool:
+        if __pythonj_isinstance__(rhs, float):
+            import math
+            if not math.isfinite(rhs) or rhs != __pythonj_float_java_rint__(rhs):
+                return False
+            value = int(rhs)
+        elif __pythonj_isinstance__(rhs, (int, bool)):
+            value = rhs
+        else:
+            return False
+        if self.step > 0:
+            if value < self.start or value >= self.stop:
+                return False
+        else:
+            if value > self.start or value <= self.stop:
+                return False
+        return (value - self.start) % self.step == 0
+
     def __repr__(self) -> str:
         if self.step == 1:
             return f'range({self.start}, {self.stop})'
@@ -963,6 +981,12 @@ class str:
         return self
 
 class tuple:
+    def __contains__(self, rhs) -> bool:
+        for item in self:
+            if item == rhs:
+                return True
+        return False
+
     def __repr__(self: tuple) -> str:
         ret = __pythonj_str_builder__(None)
         __pythonj_str_builder_append__(ret, '(')

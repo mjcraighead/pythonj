@@ -71,36 +71,7 @@ public final class PyRange extends PyObject {
     @Override public void delItem(PyObject key) {
         throw PyTypeError.raise(PyString.reprOf(type().name()) + " object doesn't support item deletion");
     }
-    private Long membershipValue(PyObject rhs) {
-        if (rhs.hasIndex()) {
-            return rhs.indexValue();
-        }
-        if (rhs instanceof PyFloat rhsFloat) {
-            double value = rhsFloat.value;
-            long longValue = (long)value;
-            if (Double.isFinite(value) && (value == longValue)) {
-                return longValue;
-            }
-        }
-        return null;
-    }
-    @Override public boolean contains(PyObject rhs) {
-        Long valueObj = membershipValue(rhs);
-        if (valueObj == null) {
-            return false;
-        }
-        long value = valueObj;
-        if (step > 0) {
-            if ((value < start) || (value >= stop)) {
-                return false;
-            }
-        } else {
-            if ((value > start) || (value <= stop)) {
-                return false;
-            }
-        }
-        return ((value - start) % step) == 0;
-    }
+    @Override public boolean contains(PyObject rhs) { return PyRuntime.pyfunc_range____contains__(this, rhs).boolValue(); }
 
     @Override public final boolean hasIter() { return true; }
     @Override public PyRangeIter iter() { return new PyRangeIter(this); }
