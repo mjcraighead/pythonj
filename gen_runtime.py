@@ -25,6 +25,11 @@ PYTHON_AUTHORED_IMPLS = {
     'range': {'count'},
     'str': {'join', 'removeprefix', 'removesuffix'},
 }
+HIDDEN_PYTHON_AUTHORED_METHOD_IMPLS = {
+    'bool': {'__format__'},
+    'float': {'__format__'},
+    'int': {'__format__'},
+}
 PYTHON_AUTHORED_CONSTRUCTOR_IMPLS = {'enumerate', 'zip'}
 SUPPORTED_HELPER_RETURN_TYPES = {'bool', 'bytes', 'dict', 'float', 'int', 'list', 'str', 'tuple'}
 
@@ -202,10 +207,20 @@ def translate_python_builtin_impl(node: ast.Module, func_name: str, pool: ir.Con
 def translate_python_method_impl(node: ast.Module, type_name: str, method_name: str, pool: ir.ConstantPool,
                                  class_funcs: Optional[dict[str, dict[str, ast.FunctionDef]]] = None,
                                  scope_infos: Optional[dict[ast.AST, pythonj.ScopeInfo]] = None,
-                                 metadata: Optional[pythonj.TranslatorMetadata] = None) -> tuple[list[ir.ClassDecl], ir.MethodDecl]:
+                                 metadata: Optional[pythonj.TranslatorMetadata] = None,
+                                 python_helper_names: Optional[set[str]] = None,
+                                 python_helper_class: Optional[str] = None,
+                                 python_helper_return_java_types: Optional[dict[str, str]] = None) -> tuple[list[ir.ClassDecl], ir.MethodDecl]:
     func_name = f'{type_name}__{method_name}'
     func = pythonj.get_class_functions(node, type_name)[method_name] if class_funcs is None else class_funcs[type_name][method_name]
-    return translate_python_impl_node(node, func, func_name, f'<method {type_name}.{method_name}>', 'builtin method', pool, scope_infos=scope_infos, metadata=metadata)
+    return translate_python_impl_node(
+        node, func, func_name, f'<method {type_name}.{method_name}>', 'builtin method', pool,
+        scope_infos=scope_infos,
+        python_helper_names=python_helper_names,
+        python_helper_class=python_helper_class,
+        metadata=metadata,
+        python_helper_return_java_types=python_helper_return_java_types,
+    )
 
 def translate_python_constructor_impl(node: ast.Module, type_name: str, pool: ir.ConstantPool,
                                       funcs: Optional[dict[str, ast.FunctionDef]] = None,
@@ -553,6 +568,9 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
                             pythonj_builtins_node, name, method_name, pool,
                             class_funcs=pythonj_builtins_classes, scope_infos=builtins_scope_infos,
                             metadata=metadata,
+                            python_helper_names=set(pythonj_runtime_funcs),
+                            python_helper_class='PyRuntime',
+                            python_helper_return_java_types=metadata.runtime_function_return_java_types,
                         )
                         python_helper_classes.extend(helper_classes)
                         python_helper_methods.append(helper_method)
@@ -673,6 +691,18 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
             )
             python_helper_classes.extend(helper_classes)
             python_helper_methods.append(helper_method)
+        for (type_name, method_names) in sorted(HIDDEN_PYTHON_AUTHORED_METHOD_IMPLS.items()):
+            for method_name in sorted(method_names):
+                (helper_classes, helper_method) = translate_python_method_impl(
+                    pythonj_builtins_node, type_name, method_name, pool,
+                    class_funcs=pythonj_builtins_classes, scope_infos=builtins_scope_infos,
+                    metadata=metadata,
+                    python_helper_names=set(pythonj_runtime_funcs),
+                    python_helper_class='PyRuntime',
+                    python_helper_return_java_types=metadata.runtime_function_return_java_types,
+                )
+                python_helper_classes.extend(helper_classes)
+                python_helper_methods.append(helper_method)
         top_level_decls.extend(python_helper_classes)
 
         for module_name in sorted(extract_spec.BUILTIN_MODULES):

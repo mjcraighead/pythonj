@@ -152,6 +152,10 @@ def zip__newobj(type, args: tuple, kwargs: dict):
     return __pythonj_zip_new__(args, strict)
 
 # Builtin classes
+class bool:
+    def __format__(self, format_spec) -> str:
+        return pyj_bool_format(self, format_spec)
+
 class bytes:
     def capitalize(self: bytes) -> bytes:
         ret = __pythonj_bytes_builder__(__pythonj_len__(self))
@@ -595,10 +599,16 @@ class dict:
         return defaultValue
 
 class float:
+    def __format__(self, format_spec) -> str:
+        return pyj_float_format(self, format_spec)
+
     def conjugate(self) -> float:
         return self
 
 class int:
+    def __format__(self, format_spec) -> str:
+        return pyj_int_format(self, format_spec)
+
     def as_integer_ratio(self) -> tuple:
         return (self, 1)
 

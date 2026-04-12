@@ -408,7 +408,7 @@ public final class PyInt extends PyObject {
     }
     @Override public double floatValue() { return value; }
     @Override public String format(String formatSpec) {
-        return PyRuntime.pyfunc_pyj_int_format(this, new PyString(formatSpec)).value;
+        return PyRuntime.pyfunc_int____format__(this, new PyString(formatSpec)).value;
     }
     @Override public int hashCode() { return Long.hashCode(value); }
     @Override public boolean hasIndex() { return true; }
