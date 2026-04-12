@@ -64,7 +64,6 @@ INTRINSIC_SIGNATURES = {
     '__pythonj_str_builder__': ('pythonjStrBuilder', 1, 'object'),
     '__pythonj_str_builder_append__': ('pythonjStrBuilderAppend', 2, 'void'),
     '__pythonj_str_builder_finish__': ('pythonjStrBuilderFinish', 1, 'str'),
-    '__pythonj_typename__': ('pythonjTypeName', 1, 'str'),
     '__pythonj_unsupported__': ('pythonjUnsupported', 0, 'void'),
     '__pythonj_zip_new__': ('pythonjZipNew', 2, 'object'),
 }
@@ -1605,6 +1604,8 @@ class LoweringVisitor(ast.NodeVisitor):
             type_name = self.exact_builtin_type_of_expr(value)
         if type_name is None:
             return None
+        if type_name == 'type' and attr == '__name__':
+            return ir.CreateObject('PyString', [ir.MethodCall(value, 'name', [], 'String')])
         attr_kind = self.metadata.direct_getattr_builtin_type_attrs.get(type_name, {}).get(attr)
         if attr_kind is None:
             return None

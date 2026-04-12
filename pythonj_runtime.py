@@ -865,17 +865,17 @@ def _pyj_percent_arg_seq(args) -> tuple:
 def _pyj_percent_real_arg(arg, conv) -> float:
     if __pythonj_isinstance__(arg, (bool, int, float)):
         return float(arg)
-    raise TypeError(f'must be real number, not {__pythonj_typename__(type(arg))}')
+    raise TypeError(f'must be real number, not {type(arg).__name__}')
 
 def _pyj_percent_signed_int_arg(arg, conv) -> int:
     if __pythonj_isinstance__(arg, (bool, int, float)):
         return int(arg)
-    raise TypeError(f'%{conv} format: a real number is required, not {__pythonj_typename__(type(arg))}')
+    raise TypeError(f'%{conv} format: a real number is required, not {type(arg).__name__}')
 
 def _pyj_percent_index_arg(arg, conv) -> int:
     if __pythonj_isinstance__(arg, (int, bool)):
         return int(arg)
-    raise TypeError(f'%{conv} format: an integer is required, not {__pythonj_typename__(type(arg))}')
+    raise TypeError(f'%{conv} format: an integer is required, not {type(arg).__name__}')
 
 def _pyj_percent_apply_width(text, flags, width) -> str:
     if width is None:
@@ -958,7 +958,7 @@ def _pyj_percent_char_text(arg) -> str:
             raise TypeError(f'%c requires an int or a unicode character, not a string of length {len(arg)}')
         return arg
     if not __pythonj_isinstance__(arg, (int, bool)):
-        raise TypeError(f'%c requires an int or a unicode character, not {__pythonj_typename__(type(arg))}')
+        raise TypeError(f'%c requires an int or a unicode character, not {type(arg).__name__}')
     code = int(arg)
     if code < 0 or code > 0x10FFFF:
         raise OverflowError('%c arg not in range(0x110000)')
