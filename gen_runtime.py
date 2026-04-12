@@ -16,14 +16,20 @@ import ir
 import pythonj
 
 RAW_ARGS_KWARGS_BUILTINS = {'max', 'min'}
-ALL_PYTHON_AUTHORED_IMPLS = {'bytes', 'float', 'int', 'range', 'tuple'}
+ALL_PYTHON_AUTHORED_IMPLS = {'bytearray', 'bytes', 'float', 'int', 'range', 'tuple'}
 PYTHON_AUTHORED_IMPLS = {
     'builtins': {
         'abs', 'all', 'any', 'bin', 'delattr', 'divmod', 'format', 'getattr', 'hasattr', 'hash', 'hex',
         'isinstance', 'issubclass', 'len', 'next', 'oct', 'repr', 'setattr', 'sum',
     },
     'dict': {'fromkeys', 'setdefault'},
-    'str': {'join', 'removeprefix', 'removesuffix'},
+    'str': {
+        'capitalize', 'casefold', 'center', 'encode', 'expandtabs', 'format_map', 'isalnum', 'isalpha',
+        'isascii', 'isidentifier', 'islower', 'isnumeric', 'isprintable', 'isspace', 'istitle', 'isupper',
+        'join', 'ljust', 'lstrip', 'partition', 'replace', 'rfind', 'rindex', 'rjust', 'rpartition', 'rsplit',
+        'removeprefix', 'removesuffix', 'rstrip', 'splitlines', 'strip', 'swapcase', 'title', 'translate',
+        'zfill',
+    },
 }
 HIDDEN_PYTHON_AUTHORED_METHODS = {'__contains__', '__format__', '__repr__'}
 PYTHON_AUTHORED_CONSTRUCTOR_IMPLS = {'enumerate', 'zip'}
