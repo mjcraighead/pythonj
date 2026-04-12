@@ -795,6 +795,12 @@ def py_index(obj: Expr) -> Expr:
         return unbox_int(obj)
     return MethodCall(obj, 'indexValue', [], 'long')
 
+def py_len(obj: Expr) -> Expr:
+    match obj.java_type():
+        case 'PyTuple':
+            return CreateObject('PyInt', [Field(Field(obj, 'items', 'PyObject[]'), 'length', 'int')])
+    return CreateObject('PyInt', [MethodCall(obj, 'len', [], 'long')])
+
 def static_method_call(class_name: str, method: str, args: list[Expr], return_type: str = JAVA_TYPE_UNKNOWN) -> Expr:
     match (class_name, method):
         case ('PyBool', 'create') if isinstance(args[0], Bool):
@@ -870,7 +876,7 @@ def static_method_call(class_name: str, method: str, args: list[Expr], return_ty
         case ('Runtime', 'pythonjIter'):
             return iter(args[0])
         case ('Runtime', 'pythonjLen'):
-            return CreateObject('PyInt', [MethodCall(args[0], 'len', [], 'long')])
+            return py_len(args[0])
         case ('Runtime', 'pythonjNext'):
             return MethodCall(args[0], 'next', [], 'PyObject')
         case ('Runtime', 'pythonjRangeStart'):
