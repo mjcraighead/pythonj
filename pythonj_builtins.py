@@ -701,7 +701,7 @@ class bytes:
 
 class dict:
     def __repr__(self: dict) -> str:
-        ret = __pythonj_str_builder__(None)
+        ret = __pythonj_str_builder__(8*len(self) + 2)
         __pythonj_str_builder_append__(ret, '{')
         first = True
         for (key, value) in self.items():
@@ -929,7 +929,7 @@ class int:
 
 class list:
     def __repr__(self: list) -> str:
-        ret = __pythonj_str_builder__(None)
+        ret = __pythonj_str_builder__(4*len(self) + 2)
         __pythonj_str_builder_append__(ret, '[')
         first = True
         for item in self:
@@ -997,7 +997,7 @@ class set:
     def __repr__(self: set) -> str:
         if not self:
             return 'set()'
-        ret = __pythonj_str_builder__(None)
+        ret = __pythonj_str_builder__(4*len(self) + 2)
         __pythonj_str_builder_append__(ret, '{')
         first = True
         for item in self:
@@ -1026,7 +1026,7 @@ class slice:
 
 class str:
     def join(self: str, iterable) -> str:
-        ret = __pythonj_str_builder__(None)
+        ret = __pythonj_str_builder__(4*len(self) + 2)
         if not __pythonj_hasiter__(iterable):
             raise TypeError('can only join an iterable')
         i: int = 0
@@ -1094,7 +1094,7 @@ class tuple:
         return False
 
     def __repr__(self: tuple) -> str:
-        ret = __pythonj_str_builder__(None)
+        ret = __pythonj_str_builder__(4*len(self) + 2)
         __pythonj_str_builder_append__(ret, '(')
         first = True
         for item in self:
