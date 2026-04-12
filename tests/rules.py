@@ -12,6 +12,7 @@ def rules(ctx):
     python = 'py' if ctx.host.os == 'windows' else 'python3'
 
     spec_json = '../_out/spec.json'
+    semantics_json = '../_out/pythonj_semantics.json'
     pythonj_jar = '../_out/pythonj.jar'
     pythonj_script = '../pythonj.py'
     pythonj_script_deps = ['../extract_spec.py', '../ir.py']
@@ -21,8 +22,8 @@ def rules(ctx):
     for name in TEST_NAMES:
         py_path = f'{name}.py'
         java_path = f'_out/{name}.java'
-        ctx.rule(java_path, [pythonj_script, *pythonj_script_deps, spec_json, py_path],
-            cmd=[python, pythonj_script, 'translate', '--spec', spec_json, py_path, '-o', java_path])
+        ctx.rule(java_path, [pythonj_script, *pythonj_script_deps, spec_json, semantics_json, py_path],
+            cmd=[python, pythonj_script, 'translate', '--spec', spec_json, '--semantics', semantics_json, py_path, '-o', java_path])
 
         jar_path = f'_out/{name}.jar'
         ctx.rule(jar_path, [jar_script, pythonj_jar, java_path],

@@ -35,10 +35,11 @@ def rules(ctx):
     ctx.rule(spec_json, script, cmd=[python, script, spec_json])
 
     pyruntime_java = '_out/PyRuntime.java'
-    script = 'pythonj.py'
-    script_deps = ['extract_spec.py', 'ir.py', 'pythonj_builtins.py', 'pythonj_runtime.py']
-    ctx.rule(pyruntime_java, [script, *script_deps, spec_json],
-        cmd=[python, script, 'gen-runtime', '--spec', spec_json, '-o', pyruntime_java])
+    semantics_json = '_out/pythonj_semantics.json'
+    script = 'gen_runtime.py'
+    script_deps = ['extract_spec.py', 'ir.py', 'pythonj.py', 'pythonj_builtins.py', 'pythonj_runtime.py']
+    ctx.rule([pyruntime_java, semantics_json], [script, *script_deps, spec_json],
+        cmd=[python, script, '--spec', spec_json, '--semantics', semantics_json, '-o', pyruntime_java])
 
     pythonj_jar = '_out/pythonj.jar'
     script = 'tools/build_jar.py'

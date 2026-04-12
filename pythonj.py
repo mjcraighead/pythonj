@@ -244,6 +244,51 @@ def collect_builtin_method_return_java_types(node: ast.Module) -> dict[tuple[str
             ret[(class_node.name, func.name)] = ret_type
     return ret
 
+def _annotation_to_metadata(annotation: Optional[ast.expr]) -> Optional[str]:
+    if annotation is None:
+        return None
+    return ast.unparse(annotation)
+
+def _collect_params_annotation_metadata(params: ast.arguments) -> list[dict[str, Optional[str]]]:
+    ret = []
+    for arg in [*params.posonlyargs, *params.args]:
+        ret.append({'name': arg.arg, 'kind': 'positional', 'annotation': _annotation_to_metadata(arg.annotation)})
+    if params.vararg is not None:
+        ret.append({'name': params.vararg.arg, 'kind': 'vararg', 'annotation': _annotation_to_metadata(params.vararg.annotation)})
+    for arg in params.kwonlyargs:
+        ret.append({'name': arg.arg, 'kind': 'kwonly', 'annotation': _annotation_to_metadata(arg.annotation)})
+    if params.kwarg is not None:
+        ret.append({'name': params.kwarg.arg, 'kind': 'varkw', 'annotation': _annotation_to_metadata(params.kwarg.annotation)})
+    return ret
+
+def collect_top_level_function_annotation_metadata(node: ast.Module) -> dict[str, dict[str, object]]:
+    ret = {}
+    for func in node.body:
+        if not isinstance(func, ast.FunctionDef):
+            continue
+        ret[func.name] = {
+            'params': _collect_params_annotation_metadata(func.args),
+            'return': _annotation_to_metadata(func.returns),
+        }
+    return ret
+
+def collect_builtin_method_annotation_metadata(node: ast.Module) -> dict[str, dict[str, dict[str, object]]]:
+    ret = {}
+    for class_node in node.body:
+        if not isinstance(class_node, ast.ClassDef):
+            continue
+        class_ret = {}
+        for func in class_node.body:
+            if not isinstance(func, ast.FunctionDef):
+                continue
+            class_ret[func.name] = {
+                'params': _collect_params_annotation_metadata(func.args),
+                'return': _annotation_to_metadata(func.returns),
+            }
+        if class_ret:
+            ret[class_node.name] = class_ret
+    return ret
+
 class AstSimplifier(ast.NodeTransformer):
     def _is_inert_literal_expr(self, node: ast.expr) -> bool:
         match node:
@@ -3389,28 +3434,58 @@ def load_runtime_spec(spec_path: str) -> dict[str, object]:
                 DIRECT_CALL_POSITIONAL_MODULE_FUNCTIONS[module_name][func_name] = call_range
     return spec
 
-def gen_runtime_java(spec_path: str, java_path: str) -> None:
+def build_semantics_data(pythonj_builtins_node: ast.Module, pythonj_runtime_node: ast.Module) -> dict[str, object]:
+    builtin_function_return_types = collect_top_level_exact_return_types(pythonj_builtins_node)
+    builtin_method_return_types = collect_builtin_method_exact_return_types(pythonj_builtins_node)
+    return {
+        'builtin_function_annotations': collect_top_level_function_annotation_metadata(pythonj_builtins_node),
+        'builtin_method_annotations': collect_builtin_method_annotation_metadata(pythonj_builtins_node),
+        'runtime_function_annotations': collect_top_level_function_annotation_metadata(pythonj_runtime_node),
+        'builtin_function_return_types': builtin_function_return_types,
+        'builtin_method_return_types': builtin_method_return_types,
+        'builtin_method_return_java_types': {
+            f'{class_name}.{method_name}': return_type
+            for ((class_name, method_name), return_type) in collect_builtin_method_return_java_types(pythonj_builtins_node).items()
+        },
+        'runtime_function_return_java_types': {
+            func_name: decode_helper_return_annotation(func.returns)
+            for (func_name, func) in get_top_level_functions(pythonj_runtime_node).items()
+        },
+    }
+
+def write_semantics_json(path: str, data: dict[str, object]) -> None:
+    with open(path, 'w', encoding='utf-8') as f:
+        json.dump(data, f, indent=2, sort_keys=True)
+        f.write('\n')
+
+def load_semantics_json(path: str) -> dict[str, object]:
+    with open(path, encoding='utf-8') as f:
+        return cast(dict[str, object], json.load(f))
+
+def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -> None:
     spec = load_runtime_spec(spec_path)
 
     pythonj_builtins_node = parse_python_module('pythonj_builtins.py')
     pythonj_runtime_node = parse_python_module('pythonj_runtime.py')
-    pythonj_builtins_return_types = collect_top_level_exact_return_types(pythonj_builtins_node)
-    pythonj_builtins_method_return_types = collect_builtin_method_exact_return_types(pythonj_builtins_node)
+    semantics_data = build_semantics_data(pythonj_builtins_node, pythonj_runtime_node)
+    pythonj_builtins_return_types = cast(dict[str, str], semantics_data['builtin_function_return_types'])
+    pythonj_builtins_method_return_types = cast(dict[str, dict[str, str]], semantics_data['builtin_method_return_types'])
     (pythonj_builtins_node, builtins_scope_infos) = analyze_and_simplify(
         pythonj_builtins_node, pythonj_builtins_return_types, pythonj_builtins_method_return_types)
     (pythonj_runtime_node, runtime_scope_infos) = analyze_and_simplify(
         pythonj_runtime_node, pythonj_builtins_return_types, pythonj_builtins_method_return_types)
     pythonj_builtins_funcs = get_top_level_functions(pythonj_builtins_node)
-    pythonj_builtins_method_return_java_types = collect_builtin_method_return_java_types(pythonj_builtins_node)
+    pythonj_builtins_method_return_java_types = {
+        tuple(key.split('.', 1)): value
+        for (key, value) in cast(dict[str, str], semantics_data['builtin_method_return_java_types']).items()
+    }
     pythonj_builtins_classes = {
         class_name: {x.name: x for x in class_node.body if isinstance(x, ast.FunctionDef)}
         for (class_name, class_node) in {x.name: x for x in pythonj_builtins_node.body if isinstance(x, ast.ClassDef)}.items()
     }
     pythonj_runtime_funcs = get_top_level_functions(pythonj_runtime_node)
-    pythonj_runtime_return_java_types = {
-        func_name: decode_helper_return_annotation(func.returns)
-        for (func_name, func) in pythonj_runtime_funcs.items()
-    }
+    pythonj_runtime_return_java_types = cast(dict[str, str], semantics_data['runtime_function_return_java_types'])
+    write_semantics_json(semantics_path, semantics_data)
     pool = ir.ConstantPool('PyRuntime')
     with open(java_path, 'w') as f:
         top_level_decls: list[ir.Decl] = []
@@ -3830,20 +3905,18 @@ def gen_runtime_java(spec_path: str, java_path: str) -> None:
         top_level_decls.append(ir.with_pooled_fields(py_runtime_decl, pool))
         ir.write_decls(f, top_level_decls, pool)
 
-def translate_python_to_java(spec_path: str, py_path: str, java_path: str) -> None:
+def translate_python_to_java(spec_path: str, semantics_path: str, py_path: str, java_path: str) -> None:
     with open(py_path, encoding='utf-8') as f:
-        translate_python_source_to_java(spec_path, f.read(), py_path, java_path, argv0=py_path)
+        translate_python_source_to_java(spec_path, semantics_path, f.read(), py_path, java_path, argv0=py_path)
 
-def translate_python_source_to_java(spec_path: str, py_source: str, source_name: str, java_path: str,
+def translate_python_source_to_java(spec_path: str, semantics_path: str, py_source: str, source_name: str, java_path: str,
                                     argv0: Optional[str] = None) -> None:
     load_runtime_spec(spec_path)
-    pythonj_builtins_node = parse_python_module('pythonj_builtins.py')
-    builtin_function_return_types = collect_top_level_exact_return_types(pythonj_builtins_node)
-    builtin_method_return_types = collect_builtin_method_exact_return_types(pythonj_builtins_node)
+    semantics_data = load_semantics_json(semantics_path)
+    builtin_function_return_types = cast(dict[str, str], semantics_data['builtin_function_return_types'])
+    builtin_method_return_types = cast(dict[str, dict[str, str]], semantics_data['builtin_method_return_types'])
     (node, scope_infos) = analyze_and_simplify(
         ast.parse(py_source, filename=source_name), builtin_function_return_types, builtin_method_return_types)
-    (pythonj_builtins_node, _) = analyze_and_simplify(
-        pythonj_builtins_node, builtin_function_return_types, builtin_method_return_types)
     visitor = LoweringVisitor(source_name, scope_infos, scope_infos[node])
     visitor.visit(node)
     if visitor.n_errors:
@@ -3867,7 +3940,7 @@ def get_java_main_class_name(source_name: str) -> str:
         py_name = f'_{py_name}'
     return py_name
 
-def run_python_script(spec_path: str, runtime_jar_path: str, source_name: str, py_source: str,
+def run_python_script(spec_path: str, semantics_path: str, runtime_jar_path: str, source_name: str, py_source: str,
                       script_args: list[str], argv0: str, run_cwd: str, keep_temp: bool = False) -> None:
     repo_root = os.path.dirname(os.path.abspath(__file__))
     py_name = get_java_main_class_name(source_name)
@@ -3883,7 +3956,7 @@ def run_python_script(spec_path: str, runtime_jar_path: str, source_name: str, p
     try:
         with open(py_path, 'w', encoding='utf-8') as f:
             f.write(py_source)
-        translate_python_source_to_java(spec_path, py_source, source_name, java_path, argv0=argv0)
+        translate_python_source_to_java(spec_path, semantics_path, py_source, source_name, java_path, argv0=argv0)
         build_result = subprocess.run([
             build_python,
             build_jar_script,
@@ -3917,60 +3990,72 @@ def run_python_script(spec_path: str, runtime_jar_path: str, source_name: str, p
         else:
             shutil.rmtree(temp_dir)
 
+def build_translate_parser(default_spec_path: str, default_semantics_path: str) -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(prog='pythonj.py translate')
+    parser.add_argument('--spec', default=default_spec_path)
+    parser.add_argument('--semantics', default=default_semantics_path)
+    parser.add_argument('-o', '--output', required=True)
+    parser.add_argument('py_path')
+    return parser
+
+def build_run_parser(default_spec_path: str, default_semantics_path: str) -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog='pythonj.py',
+        usage='pythonj.py [--keep-temp] [--spec SPEC] [--semantics SEMANTICS] (script.py | - | -c CODE) [script args ...]',
+    )
+    parser.add_argument('--keep-temp', action='store_true')
+    parser.add_argument('--spec', default=default_spec_path)
+    parser.add_argument('--semantics', default=default_semantics_path)
+    parser.add_argument('-c', dest='command_string')
+    parser.add_argument('script', nargs='?')
+    parser.add_argument('script_args', nargs=argparse.REMAINDER)
+    return parser
+
 def main() -> None:
     repo_root = os.path.dirname(os.path.abspath(__file__))
     python = 'py' if os.name == 'nt' else 'python3'
     spec_path = os.path.join(repo_root, '_out', 'spec.json')
+    semantics_path = os.path.join(repo_root, '_out', 'pythonj_semantics.json')
     runtime_jar_path = os.path.join(repo_root, '_out', 'pythonj.jar')
     direct_args = sys.argv[1:]
-    keep_temp = False
-    if direct_args and direct_args[0] == '--keep-temp':
-        keep_temp = True
-        direct_args = direct_args[1:]
-    if direct_args and direct_args[0] not in {'gen-runtime', 'translate'}:
-        mode = direct_args[0]
-        if mode == '-c':
-            if len(direct_args) < 2:
-                raise SystemExit('usage: pythonj.py [--keep-temp] [gen-runtime|translate|script.py|-|-c code] [script args ...]')
-            py_source = direct_args[1]
-            script_args = direct_args[2:]
-        else:
-            py_path = mode
-            script_args = direct_args[1:]
-        make_result = subprocess.run([python, 'make.py', '_out/pythonj.jar'], cwd=repo_root)
-        if make_result.returncode != 0:
-            raise SystemExit(make_result.returncode)
-        if mode == '-':
-            run_python_script(spec_path, runtime_jar_path, '<stdin>', sys.stdin.read(), script_args, '-', os.getcwd(), keep_temp=keep_temp)
-        elif mode == '-c':
-            run_python_script(spec_path, runtime_jar_path, '<string>', py_source, script_args, '-c', os.getcwd(), keep_temp=keep_temp)
-        else:
-            with open(py_path, encoding='utf-8') as f:
-                run_python_script(spec_path, runtime_jar_path, py_path, f.read(), script_args, py_path, os.getcwd(), keep_temp=keep_temp)
-        return
 
-    parser = argparse.ArgumentParser()
-    subparsers = parser.add_subparsers(dest='command', required=True)
-
-    runtime_parser = subparsers.add_parser('gen-runtime')
-    runtime_parser.add_argument('-o', '--output', required=True)
-    runtime_parser.add_argument('--spec', required=True)
-
-    translate_parser = subparsers.add_parser('translate')
-    translate_parser.add_argument('--spec', required=True)
-    translate_parser.add_argument('-o', '--output', required=True)
-    translate_parser.add_argument('py_path')
-
-    args = parser.parse_args()
-    if args.command == 'gen-runtime':
-        gen_runtime_java(os.path.abspath(args.spec), os.path.abspath(args.output))
-    else:
-        assert args.command == 'translate', args.command
+    if direct_args and direct_args[0] == 'translate':
+        args = build_translate_parser(spec_path, semantics_path).parse_args(direct_args[1:])
         translate_python_to_java(
             os.path.abspath(args.spec),
+            os.path.abspath(args.semantics),
             os.path.abspath(args.py_path),
             os.path.abspath(args.output),
         )
+        return
+
+    if not direct_args or direct_args[0] in {'-h', '--help'}:
+        build_run_parser(spec_path, semantics_path).parse_args(direct_args)
+        return
+
+    args = build_run_parser(spec_path, semantics_path).parse_args(direct_args)
+    if args.command_string is not None:
+        if args.script is not None:
+            raise SystemExit('pythonj.py: cannot combine -c with a script path')
+        mode = '-c'
+        py_source = args.command_string
+        script_args = args.script_args
+    else:
+        if args.script is None:
+            raise SystemExit('pythonj.py: missing script path, -, or -c CODE')
+        mode = args.script
+        script_args = args.script_args
+
+    make_result = subprocess.run([python, 'make.py', '_out/pythonj.jar'], cwd=repo_root)
+    if make_result.returncode != 0:
+        raise SystemExit(make_result.returncode)
+    if mode == '-':
+        run_python_script(args.spec, args.semantics, runtime_jar_path, '<stdin>', sys.stdin.read(), script_args, '-', os.getcwd(), keep_temp=args.keep_temp)
+    elif mode == '-c':
+        run_python_script(args.spec, args.semantics, runtime_jar_path, '<string>', py_source, script_args, '-c', os.getcwd(), keep_temp=args.keep_temp)
+    else:
+        with open(mode, encoding='utf-8') as f:
+            run_python_script(args.spec, args.semantics, runtime_jar_path, mode, f.read(), script_args, mode, os.getcwd(), keep_temp=args.keep_temp)
 
 if __name__ == '__main__':
     main()
