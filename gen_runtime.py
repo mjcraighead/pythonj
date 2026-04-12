@@ -16,11 +16,10 @@ import ir
 import pythonj
 
 RAW_ARGS_KWARGS_BUILTINS = {'max', 'min'}
-ALL_PYTHON_AUTHORED_IMPLS = {'bytes', 'float', 'int'}
+ALL_PYTHON_AUTHORED_IMPLS = {'bytes', 'float', 'int', 'range'}
 PYTHON_AUTHORED_IMPLS = {
     'builtins': {'abs', 'all', 'any', 'bin', 'delattr', 'divmod', 'format', 'getattr', 'hash', 'hasattr', 'isinstance', 'issubclass', 'len', 'next', 'oct', 'repr', 'setattr', 'sum'},
     'dict': {'fromkeys', 'setdefault'},
-    'range': {'count'},
     'str': {'join', 'removeprefix', 'removesuffix'},
 }
 HIDDEN_PYTHON_AUTHORED_METHODS = {'__format__', '__repr__'}

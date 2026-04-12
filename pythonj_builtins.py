@@ -888,6 +888,20 @@ class range:
     def count(self, value) -> int:
         return 1 if value in self else 0
 
+    def index(self, value) -> int:
+        if __pythonj_isinstance__(value, float):
+            if not math.isfinite(value) or value != __pythonj_float_java_rint__(value):
+                raise ValueError('sequence.index(x): x not in sequence')
+            value = int(value)
+            if value not in self:
+                raise ValueError('sequence.index(x): x not in sequence')
+            return (value - self.start) // self.step
+        elif not __pythonj_isinstance__(value, (int, bool)):
+            raise ValueError('sequence.index(x): x not in sequence')
+        if value not in self:
+            raise ValueError('range.index(x): x not in range')
+        return (value - self.start) // self.step
+
 class set:
     def __repr__(self: set) -> str:
         if not self:

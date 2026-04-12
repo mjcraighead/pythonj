@@ -134,23 +134,4 @@ public final class PyRange extends PyObject {
         }
     }
     @Override public String repr() { return PyRuntime.pyfunc_range____repr__(this).value; }
-
-    public PyObject pymethod_index(PyObject arg) {
-        if (arg instanceof PyFloat) {
-            if (!contains(arg)) {
-                throw PyValueError.raise("sequence.index(x): x not in sequence");
-            }
-            long value = membershipValue(arg);
-            return new PyInt((value - start) / step);
-        }
-        Long valueObj = membershipValue(arg);
-        if (valueObj == null) {
-            throw PyValueError.raise("sequence.index(x): x not in sequence");
-        }
-        if (!contains(arg)) {
-            throw PyValueError.raise("range.index(x): x not in range");
-        }
-        long value = valueObj;
-        return new PyInt((value - start) / step);
-    }
 }
