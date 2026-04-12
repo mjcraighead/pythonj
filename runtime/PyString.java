@@ -174,8 +174,8 @@ public final class PyString extends PyObject {
     }
     @Override public String str() { return value; }
     public static String reprOf(String value) {
-        boolean use_double_quotes = (value.indexOf('\'') >= 0) && (value.indexOf('"') < 0);
-        var s = new StringBuilder(use_double_quotes ? "\"" : "'");
+        boolean useDoubleQuotes = (value.indexOf('\'') >= 0) && (value.indexOf('"') < 0);
+        var s = new StringBuilder(value.length() + 2).append(useDoubleQuotes ? "\"" : "'");
         for (int i = 0; i < value.length(); i++) {
             char c = value.charAt(i);
             if (c == '\n') {
@@ -190,13 +190,13 @@ public final class PyString extends PyObject {
                 s.append("0123456789abcdef".charAt(c & 15));
             } else if (c == '\\') {
                 s.append("\\\\");
-            } else if ((c == '\'') && !use_double_quotes) {
+            } else if ((c == '\'') && !useDoubleQuotes) {
                 s.append("\\'");
             } else {
                 s.append(c);
             }
         }
-        s.append(use_double_quotes ? '"' : '\'');
+        s.append(useDoubleQuotes ? '"' : '\'');
         return s.toString();
     }
     @Override public String repr() { return reprOf(value); }
