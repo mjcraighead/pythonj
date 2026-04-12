@@ -153,6 +153,12 @@ def zip__newobj(type, args: tuple, kwargs: dict):
     return __pythonj_zip_new__(args, strict)
 
 # Builtin classes
+class object:
+    def __format__(self, format_spec) -> str:
+        if format_spec != '':
+            raise TypeError(f'unsupported format string passed to {__pythonj_typename__(type(self))}.__format__')
+        return str(self)
+
 class bool:
     def __format__(self, format_spec) -> str:
         return pyj_bool_format(self, format_spec)

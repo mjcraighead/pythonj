@@ -2,6 +2,9 @@
 # Copyright (c) 2012-2026 Matt Craighead
 # SPDX-License-Identifier: MIT
 
+import math
+import _operator
+
 def _init_bound_args(args, max_total: int) -> list:
     args_len = len(args)
     bound_args = []
@@ -521,7 +524,6 @@ def _pyj_float_is_zero_result(magnitude_text) -> bool:
     return True
 
 def _pyj_float_sign_prefix(value, sign, z, magnitude_text) -> str:
-    import math
     if not math.isfinite(value):
         if not math.isinf(value):
             if sign == '+':
@@ -635,7 +637,6 @@ def _pyj_float_python_style_finite_str(value: float) -> str:
     return sign + mantissa + 'e' + ('+' if exponent >= 0 else '-') + exp_digits
 
 def pyj_float_str(value: float) -> str:
-    import math
     if math.isnan(value):
         return 'nan'
     if math.isfinite(value):
@@ -695,7 +696,6 @@ def _pyj_float_format_finite_core(value: float, alt: bool, grouping, precision, 
     return ret
 
 def pyj_float_format(value: float, format_spec: str) -> str:
-    import math
     fill, align, sign, z, alt, width, grouping, precision, type_char = pyj_float_parse_spec(format_spec)
 
     if not math.isfinite(value):
@@ -783,7 +783,6 @@ def _pyj_slice_index_allow_null(obj, default_index: int, n: int) -> int:
         return default_index
     if not __pythonj_hasindex__(obj):
         raise TypeError('slice indices must be integers or have an __index__ method')
-    import _operator
     raw: int = _operator.index(obj)
     if raw < 0:
         adjusted = raw + n
