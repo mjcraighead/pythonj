@@ -129,6 +129,22 @@ class WrapperBindingPlan:
     exact_positional_arity: Optional[int] = None
     posonly_min_max_range: Optional[tuple[int, int]] = None
 
+@dataclass(frozen=True)
+class TranslatorMetadata:
+    spec: dict[str, object]
+    builtin_function_annotations: dict[str, dict[str, object]]
+    builtin_method_annotations: dict[str, dict[str, dict[str, object]]]
+    runtime_function_annotations: dict[str, dict[str, object]]
+    builtin_function_return_types: dict[str, str]
+    builtin_method_return_types: dict[str, dict[str, str]]
+    builtin_method_return_java_types: dict[tuple[str, str], str]
+    runtime_function_return_java_types: dict[str, str]
+    direct_call_positional_builtins: dict[str, tuple[int, int]]
+    direct_newobj_positional_builtin_types: dict[str, tuple[int, int]]
+    direct_getattr_builtin_type_attrs: dict[str, dict[str, str]]
+    direct_getattr_builtin_module_attrs: dict[str, dict[str, str]]
+    direct_call_positional_module_functions: dict[str, dict[str, tuple[int, int]]]
+
 def _iter_scope_local_nodes(node: ast.AST) -> Iterator[ast.AST]:
     if isinstance(node, ast.Name):
         yield node # don't yield ctx (Load/Store/Del)
@@ -789,28 +805,21 @@ def _infer_obvious_exact_builtin_type_expr(node: ast.expr,
     return None
 
 class ScopeAnalyzer(ast.NodeVisitor):
-    __slots__ = ('scope_infos', 'preserved_scope_infos', 'module_locals', 'builtin_function_return_types',
-                 'builtin_method_return_types', 'enable_exact_type_inference')
+    __slots__ = ('scope_infos', 'preserved_scope_infos', 'module_locals', 'metadata', 'enable_exact_type_inference')
     scope_infos: dict[ast.AST, ScopeInfo]
     preserved_scope_infos: dict[ast.AST, ScopeInfo]
     module_locals: set[str]
-    builtin_function_return_types: dict[str, str]
-    builtin_method_return_types: dict[str, dict[str, str]]
+    metadata: TranslatorMetadata
     enable_exact_type_inference: bool
 
     def __init__(self, preserved_scope_infos: Optional[dict[ast.AST, ScopeInfo]] = None,
-                 builtin_function_return_types: Optional[dict[str, str]] = None,
-                 builtin_method_return_types: Optional[dict[str, dict[str, str]]] = None,
+                 metadata: Optional[TranslatorMetadata] = None,
                  enable_exact_type_inference: bool = True):
         self.scope_infos = {}
         self.preserved_scope_infos = {} if preserved_scope_infos is None else preserved_scope_infos
         self.module_locals = set()
-        self.builtin_function_return_types = (
-            {} if builtin_function_return_types is None else builtin_function_return_types
-        )
-        self.builtin_method_return_types = (
-            {} if builtin_method_return_types is None else builtin_method_return_types
-        )
+        assert metadata is not None
+        self.metadata = metadata
         self.enable_exact_type_inference = enable_exact_type_inference
 
     def _analyze_scope_node(self, node: ast.AST) -> ScopeInfo:
@@ -1114,7 +1123,7 @@ class ScopeAnalyzer(ast.NodeVisitor):
         unavailable_builtin_names = scope_info.locals | scope_info.explicit_globals | self.module_locals
         return {
             name: type_name
-            for (name, type_name) in self.builtin_function_return_types.items()
+            for (name, type_name) in self.metadata.builtin_function_return_types.items()
             if name not in unavailable_builtin_names
         }
 
@@ -1203,7 +1212,7 @@ class ScopeAnalyzer(ast.NodeVisitor):
             if isinstance(node.func, ast.Attribute):
                 receiver_type = get_expr_exact_builtin_type(node.func.value)
                 if receiver_type is not None:
-                    return self.builtin_method_return_types.get(receiver_type, {}).get(node.func.attr)
+                    return self.metadata.builtin_method_return_types.get(receiver_type, {}).get(node.func.attr)
         return _infer_obvious_exact_builtin_type_expr(
             node,
             self._available_builtin_function_return_types(scope_info),
@@ -1363,7 +1372,7 @@ class Scope:
 class LoweringVisitor(ast.NodeVisitor):
     __slots__ = ('path', 'n_errors', 'n_functions', 'n_lambdas', 'scope', 'global_code', 'code',
                  'scope_infos', 'pool', 'break_name', 'classes', 'allow_intrinsics',
-                 'python_helper_names', 'python_helper_class', 'python_helper_return_java_types',
+                 'metadata', 'python_helper_names', 'python_helper_class', 'python_helper_return_java_types',
                  'final_global_function_classes')
     path: str
     n_errors: int
@@ -1377,12 +1386,13 @@ class LoweringVisitor(ast.NodeVisitor):
     break_name: Optional[str]
     classes: dict[str, ir.ClassDecl]
     allow_intrinsics: bool # enables special internal-only codegen features for builtins
+    metadata: TranslatorMetadata
     python_helper_names: set[str]
     python_helper_class: Optional[str]
     python_helper_return_java_types: dict[str, str]
     final_global_function_classes: dict[str, str]
 
-    def __init__(self, path: str, scope_infos: dict[ast.AST, ScopeInfo], module_info: ScopeInfo):
+    def __init__(self, path: str, scope_infos: dict[ast.AST, ScopeInfo], module_info: ScopeInfo, metadata: TranslatorMetadata):
         self.path = path
         self.n_errors = 0
         self.n_functions = 0
@@ -1395,6 +1405,7 @@ class LoweringVisitor(ast.NodeVisitor):
         self.break_name = None
         self.classes = {}
         self.allow_intrinsics = False
+        self.metadata = metadata
         self.python_helper_names = set()
         self.python_helper_class = None
         self.python_helper_return_java_types = {}
@@ -1601,14 +1612,14 @@ class LoweringVisitor(ast.NodeVisitor):
     def direct_builtin_module_attr_expr(self, value: ir.Expr, attr: str) -> Optional[ir.Expr]:
         if not isinstance(value, ir.PyBuiltinModule):
             return None
-        attr_kind = DIRECT_GETATTR_BUILTIN_MODULE_ATTRS.get(value.name, {}).get(attr)
+        attr_kind = self.metadata.direct_getattr_builtin_module_attrs.get(value.name, {}).get(attr)
         if attr_kind is None:
             return None
         return get_builtin_module_attr_expr(value.name, attr, attr_kind)
 
     def direct_builtin_type_attr_expr(self, value: ir.Expr, attr: str, type_name: Optional[str] = None) -> Optional[ir.Expr]:
         if isinstance(value, ir.PyBuiltinType):
-            attr_kind = DIRECT_GETATTR_BUILTIN_TYPE_ATTRS.get(value.name, {}).get(attr)
+            attr_kind = self.metadata.direct_getattr_builtin_type_attrs.get(value.name, {}).get(attr)
             if attr_kind is None:
                 return None
             return get_builtin_type_attr_expr(value.name, attr, attr_kind, None)
@@ -1616,24 +1627,22 @@ class LoweringVisitor(ast.NodeVisitor):
             type_name = self.exact_builtin_type_of_expr(value)
         if type_name is None:
             return None
-        attr_kind = DIRECT_GETATTR_BUILTIN_TYPE_ATTRS.get(type_name, {}).get(attr)
+        attr_kind = self.metadata.direct_getattr_builtin_type_attrs.get(type_name, {}).get(attr)
         if attr_kind is None:
             return None
         return get_builtin_type_attr_expr(type_name, attr, attr_kind, value)
 
     def direct_builtin_method_call_info(self, receiver: ir.Expr, type_name: Optional[str], attr: str) -> Optional[tuple[ir.Expr, str, int, int]]:
-        if RUNTIME_SPEC is None:
-            return None
         if isinstance(receiver, ir.PyBuiltinType):
             return None
         if type_name is None:
             type_name = self.exact_builtin_type_of_expr(receiver)
         if type_name is None:
             return None
-        attr_kind = DIRECT_GETATTR_BUILTIN_TYPE_ATTRS.get(type_name, {}).get(attr)
+        attr_kind = self.metadata.direct_getattr_builtin_type_attrs.get(type_name, {}).get(attr)
         if attr_kind != 'method':
             return None
-        call_range = extract_spec.get_method_call_range(RUNTIME_SPEC, type_name, attr)
+        call_range = extract_spec.get_method_call_range(self.metadata.spec, type_name, attr)
         if call_range is None:
             return None
         (min_args, max_args) = call_range
@@ -1944,8 +1953,8 @@ class LoweringVisitor(ast.NodeVisitor):
                     'newObjPositional',
                     self.emit_plain_positional_args(node.args, 3),
                 )
-            if isinstance(func, ir.PyBuiltinType) and func.name in DIRECT_NEWOBJ_POSITIONAL_BUILTIN_TYPES:
-                (min_args, max_args) = DIRECT_NEWOBJ_POSITIONAL_BUILTIN_TYPES[func.name]
+            if isinstance(func, ir.PyBuiltinType) and func.name in self.metadata.direct_newobj_positional_builtin_types:
+                (min_args, max_args) = self.metadata.direct_newobj_positional_builtin_types[func.name]
                 if min_args <= len(node.args) <= max_args:
                     java_name = func.java_name
                     return ir.StaticMethodCall(
@@ -1966,9 +1975,9 @@ class LoweringVisitor(ast.NodeVisitor):
         if func is None:
             func = self.visit(node.func)
         if (isinstance(func, ir.PyBuiltinFunction) and
-            func.name in DIRECT_CALL_POSITIONAL_BUILTINS and
+            func.name in self.metadata.direct_call_positional_builtins and
             self.call_has_only_plain_positional_args(node)):
-            (min_args, max_args) = DIRECT_CALL_POSITIONAL_BUILTINS[func.name]
+            (min_args, max_args) = self.metadata.direct_call_positional_builtins[func.name]
             if min_args <= len(node.args) <= max_args:
                 if func.name in {'abs', 'hash', 'len', 'repr'}:
                     method_name = INTRINSIC_SIGNATURES[f'__pythonj_{func.name}__'][0]
@@ -1978,8 +1987,8 @@ class LoweringVisitor(ast.NodeVisitor):
             '.' in func.name and
             self.call_has_only_plain_positional_args(node)):
             (module_name, func_name) = func.name.split('.', 1)
-            if func_name in DIRECT_CALL_POSITIONAL_MODULE_FUNCTIONS.get(module_name, {}):
-                (min_args, max_args) = DIRECT_CALL_POSITIONAL_MODULE_FUNCTIONS[module_name][func_name]
+            if func_name in self.metadata.direct_call_positional_module_functions.get(module_name, {}):
+                (min_args, max_args) = self.metadata.direct_call_positional_module_functions[module_name][func_name]
                 if min_args <= len(node.args) <= max_args:
                     return self.emit_call_positional(func, node, max_args)
         if isinstance(node.func, ast.Name) and node.func.id in self.python_helper_names:
@@ -2913,16 +2922,15 @@ def parse_python_module(path: str) -> ast.Module:
         return ast.parse(f.read(), resolved_path)
 
 def analyze_and_simplify(node: ast.Module,
-                         builtin_function_return_types: Optional[dict[str, str]] = None,
-                         builtin_method_return_types: Optional[dict[str, dict[str, str]]] = None) -> tuple[ast.Module, dict[ast.AST, ScopeInfo]]:
+                         metadata: Optional[TranslatorMetadata] = None) -> tuple[ast.Module, dict[ast.AST, ScopeInfo]]:
+    assert metadata is not None
     initial_analyzer = ScopeAnalyzer(
-        builtin_function_return_types=builtin_function_return_types,
-        builtin_method_return_types=builtin_method_return_types,
+        metadata=metadata,
         enable_exact_type_inference=False,
     )
     initial_analyzer.visit(node)
     node = cast(ast.Module, simplify_ast(node))
-    analyzer = ScopeAnalyzer(initial_analyzer.scope_infos, builtin_function_return_types, builtin_method_return_types)
+    analyzer = ScopeAnalyzer(initial_analyzer.scope_infos, metadata=metadata)
     analyzer.visit(node)
     return (node, analyzer.scope_infos)
 
@@ -2934,9 +2942,6 @@ def get_class_functions(node: ast.Module, class_name: str) -> dict[str, ast.Func
     return {x.name: x for x in classes[class_name].body if isinstance(x, ast.FunctionDef)}
 
 RAW_ARGS_KWARGS_BUILTINS = {'max', 'min'}
-RUNTIME_SPEC: Optional[dict[str, object]] = None
-DIRECT_CALL_POSITIONAL_BUILTINS: dict[str, tuple[int, int]] = {}
-DIRECT_NEWOBJ_POSITIONAL_BUILTIN_TYPES: dict[str, tuple[int, int]] = {}
 DIRECT_NEWOBJ_POSITIONAL_SUPPORTED_BUILTIN_TYPES = {
     'bool',
     'bytearray',
@@ -2952,10 +2957,7 @@ DIRECT_NEWOBJ_POSITIONAL_SUPPORTED_BUILTIN_TYPES = {
     'str',
     'tuple',
 }
-DIRECT_GETATTR_BUILTIN_TYPE_ATTRS: dict[str, dict[str, str]] = {}
 DIRECT_GETATTR_IDENTITY_KINDS = {'string', 'member', 'getset', 'method'}
-DIRECT_GETATTR_BUILTIN_MODULE_ATTRS: dict[str, dict[str, str]] = {}
-DIRECT_CALL_POSITIONAL_MODULE_FUNCTIONS: dict[str, dict[str, tuple[int, int]]] = {}
 
 PYTHON_AUTHORED_IMPLS = {
     'builtins': {'abs', 'all', 'any', 'bin', 'delattr', 'divmod', 'format', 'getattr', 'hash', 'hasattr', 'isinstance', 'issubclass', 'len', 'next', 'oct', 'repr', 'setattr', 'sum'},
@@ -3077,12 +3079,12 @@ def translate_python_impl_node(node: ast.Module, func: ast.FunctionDef, emitted_
                                scope_infos: Optional[dict[ast.AST, ScopeInfo]] = None,
                                python_helper_names: Optional[set[str]] = None,
                                python_helper_class: Optional[str] = None,
-                               builtin_function_return_types: Optional[dict[str, str]] = None,
-                               builtin_method_return_types: Optional[dict[str, dict[str, str]]] = None,
+                               metadata: Optional[TranslatorMetadata] = None,
                                python_helper_return_java_types: Optional[dict[str, str]] = None) -> tuple[list[ir.ClassDecl], ir.MethodDecl]:
+    assert metadata is not None, emitted_name
     if scope_infos is None:
-        (node, scope_infos) = analyze_and_simplify(node, builtin_function_return_types, builtin_method_return_types)
-    visitor = LoweringVisitor(display_name, scope_infos, scope_infos[node])
+        (node, scope_infos) = analyze_and_simplify(node, metadata=metadata)
+    visitor = LoweringVisitor(display_name, scope_infos, scope_infos[node], metadata)
     visitor.pool = pool
     visitor.allow_intrinsics = True
     if python_helper_names is not None:
@@ -3116,23 +3118,20 @@ def translate_python_impl_node(node: ast.Module, func: ast.FunctionDef, emitted_
 def translate_python_builtin_impl(node: ast.Module, func_name: str, pool: ir.ConstantPool,
                                   funcs: Optional[dict[str, ast.FunctionDef]] = None,
                                   scope_infos: Optional[dict[ast.AST, ScopeInfo]] = None,
-                                  builtin_function_return_types: Optional[dict[str, str]] = None,
-                                  builtin_method_return_types: Optional[dict[str, dict[str, str]]] = None) -> tuple[list[ir.ClassDecl], ir.MethodDecl]:
+                                  metadata: Optional[TranslatorMetadata] = None) -> tuple[list[ir.ClassDecl], ir.MethodDecl]:
     if funcs is None:
         funcs = get_top_level_functions(node)
     func = funcs[func_name]
     return translate_python_impl_node(
         node, func, func_name, f'<builtin {func_name}>', 'builtin function', pool,
         scope_infos=scope_infos,
-        builtin_function_return_types=builtin_function_return_types,
-        builtin_method_return_types=builtin_method_return_types,
+        metadata=metadata,
     )
 
 def translate_python_method_impl(node: ast.Module, type_name: str, method_name: str, pool: ir.ConstantPool,
                                  class_funcs: Optional[dict[str, dict[str, ast.FunctionDef]]] = None,
                                  scope_infos: Optional[dict[ast.AST, ScopeInfo]] = None,
-                                 builtin_function_return_types: Optional[dict[str, str]] = None,
-                                 builtin_method_return_types: Optional[dict[str, dict[str, str]]] = None) -> tuple[list[ir.ClassDecl], ir.MethodDecl]:
+                                 metadata: Optional[TranslatorMetadata] = None) -> tuple[list[ir.ClassDecl], ir.MethodDecl]:
     func_name = f'{type_name}__{method_name}'
     if class_funcs is None:
         func = get_class_functions(node, type_name)[method_name]
@@ -3141,15 +3140,13 @@ def translate_python_method_impl(node: ast.Module, type_name: str, method_name: 
     return translate_python_impl_node(
         node, func, func_name, f'<method {type_name}.{method_name}>', 'builtin method', pool,
         scope_infos=scope_infos,
-        builtin_function_return_types=builtin_function_return_types,
-        builtin_method_return_types=builtin_method_return_types,
+        metadata=metadata,
     )
 
 def translate_python_constructor_impl(node: ast.Module, type_name: str, pool: ir.ConstantPool,
                                       funcs: Optional[dict[str, ast.FunctionDef]] = None,
                                       scope_infos: Optional[dict[ast.AST, ScopeInfo]] = None,
-                                      builtin_function_return_types: Optional[dict[str, str]] = None,
-                                      builtin_method_return_types: Optional[dict[str, dict[str, str]]] = None) -> tuple[list[ir.ClassDecl], ir.MethodDecl]:
+                                      metadata: Optional[TranslatorMetadata] = None) -> tuple[list[ir.ClassDecl], ir.MethodDecl]:
     if funcs is None:
         funcs = get_top_level_functions(node)
     func_name = f'{type_name}__newobj'
@@ -3158,15 +3155,13 @@ def translate_python_constructor_impl(node: ast.Module, type_name: str, pool: ir
     return translate_python_impl_node(
         node, func, emitted_name, f'<constructor {type_name}>', 'builtin constructor', pool,
         scope_infos=scope_infos,
-        builtin_function_return_types=builtin_function_return_types,
-        builtin_method_return_types=builtin_method_return_types,
+        metadata=metadata,
     )
 
 def translate_python_runtime_impl(node: ast.Module, func_name: str, pool: ir.ConstantPool,
                                   funcs: Optional[dict[str, ast.FunctionDef]] = None,
                                   scope_infos: Optional[dict[ast.AST, ScopeInfo]] = None,
-                                  builtin_function_return_types: Optional[dict[str, str]] = None,
-                                  builtin_method_return_types: Optional[dict[str, dict[str, str]]] = None,
+                                  metadata: Optional[TranslatorMetadata] = None,
                                   python_helper_return_java_types: Optional[dict[str, str]] = None) -> tuple[list[ir.ClassDecl], ir.MethodDecl]:
     if funcs is None:
         funcs = get_top_level_functions(node)
@@ -3174,8 +3169,7 @@ def translate_python_runtime_impl(node: ast.Module, func_name: str, pool: ir.Con
         node, funcs[func_name], func_name, f'<runtime {func_name}>', 'runtime helper', pool,
         scope_infos=scope_infos,
         python_helper_names=set(funcs), python_helper_class='PyRuntime',
-        builtin_function_return_types=builtin_function_return_types,
-        builtin_method_return_types=builtin_method_return_types,
+        metadata=metadata,
         python_helper_return_java_types=python_helper_return_java_types,
     )
 
@@ -3404,35 +3398,55 @@ def build_call_positional_ir(shape: SignatureShape) -> tuple[list[str], list[ir.
             bind_args.append(ir.Identifier(f'arg{i}'))
     return (call_args, statements, bind_args)
 
-def load_runtime_spec(spec_path: str) -> dict[str, object]:
-    global RUNTIME_SPEC
+def load_spec_json(spec_path: str) -> dict[str, object]:
     with open(spec_path) as f:
-        spec = json.load(f)
-    RUNTIME_SPEC = spec
-    DIRECT_CALL_POSITIONAL_BUILTINS.clear()
-    DIRECT_NEWOBJ_POSITIONAL_BUILTIN_TYPES.clear()
-    DIRECT_GETATTR_BUILTIN_TYPE_ATTRS.clear()
-    DIRECT_GETATTR_BUILTIN_MODULE_ATTRS.clear()
-    DIRECT_CALL_POSITIONAL_MODULE_FUNCTIONS.clear()
+        return cast(dict[str, object], json.load(f))
+
+def resolve_translator_metadata(spec: dict[str, object], semantics_data: dict[str, object]) -> TranslatorMetadata:
+    direct_call_positional_builtins = {}
     for func_name in extract_spec.BUILTIN_FUNCTIONS:
         call_range = extract_spec.get_builtin_function_call_range(spec, func_name)
         if call_range is not None:
-            DIRECT_CALL_POSITIONAL_BUILTINS[func_name] = call_range
+            direct_call_positional_builtins[func_name] = call_range
+    direct_newobj_positional_builtin_types = {}
+    direct_getattr_builtin_type_attrs = {}
     for type_name in extract_spec.BUILTIN_TYPES:
-        DIRECT_GETATTR_BUILTIN_TYPE_ATTRS[type_name] = extract_spec.get_type_attr_kinds(spec, type_name)
+        direct_getattr_builtin_type_attrs[type_name] = extract_spec.get_type_attr_kinds(spec, type_name)
         if type_name in DIRECT_NEWOBJ_POSITIONAL_SUPPORTED_BUILTIN_TYPES:
             call_range = extract_spec.get_type_newobj_call_range(spec, type_name)
             if call_range is not None:
-                DIRECT_NEWOBJ_POSITIONAL_BUILTIN_TYPES[type_name] = call_range
+                direct_newobj_positional_builtin_types[type_name] = call_range
+    direct_getattr_builtin_module_attrs = {}
     for module_name in extract_spec.BUILTIN_MODULES:
-        DIRECT_GETATTR_BUILTIN_MODULE_ATTRS[module_name] = extract_spec.get_module_attr_kinds(spec, module_name)
+        direct_getattr_builtin_module_attrs[module_name] = extract_spec.get_module_attr_kinds(spec, module_name)
+    direct_call_positional_module_functions = {}
     for module_name in extract_spec.BUILTIN_MODULES:
-        DIRECT_CALL_POSITIONAL_MODULE_FUNCTIONS[module_name] = {}
+        direct_call_positional_module_functions[module_name] = {}
         for (func_name, _) in extract_spec.iter_module_functions(spec, module_name):
             call_range = extract_spec.get_module_function_call_range(spec, module_name, func_name)
             if call_range is not None:
-                DIRECT_CALL_POSITIONAL_MODULE_FUNCTIONS[module_name][func_name] = call_range
-    return spec
+                direct_call_positional_module_functions[module_name][func_name] = call_range
+    return TranslatorMetadata(
+        spec=spec,
+        builtin_function_annotations=cast(dict[str, dict[str, object]], semantics_data['builtin_function_annotations']),
+        builtin_method_annotations=cast(dict[str, dict[str, dict[str, object]]], semantics_data['builtin_method_annotations']),
+        runtime_function_annotations=cast(dict[str, dict[str, object]], semantics_data['runtime_function_annotations']),
+        builtin_function_return_types=cast(dict[str, str], semantics_data['builtin_function_return_types']),
+        builtin_method_return_types=cast(dict[str, dict[str, str]], semantics_data['builtin_method_return_types']),
+        builtin_method_return_java_types={
+            tuple(key.split('.', 1)): value
+            for (key, value) in cast(dict[str, str], semantics_data['builtin_method_return_java_types']).items()
+        },
+        runtime_function_return_java_types=cast(dict[str, str], semantics_data['runtime_function_return_java_types']),
+        direct_call_positional_builtins=direct_call_positional_builtins,
+        direct_newobj_positional_builtin_types=direct_newobj_positional_builtin_types,
+        direct_getattr_builtin_type_attrs=direct_getattr_builtin_type_attrs,
+        direct_getattr_builtin_module_attrs=direct_getattr_builtin_module_attrs,
+        direct_call_positional_module_functions=direct_call_positional_module_functions,
+    )
+
+def load_translator_metadata(spec_path: str, semantics_path: str) -> TranslatorMetadata:
+    return resolve_translator_metadata(load_spec_json(spec_path), load_semantics_json(semantics_path))
 
 def build_semantics_data(pythonj_builtins_node: ast.Module, pythonj_runtime_node: ast.Module) -> dict[str, object]:
     builtin_function_return_types = collect_top_level_exact_return_types(pythonj_builtins_node)
@@ -3463,28 +3477,21 @@ def load_semantics_json(path: str) -> dict[str, object]:
         return cast(dict[str, object], json.load(f))
 
 def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -> None:
-    spec = load_runtime_spec(spec_path)
-
     pythonj_builtins_node = parse_python_module('pythonj_builtins.py')
     pythonj_runtime_node = parse_python_module('pythonj_runtime.py')
     semantics_data = build_semantics_data(pythonj_builtins_node, pythonj_runtime_node)
-    pythonj_builtins_return_types = cast(dict[str, str], semantics_data['builtin_function_return_types'])
-    pythonj_builtins_method_return_types = cast(dict[str, dict[str, str]], semantics_data['builtin_method_return_types'])
+    metadata = resolve_translator_metadata(load_spec_json(spec_path), semantics_data)
+    spec = metadata.spec
     (pythonj_builtins_node, builtins_scope_infos) = analyze_and_simplify(
-        pythonj_builtins_node, pythonj_builtins_return_types, pythonj_builtins_method_return_types)
+        pythonj_builtins_node, metadata=metadata)
     (pythonj_runtime_node, runtime_scope_infos) = analyze_and_simplify(
-        pythonj_runtime_node, pythonj_builtins_return_types, pythonj_builtins_method_return_types)
+        pythonj_runtime_node, metadata=metadata)
     pythonj_builtins_funcs = get_top_level_functions(pythonj_builtins_node)
-    pythonj_builtins_method_return_java_types = {
-        tuple(key.split('.', 1)): value
-        for (key, value) in cast(dict[str, str], semantics_data['builtin_method_return_java_types']).items()
-    }
     pythonj_builtins_classes = {
         class_name: {x.name: x for x in class_node.body if isinstance(x, ast.FunctionDef)}
         for (class_name, class_node) in {x.name: x for x in pythonj_builtins_node.body if isinstance(x, ast.ClassDef)}.items()
     }
     pythonj_runtime_funcs = get_top_level_functions(pythonj_runtime_node)
-    pythonj_runtime_return_java_types = cast(dict[str, str], semantics_data['runtime_function_return_java_types'])
     write_semantics_json(semantics_path, semantics_data)
     pool = ir.ConstantPool('PyRuntime')
     with open(java_path, 'w') as f:
@@ -3655,8 +3662,7 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
                         (helper_classes, helper_method) = translate_python_method_impl(
                             pythonj_builtins_node, name, method_name, pool,
                             class_funcs=pythonj_builtins_classes, scope_infos=builtins_scope_infos,
-                            builtin_function_return_types=pythonj_builtins_return_types,
-                            builtin_method_return_types=pythonj_builtins_method_return_types,
+                            metadata=metadata,
                         )
                         python_helper_classes.extend(helper_classes)
                         python_helper_methods.append(helper_method)
@@ -3684,7 +3690,7 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
                         bind_args = [ir.Identifier('self')] + bind_args
                     call_positional_return_java_type = 'PyObject'
                     if method_impl_target is not None:
-                        call_positional_return_java_type = pythonj_builtins_method_return_java_types.get(
+                        call_positional_return_java_type = metadata.builtin_method_return_java_types.get(
                             (name.rsplit('.', 1)[-1], method_name),
                             'PyObject',
                         )
@@ -3701,7 +3707,7 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
                             method_impl_target.rsplit('.', 1)[0],
                             method_impl_target.rsplit('.', 1)[1],
                             call_args,
-                            pythonj_builtins_method_return_java_types.get((name.rsplit('.', 1)[-1], method_name), ir.JAVA_TYPE_UNKNOWN),
+                            metadata.builtin_method_return_java_types.get((name.rsplit('.', 1)[-1], method_name), ir.JAVA_TYPE_UNKNOWN),
                         )
                     else:
                         call_expr = ir.MethodCall(ir.Identifier(method_target), f'pymethod_{method_name}', bind_args)
@@ -3716,7 +3722,7 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
                                 method_impl_target.rsplit('.', 1)[0],
                                 method_impl_target.rsplit('.', 1)[1],
                                 call_args,
-                                pythonj_builtins_method_return_java_types.get((name.rsplit('.', 1)[-1], method_name), ir.JAVA_TYPE_UNKNOWN),
+                                metadata.builtin_method_return_java_types.get((name.rsplit('.', 1)[-1], method_name), ir.JAVA_TYPE_UNKNOWN),
                             )
                         else:
                             if kind == 'method':
@@ -3737,9 +3743,8 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
         for func_name in sorted(pythonj_runtime_funcs):
             (helper_classes, helper_method) = translate_python_runtime_impl(
                 pythonj_runtime_node, func_name, pool, funcs=pythonj_runtime_funcs, scope_infos=runtime_scope_infos,
-                builtin_function_return_types=pythonj_builtins_return_types,
-                builtin_method_return_types=pythonj_builtins_method_return_types,
-                python_helper_return_java_types=pythonj_runtime_return_java_types,
+                metadata=metadata,
+                python_helper_return_java_types=metadata.runtime_function_return_java_types,
             )
             python_helper_classes.extend(helper_classes)
             python_helper_methods.append(helper_method)
@@ -3747,8 +3752,7 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
         for type_name in sorted(PYTHON_AUTHORED_CONSTRUCTOR_IMPLS):
             (helper_classes, helper_method) = translate_python_constructor_impl(
                 pythonj_builtins_node, type_name, pool, funcs=pythonj_builtins_funcs, scope_infos=builtins_scope_infos,
-                builtin_function_return_types=pythonj_builtins_return_types,
-                builtin_method_return_types=pythonj_builtins_method_return_types,
+                metadata=metadata,
             )
             python_helper_classes.extend(helper_classes)
             emitted_name = f'{type_name}__newobj_impl'
@@ -3778,8 +3782,7 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
         for func_name in sorted(PYTHON_AUTHORED_IMPLS['builtins']):
             (helper_classes, helper_method) = translate_python_builtin_impl(
                 pythonj_builtins_node, func_name, pool, funcs=pythonj_builtins_funcs, scope_infos=builtins_scope_infos,
-                builtin_function_return_types=pythonj_builtins_return_types,
-                builtin_method_return_types=pythonj_builtins_method_return_types,
+                metadata=metadata,
             )
             python_helper_classes.extend(helper_classes)
             python_helper_methods.append(helper_method)
@@ -3866,7 +3869,7 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
             if func_name in PYTHON_AUTHORED_IMPLS['builtins']:
                 call_target = 'PyRuntime'
                 call_positional_return_java_type = exact_builtin_type_to_java_type(type_name) if (
-                    (type_name := pythonj_builtins_return_types.get(func_name)) is not None
+                    (type_name := metadata.builtin_function_return_types.get(func_name)) is not None
                 ) else 'PyObject'
             else:
                 call_target = 'PyBuiltinFunctionsImpl'
@@ -3911,13 +3914,10 @@ def translate_python_to_java(spec_path: str, semantics_path: str, py_path: str, 
 
 def translate_python_source_to_java(spec_path: str, semantics_path: str, py_source: str, source_name: str, java_path: str,
                                     argv0: Optional[str] = None) -> None:
-    load_runtime_spec(spec_path)
-    semantics_data = load_semantics_json(semantics_path)
-    builtin_function_return_types = cast(dict[str, str], semantics_data['builtin_function_return_types'])
-    builtin_method_return_types = cast(dict[str, dict[str, str]], semantics_data['builtin_method_return_types'])
+    metadata = load_translator_metadata(spec_path, semantics_path)
     (node, scope_infos) = analyze_and_simplify(
-        ast.parse(py_source, filename=source_name), builtin_function_return_types, builtin_method_return_types)
-    visitor = LoweringVisitor(source_name, scope_infos, scope_infos[node])
+        ast.parse(py_source, filename=source_name), metadata=metadata)
+    visitor = LoweringVisitor(source_name, scope_infos, scope_infos[node], metadata)
     visitor.visit(node)
     if visitor.n_errors:
         raise SystemExit(f'Translation failed: {visitor.n_errors} errors')
