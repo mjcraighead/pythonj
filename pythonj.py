@@ -1901,7 +1901,7 @@ class LoweringVisitor(ast.NodeVisitor):
                 (min_args, max_args) = self.metadata.direct_newobj_positional_builtin_types[func.name]
                 if min_args <= len(node.args) <= max_args:
                     java_name = func.java_name
-                    return ir.StaticMethodCall(
+                    return ir.static_method_call(
                         java_name,
                         'newObjPositional',
                         self.emit_plain_positional_args(node.args, max_args),

@@ -783,10 +783,21 @@ def py_format(obj: Expr, spec: Expr) -> Expr:
             return obj
     return CreateObject('PyString', [MethodCall(obj, 'format', [unbox_str(spec)], 'String')])
 
+def py_index(obj: Expr) -> Expr:
+    if obj.java_type() == 'PyInt':
+        return unbox_int(obj)
+    return MethodCall(obj, 'indexValue', [], 'long')
+
 def static_method_call(class_name: str, method: str, args: list[Expr], return_type: str = JAVA_TYPE_UNKNOWN) -> Expr:
     match (class_name, method):
         case ('PyBool', 'create') if isinstance(args[0], Bool):
             return PyConstant(args[0].value)
+        case ('PyRange', 'newObjPositional') if isinstance(args[1], Null) and isinstance(args[2], Null):
+            return CreateObject('PyRange', [IntLiteral(0, 'L'), py_index(args[0]), IntLiteral(1, 'L')])
+        case ('PyRange', 'newObjPositional') if isinstance(args[2], Null):
+            return CreateObject('PyRange', [py_index(args[0]), py_index(args[1]), IntLiteral(1, 'L')])
+        case ('PyRange', 'newObjPositional'):
+            return CreateObject('PyRange', [py_index(args[i]) for i in range(3)])
         case ('PyType', 'newObjPositional') if isinstance(args[1], Null) and isinstance(args[2], Null):
             return MethodCall(args[0], 'type', [], 'PyType')
         case ('Runtime', 'pythonjAbs'):
