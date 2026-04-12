@@ -1337,9 +1337,7 @@ class LoweringVisitor(ast.NodeVisitor):
     python_helper_return_java_types: dict[str, str]
     final_global_function_classes: dict[str, str]
 
-    def __init__(self, path: str, scope_infos: dict[ast.AST, ScopeInfo], module_info: ScopeInfo,
-                 builtin_function_return_types: Optional[dict[str, str]] = None,
-                 builtin_method_return_types: Optional[dict[str, dict[str, str]]] = None):
+    def __init__(self, path: str, scope_infos: dict[ast.AST, ScopeInfo], module_info: ScopeInfo):
         self.path = path
         self.n_errors = 0
         self.n_functions = 0
@@ -1535,6 +1533,53 @@ class LoweringVisitor(ast.NodeVisitor):
 
     def exact_builtin_type_of_expr(self, expr: ir.Expr) -> Optional[str]:
         return JAVA_BUILTIN_TYPES.get(expr.java_type())
+
+    def call_has_only_plain_positional_args(self, node: ast.Call) -> bool:
+        return not node.keywords and not any(isinstance(arg, ast.Starred) for arg in node.args)
+
+    def emit_plain_positional_args(self, args: list[ast.expr], max_args: int) -> list[ir.Expr]:
+        return [*([self.visit(arg) for arg in args]), *([ir.Null()] * (max_args - len(args)))]
+
+    def expr_exact_java_type(self, node: ast.expr) -> str:
+        if (type_name := get_expr_exact_builtin_type(node)) is None:
+            return ir.JAVA_TYPE_UNKNOWN
+        return exact_builtin_type_to_java_type(type_name)
+
+    def emit_call_positional(self, func: ir.Expr, node: ast.Call, max_args: int, *, return_node: Optional[ast.expr] = None) -> ir.Expr:
+        return ir.MethodCall(
+            func,
+            'callPositional',
+            self.emit_plain_positional_args(node.args, max_args),
+            self.expr_exact_java_type(node if return_node is None else return_node),
+        )
+
+    def try_emit_direct_builtin_method_call(self, node: ast.Call) -> Optional[ir.Expr]:
+        if not isinstance(node.func, ast.Attribute):
+            return None
+        if not self.call_has_only_plain_positional_args(node):
+            return None
+        receiver = self.visit(node.func.value)
+        type_name = get_expr_exact_builtin_type(node.func.value)
+        if type_name is None or RUNTIME_SPEC is None:
+            return None
+        attr_kind = DIRECT_GETATTR_BUILTIN_TYPE_ATTRS.get(type_name, {}).get(node.func.attr)
+        if attr_kind != 'method':
+            return None
+        call_range = extract_spec.get_method_call_range(RUNTIME_SPEC, type_name, node.func.attr)
+        if call_range is None:
+            return None
+        (min_args, max_args) = call_range
+        if not (min_args <= len(node.args) <= max_args):
+            return None
+        java_name = extract_spec.BUILTIN_TYPES[type_name]
+        if receiver.java_type() != java_name:
+            receiver = ir.CastExpr(java_name, receiver)
+        return ir.MethodCall(
+            ir.Identifier(f'{java_name}Method_{node.func.attr}'),
+            'callPositional',
+            [receiver, *self.emit_plain_positional_args(node.args, max_args)],
+            self.expr_exact_java_type(node),
+        )
 
     def emit_exact_type_binop(self, op: str, lhs: ir.Expr, rhs: ir.Expr) -> Optional[ir.Expr]:
         lhs_type = self.exact_builtin_type_of_expr(lhs)
@@ -1797,110 +1842,64 @@ class LoweringVisitor(ast.NodeVisitor):
         if (exception := self.emit_builtin_exception_call(node)) is not None:
             return exception
         if (isinstance(node.func, ast.Lambda) and
-            not node.keywords and
-            not any(isinstance(arg, ast.Starred) for arg in node.args)):
+            self.call_has_only_plain_positional_args(node)):
             params = self.get_supported_params(node.lineno, node.func.args)
             (min_args, max_args) = cast(tuple[int, int], extract_spec.get_positional_call_range(params))
             if min_args <= len(node.args) <= max_args:
-                return ir.MethodCall(
-                    self.visit(node.func),
-                    'callPositional',
-                    [*([self.visit(arg) for arg in node.args]), *([ir.Null()] * (max_args - len(node.args)))],
-                )
+                return self.emit_call_positional(self.visit(node.func), node, max_args)
         if (isinstance(node.func, ast.Name) and
             self.name_resolves_to_final_top_level_function(node.func) and
-            not node.keywords and
-            not any(isinstance(arg, ast.Starred) for arg in node.args)):
+            self.call_has_only_plain_positional_args(node)):
             (min_args, max_args) = self.module_scope().info.initial_final_function_call_ranges[node.func.id]
             if min_args <= len(node.args) <= max_args:
-                return ir.MethodCall(
-                    self.final_top_level_function_expr(node.func.id),
-                    'callPositional',
-                    [*([self.visit(arg) for arg in node.args]), *([ir.Null()] * (max_args - len(node.args)))],
-                    exact_builtin_type_to_java_type(type_name) if (
-                        (type_name := get_expr_exact_builtin_type(node)) is not None
-                    ) else ir.JAVA_TYPE_UNKNOWN,
-                )
+                return self.emit_call_positional(self.final_top_level_function_expr(node.func.id), node, max_args)
         if (isinstance(node.func, ast.Name) and
-            not node.keywords and
-            not any(isinstance(arg, ast.Starred) for arg in node.args)):
+            self.call_has_only_plain_positional_args(node)):
             func = self.visit(node.func)
             if isinstance(func, ir.PyBuiltinType) and func.name == 'type' and len(node.args) <= 3:
                 return ir.static_method_call(
                     'PyType',
                     'newObjPositional',
-                    [*([self.visit(arg) for arg in node.args]), *([ir.Null()] * (3 - len(node.args)))],
+                    self.emit_plain_positional_args(node.args, 3),
                 )
             if isinstance(func, ir.PyBuiltinType) and func.name in DIRECT_NEWOBJ_POSITIONAL_BUILTIN_TYPES:
                 (min_args, max_args) = DIRECT_NEWOBJ_POSITIONAL_BUILTIN_TYPES[func.name]
                 if min_args <= len(node.args) <= max_args:
                     java_name = func.java_name
-                return ir.StaticMethodCall(
-                    java_name,
-                    'newObjPositional',
-                    [*([self.visit(arg) for arg in node.args]), *([ir.Null()] * (max_args - len(node.args)))],
-                    java_name,
-                )
+                    return ir.StaticMethodCall(
+                        java_name,
+                        'newObjPositional',
+                        self.emit_plain_positional_args(node.args, max_args),
+                        java_name,
+                    )
         if self.allow_intrinsics and isinstance(node.func, ast.Name) and node.func.id in INTRINSIC_SIGNATURES:
             assert not node.keywords, (node.func.id, node.keywords)
             return self.emit_intrinsic_call(node.func.id, node.args)
         func: Optional[ir.Expr] = None
-        if (isinstance(node.func, ast.Attribute) and
-            not node.keywords and
-            not any(isinstance(arg, ast.Starred) for arg in node.args)):
+        if (direct_method := self.try_emit_direct_builtin_method_call(node)) is not None:
+            return direct_method
+        if isinstance(node.func, ast.Attribute):
             receiver = self.visit(node.func.value)
-            type_name = get_expr_exact_builtin_type(node.func.value)
-            if type_name is not None and RUNTIME_SPEC is not None:
-                attr_kind = DIRECT_GETATTR_BUILTIN_TYPE_ATTRS.get(type_name, {}).get(node.func.attr)
-                if attr_kind == 'method':
-                    call_range = extract_spec.get_method_call_range(RUNTIME_SPEC, type_name, node.func.attr)
-                    if call_range is not None:
-                        (min_args, max_args) = call_range
-                        if min_args <= len(node.args) <= max_args:
-                            java_name = extract_spec.BUILTIN_TYPES[type_name]
-                            if receiver.java_type() != java_name:
-                                receiver = ir.CastExpr(java_name, receiver)
-                            return ir.MethodCall(
-                                ir.Identifier(f'{java_name}Method_{node.func.attr}'),
-                                'callPositional',
-                                [receiver, *([self.visit(arg) for arg in node.args]), *([ir.Null()] * (max_args - len(node.args)))],
-                                exact_builtin_type_to_java_type(method_return_type) if (
-                                    (method_return_type := get_expr_exact_builtin_type(node)) is not None
-                                ) else ir.JAVA_TYPE_UNKNOWN,
-                            )
-            func = self.emit_attribute(receiver, node.func.attr, type_name)
+            func = self.emit_attribute(receiver, node.func.attr, get_expr_exact_builtin_type(node.func.value))
         if func is None:
             func = self.visit(node.func)
         if (isinstance(func, ir.PyBuiltinFunction) and
             func.name in DIRECT_CALL_POSITIONAL_BUILTINS and
-            not node.keywords and
-            not any(isinstance(arg, ast.Starred) for arg in node.args)):
+            self.call_has_only_plain_positional_args(node)):
             (min_args, max_args) = DIRECT_CALL_POSITIONAL_BUILTINS[func.name]
             if min_args <= len(node.args) <= max_args:
                 if func.name in {'abs', 'hash', 'len', 'repr'}:
                     method_name = INTRINSIC_SIGNATURES[f'__pythonj_{func.name}__'][0]
                     return ir.static_method_call('Runtime', method_name, [self.visit(node.args[0])])
-                return ir.MethodCall(
-                    func,
-                    'callPositional',
-                    [*([self.visit(arg) for arg in node.args]), *([ir.Null()] * (max_args - len(node.args)))],
-                    exact_builtin_type_to_java_type(type_name) if (
-                        (type_name := get_expr_exact_builtin_type(node)) is not None
-                    ) else ir.JAVA_TYPE_UNKNOWN,
-                )
+                return self.emit_call_positional(func, node, max_args)
         if (isinstance(func, ir.PyBuiltinFunction) and
             '.' in func.name and
-            not node.keywords and
-            not any(isinstance(arg, ast.Starred) for arg in node.args)):
+            self.call_has_only_plain_positional_args(node)):
             (module_name, func_name) = func.name.split('.', 1)
             if func_name in DIRECT_CALL_POSITIONAL_MODULE_FUNCTIONS.get(module_name, {}):
                 (min_args, max_args) = DIRECT_CALL_POSITIONAL_MODULE_FUNCTIONS[module_name][func_name]
                 if min_args <= len(node.args) <= max_args:
-                    return ir.MethodCall(
-                        func,
-                        'callPositional',
-                        [*([self.visit(arg) for arg in node.args]), *([ir.Null()] * (max_args - len(node.args)))],
-                    )
+                    return self.emit_call_positional(func, node, max_args)
         if isinstance(node.func, ast.Name) and node.func.id in self.python_helper_names:
             if node.keywords or any(isinstance(arg, ast.Starred) for arg in node.args):
                 self.error(node.lineno, 'same-file helper calls only support plain positional args')
@@ -3012,13 +3011,7 @@ def translate_python_impl_node(node: ast.Module, func: ast.FunctionDef, emitted_
                                python_helper_return_java_types: Optional[dict[str, str]] = None) -> tuple[list[ir.ClassDecl], ir.MethodDecl]:
     if scope_infos is None:
         (node, scope_infos) = analyze_and_simplify(node, builtin_function_return_types, builtin_method_return_types)
-    visitor = LoweringVisitor(
-        display_name,
-        scope_infos,
-        scope_infos[node],
-        builtin_function_return_types,
-        builtin_method_return_types,
-    )
+    visitor = LoweringVisitor(display_name, scope_infos, scope_infos[node])
     visitor.pool = pool
     visitor.allow_intrinsics = True
     if python_helper_names is not None:
@@ -3825,13 +3818,7 @@ def translate_python_source_to_java(spec_path: str, py_source: str, source_name:
         ast.parse(py_source, filename=source_name), builtin_function_return_types, builtin_method_return_types)
     (pythonj_builtins_node, _) = analyze_and_simplify(
         pythonj_builtins_node, builtin_function_return_types, builtin_method_return_types)
-    visitor = LoweringVisitor(
-        source_name,
-        scope_infos,
-        scope_infos[node],
-        builtin_function_return_types,
-        builtin_method_return_types,
-    )
+    visitor = LoweringVisitor(source_name, scope_infos, scope_infos[node])
     visitor.visit(node)
     if visitor.n_errors:
         raise SystemExit(f'Translation failed: {visitor.n_errors} errors')
