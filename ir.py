@@ -18,6 +18,7 @@ JAVA_FORBIDDEN_IDENTIFIERS = {
 }
 JAVA_TYPE_UNKNOWN = 'unknown'
 STATIC_METHOD_RETURN_TYPES = {
+    ('Long', 'toString'): 'String',
     ('PyBool', 'create'): 'PyBool',
     ('PyBuiltinFunctionsImpl', 'pyfunc_ascii'): 'PyString',
     ('PyInt', 'addUnboxed'): 'long',
@@ -38,7 +39,6 @@ STATIC_METHOD_RETURN_TYPES = {
     ('Runtime', 'pythonjIsInstance'): 'PyBool',
     ('Runtime', 'pythonjIsSubclass'): 'PyBool',
     ('Runtime', 'pythonjUnsupported'): 'void',
-    ('String', 'valueOf'): 'String',
 }
 
 def _int_name(i: int) -> str:
@@ -779,7 +779,7 @@ def py_format(obj: Expr, spec: Expr) -> Expr:
     if isinstance(spec, PyConstant) and isinstance(spec.value, str) and not spec.value:
         java_type = obj.java_type()
         if java_type == 'PyInt':
-            return CreateObject('PyString', [static_method_call('String', 'valueOf', [unbox_int(obj)])])
+            return CreateObject('PyString', [static_method_call('Long', 'toString', [unbox_int(obj)])])
         if java_type == 'PyString':
             return obj
     return CreateObject('PyString', [MethodCall(obj, 'format', [unbox_str(spec)], 'String')])
@@ -860,7 +860,7 @@ def static_method_call(class_name: str, method: str, args: list[Expr], return_ty
         case ('Runtime', 'pythonjIntJavaLeadingZeros'):
             return CreateObject('PyInt', [CastExpr('long', StaticMethodCall('Long', 'numberOfLeadingZeros', [unbox_int(args[0])], 'int'))])
         case ('Runtime', 'pythonjIntJavaStr'):
-            return CreateObject('PyString', [StaticMethodCall('Long', 'toString', [unbox_int(args[0])], 'String')])
+            return CreateObject('PyString', [static_method_call('Long', 'toString', [unbox_int(args[0])])])
         case ('Runtime', 'pythonjIter'):
             return iter(args[0])
         case ('Runtime', 'pythonjLen'):
