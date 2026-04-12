@@ -476,7 +476,7 @@ def _is_scalar_json_value(value: object) -> bool:
 def _is_leaf_json_value(value: object) -> bool:
     if _is_scalar_json_value(value):
         return True
-    if isinstance(value, list):
+    if isinstance(value, (list, tuple)):
         return all(_is_scalar_json_value(x) for x in value)
     if isinstance(value, dict):
         return all(isinstance(k, str) and _is_scalar_json_value(v) for (k, v) in value.items())
@@ -484,9 +484,8 @@ def _is_leaf_json_value(value: object) -> bool:
 
 def _write_pretty_json(f, value: object, indent: int = 0) -> None:
     if _is_leaf_json_value(value):
-        f.write(json.dumps(value, ensure_ascii=True, separators=(', ', ': ')))
-        return
-    if isinstance(value, list):
+        json.dump(value, f, ensure_ascii=True)
+    elif isinstance(value, (list, tuple)):
         f.write('[\n')
         for (i, item) in enumerate(value):
             f.write('  ' * (indent + 1))
@@ -496,13 +495,12 @@ def _write_pretty_json(f, value: object, indent: int = 0) -> None:
             f.write('\n')
         f.write('  ' * indent)
         f.write(']')
-        return
-    if isinstance(value, dict):
+    elif isinstance(value, dict):
         f.write('{\n')
         items = list(value.items())
         for (i, (k, v)) in enumerate(items):
             f.write('  ' * (indent + 1))
-            f.write(json.dumps(k, ensure_ascii=True))
+            json.dump(k, f, ensure_ascii=True)
             f.write(': ')
             _write_pretty_json(f, v, indent + 1)
             if i + 1 != len(items):
@@ -510,8 +508,8 @@ def _write_pretty_json(f, value: object, indent: int = 0) -> None:
             f.write('\n')
         f.write('  ' * indent)
         f.write('}')
-        return
-    assert False, value
+    else:
+        assert False, value
 
 def gen_spec(spec_path: str) -> None:
     spec = {'builtins': _build_builtin_module_entry()}
