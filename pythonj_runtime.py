@@ -5,7 +5,7 @@
 import math
 import _operator
 
-def _init_bound_args(args, max_total: int) -> list:
+def _init_bound_args(args: tuple, max_total: int) -> list:
     args_len = len(args)
     bound_args = []
     i: int = 0
@@ -17,7 +17,7 @@ def _init_bound_args(args, max_total: int) -> list:
         i += 1
     return bound_args
 
-def _find_name(names, kw, start: int) -> int:
+def _find_name(names: tuple, kw: str, start: int) -> int:
     names_len = len(names)
     i: int = start
     while i < names_len:
@@ -56,7 +56,7 @@ def _type_error_user_missing_args(name: str, missing_arg_names) -> TypeError:
 def _type_error_user_posonly_as_keyword(name: str, arg_names: list) -> TypeError:
     return TypeError(f"{name}() got some positional-only arguments passed as keyword arguments: {', '.join(arg_names)!r}")
 
-def require_exact_positional(args_len: int, kwargs, kw_name: str, positional_name: str, n: int, generic_exact_args_style) -> None:
+def require_exact_positional(args_len: int, kwargs: dict, kw_name: str, positional_name: str, n: int, generic_exact_args_style: bool) -> None:
     if kwargs is not __pythonj_null__ and kwargs:
         raise TypeError(f'{kw_name}() takes no keyword arguments')
     if args_len != n:
@@ -67,7 +67,7 @@ def require_exact_positional(args_len: int, kwargs, kw_name: str, positional_nam
         suffix = '' if n == 1 else 's'
         raise TypeError(f'{positional_name} expected {n} argument{suffix}, got {args_len}')
 
-def require_min_max_positional(args_len: int, kwargs, kw_name: str, positional_name: str, min_args: int, max_args: int) -> None:
+def require_min_max_positional(args_len: int, kwargs: dict, kw_name: str, positional_name: str, min_args: int, max_args: int) -> None:
     if kwargs is not __pythonj_null__ and kwargs:
         raise TypeError(f'{kw_name}() takes no keyword arguments')
     if args_len < min_args:
@@ -77,7 +77,7 @@ def require_min_max_positional(args_len: int, kwargs, kw_name: str, positional_n
         suffix = '' if max_args == 1 else 's'
         raise TypeError(f'{positional_name} expected at most {max_args} argument{suffix}, got {args_len}')
 
-def bind_min_max_positional_or_keyword(args, kwargs: dict, kw_name: str, positional_name: str, positional_names, posonly_count: int, kwonly_names, min_args: int, max_positional: int, max_total: int, min_positional_style, exact_args_style) -> list:
+def bind_min_max_positional_or_keyword(args: tuple, kwargs: dict, kw_name: str, positional_name: str, positional_names: tuple, posonly_count: int, kwonly_names: tuple, min_args: int, max_positional: int, max_total: int, min_positional_style: bool, exact_args_style: bool) -> list:
     args_len = len(args)
     if exact_args_style and args_len != min_args:
         suffix = '' if min_args == 1 else 's'
@@ -129,7 +129,7 @@ def bind_min_max_positional_or_keyword(args, kwargs: dict, kw_name: str, positio
 
     return bound_args
 
-def bind_varargs_and_kwonly(kwargs: dict, kw_name: str, kwonly_names) -> list:
+def bind_varargs_and_kwonly(kwargs: dict, kw_name: str, kwonly_names: tuple) -> list:
     bound_args = [__pythonj_null__] * len(kwonly_names)
 
     if kwargs is not __pythonj_null__ and kwargs:
@@ -142,7 +142,7 @@ def bind_varargs_and_kwonly(kwargs: dict, kw_name: str, kwonly_names) -> list:
 
     return bound_args
 
-def require_user_exact_positional(args_len: int, kwargs, name: str, arg_names) -> None:
+def require_user_exact_positional(args_len: int, kwargs: dict, name: str, arg_names: tuple) -> None:
     n_args = len(arg_names)
 
     if kwargs is not __pythonj_null__ and kwargs:
@@ -165,7 +165,7 @@ def require_user_exact_positional(args_len: int, kwargs, name: str, arg_names) -
             raise TypeError(f'{name}() takes {n_args} positional argument{arg_s} but {args_len} {was_were} given')
         raise _type_error_user_missing_args(name, arg_names[args_len:n_args])
 
-def require_user_min_max_positional(args_len: int, kwargs, name: str, arg_names, n_required: int) -> None:
+def require_user_min_max_positional(args_len: int, kwargs: dict, name: str, arg_names: tuple, n_required: int) -> None:
     n_args = len(arg_names)
 
     if kwargs is not __pythonj_null__ and kwargs:
@@ -187,7 +187,7 @@ def require_user_min_max_positional(args_len: int, kwargs, name: str, arg_names,
         was_were = 'was' if args_len == 1 else 'were'
         raise TypeError(f'{name}() takes from {n_required} to {n_args} positional arguments but {args_len} {was_were} given')
 
-def bind_user_function(args, kwargs: dict, name: str, arg_names, n_required: int, posonly_count: int) -> list:
+def bind_user_function(args: tuple, kwargs: dict, name: str, arg_names: tuple, n_required: int, posonly_count: int) -> list:
     args_len = len(args)
     n_args = len(arg_names)
     bound_args = _init_bound_args(args, n_args)
