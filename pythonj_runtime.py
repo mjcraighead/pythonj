@@ -499,7 +499,7 @@ def pyj_str_parse_spec(spec) -> tuple:
 
     return (fill, align, width, precision)
 
-def pyj_float_special_text(value: float, type_char: str) -> str:
+def _pyj_float_special_text(value: float, type_char: str) -> str:
     upper: bool = type_char == 'E' or type_char == 'F' or type_char == 'G'
     if value != value:
         text = 'NAN' if upper else 'nan'
@@ -579,36 +579,145 @@ def _pyj_float_apply_zero_fill(text, grouping, width) -> str:
 
     return _pyj_format_zero_fill_grouped(sign, '', integer_digits, grouping, 3, fractional_suffix + exp_suffix, width)
 
-def pyj_float_finish_text(fill, align, sign, z, width, grouping, value, magnitude_text) -> str:
+def _pyj_float_finish_text(fill, align, sign, z, width, grouping, value, magnitude_text) -> str:
     text = _pyj_float_sign_prefix(value, sign, z, magnitude_text) + magnitude_text
     if align == '=' and fill == '0' and width is not None:
         return _pyj_float_apply_zero_fill(text, grouping, width)
     return _pyj_format_apply_width(text, fill, align, width, '>')
+
+def _pyj_replace_commas_with_underscores(text: str) -> str:
+    out = ''
+    for c in text:
+        out += '_' if c == ',' else c
+    return out
+
+def _pyj_trim_fixed_fraction(text: str) -> str:
+    while text.endswith('0') and not text.endswith('.0'):
+        text = text[:-1]
+    return text
+
+def _pyj_float_python_style_finite_str(value: float) -> str:
+    text = __pythonj_float_java_str__(value)
+    e_index = text.find('E')
+    if e_index == -1:
+        return text
+
+    sign = ''
+    if text.startswith('-'):
+        sign = '-'
+        text = text[1:]
+        e_index -= 1
+
+    mantissa = text[:e_index]
+    exponent = int(text[e_index + 1:])
+    digits = ''
+    for c in mantissa:
+        if c != '.':
+            digits += c
+    dot_index = mantissa.find('.')
+    fractional_digits = 0 if dot_index == -1 else len(mantissa) - dot_index - 1
+
+    if -4 <= exponent < 16:
+        decimal_pos = len(digits) - fractional_digits + exponent
+        if decimal_pos <= 0:
+            ret = '0.' + ('0' * (-decimal_pos)) + digits
+        elif decimal_pos >= len(digits):
+            ret = digits + ('0' * (decimal_pos - len(digits))) + '.0'
+        else:
+            ret = digits[:decimal_pos] + '.' + digits[decimal_pos:]
+        return sign + _pyj_trim_fixed_fraction(ret)
+
+    exp_digits = str(abs(exponent))
+    if len(exp_digits) < 2:
+        exp_digits = '0' + exp_digits
+    if mantissa.endswith('.0'):
+        mantissa = mantissa[:-2]
+    return sign + mantissa + 'e' + ('+' if exponent >= 0 else '-') + exp_digits
+
+def pyj_float_str(value: float) -> str:
+    import math
+    if math.isnan(value):
+        return 'nan'
+    if math.isfinite(value):
+        return _pyj_float_python_style_finite_str(value)
+    return '-inf' if math.copysign(1.0, value) < 0.0 else 'inf'
+
+def _pyj_float_format_finite_core(value: float, alt: bool, grouping, precision, type_char: str) -> str:
+    assert value >= 0.0
+    postprocess_alt = False
+    if type_char == '':
+        if precision is None and grouping is None and not alt:
+            return pyj_float_str(value)
+        type_char = 'g'
+    elif type_char == 'n':
+        type_char = 'g'
+    elif type_char == 'F':
+        type_char = 'f'
+
+    java_type = type_char
+    if alt and (java_type == 'g' or java_type == 'G'):
+        postprocess_alt = True
+        alt = False
+
+    fmt = '%'
+    if grouping is not None:
+        fmt += ','
+    if alt:
+        fmt += '#'
+    if precision is not None:
+        fmt += f'.{precision}'
+    fmt += java_type
+
+    ret = __pythonj_float_java_format__(fmt, value)
+    if grouping == '_':
+        ret = _pyj_replace_commas_with_underscores(ret)
+    if java_type == 'g' or java_type == 'G':
+        exp_index = ret.find('e')
+        if exp_index == -1:
+            exp_index = ret.find('E')
+        exp_suffix = ''
+        mantissa = ret
+        if exp_index != -1:
+            mantissa = ret[:exp_index]
+            exp_suffix = ret[exp_index:]
+        dot_index = mantissa.find('.')
+        if dot_index != -1:
+            if not postprocess_alt:
+                i = len(mantissa)
+                while i > dot_index + 1 and mantissa[i - 1] == '0':
+                    i -= 1
+                if i == dot_index + 1 and mantissa[dot_index] == '.':
+                    i -= 1
+                mantissa = mantissa[:i]
+        elif postprocess_alt:
+            mantissa += '.'
+        ret = mantissa + exp_suffix
+    return ret
 
 def pyj_float_format(value: float, format_spec: str) -> str:
     import math
     fill, align, sign, z, alt, width, grouping, precision, type_char = pyj_float_parse_spec(format_spec)
 
     if not math.isfinite(value):
-        magnitude_text = pyj_float_special_text(value, type_char)
+        magnitude_text = _pyj_float_special_text(value, type_char)
     else:
         core_value = abs(value)
         if type_char == '%':
             core_value *= 100.0
             if not math.isfinite(core_value):
-                magnitude_text = pyj_float_special_text(core_value, type_char)
-                return pyj_float_finish_text(fill, align, sign, z, width, grouping, value, magnitude_text)
+                magnitude_text = _pyj_float_special_text(core_value, type_char)
+                return _pyj_float_finish_text(fill, align, sign, z, width, grouping, value, magnitude_text)
 
         core_type_char = 'f' if type_char == '%' else type_char
         core_grouping = grouping
         if width is not None and grouping is not None and align == '=' and fill == '0':
             core_grouping = None
 
-        magnitude_text = __pythonj_float_format_finite_core__(core_value, alt, core_grouping, precision, core_type_char)
+        magnitude_text = _pyj_float_format_finite_core(core_value, alt, core_grouping, precision, core_type_char)
         if type_char == '%':
             magnitude_text += '%'
 
-    return pyj_float_finish_text(fill, align, sign, z, width, grouping, value, magnitude_text)
+    return _pyj_float_finish_text(fill, align, sign, z, width, grouping, value, magnitude_text)
 
 def pyj_int_format(value, spec) -> str:
     fill, align, sign, alt, width, grouping, type_char = pyj_int_parse_spec(spec)

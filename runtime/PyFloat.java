@@ -3,7 +3,6 @@
 // SPDX-License-Identifier: MIT
 
 import java.nio.charset.StandardCharsets;
-import java.util.Locale;
 
 public final class PyFloat extends PyObject {
     public static final PyFloat nan_singleton = new PyFloat(Double.NaN);
@@ -11,62 +10,6 @@ public final class PyFloat extends PyObject {
     public final double value;
 
     PyFloat(double _value) { value = _value; }
-
-    private static String zeros(int n) {
-        StringBuilder ret = new StringBuilder();
-        for (int i = 0; i < n; i++) {
-            ret.append('0');
-        }
-        return ret.toString();
-    }
-    private static String trimFixedFraction(String s) {
-        while (s.endsWith("0") && !s.endsWith(".0")) {
-            s = s.substring(0, s.length() - 1);
-        }
-        return s;
-    }
-    private static String pythonStyleFiniteStr(double value) {
-        String s = Double.toString(value);
-        int eIndex = s.indexOf('E');
-        if (eIndex == -1) {
-            return s;
-        }
-
-        String sign = "";
-        if (s.startsWith("-")) {
-            sign = "-";
-            s = s.substring(1);
-            eIndex -= 1;
-        }
-
-        String mantissa = s.substring(0, eIndex);
-        int exponent = Integer.parseInt(s.substring(eIndex + 1));
-        String digits = mantissa.replace(".", "");
-        int dotIndex = mantissa.indexOf('.');
-        int fractionalDigits = (dotIndex == -1) ? 0 : (mantissa.length() - dotIndex - 1);
-
-        if ((exponent >= -4) && (exponent < 16)) {
-            int decimalPos = digits.length() - fractionalDigits + exponent;
-            String ret;
-            if (decimalPos <= 0) {
-                ret = "0." + zeros(-decimalPos) + digits;
-            } else if (decimalPos >= digits.length()) {
-                ret = digits + zeros(decimalPos - digits.length()) + ".0";
-            } else {
-                ret = digits.substring(0, decimalPos) + "." + digits.substring(decimalPos);
-            }
-            return sign + trimFixedFraction(ret);
-        }
-
-        String expDigits = Integer.toString(Math.abs(exponent));
-        if (expDigits.length() < 2) {
-            expDigits = "0" + expDigits;
-        }
-        if (mantissa.endsWith(".0")) {
-            mantissa = mantissa.substring(0, mantissa.length() - 2);
-        }
-        return sign + mantissa + "e" + ((exponent >= 0) ? "+" : "-") + expDigits;
-    }
 
     public static double addUnboxed(double lhs, double rhs) { return lhs + rhs; }
     public static double mulUnboxed(double lhs, double rhs) { return lhs * rhs; }
@@ -128,91 +71,6 @@ public final class PyFloat extends PyObject {
         }
         return new PyFloat(ret);
     }
-    private static String strOf(double value) {
-        if (Double.isNaN(value)) {
-            return "nan";
-        } else if (value == Double.POSITIVE_INFINITY) {
-            return "inf";
-        } else if (value == Double.NEGATIVE_INFINITY) {
-            return "-inf";
-        } else {
-            return pythonStyleFiniteStr(value);
-        }
-    }
-    private static String formatFiniteCore(double value, boolean alt, String grouping, Long precision, String typeChar) {
-        assert Double.isFinite(value) && (value >= 0.0) : value;
-        boolean postprocessAlt = false;
-        if (typeChar.isEmpty()) {
-            if ((precision == null) && (grouping == null) && !alt) {
-                return strOf(value);
-            }
-            typeChar = "g";
-        } else if (typeChar.equals("n")) {
-            typeChar = "g";
-        } else if (typeChar.equals("F")) {
-            typeChar = "f";
-        }
-        String javaType = typeChar;
-        if (alt && (javaType.equals("g") || javaType.equals("G"))) {
-            postprocessAlt = true;
-            alt = false;
-        }
-        StringBuilder fmt = new StringBuilder("%");
-        if (grouping != null) {
-            fmt.append(",");
-        }
-        if (alt) {
-            fmt.append("#");
-        }
-        if (precision != null) {
-            fmt.append(".").append(precision);
-        }
-        fmt.append(javaType);
-        String ret = String.format(Locale.ROOT, fmt.toString(), value);
-        if ((grouping != null) && grouping.equals("_")) {
-            ret = ret.replace(',', '_');
-        }
-        if (javaType.equals("g") || javaType.equals("G")) {
-            int expIndex = ret.indexOf('e');
-            if (expIndex == -1) {
-                expIndex = ret.indexOf('E');
-            }
-            String expSuffix = "";
-            String mantissa = ret;
-            if (expIndex != -1) {
-                mantissa = ret.substring(0, expIndex);
-                expSuffix = ret.substring(expIndex);
-            }
-            int dotIndex = mantissa.indexOf('.');
-            if (dotIndex != -1) {
-                if (postprocessAlt) {
-                    // Keep Java's trailing zeros for %#g/%#G.
-                } else {
-                    int i = mantissa.length();
-                    while ((i > dotIndex + 1) && (mantissa.charAt(i - 1) == '0')) {
-                        i--;
-                    }
-                    if ((i == dotIndex + 1) && (mantissa.charAt(dotIndex) == '.')) {
-                        i--;
-                    }
-                    mantissa = mantissa.substring(0, i);
-                }
-            } else if (postprocessAlt) {
-                mantissa += ".";
-            }
-            ret = mantissa + expSuffix;
-        }
-        return ret;
-    }
-    public static PyString formatFiniteCore(PyObject valueObj, PyObject altObj, PyObject groupingObj, PyObject precisionObj, PyObject typeCharObj) {
-        double value = ((PyFloat)valueObj).value;
-        boolean alt = altObj.boolValue();
-        String grouping = (groupingObj == PyNone.singleton) ? null : ((PyString)groupingObj).value;
-        Long precision = (precisionObj == PyNone.singleton) ? null : precisionObj.indexValue();
-        String typeChar = ((PyString)typeCharObj).value;
-        return new PyString(formatFiniteCore(value, alt, grouping, precision, typeChar));
-    }
-
     public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
         Runtime.requireMinMaxPositional(args, kwargs, type.name(), 0, 1);
         return newObjPositional((args.length == 0) ? null : args[0]);
@@ -383,8 +241,8 @@ public final class PyFloat extends PyObject {
             return super.lt(rhs);
         }
     }
-    @Override public String repr() { return strOf(value); }
-    @Override public String str() { return strOf(value); }
+    @Override public String repr() { return PyRuntime.pyfunc_pyj_float_str(this).value; }
+    @Override public String str() { return PyRuntime.pyfunc_pyj_float_str(this).value; }
     @Override public PyConcreteType type() { return PyFloatType.singleton; }
     @Override public String format(String formatSpec) {
         return PyRuntime.pyfunc_pyj_float_format(this, new PyString(formatSpec)).value;
