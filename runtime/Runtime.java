@@ -743,19 +743,6 @@ public final class Runtime {
         }
         return i;
     }
-    public static int asBoundedSearchIndexAllowNull(PyObject obj, int defaultIndex, int n) {
-        if (obj == null) {
-            return defaultIndex;
-        }
-        if (!obj.hasIndex()) {
-            throw PyTypeError.raise("slice indices must be integers or have an __index__ method");
-        }
-        long raw = obj.indexValue();
-        if (raw < 0) {
-            return Math.toIntExact(Math.max(raw + n, 0));
-        }
-        return Math.toIntExact(Math.min(raw, n));
-    }
     public static void unsupportedSearchIndexAllowNone(PyObject obj, String msg) {
         if (obj == PyNone.singleton) {
             return;

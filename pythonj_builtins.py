@@ -882,7 +882,6 @@ class range:
 
     def __contains__(self, rhs) -> bool:
         if __pythonj_isinstance__(rhs, float):
-            import math
             if not math.isfinite(rhs) or rhs != __pythonj_float_java_rint__(rhs):
                 return False
             value = int(rhs)
@@ -1000,3 +999,21 @@ class tuple:
             __pythonj_str_builder_append__(ret, ',')
         __pythonj_str_builder_append__(ret, ')')
         return __pythonj_str_builder_finish__(ret)
+
+    def count(self, value) -> int:
+        n: int = 0
+        for item in self:
+            if item == value:
+                n += 1
+        return n
+
+    def index(self, value, start, stop) -> int:
+        n = len(self)
+        start_index: int = _pyj_slice_index_allow_null(start, 0, n)
+        stop_index: int = _pyj_slice_index_allow_null(stop, n, n)
+        i: int = start_index
+        while i < stop_index:
+            if self[i] == value:
+                return i
+            i += 1
+        raise ValueError('tuple.index(x): x not in tuple')

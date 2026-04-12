@@ -151,25 +151,4 @@ public final class PyTuple extends PyObject {
     @Override public int hashCode() { return Arrays.hashCode(items); }
     @Override public long len() { return items.length; }
     @Override public String repr() { return PyRuntime.pyfunc_tuple____repr__(this).value; }
-
-    public PyInt pymethod_count(PyObject arg) {
-        long n = 0;
-        for (var x: items) {
-            if (x.equals(arg)) {
-                n++;
-            }
-        }
-        return new PyInt(n);
-    }
-    public PyInt pymethod_index(PyObject value, PyObject start, PyObject stop) {
-        int n = items.length;
-        int startIndex = Runtime.asBoundedSearchIndexAllowNull(start, 0, n);
-        int stopIndex = Runtime.asSliceIndexAllowNull(stop, n, n);
-        for (int i = startIndex; i < stopIndex; i++) {
-            if (items[i].equals(value)) {
-                return new PyInt(i);
-            }
-        }
-        throw PyValueError.raise("tuple.index(x): x not in tuple");
-    }
 }

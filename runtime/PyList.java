@@ -236,7 +236,7 @@ public final class PyList extends PyObject {
     }
     public PyInt pymethod_index(PyObject value, PyObject start, PyObject stop) {
         int n = items.size();
-        int startIndex = Runtime.asBoundedSearchIndexAllowNull(start, 0, n);
+        int startIndex = Runtime.asSliceIndexAllowNull(start, 0, n);
         int stopIndex = Runtime.asSliceIndexAllowNull(stop, n, n);
         try {
             for (int i = startIndex; i < stopIndex; i++) {

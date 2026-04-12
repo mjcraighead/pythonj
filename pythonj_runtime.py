@@ -778,6 +778,18 @@ def pyj_bool_format(value, spec) -> str:
     _pyj_int_like_parse_spec(spec, 'bool')
     return pyj_int_format(1 if value else 0, spec)
 
+def _pyj_slice_index_allow_null(obj, default_index: int, n: int) -> int:
+    if obj is __pythonj_null__:
+        return default_index
+    if not __pythonj_hasindex__(obj):
+        raise TypeError('slice indices must be integers or have an __index__ method')
+    import _operator
+    raw: int = _operator.index(obj)
+    if raw < 0:
+        adjusted = raw + n
+        return adjusted if adjusted > 0 else 0
+    return raw if raw < n else n
+
 def pyj_str_format(value, spec) -> str:
     fill, align, width, precision = pyj_str_parse_spec(spec)
     text = value if precision is None else value[:precision]

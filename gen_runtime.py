@@ -16,7 +16,7 @@ import ir
 import pythonj
 
 RAW_ARGS_KWARGS_BUILTINS = {'max', 'min'}
-ALL_PYTHON_AUTHORED_IMPLS = {'bytes', 'float', 'int', 'range'}
+ALL_PYTHON_AUTHORED_IMPLS = {'bytes', 'float', 'int', 'range', 'tuple'}
 PYTHON_AUTHORED_IMPLS = {
     'builtins': {'abs', 'all', 'any', 'bin', 'delattr', 'divmod', 'format', 'getattr', 'hash', 'hasattr', 'isinstance', 'issubclass', 'len', 'next', 'oct', 'repr', 'setattr', 'sum'},
     'dict': {'fromkeys', 'setdefault'},
