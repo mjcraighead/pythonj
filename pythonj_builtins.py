@@ -276,6 +276,8 @@ class bytes:
         indices = slice(start, end).indices(len(self))
         start = indices[0]
         end = indices[1]
+        ret: int
+        i: int
         if __pythonj_isinstance__(sub, int):
             if sub < 0 or sub > 255:
                 raise ValueError('byte must be in range(0, 256)')
@@ -362,6 +364,7 @@ class bytes:
             if is_str:
                 hi = ord(hi)
                 lo = ord(lo)
+            value: int
             if 48 <= hi <= 57:
                 value = hi - 48
             elif 97 <= hi <= 102:
@@ -401,6 +404,7 @@ class bytes:
         sep_str: str = sep
         ret = __pythonj_str_builder__(len(self) * 2)
         n = len(self)
+        i: int
         if sep and bytes_per_sep != 0:
             group_size = abs(bytes_per_sep)
             if bytes_per_sep > 0:

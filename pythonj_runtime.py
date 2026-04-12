@@ -39,7 +39,7 @@ def _type_error_unexpected_kw_arg(kw_name: str, unknown_kw: str) -> TypeError:
 
 def _type_error_user_missing_args(name: str, missing_arg_names) -> TypeError:
     missing = len(missing_arg_names)
-    ret = f'{name}() missing {missing} required positional argument'
+    ret: str = f'{name}() missing {missing} required positional argument'
     if missing != 1:
         ret += 's'
     ret += ':'
@@ -56,7 +56,7 @@ def _type_error_user_missing_args(name: str, missing_arg_names) -> TypeError:
     return TypeError(ret)
 
 def _type_error_user_posonly_as_keyword(name: str, arg_names) -> TypeError:
-    joined = ''
+    joined: str = ''
     arg_names_len = len(arg_names)
     i: int = 0
     while i < arg_names_len:
@@ -404,7 +404,7 @@ def _pyj_format_zero_fill_grouped(sign, prefix, digits, grouping, group_size, su
     if grouping is None:
         return sign + prefix + ('0' * (width - len(sign) - len(prefix) - len(digits) - len(suffix))) + digits + suffix
 
-    digits_len = len(digits)
+    digits_len: int = len(digits)
     total_len = len(sign) + len(prefix) + digits_len + ((digits_len - 1) // group_size) + len(suffix)
     while total_len < width:
         digits_len += 1
@@ -504,6 +504,7 @@ def pyj_str_parse_spec(spec) -> tuple:
 
 def _pyj_float_special_text(value: float, type_char: str) -> str:
     upper: bool = type_char == 'E' or type_char == 'F' or type_char == 'G'
+    text: str
     if value != value:
         text = 'NAN' if upper else 'nan'
     else:
@@ -588,7 +589,7 @@ def _pyj_float_finish_text(fill, align, sign, z, width, grouping, value, magnitu
     return _pyj_format_apply_width(text, fill, align, width, '>')
 
 def _pyj_replace_commas_with_underscores(text: str) -> str:
-    out = ''
+    out: str = ''
     for c in text:
         out += '_' if c == ',' else c
     return out
@@ -613,6 +614,7 @@ def _pyj_float_python_style_finite_str(value: float) -> str:
     mantissa: str = text[:e_index]
     exponent = int(text[e_index + 1:])
     digits: str = ''
+    c: str
     for c in mantissa:
         if c != '.':
             digits += c
@@ -698,6 +700,7 @@ def _pyj_float_format_finite_core(value: float, alt: bool, grouping, precision, 
 def pyj_float_format(value: float, format_spec: str) -> str:
     fill, align, sign, z, alt, width, grouping, precision, type_char = pyj_float_parse_spec(format_spec)
 
+    magnitude_text: str
     if not math.isfinite(value):
         magnitude_text = _pyj_float_special_text(value, type_char)
     else:
@@ -862,7 +865,7 @@ def _pyj_percent_arg_seq(args) -> tuple:
         return args
     return (args,)
 
-def _pyj_percent_real_arg(arg, conv) -> float:
+def _pyj_percent_real_arg(arg) -> float:
     if __pythonj_isinstance__(arg, (bool, int, float)):
         return float(arg)
     raise TypeError(f'must be real number, not {type(arg).__name__}')
@@ -933,8 +936,8 @@ def _pyj_percent_int_text(value, flags, width, precision, conv) -> str:
         return sign_prefix + prefix + ('0' * (width - len(text))) + digits
     return _pyj_percent_apply_width(text, flags, width)
 
-def _pyj_percent_float_text(flags, width, precision, conv, arg) -> str:
-    spec = ''
+def _pyj_percent_float_text(flags, width, precision, conv: str, arg) -> str:
+    spec: str = ''
     if '-' in flags:
         spec += '<'
     if '+' in flags:
@@ -950,7 +953,7 @@ def _pyj_percent_float_text(flags, width, precision, conv, arg) -> str:
     if precision is not None:
         spec += '.' + str(precision)
     spec += conv
-    return format(_pyj_percent_real_arg(arg, conv), spec)
+    return format(_pyj_percent_real_arg(arg), spec)
 
 def _pyj_percent_char_text(arg) -> str:
     if isinstance(arg, str):
@@ -992,7 +995,7 @@ def _pyj_percent_item_text(conv, flags, width, precision, arg) -> str:
         return _pyj_percent_float_text(flags, width, precision, conv, arg)
     raise ValueError(conv)
 
-def _pyj_percent_take_star_value(arg_seq, arg_index) -> tuple:
+def _pyj_percent_take_star_value(arg_seq, arg_index: int) -> tuple:
     if arg_index >= len(arg_seq):
         raise TypeError('not enough arguments for format string')
     value = arg_seq[arg_index]
@@ -1036,7 +1039,7 @@ def pyj_percent_format(fmt: str, args) -> str:
             mapping_key = fmt[key_start:i]
             i += 1
 
-        flags = ''
+        flags: str = ''
         while i < n and fmt[i] in '-+ 0#':
             if fmt[i] not in flags:
                 flags += fmt[i]
