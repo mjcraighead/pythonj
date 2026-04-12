@@ -434,10 +434,30 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
                 if v['kind'] == 'string':
                     value = ir.CreateObject('PyString', [ir.StrLiteral(v['value'])])
                 elif v['kind'] == 'member':
+                    getter_target_class = java_name
+                    getter_target_method = f'pymember_{k}'
+                    getter_func = pythonj_builtins_classes.get(name, {}).get(k)
+                    if getter_func is not None and is_pythonj_getter(getter_func):
+                        helper_key = (name, k)
+                        helper_name = f'{name.replace(".", "_")}__{k}'
+                        getter_target_class = 'PyRuntime'
+                        getter_target_method = f'pyfunc_{helper_name}'
+                        if helper_key not in emitted_python_getter_helpers:
+                            (helper_classes, helper_method) = translate_python_method_impl(
+                                pythonj_builtins_node, name, k, pool,
+                                class_funcs=pythonj_builtins_classes, scope_infos=builtins_scope_infos,
+                                metadata=metadata,
+                                python_helper_names=set(pythonj_runtime_funcs),
+                                python_helper_class='PyRuntime',
+                                python_helper_return_java_types=metadata.runtime_function_return_java_types,
+                            )
+                            python_helper_classes.extend(helper_classes)
+                            python_helper_methods.append(helper_method)
+                            emitted_python_getter_helpers.add(helper_key)
                     value = ir.CreateObject('PyMemberDescriptor', [
                         ir.Identifier('singleton'),
                         ir.StrLiteral(k),
-                        ir.MethodRef(java_name, f'pymember_{k}'),
+                        ir.MethodRef(getter_target_class, getter_target_method),
                         ir.Null() if doc_value is None else ir.StrLiteral(doc_value),
                     ])
                 elif v['kind'] == 'getset':

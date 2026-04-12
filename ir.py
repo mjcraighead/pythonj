@@ -865,12 +865,24 @@ def static_method_call(class_name: str, method: str, args: list[Expr], return_ty
             return CreateObject('PyInt', [MethodCall(args[0], 'len', [], 'long')])
         case ('Runtime', 'pythonjNext'):
             return MethodCall(args[0], 'next', [], 'PyObject')
+        case ('Runtime', 'pythonjRangeStart'):
+            return CreateObject('PyInt', [Field(CastExpr('PyRange', args[0]), 'start', 'long')])
+        case ('Runtime', 'pythonjRangeStep'):
+            return CreateObject('PyInt', [Field(CastExpr('PyRange', args[0]), 'step', 'long')])
+        case ('Runtime', 'pythonjRangeStop'):
+            return CreateObject('PyInt', [Field(CastExpr('PyRange', args[0]), 'stop', 'long')])
         case ('Runtime', 'pythonjRepr'):
             if args[0].java_type() == 'PyString':
                 return CreateObject('PyString', [static_method_call('PyString', 'reprOf', [unbox_str(args[0])])])
             return CreateObject('PyString', [MethodCall(args[0], 'repr', [], 'String')])
         case ('Runtime', 'pythonjSetAttr'):
             return MethodCall(args[0], 'setAttr', [unbox_str(args[1]), args[2]], 'void')
+        case ('Runtime', 'pythonjSliceStart'):
+            return Field(CastExpr('PySlice', args[0]), 'start', 'PyObject')
+        case ('Runtime', 'pythonjSliceStep'):
+            return Field(CastExpr('PySlice', args[0]), 'step', 'PyObject')
+        case ('Runtime', 'pythonjSliceStop'):
+            return Field(CastExpr('PySlice', args[0]), 'stop', 'PyObject')
         case ('Runtime', 'pythonjStrBuilder'):
             if isinstance(args[0], PyConstant) and args[0].value is None:
                 return CreateObject('PyStringBuilder', [])

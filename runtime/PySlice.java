@@ -121,8 +121,4 @@ public final class PySlice extends PyTruthyObject {
             new PyInt(indices.step())
         });
     }
-
-    static PyObject pymember_start(PyObject obj) { return ((PySlice)obj).start; }
-    static PyObject pymember_step(PyObject obj) { return ((PySlice)obj).step; }
-    static PyObject pymember_stop(PyObject obj) { return ((PySlice)obj).stop; }
 }

@@ -859,6 +859,18 @@ class list:
         return __pythonj_str_builder_finish__(ret)
 
 class range:
+    @__pythonj_getter__
+    def start(self) -> int:
+        return __pythonj_range_start__(self)
+
+    @__pythonj_getter__
+    def step(self) -> int:
+        return __pythonj_range_step__(self)
+
+    @__pythonj_getter__
+    def stop(self) -> int:
+        return __pythonj_range_stop__(self)
+
     def __repr__(self) -> str:
         if self.step == 1:
             return f'range({self.start}, {self.stop})'
@@ -883,6 +895,18 @@ class set:
         return __pythonj_str_builder_finish__(ret)
 
 class slice:
+    @__pythonj_getter__
+    def start(self):
+        return __pythonj_slice_start__(self)
+
+    @__pythonj_getter__
+    def step(self):
+        return __pythonj_slice_step__(self)
+
+    @__pythonj_getter__
+    def stop(self):
+        return __pythonj_slice_stop__(self)
+
     def __repr__(self) -> str:
         return f'slice({self.start!r}, {self.stop!r}, {self.step!r})'
 

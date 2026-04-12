@@ -135,10 +135,6 @@ public final class PyRange extends PyObject {
     }
     @Override public String repr() { return PyRuntime.pyfunc_range____repr__(this).value; }
 
-    static PyObject pymember_start(PyObject obj) { return new PyInt(((PyRange)obj).start); }
-    static PyObject pymember_step(PyObject obj) { return new PyInt(((PyRange)obj).step); }
-    static PyObject pymember_stop(PyObject obj) { return new PyInt(((PyRange)obj).stop); }
-
     public PyObject pymethod_index(PyObject arg) {
         if (arg instanceof PyFloat) {
             if (!contains(arg)) {
