@@ -146,8 +146,8 @@ def enumerate__newobj(type, args: tuple, kwargs: dict):
 def zip__newobj(type, args: tuple, kwargs: dict):
     strict = None
     if kwargs:
-        kwargs_len: int = len(kwargs)
-        args_len: int = len(args)
+        kwargs_len = len(kwargs)
+        args_len = len(args)
         if kwargs_len > 1:
             if args_len == 0:
                 raise TypeError(f'zip() takes at most 1 keyword argument ({kwargs_len} given)')
@@ -347,7 +347,7 @@ class bytes:
             raise TypeError(f'fromhex() argument must be str or bytes-like, not {__pythonj_typename__(type(string))}')
         ret = __pythonj_bytes_builder__(len(string) // 2)
         i: int = 0
-        n: int = len(string)
+        n = len(string)
         while i < n:
             c = string[i]
             if is_str:
@@ -420,6 +420,7 @@ class bytes:
                         __pythonj_str_builder_append__(ret, format(self[i], '02x'))
                         i += 1
         else:
+            c: int
             for c in self:
                 __pythonj_str_builder_append__(ret, format(c, '02x'))
         return __pythonj_str_builder_finish__(ret)
@@ -450,6 +451,7 @@ class bytes:
     def isalnum(self: bytes) -> bool:
         if not self:
             return False
+        c: int
         for c in self:
             if not (48 <= c <= 57 or 65 <= c <= 90 or 97 <= c <= 122):
                 return False
@@ -458,12 +460,14 @@ class bytes:
     def isalpha(self: bytes) -> bool:
         if not self:
             return False
+        c: int
         for c in self:
             if not (65 <= c <= 90 or 97 <= c <= 122):
                 return False
         return True
 
     def isascii(self: bytes) -> bool:
+        c: int
         for c in self:
             if c >= 128:
                 return False
@@ -472,6 +476,7 @@ class bytes:
     def isdigit(self: bytes) -> bool:
         if not self:
             return False
+        c: int
         for c in self:
             if not (48 <= c <= 57):
                 return False
@@ -479,6 +484,7 @@ class bytes:
 
     def islower(self: bytes) -> bool:
         has_cased = False
+        c: int
         for c in self:
             if 65 <= c <= 90:
                 return False
@@ -489,6 +495,7 @@ class bytes:
     def isspace(self: bytes) -> bool:
         if not self:
             return False
+        c: int
         for c in self:
             if c not in b' \t\n\r\x0b\x0c':
                 return False
@@ -497,6 +504,7 @@ class bytes:
     def istitle(self: bytes) -> bool:
         has_cased = False
         in_word = False
+        c: int
         for c in self:
             if 65 <= c <= 90:
                 if in_word:
@@ -513,6 +521,7 @@ class bytes:
 
     def isupper(self: bytes) -> bool:
         has_cased = False
+        c: int
         for c in self:
             if 97 <= c <= 122:
                 return False
@@ -538,7 +547,7 @@ class bytes:
         else:
             raise TypeError(f'a bytes-like object is required, not {__pythonj_typename__(type(bytes_arg))!r}')
         i: int = 0
-        n: int = len(self)
+        n = len(self)
         while i < n and self[i] in strip_set:
             i += 1
         return self[i:]
@@ -738,9 +747,9 @@ class float:
             raise ValueError('cannot convert NaN to integer ratio')
         if not math.isfinite(self):
             raise OverflowError('cannot convert Infinity to integer ratio')
-        bits: int = __pythonj_float_java_bits__(self)
+        bits = __pythonj_float_java_bits__(self)
         negative: bool = bits < 0
-        exponent_bits: int = (bits >> 52) & 0x7FF
+        exponent_bits = (bits >> 52) & 0x7FF
         numerator: int = bits & ((1 << 52) - 1)
         exponent: int
         if exponent_bits == 0:
