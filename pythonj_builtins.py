@@ -682,9 +682,10 @@ class float:
         if not math.isfinite(self):
             raise OverflowError('cannot convert Infinity to integer ratio')
         bits: int = __pythonj_float_java_bits__(self)
-        negative = bits < 0
+        negative: bool = bits < 0
         exponent_bits: int = (bits >> 52) & 0x7FF
         numerator: int = bits & ((1 << 52) - 1)
+        exponent: int
         if exponent_bits == 0:
             exponent = -1022 - 52
         else:
@@ -782,9 +783,11 @@ class int:
         else:
             big_endian_data = data
 
-        data_len = len(big_endian_data)
+        data_len: int = len(big_endian_data)
+        result: int = 0
+        i: int = 0
         if signed:
-            negative = (big_endian_data[0] & 0x80) != 0
+            negative: bool = (big_endian_data[0] & 0x80) != 0
             pad = 0xFF if negative else 0x00
             start: int = 0
             while (data_len - start > 8) and (big_endian_data[start] == pad):
@@ -792,12 +795,10 @@ class int:
             data_len -= start
             if data_len > 8 or (data_len == 8 and (((big_endian_data[start] & 0x80) != 0) != negative)):
                 raise OverflowError('int too big to convert')
+            i = start
             if negative:
                 result = big_endian_data[start] - 0x100
                 i = start + 1
-            else:
-                result = 0
-                i = start
             while i < len(big_endian_data):
                 result = (result << 8) | big_endian_data[i]
                 i += 1
@@ -833,7 +834,7 @@ class int:
                 raise ValueError("byteorder must be either 'little' or 'big'")
         if length < 0:
             raise ValueError('length argument must be non-negative')
-        value = self
+        value: int = self
         if not signed:
             if value < 0:
                 raise OverflowError("can't convert negative int to unsigned")
@@ -887,12 +888,13 @@ class range:
         return __pythonj_range_stop__(self)
 
     def __contains__(self, rhs) -> bool:
+        value: int
         if __pythonj_isinstance__(rhs, float):
             if not math.isfinite(rhs) or rhs != __pythonj_float_java_rint__(rhs):
                 return False
             value = int(rhs)
         elif __pythonj_isinstance__(rhs, (int, bool)):
-            value = rhs
+            value = int(rhs)
         else:
             return False
         if self.step > 0:

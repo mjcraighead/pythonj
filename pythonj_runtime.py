@@ -599,28 +599,28 @@ def _pyj_trim_fixed_fraction(text: str) -> str:
     return text
 
 def _pyj_float_python_style_finite_str(value: float) -> str:
-    text = __pythonj_float_java_str__(value)
-    e_index = text.find('E')
+    text: str = __pythonj_float_java_str__(value)
+    e_index: int = text.find('E')
     if e_index == -1:
         return text
 
-    sign = ''
+    sign: str = ''
     if text.startswith('-'):
         sign = '-'
         text = text[1:]
         e_index -= 1
 
-    mantissa = text[:e_index]
+    mantissa: str = text[:e_index]
     exponent = int(text[e_index + 1:])
-    digits = ''
+    digits: str = ''
     for c in mantissa:
         if c != '.':
             digits += c
-    dot_index = mantissa.find('.')
+    dot_index: int = mantissa.find('.')
     fractional_digits = 0 if dot_index == -1 else len(mantissa) - dot_index - 1
 
     if -4 <= exponent < 16:
-        decimal_pos = len(digits) - fractional_digits + exponent
+        decimal_pos: int = len(digits) - fractional_digits + exponent
         if decimal_pos <= 0:
             ret = '0.' + ('0' * (-decimal_pos)) + digits
         elif decimal_pos >= len(digits):
@@ -629,7 +629,7 @@ def _pyj_float_python_style_finite_str(value: float) -> str:
             ret = digits[:decimal_pos] + '.' + digits[decimal_pos:]
         return sign + _pyj_trim_fixed_fraction(ret)
 
-    exp_digits = str(abs(exponent))
+    exp_digits: str = str(abs(exponent))
     if len(exp_digits) < 2:
         exp_digits = '0' + exp_digits
     if mantissa.endswith('.0'):
@@ -645,7 +645,7 @@ def pyj_float_str(value: float) -> str:
 
 def _pyj_float_format_finite_core(value: float, alt: bool, grouping, precision, type_char: str) -> str:
     assert value >= 0.0
-    postprocess_alt = False
+    postprocess_alt: bool = False
     if type_char == '':
         if precision is None and grouping is None and not alt:
             return pyj_float_str(value)
@@ -655,12 +655,12 @@ def _pyj_float_format_finite_core(value: float, alt: bool, grouping, precision, 
     elif type_char == 'F':
         type_char = 'f'
 
-    java_type = type_char
+    java_type: str = type_char
     if alt and (java_type == 'g' or java_type == 'G'):
         postprocess_alt = True
         alt = False
 
-    fmt = '%'
+    fmt: str = '%'
     if grouping is not None:
         fmt += ','
     if alt:
@@ -669,22 +669,22 @@ def _pyj_float_format_finite_core(value: float, alt: bool, grouping, precision, 
         fmt += f'.{precision}'
     fmt += java_type
 
-    ret = __pythonj_float_java_format__(fmt, value)
+    ret: str = __pythonj_float_java_format__(fmt, value)
     if grouping == '_':
         ret = _pyj_replace_commas_with_underscores(ret)
     if java_type == 'g' or java_type == 'G':
-        exp_index = ret.find('e')
+        exp_index: int = ret.find('e')
         if exp_index == -1:
             exp_index = ret.find('E')
-        exp_suffix = ''
-        mantissa = ret
+        exp_suffix: str = ''
+        mantissa: str = ret
         if exp_index != -1:
             mantissa = ret[:exp_index]
             exp_suffix = ret[exp_index:]
-        dot_index = mantissa.find('.')
+        dot_index: int = mantissa.find('.')
         if dot_index != -1:
             if not postprocess_alt:
-                i = len(mantissa)
+                i: int = len(mantissa)
                 while i > dot_index + 1 and mantissa[i - 1] == '0':
                     i -= 1
                 if i == dot_index + 1 and mantissa[dot_index] == '.':
@@ -807,7 +807,7 @@ def pyj_int_parse_stringlike(s: str, original_obj, base_obj: int) -> int:
     if i == end:
         raise ValueError(f'invalid literal for int() with base {base}: {original_obj!r}')
     if end - i >= 2 and s[i] == '0':
-        prefix = s[i + 1]
+        prefix: str = s[i + 1]
         if prefix in {'x', 'X'}:
             if base == 0 or base == 16:
                 base = 16
@@ -823,7 +823,7 @@ def pyj_int_parse_stringlike(s: str, original_obj, base_obj: int) -> int:
     if base == 0:
         base = 10
         if i < end and s[i] == '0' and end - i > 1:
-            all_zero = True
+            all_zero: bool = True
             j: int = i + 1
             while j < end:
                 if s[j] != '0':
@@ -836,8 +836,9 @@ def pyj_int_parse_stringlike(s: str, original_obj, base_obj: int) -> int:
         raise ValueError(f'invalid literal for int() with base {base}: {original_obj!r}')
     value: int = 0
     while i < end:
-        c = s[i]
+        c: str = s[i]
         i += 1
+        digit: int
         if '0' <= c <= '9':
             digit = ord(c) - ord('0')
         elif 'a' <= c <= 'z':
