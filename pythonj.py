@@ -24,7 +24,7 @@ import ir
 
 # Keep this explicit and narrow; widen it only for builtin types we have actually
 # exercised and are comfortable lowering directly to JVM instanceof checks.
-ISINSTANCE_SINGLE_FASTPATH_BUILTIN_TYPES = {'bool', 'bytearray', 'bytes', 'float', 'int', 'str', 'tuple'}
+ISINSTANCE_SINGLE_FASTPATH_BUILTIN_TYPES = {'bool', 'bytearray', 'bytes', 'dict', 'float', 'int', 'object', 'set', 'slice', 'str', 'tuple', 'type'}
 EXACT_INT_BINOPS = {'add', 'and', 'floorDiv', 'lshift', 'mod', 'mul', 'or', 'pow', 'rshift', 'sub', 'xor'}
 
 INTRINSIC_SIGNATURES = {
@@ -1573,6 +1573,15 @@ class LoweringVisitor(ast.NodeVisitor):
 
     def emit_call_positional(self, func: ir.Expr, node: ast.Call, max_args: int, *, return_node: Optional[ast.expr] = None) -> ir.Expr:
         if isinstance(func, ir.PyBuiltinFunction):
+            if func.name in {'abs', 'hash', 'len', 'repr'}:
+                method_name = INTRINSIC_SIGNATURES[f'__pythonj_{func.name}__'][0]
+                return ir.static_method_call('Runtime', method_name, [self.visit(node.args[0])])
+            if func.name == 'isinstance':
+                class_or_tuple = self.visit(node.args[1])
+                if isinstance(class_or_tuple, ir.PyBuiltinType) and class_or_tuple.name in ISINSTANCE_SINGLE_FASTPATH_BUILTIN_TYPES:
+                    return ir.static_method_call('PyBool', 'create', [
+                        ir.BinaryOp('instanceof', self.visit(node.args[0]), ir.Identifier(class_or_tuple.java_name))
+                    ])
             return ir.StaticMethodCall(
                 func.java_type(),
                 'callPositional',
@@ -1958,9 +1967,6 @@ class LoweringVisitor(ast.NodeVisitor):
             self.call_has_only_plain_positional_args(node)):
             (min_args, max_args) = self.metadata.direct_call_positional_builtins[func.name]
             if min_args <= len(node.args) <= max_args:
-                if func.name in {'abs', 'hash', 'len', 'repr'}:
-                    method_name = INTRINSIC_SIGNATURES[f'__pythonj_{func.name}__'][0]
-                    return ir.static_method_call('Runtime', method_name, [self.visit(node.args[0])])
                 return self.emit_call_positional(func, node, max_args)
         if (isinstance(func, ir.PyBuiltinFunction) and
             '.' in func.name and

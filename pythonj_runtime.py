@@ -858,7 +858,7 @@ def pyj_str_format(value, spec) -> str:
     return _pyj_format_apply_width(text, fill, align, width, '<')
 
 def _pyj_percent_arg_seq(args) -> tuple:
-    if __pythonj_isinstance__(args, tuple):
+    if isinstance(args, tuple):
         return args
     return (args,)
 
@@ -953,7 +953,7 @@ def _pyj_percent_float_text(flags, width, precision, conv, arg) -> str:
     return format(_pyj_percent_real_arg(arg, conv), spec)
 
 def _pyj_percent_char_text(arg) -> str:
-    if __pythonj_isinstance__(arg, str):
+    if isinstance(arg, str):
         if len(arg) != 1:
             raise TypeError(f'%c requires an int or a unicode character, not a string of length {len(arg)}')
         return arg
