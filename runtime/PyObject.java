@@ -97,7 +97,7 @@ public abstract class PyObject implements Comparable<PyObject> {
             }
             return;
         }
-        throw PyAttributeError.raiseFormat("%s object has no attribute %s and no __dict__ for setting new attributes", PyString.reprOf(type().name()), PyString.reprOf(key));
+        throw PyAttributeError.raise(PyString.reprOf(type().name()) + " object has no attribute " + PyString.reprOf(key) + " and no __dict__ for setting new attributes");
     }
     public void delAttr(String key) {
         var desc = type().lookupAttr(key);
@@ -109,7 +109,7 @@ public abstract class PyObject implements Comparable<PyObject> {
             }
             return;
         }
-        throw PyAttributeError.raiseFormat("%s object has no attribute %s and no __dict__ for setting new attributes", PyString.reprOf(type().name()), PyString.reprOf(key));
+        throw PyAttributeError.raise(PyString.reprOf(type().name()) + " object has no attribute " + PyString.reprOf(key) + " and no __dict__ for setting new attributes");
     }
     public PyObject get(PyObject instance) { return this; }
     public boolean isDataDescriptor() { return false; }
@@ -155,7 +155,7 @@ public abstract class PyObject implements Comparable<PyObject> {
     }
     public long intValue() { throw unimplementedMethod("intValue"); }
     public long len() {
-        throw PyTypeError.raiseFormat("object of type %s has no len()", PyString.reprOf(type().name()));
+        throw PyTypeError.raise("object of type " + PyString.reprOf(type().name()) + " has no len()");
     }
     public abstract String repr();
     public String str() { return repr(); }
@@ -165,25 +165,22 @@ public abstract class PyObject implements Comparable<PyObject> {
 
     // Helpers used by derived classes
     protected final UnsupportedOperationException unimplementedMethod(String method) {
-        return new UnsupportedOperationException(String.format("%s unimplemented on %s", PyString.reprOf(method), PyString.reprOf(type().name())));
-    }
-    protected final UnsupportedOperationException unimplementedAttr(String key) {
-        return new UnsupportedOperationException(String.format("%s attribute unimplemented on %s", PyString.reprOf(key), PyString.reprOf(type().name())));
+        return new UnsupportedOperationException(PyString.reprOf(method) + " unimplemented on " + PyString.reprOf(type().name()));
     }
     protected final PyRaise raiseUnaryOp(String op) {
-        return PyTypeError.raiseFormat("bad operand type for %s: %s", op, PyString.reprOf(type().name()));
+        return PyTypeError.raise("bad operand type for " + op + ": " + PyString.reprOf(type().name()));
     }
     protected final PyRaise raiseBinOp(String op, PyObject rhs) {
-        return PyTypeError.raiseFormat("unsupported operand type(s) for %s: %s and %s", op, PyString.reprOf(type().name()), PyString.reprOf(rhs.type().name()));
+        return PyTypeError.raise("unsupported operand type(s) for " + op + ": " + PyString.reprOf(type().name()) + " and " + PyString.reprOf(rhs.type().name()));
     }
     protected final PyRaise raiseCompareOp(String op, PyObject rhs) {
-        return PyTypeError.raiseFormat("'%s' not supported between instances of %s and %s", op, PyString.reprOf(type().name()), PyString.reprOf(rhs.type().name()));
+        return PyTypeError.raise("'" + op + "' not supported between instances of " + PyString.reprOf(type().name()) + " and " + PyString.reprOf(rhs.type().name()));
     }
     protected final PyRaise raiseUnhashable() {
         return PyTypeError.raise("unhashable type: " + PyString.reprOf(type().name()));
     }
     protected final PyRaise raiseMissingAttr(String key) {
-        return PyAttributeError.raiseFormat("%s object has no attribute %s", PyString.reprOf(type().name()), PyString.reprOf(key));
+        return PyAttributeError.raise(PyString.reprOf(type().name()) + " object has no attribute " + PyString.reprOf(key));
     }
     protected final int defaultHashCode() {
         return System.identityHashCode(this);

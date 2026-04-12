@@ -351,10 +351,10 @@ class PyConcreteType extends PyType {
         }
     }
     @Override public final void setAttr(String key, PyObject value) {
-        throw PyTypeError.raiseFormat("cannot set %s attribute of immutable type %s", PyString.reprOf(key), PyString.reprOf(typeName));
+        throw PyTypeError.raise("cannot set " + PyString.reprOf(key) + " attribute of immutable type " + PyString.reprOf(typeName));
     }
     @Override public final void delAttr(String key) {
-        throw PyTypeError.raiseFormat("cannot set %s attribute of immutable type %s", PyString.reprOf(key), PyString.reprOf(typeName));
+        throw PyTypeError.raise("cannot set " + PyString.reprOf(key) + " attribute of immutable type " + PyString.reprOf(typeName));
     }
     @Override public final String repr() { return "<class '" + typeName + "'>"; }
     @Override public final PyTypeType type() { return PyTypeType.singleton; }
@@ -572,7 +572,7 @@ public final class Runtime {
             type instanceof PyConcreteType typeClass) {
             return PyBool.create(typeClass.instanceClass.isAssignableFrom(objClass.instanceClass));
         } else {
-            throw new UnsupportedOperationException(String.format("issubclass() is unimplemented for types %s and %s", obj.repr(), type.repr()));
+            throw new UnsupportedOperationException("issubclass() is unimplemented for types " + obj.repr() + " and " + type.repr());
         }
     }
     public static PyRaise raiseExactArgs(PyObject[] args, int n, String name) {
@@ -594,7 +594,7 @@ public final class Runtime {
         }
     }
     public static PyRaise raiseUnexpectedKwArg(String name, String kwName) {
-        return PyTypeError.raiseFormat("%s() got an unexpected keyword argument %s", name, PyString.reprOf(kwName));
+        return PyTypeError.raise(name + "() got an unexpected keyword argument " + PyString.reprOf(kwName));
     }
     public static PyObject getLocal(PyObject value, String name) {
         if (value == null) {
@@ -688,7 +688,7 @@ public final class Runtime {
             addIterableToCollection(list, iterable);
             return list;
         } else {
-            throw PyTypeError.raiseFormat("Value after * must be an iterable, not %s", iterable.type().name());
+            throw PyTypeError.raise("Value after * must be an iterable, not " + iterable.type().name());
         }
     }
     public static PyObject[] arrayListToArray(ArrayList<PyObject> list) {
@@ -774,14 +774,14 @@ public final class Runtime {
     public static String requireEncodingArg(PyObject encodingObj, String name) {
         if (!(encodingObj instanceof PyString encodingStr)) {
             String typeName = (encodingObj == PyNone.singleton) ? "None" : encodingObj.type().name();
-            throw PyTypeError.raiseFormat("%s() argument 'encoding' must be str, not %s", name, typeName);
+            throw PyTypeError.raise(name + "() argument 'encoding' must be str, not " + typeName);
         }
         return encodingStr.value;
     }
     public static void requireErrorsArg(PyObject errorsObj, String name) {
         if (!(errorsObj instanceof PyString)) {
             String typeName = (errorsObj == PyNone.singleton) ? "None" : errorsObj.type().name();
-            throw PyTypeError.raiseFormat("%s() argument 'errors' must be str, not %s", name, typeName);
+            throw PyTypeError.raise(name + "() argument 'errors' must be str, not " + typeName);
         }
     }
     public static Charset lookupCharset(String encoding) {

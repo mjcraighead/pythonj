@@ -92,9 +92,6 @@ final class PyAttributeError extends PyException {
     static PyRaise raise(String msg) {
         return new PyRaise(new PyAttributeError(new PyString(msg)));
     }
-    static PyRaise raiseFormat(String fmt, Object... args) {
-        return new PyRaise(new PyAttributeError(new PyString(String.format(fmt, args))));
-    }
 
     static PyObject pymember_name(PyObject obj) { throw new UnsupportedOperationException(); }
     static PyObject pymember_obj(PyObject obj) { throw new UnsupportedOperationException(); }
