@@ -755,6 +755,23 @@ def _infer_obvious_exact_builtin_type_expr(node: ast.expr,
         return INTRINSIC_RETURN_EXACT_TYPES[node.func.id]
     return None
 
+def _infer_subscript_exact_builtin_type(node: ast.Subscript) -> Optional[str]:
+    value_type = get_expr_exact_builtin_type(node.value)
+    if value_type is None:
+        return None
+    index_type = get_expr_exact_builtin_type(node.slice)
+    if isinstance(node.slice, ast.Slice):
+        index_type = 'slice'
+    if index_type == 'int':
+        if value_type in {'str'}:
+            return 'str'
+        if value_type in {'bytes', 'bytearray'}:
+            return 'int'
+    if index_type == 'slice':
+        if value_type in {'str', 'bytes', 'bytearray', 'list', 'tuple'}:
+            return value_type
+    return None
+
 class ScopeAnalyzer(ast.NodeVisitor):
     __slots__ = ('scope_infos', 'preserved_scope_infos', 'module_locals', 'metadata', 'enable_exact_type_inference')
     scope_infos: dict[ast.AST, ScopeInfo]
@@ -1151,6 +1168,9 @@ class ScopeAnalyzer(ast.NodeVisitor):
             if not isinstance(node.ctx, ast.Load):
                 return None
             return self._name_exact_builtin_type(node, scope_info)
+        if isinstance(node, ast.Subscript) and isinstance(node.ctx, ast.Load):
+            if (type_name := _infer_subscript_exact_builtin_type(node)) is not None:
+                return type_name
         if (isinstance(node, ast.Call) and
             not node.keywords and
             not any(isinstance(arg, ast.Starred) for arg in node.args)):
@@ -1997,7 +2017,15 @@ class LoweringVisitor(ast.NodeVisitor):
         return self.ident_expr_by_resolution(node.id, resolution)
 
     def visit_Subscript(self, node) -> ir.Expr:
-        return ir.MethodCall(self.visit(node.value), 'getItem', [self.visit(node.slice)])
+        expr = ir.MethodCall(
+            self.visit(node.value),
+            'getItem',
+            [self.visit(node.slice)],
+        )
+        java_type = self.expr_exact_java_type(node)
+        if java_type is not ir.JAVA_TYPE_UNKNOWN:
+            return ir.CastExpr(java_type, expr)
+        return expr
 
     def emit_attribute(self, value: ir.Expr, attr: str, type_name: Optional[str] = None) -> ir.Expr:
         if (direct_expr := self.direct_builtin_module_attr_expr(value, attr)) is not None:

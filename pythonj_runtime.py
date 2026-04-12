@@ -294,7 +294,7 @@ def min_iterable(iterable, default_obj, key_func):
                 ret_key = item_key
     return ret
 
-def _pyj_format_parse_common(spec) -> tuple:
+def _pyj_format_parse_common(spec: str) -> tuple:
     i: int = 0
     n = len(spec)
     fill = ' '
@@ -1001,7 +1001,7 @@ def _pyj_percent_take_star_value(arg_seq, arg_index) -> tuple:
         raise TypeError('* wants int')
     return (int(value), arg_index)
 
-def pyj_percent_format(fmt, args) -> str:
+def pyj_percent_format(fmt: str, args) -> str:
     arg_seq = _pyj_percent_arg_seq(args)
     arg_index: int = 0
     used_mapping = False
