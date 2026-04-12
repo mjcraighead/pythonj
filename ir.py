@@ -37,6 +37,7 @@ STATIC_METHOD_RETURN_TYPES = {
     ('PyZip', 'newObjPositional'): 'PyZip',
     ('Runtime', 'pythonjIsInstance'): 'PyBool',
     ('Runtime', 'pythonjIsSubclass'): 'PyBool',
+    ('Runtime', 'pythonjUnsupported'): 'void',
     ('String', 'valueOf'): 'String',
 }
 
@@ -834,10 +835,14 @@ def static_method_call(class_name: str, method: str, args: list[Expr], return_ty
             return MethodCall(args[0], 'delAttr', [unbox_str(args[1])], 'void')
         case ('Runtime', 'pythonjDictGet'):
             return MethodCall(Field(CastExpr('PyDict', args[0]), 'items'), 'get', [args[1]], 'PyObject')
+        case ('Runtime', 'pythonjFloatJavaBits'):
+            return CreateObject('PyInt', [StaticMethodCall('Double', 'doubleToLongBits', [unbox_float(args[0])], 'long')])
         case ('Runtime', 'pythonjFloatJavaFormat'):
             return CreateObject('PyString', [
                 StaticMethodCall('String', 'format', [Identifier('java.util.Locale.ROOT'), unbox_str(args[0]), unbox_float(args[1])], 'String')
             ])
+        case ('Runtime', 'pythonjFloatJavaRint'):
+            return CreateObject('PyFloat', [StaticMethodCall('Math', 'rint', [unbox_float(args[0])], 'double')])
         case ('Runtime', 'pythonjFloatJavaStr'):
             return CreateObject('PyString', [StaticMethodCall('Double', 'toString', [unbox_float(args[0])], 'String')])
         case ('Runtime', 'pythonjFormat'):
@@ -848,6 +853,10 @@ def static_method_call(class_name: str, method: str, args: list[Expr], return_ty
             return CreateObject('PyInt', [CastExpr('long', MethodCall(args[0], 'hashCode', [], 'int'))])
         case ('Runtime', 'pythonjHasIter'):
             return static_method_call('PyBool', 'create', [MethodCall(args[0], 'hasIter', [], 'boolean')])
+        case ('Runtime', 'pythonjIntJavaBitCount'):
+            return CreateObject('PyInt', [CastExpr('long', StaticMethodCall('Long', 'bitCount', [unbox_int(args[0])], 'int'))])
+        case ('Runtime', 'pythonjIntJavaLeadingZeros'):
+            return CreateObject('PyInt', [CastExpr('long', StaticMethodCall('Long', 'numberOfLeadingZeros', [unbox_int(args[0])], 'int'))])
         case ('Runtime', 'pythonjIntJavaStr'):
             return CreateObject('PyString', [StaticMethodCall('Long', 'toString', [unbox_int(args[0])], 'String')])
         case ('Runtime', 'pythonjIter'):

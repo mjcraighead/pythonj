@@ -2,6 +2,7 @@
 # Copyright (c) 2012-2026 Matt Craighead
 # SPDX-License-Identifier: MIT
 
+import math
 import _operator
 
 # Builtin functions
@@ -649,8 +650,48 @@ class float:
     def __repr__(self) -> str:
         return pyj_float_str(self)
 
+    def as_integer_ratio(self) -> tuple:
+        if math.isnan(self):
+            raise ValueError('cannot convert NaN to integer ratio')
+        if not math.isfinite(self):
+            raise OverflowError('cannot convert Infinity to integer ratio')
+        bits: int = __pythonj_float_java_bits__(self)
+        negative = bits < 0
+        exponent_bits: int = (bits >> 52) & 0x7FF
+        numerator: int = bits & ((1 << 52) - 1)
+        if exponent_bits == 0:
+            exponent = -1022 - 52
+        else:
+            numerator |= (1 << 52)
+            exponent = exponent_bits - 1023 - 52
+        while (numerator & 1) == 0 and exponent < 0:
+            numerator >>= 1
+            exponent += 1
+        denominator: int = 1
+        if exponent > 0:
+            numerator <<= exponent
+        elif exponent < 0:
+            denominator <<= -exponent
+        if negative:
+            numerator = -numerator
+        return (numerator, denominator)
+
     def conjugate(self) -> float:
         return self
+
+    def from_number(self, number) -> float:
+        if not __pythonj_isinstance__(number, (float, int, bool)):
+            raise TypeError(f'must be real number, not {__pythonj_typename__(type(number))}')
+        return float(number)
+
+    def fromhex(self, s):
+        __pythonj_unsupported__()
+
+    def hex(self):
+        __pythonj_unsupported__()
+
+    def is_integer(self) -> bool:
+        return math.isfinite(self) and self == __pythonj_float_java_rint__(self)
 
 class int:
     def __format__(self, format_spec) -> str:
@@ -662,11 +703,123 @@ class int:
     def as_integer_ratio(self) -> tuple:
         return (self, 1)
 
+    def bit_count(self) -> int:
+        if self == (-1 << 63):
+            return 1
+        return __pythonj_int_java_bit_count__(abs(self))
+
+    def bit_length(self) -> int:
+        if self == (-1 << 63):
+            return 64
+        return 64 - __pythonj_int_java_leading_zeros__(abs(self))
+
     def conjugate(self) -> int:
         return self
 
+    def from_bytes(self, bytes_arg, byteorder, signed) -> int:
+        little_endian = False
+        if byteorder is not None:
+            if not __pythonj_isinstance__(byteorder, str):
+                raise TypeError(f"from_bytes() argument 'byteorder' must be str, not {type(byteorder).__name__}")
+            if byteorder == 'big':
+                little_endian = False
+            elif byteorder == 'little':
+                little_endian = True
+            else:
+                raise ValueError("byteorder must be either 'little' or 'big'")
+
+        if __pythonj_isinstance__(bytes_arg, (bytes, bytearray)):
+            data = bytes_arg
+        else:
+            if __pythonj_isinstance__(bytes_arg, int):
+                raise TypeError(f"cannot convert '{type(bytes_arg).__name__}' object to bytes")
+            data = bytes(bytes_arg)
+
+        if len(data) == 0:
+            return 0
+
+        if little_endian:
+            big_endian_data = data[::-1]
+        else:
+            big_endian_data = data
+
+        data_len = len(big_endian_data)
+        if signed:
+            negative = (big_endian_data[0] & 0x80) != 0
+            pad = 0xFF if negative else 0x00
+            start: int = 0
+            while (data_len - start > 8) and (big_endian_data[start] == pad):
+                start += 1
+            data_len -= start
+            if data_len > 8 or (data_len == 8 and (((big_endian_data[start] & 0x80) != 0) != negative)):
+                raise OverflowError('int too big to convert')
+            if negative:
+                result = big_endian_data[start] - 0x100
+                i = start + 1
+            else:
+                result = 0
+                i = start
+            while i < len(big_endian_data):
+                result = (result << 8) | big_endian_data[i]
+                i += 1
+            return result
+
+        start = 0
+        while (data_len - start > 8) and (big_endian_data[start] == 0):
+            start += 1
+        data_len -= start
+        if data_len > 8 or (data_len == 8 and ((big_endian_data[start] & 0x80) != 0)):
+            raise OverflowError('int too big to convert')
+        result = 0
+        i = start
+        while i < len(big_endian_data):
+            result = (result << 8) | big_endian_data[i]
+            i += 1
+        return result
+
     def is_integer(self) -> bool:
         return True
+
+    def to_bytes(self, length, byteorder, signed) -> bytes:
+        length = _operator.index(length)
+        little_endian = False
+        if byteorder is not None:
+            if not __pythonj_isinstance__(byteorder, str):
+                raise TypeError(f"to_bytes() argument 'byteorder' must be str, not {type(byteorder).__name__}")
+            if byteorder == 'big':
+                little_endian = False
+            elif byteorder == 'little':
+                little_endian = True
+            else:
+                raise ValueError("byteorder must be either 'little' or 'big'")
+        if length < 0:
+            raise ValueError('length argument must be non-negative')
+        value = self
+        if not signed:
+            if value < 0:
+                raise OverflowError("can't convert negative int to unsigned")
+            if length < 8:
+                max_value = (1 << (length * 8)) - 1
+                if value > max_value:
+                    raise OverflowError('int too big to convert')
+        elif length < 8:
+            if length == 0:
+                if value != 0:
+                    raise OverflowError('int too big to convert')
+            else:
+                bits = length * 8
+                min_value = -(1 << (bits - 1))
+                max_value = (1 << (bits - 1)) - 1
+                if value < min_value or value > max_value:
+                    raise OverflowError('int too big to convert')
+        out = bytearray(length)
+        i: int = 0
+        while i < length:
+            idx = i if little_endian else (length - 1 - i)
+            out[idx] = value & 0xFF
+            value >>= 8
+            i += 1
+        return bytes(out)
 
 class list:
     def __repr__(self: list) -> str:

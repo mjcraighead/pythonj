@@ -765,6 +765,9 @@ public final class Runtime {
         }
         throw new UnsupportedOperationException(msg);
     }
+    public static void pythonjUnsupported() {
+        throw new UnsupportedOperationException();
+    }
     public static byte[] getBytesLikeBuffer(PyObject arg) {
         if (arg instanceof PyBytes argBytes) {
             return argBytes.value;

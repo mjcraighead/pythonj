@@ -248,54 +248,6 @@ public final class PyFloat extends PyObject {
         return PyRuntime.pyfunc_float____format__(this, new PyString(formatSpec)).value;
     }
 
-    public PyObject pymethod_as_integer_ratio() {
-        if (Double.isNaN(value)) {
-            throw PyValueError.raise("cannot convert NaN to integer ratio");
-        } else if (Double.isInfinite(value)) {
-            throw PyOverflowError.raise("cannot convert Infinity to integer ratio");
-        }
-        long bits = Double.doubleToRawLongBits(value);
-        boolean negative = bits < 0;
-        int exponentBits = (int)((bits >>> 52) & 0x7FF);
-        long numerator = bits & ((1L << 52) - 1);
-        int exponent;
-        if (exponentBits == 0) {
-            exponent = -1022 - 52;
-        } else {
-            numerator |= (1L << 52);
-            exponent = exponentBits - 1023 - 52;
-        }
-        while (((numerator & 1) == 0) && (exponent < 0)) {
-            numerator >>= 1;
-            exponent++;
-        }
-        PyInt denominator = PyInt.singleton_1;
-        if (exponent > 0) {
-            numerator = PyInt.lshiftUnboxed(numerator, exponent);
-        } else if (exponent < 0) {
-            denominator = new PyInt(PyInt.lshiftUnboxed(1, -exponent));
-        }
-        if (negative) {
-            numerator = Math.negateExact(numerator);
-        }
-        return new PyTuple(new PyObject[]{new PyInt(numerator), denominator});
-    }
-    public static PyObject pymethod_from_number(PyType self, PyObject number) {
-        if ((number instanceof PyFloat) || (number instanceof PyInt) || (number instanceof PyBool)) {
-            return new PyFloat(number.floatValue());
-        }
-        throw PyTypeError.raise("must be real number, not " + number.type().name());
-    }
-    public static PyObject pymethod_fromhex(PyType self, PyObject s) {
-        throw new UnsupportedOperationException();
-    }
-    public PyObject pymethod_hex() {
-        throw new UnsupportedOperationException();
-    }
-    public PyBool pymethod_is_integer() {
-        return PyBool.create(Double.isFinite(value) && (value == Math.rint(value)));
-    }
-
     static PyObject pygetset_real(PyObject obj) { return obj; }
     static PyObject pygetset_imag(PyObject obj) { return new PyFloat(0.0); }
 }

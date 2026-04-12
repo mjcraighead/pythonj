@@ -20,8 +20,8 @@ PYTHON_AUTHORED_IMPLS = {
     'builtins': {'abs', 'all', 'any', 'bin', 'delattr', 'divmod', 'format', 'getattr', 'hash', 'hasattr', 'isinstance', 'issubclass', 'len', 'next', 'oct', 'repr', 'setattr', 'sum'},
     'bytes': {'capitalize', 'count', 'endswith', 'find', 'fromhex', 'hex', 'index', 'isalnum', 'isalpha', 'isascii', 'isdigit', 'islower', 'isspace', 'istitle', 'isupper', 'join', 'lower', 'lstrip', 'partition', 'removeprefix', 'removesuffix', 'rfind', 'rindex', 'rpartition', 'rstrip', 'startswith', 'strip', 'swapcase', 'title', 'upper'},
     'dict': {'fromkeys', 'setdefault'},
-    'float': {'conjugate'},
-    'int': {'as_integer_ratio', 'conjugate', 'is_integer'},
+    'float': {'as_integer_ratio', 'conjugate', 'from_number', 'fromhex', 'hex', 'is_integer'},
+    'int': {'as_integer_ratio', 'bit_count', 'bit_length', 'conjugate', 'from_bytes', 'is_integer', 'to_bytes'},
     'range': {'count'},
     'str': {'join', 'removeprefix', 'removesuffix'},
 }
