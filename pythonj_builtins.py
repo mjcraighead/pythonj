@@ -615,6 +615,18 @@ class bytes:
                 __pythonj_bytes_builder_append_int__(ret, c)
         return __pythonj_bytes_builder_finish__(ret)
 
+    def center(self, width, fillchar): __pythonj_unsupported__()
+    def decode(self, encoding, errors): __pythonj_unsupported__()
+    def expandtabs(self, tabsize): __pythonj_unsupported__()
+    def ljust(self, width, fillchar): __pythonj_unsupported__()
+    def replace(self, old, _new, count): __pythonj_unsupported__()
+    def rjust(self, width, fillchar): __pythonj_unsupported__()
+    def rsplit(self, sep, maxsplit): __pythonj_unsupported__()
+    def split(self, sep, maxsplit): __pythonj_unsupported__()
+    def splitlines(self, keepends): __pythonj_unsupported__()
+    def translate(self, table, delete): __pythonj_unsupported__()
+    def zfill(self, width): __pythonj_unsupported__()
+
 class dict:
     def __repr__(self: dict) -> str:
         ret = __pythonj_str_builder__(None)
@@ -692,14 +704,11 @@ class float:
             raise TypeError(f'must be real number, not {__pythonj_typename__(type(number))}')
         return float(number)
 
-    def fromhex(self, s):
-        __pythonj_unsupported__()
-
-    def hex(self):
-        __pythonj_unsupported__()
-
     def is_integer(self) -> bool:
         return math.isfinite(self) and self == __pythonj_float_java_rint__(self)
+
+    def fromhex(self, s): __pythonj_unsupported__()
+    def hex(self):__pythonj_unsupported__()
 
 class int:
     @__pythonj_getter__

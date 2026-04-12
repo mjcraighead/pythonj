@@ -16,12 +16,10 @@ import ir
 import pythonj
 
 RAW_ARGS_KWARGS_BUILTINS = {'max', 'min'}
+ALL_PYTHON_AUTHORED_IMPLS = {'bytes', 'float', 'int'}
 PYTHON_AUTHORED_IMPLS = {
     'builtins': {'abs', 'all', 'any', 'bin', 'delattr', 'divmod', 'format', 'getattr', 'hash', 'hasattr', 'isinstance', 'issubclass', 'len', 'next', 'oct', 'repr', 'setattr', 'sum'},
-    'bytes': {'capitalize', 'count', 'endswith', 'find', 'fromhex', 'hex', 'index', 'isalnum', 'isalpha', 'isascii', 'isdigit', 'islower', 'isspace', 'istitle', 'isupper', 'join', 'lower', 'lstrip', 'partition', 'removeprefix', 'removesuffix', 'rfind', 'rindex', 'rpartition', 'rstrip', 'startswith', 'strip', 'swapcase', 'title', 'upper'},
     'dict': {'fromkeys', 'setdefault'},
-    'float': {'as_integer_ratio', 'conjugate', 'from_number', 'fromhex', 'hex', 'is_integer'},
-    'int': {'as_integer_ratio', 'bit_count', 'bit_length', 'conjugate', 'from_bytes', 'is_integer', 'to_bytes'},
     'range': {'count'},
     'str': {'join', 'removeprefix', 'removesuffix'},
 }
@@ -602,6 +600,7 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
                         assert False, (name, method_name, kind)
                     method_impl_target = None
                     if kind in {'method', 'classmethod'} and (
+                        name in ALL_PYTHON_AUTHORED_IMPLS or
                         method_name in PYTHON_AUTHORED_IMPLS.get(name, set()) or
                         (method_name in HIDDEN_PYTHON_AUTHORED_METHODS and method_name in pythonj_builtins_classes.get(name, {}))
                     ):
