@@ -701,13 +701,13 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
                     kw_overflow_args_length='argsLength',
                     noarg_name=full_name,
                 )
-                call_expr = ir.MethodCall(ir.This(), 'callPositional', bind_args) if call_positional_shape is not None else ir.StaticMethodCall('PyBuiltinFunctionsImpl', f'pyfunc_{module_name.removeprefix("_")}_{func_name}', bind_args)
+                call_expr = ir.StaticMethodCall(f'{module_func_prefix}Function_{func_name}', 'callPositional', bind_args) if call_positional_shape is not None else ir.StaticMethodCall('PyBuiltinFunctionsImpl', f'pyfunc_{module_name.removeprefix("_")}_{func_name}', bind_args)
                 call_body.append(ir.ReturnStatement(call_expr))
                 decls.append(ir.MethodDecl('@Override public', 'PyObject', 'call', ['PyObject[] args', 'PyDict kwargs'], call_body))
                 if call_positional_shape is not None:
                     (call_positional_method_args, call_positional_statements, call_positional_args) = build_call_positional_ir(call_positional_shape)
                     decls.append(ir.MethodDecl(
-                        'public',
+                        'public static',
                         'PyObject',
                         'callPositional',
                         call_positional_method_args,
@@ -752,13 +752,13 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
             else:
                 call_target = 'PyBuiltinFunctionsImpl'
                 call_positional_return_java_type = 'PyObject'
-            call_expr = ir.MethodCall(ir.This(), 'callPositional', bind_args, call_positional_return_java_type) if call_positional_shape is not None else ir.StaticMethodCall(call_target, f'pyfunc_{func_name}', bind_args)
+            call_expr = ir.StaticMethodCall(f'PyBuiltinFunction_{func_name}', 'callPositional', bind_args, call_positional_return_java_type) if call_positional_shape is not None else ir.StaticMethodCall(call_target, f'pyfunc_{func_name}', bind_args)
             call_body.append(ir.ReturnStatement(call_expr))
             decls.append(ir.MethodDecl('@Override public', 'PyObject', 'call', ['PyObject[] args', 'PyDict kwargs'], call_body))
             if call_positional_shape is not None:
                 (call_positional_method_args, call_positional_statements, call_positional_args) = build_call_positional_ir(call_positional_shape)
                 decls.append(ir.MethodDecl(
-                    'public',
+                    'public static',
                     call_positional_return_java_type,
                     'callPositional',
                     call_positional_method_args,

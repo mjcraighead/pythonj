@@ -1539,6 +1539,13 @@ class LoweringVisitor(ast.NodeVisitor):
         return exact_builtin_type_to_java_type(type_name)
 
     def emit_call_positional(self, func: ir.Expr, node: ast.Call, max_args: int, *, return_node: Optional[ast.expr] = None) -> ir.Expr:
+        if isinstance(func, ir.PyBuiltinFunction):
+            return ir.StaticMethodCall(
+                func.java_type(),
+                'callPositional',
+                self.emit_plain_positional_args(node.args, max_args),
+                self.expr_exact_java_type(node if return_node is None else return_node),
+            )
         return ir.MethodCall(
             func,
             'callPositional',
@@ -1602,8 +1609,8 @@ class LoweringVisitor(ast.NodeVisitor):
         if not (min_args <= len(node.args) <= max_args):
             return None
         java_name = extract_spec.BUILTIN_TYPES[type_name]
-        return ir.MethodCall(
-            ir.Identifier(f'{java_name}Method_{node.func.attr}'),
+        return ir.static_method_call(
+            f'{java_name}Method_{node.func.attr}',
             'callPositional',
             [receiver, *self.emit_plain_positional_args(node.args, max_args)],
             self.expr_exact_java_type(node),

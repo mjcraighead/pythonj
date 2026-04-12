@@ -783,7 +783,7 @@ def py_format(obj: Expr, spec: Expr) -> Expr:
             return obj
     return CreateObject('PyString', [MethodCall(obj, 'format', [unbox_str(spec)], 'String')])
 
-def static_method_call(class_name: str, method: str, args: list[Expr]) -> Expr:
+def static_method_call(class_name: str, method: str, args: list[Expr], return_type: str = JAVA_TYPE_UNKNOWN) -> Expr:
     match (class_name, method):
         case ('PyBool', 'create') if isinstance(args[0], Bool):
             return PyConstant(args[0].value)
@@ -858,7 +858,7 @@ def static_method_call(class_name: str, method: str, args: list[Expr]) -> Expr:
             return CreateObject('PyString', [MethodCall(CastExpr('PyType', args[0]), 'name', [], 'String')])
         case ('Runtime', 'pythonjZipNew'):
             return static_method_call('PyZip', 'newObjPositional', [Field(args[0], 'items'), args[1]])
-    return StaticMethodCall(class_name, method, args, STATIC_METHOD_RETURN_TYPES.get((class_name, method), JAVA_TYPE_UNKNOWN))
+    return StaticMethodCall(class_name, method, args, STATIC_METHOD_RETURN_TYPES.get((class_name, method), return_type))
 
 def chained_binary_op(op: str, exprs: list[Expr]) -> Expr:
     assert len(exprs) >= 1, exprs
