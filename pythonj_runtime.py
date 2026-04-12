@@ -39,10 +39,8 @@ def _type_error_unexpected_kw_arg(kw_name: str, unknown_kw: str) -> TypeError:
 
 def _type_error_user_missing_args(name: str, missing_arg_names) -> TypeError:
     missing = len(missing_arg_names)
-    ret: str = f'{name}() missing {missing} required positional argument'
-    if missing != 1:
-        ret += 's'
-    ret += ':'
+    suffix = '' if missing == 1 else 's'
+    ret: str = f'{name}() missing {missing} required positional argument{suffix}:'
     i: int = 0
     last_missing_index = missing - 1
     penultimate_missing_index = missing - 2
@@ -55,16 +53,8 @@ def _type_error_user_missing_args(name: str, missing_arg_names) -> TypeError:
         i += 1
     return TypeError(ret)
 
-def _type_error_user_posonly_as_keyword(name: str, arg_names) -> TypeError:
-    joined: str = ''
-    arg_names_len = len(arg_names)
-    i: int = 0
-    while i < arg_names_len:
-        if i != 0:
-            joined += ', '
-        joined += arg_names[i]
-        i += 1
-    return TypeError(f"{name}() got some positional-only arguments passed as keyword arguments: {joined!r}")
+def _type_error_user_posonly_as_keyword(name: str, arg_names: list) -> TypeError:
+    return TypeError(f"{name}() got some positional-only arguments passed as keyword arguments: {', '.join(arg_names)!r}")
 
 def require_exact_positional(args_len: int, kwargs, kw_name: str, positional_name: str, n: int, generic_exact_args_style) -> None:
     if kwargs is not __pythonj_null__ and kwargs:
