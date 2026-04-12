@@ -731,6 +731,8 @@ def bool_value(expr: Expr) -> Expr:
         return expr.args[0] # return the raw boolean instead of box/unbox
     if isinstance(expr, PyConstant):
         return Bool(bool(expr.value))
+    if expr.java_type() == 'PyBool':
+        return Field(expr, 'value', 'boolean')
     return MethodCall(expr, 'boolValue', [], 'boolean')
 
 def unbox_int(expr: Expr) -> Expr:

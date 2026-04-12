@@ -1811,8 +1811,10 @@ class LoweringVisitor(ast.NodeVisitor):
         if len(values) == 1:
             return self.visit(values[0])
         temp_name = self.scope.make_temp()
-        self.code.append(ir.LocalDecl('PyObject', temp_name, None))
         lhs = self.visit(values[0])
+        if (temp_java_type := lhs.java_type()) == ir.JAVA_TYPE_UNKNOWN:
+            temp_java_type = 'PyObject'
+        self.code.append(ir.LocalDecl(temp_java_type, temp_name, None))
         rhs = self.emit_bool_op(op, values[1:])
         if isinstance(op, ast.And):
             return ir.CondOp(ir.bool_value(ir.AssignExpr(ir.Identifier(temp_name), lhs)), rhs, ir.Identifier(temp_name))
@@ -2039,7 +2041,7 @@ class LoweringVisitor(ast.NodeVisitor):
             [self.visit(node.slice)],
         )
         java_type = self.expr_exact_java_type(node)
-        if java_type is not ir.JAVA_TYPE_UNKNOWN:
+        if java_type != ir.JAVA_TYPE_UNKNOWN:
             return ir.CastExpr(java_type, expr)
         return expr
 
