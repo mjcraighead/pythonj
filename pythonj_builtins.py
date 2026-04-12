@@ -61,6 +61,12 @@ def hasattr(obj, name) -> bool:
 def hash(arg) -> int:
     return __pythonj_hash__(arg)
 
+def hex(arg) -> str:
+    value: int = _operator.index(arg)
+    if value < 0:
+        return '-0x' + format(-value, 'x')
+    return '0x' + format(value, 'x')
+
 def isinstance(obj, class_or_tuple) -> bool:
     if __pythonj_isinstance__(class_or_tuple, tuple):
         for x in class_or_tuple:

@@ -250,14 +250,6 @@ final class PyBuiltinFunctionsImpl {
         Collections.sort(list);
         return new PyList(list);
     }
-    static PyString pyfunc_hex(PyObject arg) {
-        long index = arg.indexValue();
-        if (index < 0) {
-            return new PyString(String.format("-0x%x", Math.negateExact(index)));
-        } else {
-            return new PyString(String.format("0x%x", index));
-        }
-    }
     static PyIter pyfunc_iter(PyObject obj, PyObject sentinel) {
         if (sentinel != null) {
             throw new UnsupportedOperationException("iter() with callable+sentinel is not implemented");
