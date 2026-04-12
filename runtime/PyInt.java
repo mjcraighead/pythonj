@@ -415,9 +415,4 @@ public final class PyInt extends PyObject {
     @Override public long indexValue() { return value; }
     @Override public long intValue() { return value; }
     @Override public String repr() { return PyRuntime.pyfunc_int____repr__(this).value; }
-
-    static PyObject pygetset_denominator(PyObject obj) { return PyInt.singleton_1; }
-    static PyObject pygetset_imag(PyObject obj) { return PyInt.singleton_0; }
-    static PyObject pygetset_numerator(PyObject obj) { return obj; }
-    static PyObject pygetset_real(PyObject obj) { return obj; }
 }

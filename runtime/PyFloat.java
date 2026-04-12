@@ -247,7 +247,4 @@ public final class PyFloat extends PyObject {
     @Override public String format(String formatSpec) {
         return PyRuntime.pyfunc_float____format__(this, new PyString(formatSpec)).value;
     }
-
-    static PyObject pygetset_real(PyObject obj) { return obj; }
-    static PyObject pygetset_imag(PyObject obj) { return new PyFloat(0.0); }
 }

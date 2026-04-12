@@ -644,6 +644,14 @@ class dict:
         return defaultValue
 
 class float:
+    @__pythonj_getter__
+    def imag(self) -> float:
+        return 0.0
+
+    @__pythonj_getter__
+    def real(self) -> float:
+        return self
+
     def __format__(self, format_spec) -> str:
         return pyj_float_format(self, format_spec)
 
@@ -694,6 +702,22 @@ class float:
         return math.isfinite(self) and self == __pythonj_float_java_rint__(self)
 
 class int:
+    @__pythonj_getter__
+    def denominator(self) -> int:
+        return 1
+
+    @__pythonj_getter__
+    def imag(self) -> int:
+        return 0
+
+    @__pythonj_getter__
+    def numerator(self) -> int:
+        return self
+
+    @__pythonj_getter__
+    def real(self) -> int:
+        return self
+
     def __format__(self, format_spec) -> str:
         return pyj_int_format(self, format_spec)
 
