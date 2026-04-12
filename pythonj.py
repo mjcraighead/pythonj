@@ -1553,6 +1553,50 @@ class LoweringVisitor(ast.NodeVisitor):
             self.expr_exact_java_type(node if return_node is None else return_node),
         )
 
+    def direct_builtin_module_attr_expr(self, value: ir.Expr, attr: str) -> Optional[ir.Expr]:
+        if not isinstance(value, ir.PyBuiltinModule):
+            return None
+        attr_kind = DIRECT_GETATTR_BUILTIN_MODULE_ATTRS.get(value.name, {}).get(attr)
+        if attr_kind is None:
+            return None
+        return get_builtin_module_attr_expr(value.name, attr, attr_kind)
+
+    def direct_builtin_type_attr_expr(self, value: ir.Expr, attr: str, type_name: Optional[str] = None) -> Optional[ir.Expr]:
+        if isinstance(value, ir.PyBuiltinType):
+            attr_kind = DIRECT_GETATTR_BUILTIN_TYPE_ATTRS.get(value.name, {}).get(attr)
+            if attr_kind is None:
+                return None
+            return get_builtin_type_attr_expr(value.name, attr, attr_kind, None)
+        if type_name is None:
+            type_name = self.exact_builtin_type_of_expr(value)
+        if type_name is None:
+            return None
+        attr_kind = DIRECT_GETATTR_BUILTIN_TYPE_ATTRS.get(type_name, {}).get(attr)
+        if attr_kind is None:
+            return None
+        return get_builtin_type_attr_expr(type_name, attr, attr_kind, value)
+
+    def direct_builtin_method_call_info(self, receiver: ir.Expr, type_name: Optional[str], attr: str) -> Optional[tuple[ir.Expr, str, int, int]]:
+        if RUNTIME_SPEC is None:
+            return None
+        if isinstance(receiver, ir.PyBuiltinType):
+            return None
+        if type_name is None:
+            type_name = self.exact_builtin_type_of_expr(receiver)
+        if type_name is None:
+            return None
+        attr_kind = DIRECT_GETATTR_BUILTIN_TYPE_ATTRS.get(type_name, {}).get(attr)
+        if attr_kind != 'method':
+            return None
+        call_range = extract_spec.get_method_call_range(RUNTIME_SPEC, type_name, attr)
+        if call_range is None:
+            return None
+        (min_args, max_args) = call_range
+        java_name = extract_spec.BUILTIN_TYPES[type_name]
+        if receiver.java_type() != java_name:
+            receiver = ir.CastExpr(java_name, receiver)
+        return (receiver, type_name, min_args, max_args)
+
     def try_emit_direct_builtin_method_call(self, node: ast.Call) -> Optional[ir.Expr]:
         if not isinstance(node.func, ast.Attribute):
             return None
@@ -1560,20 +1604,13 @@ class LoweringVisitor(ast.NodeVisitor):
             return None
         receiver = self.visit(node.func.value)
         type_name = get_expr_exact_builtin_type(node.func.value)
-        if type_name is None or RUNTIME_SPEC is None:
+        direct_method_info = self.direct_builtin_method_call_info(receiver, type_name, node.func.attr)
+        if direct_method_info is None:
             return None
-        attr_kind = DIRECT_GETATTR_BUILTIN_TYPE_ATTRS.get(type_name, {}).get(node.func.attr)
-        if attr_kind != 'method':
-            return None
-        call_range = extract_spec.get_method_call_range(RUNTIME_SPEC, type_name, node.func.attr)
-        if call_range is None:
-            return None
-        (min_args, max_args) = call_range
+        (receiver, type_name, min_args, max_args) = direct_method_info
         if not (min_args <= len(node.args) <= max_args):
             return None
         java_name = extract_spec.BUILTIN_TYPES[type_name]
-        if receiver.java_type() != java_name:
-            receiver = ir.CastExpr(java_name, receiver)
         return ir.MethodCall(
             ir.Identifier(f'{java_name}Method_{node.func.attr}'),
             'callPositional',
@@ -1951,21 +1988,10 @@ class LoweringVisitor(ast.NodeVisitor):
         return ir.MethodCall(self.visit(node.value), 'getItem', [self.visit(node.slice)])
 
     def emit_attribute(self, value: ir.Expr, attr: str, type_name: Optional[str] = None) -> ir.Expr:
-        if isinstance(value, ir.PyBuiltinModule):
-            attr_kind = DIRECT_GETATTR_BUILTIN_MODULE_ATTRS.get(value.name, {}).get(attr)
-            if attr_kind is not None:
-                return get_builtin_module_attr_expr(value.name, attr, attr_kind)
-            return ir.MethodCall(value, 'getAttr', [ir.StrLiteral(attr)])
-        if isinstance(value, ir.PyBuiltinType):
-            attr_kind = DIRECT_GETATTR_BUILTIN_TYPE_ATTRS.get(value.name, {}).get(attr)
-            if attr_kind is not None:
-                return get_builtin_type_attr_expr(value.name, attr, attr_kind, None)
-        if type_name is None:
-            type_name = self.exact_builtin_type_of_expr(value)
-        if type_name is not None:
-            attr_kind = DIRECT_GETATTR_BUILTIN_TYPE_ATTRS.get(type_name, {}).get(attr)
-            if attr_kind is not None:
-                return get_builtin_type_attr_expr(type_name, attr, attr_kind, value)
+        if (direct_expr := self.direct_builtin_module_attr_expr(value, attr)) is not None:
+            return direct_expr
+        if (direct_expr := self.direct_builtin_type_attr_expr(value, attr, type_name)) is not None:
+            return direct_expr
         return ir.MethodCall(value, 'getAttr', [ir.StrLiteral(attr)])
 
     def visit_Attribute(self, node) -> ir.Expr:
