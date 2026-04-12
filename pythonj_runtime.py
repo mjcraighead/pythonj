@@ -886,7 +886,7 @@ def _pyj_percent_apply_width(text, flags, width) -> str:
     align = '<' if '-' in flags else '>'
     return _pyj_format_apply_width(text, fill, align, width, '>')
 
-def _pyj_percent_without_zero_flag(flags) -> str:
+def _pyj_percent_without_zero_flag(flags: str) -> str:
     ret = []
     for c in flags:
         if c != '0':

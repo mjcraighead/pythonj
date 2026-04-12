@@ -5,29 +5,29 @@
 import java.nio.charset.Charset;
 import java.util.Locale;
 
+final class PyStringIter extends PyIter {
+    private static final PyConcreteType type_singleton = new PyConcreteType("str_iterator", PyStringIter.class);
+
+    private final String s;
+    private int index = 0;
+
+    PyStringIter(PyString _s) { s = _s.value; }
+
+    @Override public PyString next() {
+        if (index >= s.length()) {
+            return null;
+        }
+        var ret = new PyString(String.valueOf(s.charAt(index)));
+        index++;
+        return ret;
+    }
+    @Override public String repr() { return defaultRepr(); }
+    @Override public PyConcreteType type() { return type_singleton; }
+};
+
 public final class PyString extends PyObject {
     public static final PyString empty_singleton = new PyString("");
     private static final PyTuple constructor_positional_names = new PyTuple(new PyObject[] {new PyString("object"), new PyString("encoding"), new PyString("errors")});
-
-    static final class PyStringIter extends PyIter {
-        private static final PyConcreteType type_singleton = new PyConcreteType("str_iterator", PyStringIter.class);
-
-        private final String s;
-        private int index = 0;
-
-        PyStringIter(PyString _s) { s = _s.value; }
-
-        @Override public PyString next() {
-            if (index >= s.length()) {
-                return null;
-            }
-            var ret = new PyString(String.valueOf(s.charAt(index)));
-            index++;
-            return ret;
-        }
-        @Override public String repr() { return defaultRepr(); }
-        @Override public PyConcreteType type() { return type_singleton; }
-    };
 
     public final String value;
 

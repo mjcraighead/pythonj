@@ -771,6 +771,10 @@ def iter(obj: Expr) -> Expr:
             return CreateObject('PyListIter', [MethodCall(Field(obj, 'items'), 'iterator', [])])
         case 'PyRange':
             return CreateObject('PyRangeIter', [obj])
+        case 'PySet':
+            return CreateObject('PySetIter', [MethodCall(Field(obj, 'items'), 'iterator', [])])
+        case 'PyString':
+            return CreateObject('PyStringIter', [obj])
         case 'PyTuple':
             return CreateObject('PyTupleIter', [obj])
     return MethodCall(obj, 'iter', [], 'PyIter')

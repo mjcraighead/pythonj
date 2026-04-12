@@ -7,19 +7,19 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
+final class PySetIter extends PyIter {
+    private static final PyConcreteType type_singleton = new PyConcreteType("set_iterator", PySetIter.class);
+
+    private final Iterator<PyObject> it;
+
+    PySetIter(Iterator<PyObject> _it) { it = _it; }
+
+    @Override public PyObject next() { return it.hasNext() ? it.next() : null; }
+    @Override public String repr() { return defaultRepr(); }
+    @Override public PyConcreteType type() { return type_singleton; }
+};
+
 public final class PySet extends PyObject {
-    static final class PySetIter extends PyIter {
-        private static final PyConcreteType type_singleton = new PyConcreteType("set_iterator", PySetIter.class);
-
-        private final Iterator<PyObject> it;
-
-        PySetIter(Iterator<PyObject> _it) { it = _it; }
-
-        @Override public PyObject next() { return it.hasNext() ? it.next() : null; }
-        @Override public String repr() { return defaultRepr(); }
-        @Override public PyConcreteType type() { return type_singleton; }
-    };
-
     public final HashSet<PyObject> items;
 
     PySet() {
