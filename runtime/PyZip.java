@@ -37,11 +37,11 @@ public final class PyZip extends PyIter {
                     return null;
                 }
                 if (i != 0) {
-                    throw PyValueError.raiseFormat("zip() argument %d is shorter than argument 1", i + 1);
+                    throw PyValueError.raise("zip() argument " + (i + 1) + " is shorter than argument 1");
                 }
                 for (int j = 1; j < iters.length; j++) {
                     if (iters[j].next() != null) {
-                        throw PyValueError.raiseFormat("zip() argument %d is longer than argument 1", j + 1);
+                        throw PyValueError.raise("zip() argument " + (j + 1) + " is longer than argument 1");
                     }
                 }
                 return null;

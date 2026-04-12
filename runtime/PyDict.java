@@ -449,11 +449,11 @@ public final class PyDict extends PyObject {
                     var itemIter = item.iter();
                     var key = itemIter.next();
                     if (key == null) {
-                        throw PyValueError.raiseFormat("dictionary update sequence element #%d has length 0; 2 is required", index);
+                        throw PyValueError.raise("dictionary update sequence element #" + index + " has length 0; 2 is required");
                     }
                     var value = itemIter.next();
                     if (value == null) {
-                        throw PyValueError.raiseFormat("dictionary update sequence element #%d has length 1; 2 is required", index);
+                        throw PyValueError.raise("dictionary update sequence element #" + index + " has length 1; 2 is required");
                     }
                     var nextItem = itemIter.next();
                     if (nextItem != null) {
@@ -461,7 +461,7 @@ public final class PyDict extends PyObject {
                         while (itemIter.next() != null) {
                             length++;
                         }
-                        throw PyValueError.raiseFormat("dictionary update sequence element #%d has length %d; 2 is required", index, length);
+                        throw PyValueError.raise("dictionary update sequence element #" + index + " has length " + length + "; 2 is required");
                     }
                     items.put(key, value);
                 }

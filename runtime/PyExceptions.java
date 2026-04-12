@@ -254,9 +254,6 @@ final class PyTypeError extends PyException {
     static PyRaise raise(String msg) {
         return new PyRaise(new PyTypeError(new PyString(msg)));
     }
-    static PyRaise raiseFormat(String fmt, Object... args) {
-        return new PyRaise(new PyTypeError(new PyString(String.format(fmt, args))));
-    }
 
     public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, type.name());
@@ -270,9 +267,6 @@ final class PyValueError extends PyException {
 
     static PyRaise raise(String msg) {
         return new PyRaise(new PyValueError(new PyString(msg)));
-    }
-    static PyRaise raiseFormat(String fmt, Object... args) {
-        return new PyRaise(new PyValueError(new PyString(String.format(fmt, args))));
     }
 
     public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {

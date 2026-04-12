@@ -58,7 +58,7 @@ final class PyBuiltinFunctionsImpl {
                 col++;
             }
         }
-        return PyValueError.raiseFormat("%s: line %d column %d (char %d)", msg, line, col, pos);
+        return PyValueError.raise(msg + ": line " + line + " column " + col + " (char " + pos + ")");
     }
     static PyTuple pyfunc_json_scanstring(PyObject sObj, PyObject endObj) {
         if (!(sObj instanceof PyString sStr)) {

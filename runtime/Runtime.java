@@ -575,20 +575,17 @@ public final class Runtime {
             throw new UnsupportedOperationException("issubclass() is unimplemented for types " + obj.repr() + " and " + type.repr());
         }
     }
-    public static PyRaise raiseExactArgs(PyObject[] args, int n, String name) {
-        return PyTypeError.raiseFormat("%s expected %d argument%s, got %d", name, n, (n == 1) ? "" : "s", args.length);
-    }
     public static void requireNoKwArgs(PyDict kwargs, String name) {
         if ((kwargs != null) && kwargs.boolValue()) {
             throw PyTypeError.raise(name + "() takes no keyword arguments");
         }
     }
     public static PyRaise raiseAtMostArgs(String name, long max, long given) {
-        return PyTypeError.raiseFormat("%s() takes at most %d arguments (%d given)", name, max, given);
+        return PyTypeError.raise(name + "() takes at most " + max + " arguments (" + given + " given)");
     }
     public static PyRaise raiseAtMostKwArgs(String name, long max, long argsLength, long kwargsLen) {
         if (argsLength == 0) {
-            return PyTypeError.raiseFormat("%s() takes at most %d keyword argument%s (%d given)", name, max, (max == 1) ? "" : "s", kwargsLen);
+            return PyTypeError.raise(String.format("%s() takes at most %d keyword argument%s (%d given)", name, max, (max == 1) ? "" : "s", kwargsLen));
         } else {
             return raiseAtMostArgs(name, max, argsLength + kwargsLen);
         }
@@ -649,10 +646,10 @@ public final class Runtime {
         return PyAttributeError.raise(PyString.reprOf(owner.name()) + " object attribute " + PyString.reprOf(key) + " is read-only");
     }
     public static PyRaise raiseMinArgs(PyObject[] args, int min, String name) {
-        return PyTypeError.raiseFormat("%s expected at least %d argument%s, got %d", name, min, (min == 1) ? "" : "s", args.length);
+        return PyTypeError.raise(String.format("%s expected at least %d argument%s, got %d", name, min, (min == 1) ? "" : "s", args.length));
     }
     public static PyRaise raiseMaxArgs(PyObject[] args, int max, String name) {
-        return PyTypeError.raiseFormat("%s expected at most %d argument%s, got %d", name, max, (max == 1) ? "" : "s", args.length);
+        return PyTypeError.raise(String.format("%s expected at most %d argument%s, got %d", name, max, (max == 1) ? "" : "s", args.length));
     }
     public static void requireMinMaxPositional(PyObject[] args, PyDict kwargs, String name, int minArgs, int maxArgs) {
         PyString pyName = new PyString(name);
