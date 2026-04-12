@@ -221,30 +221,7 @@ public final class PyBytes extends PyObject {
     }
     @Override public int hashCode() { return Arrays.hashCode(value); }
     @Override public long len() { return value.length; }
-    @Override public String repr() {
-        var s = new StringBuilder("b'");
-        for (byte x: value) {
-            if (x == '\n') {
-                s.append("\\n");
-            } else if (x == '\r') {
-                s.append("\\r");
-            } else if (x == '\t') {
-                s.append("\\t");
-            } else if (x == '\'') {
-                s.append("\\'");
-            } else if (x == '\\') {
-                s.append("\\\\");
-            } else if ((x >= 0x20) && (x < 0x7F)) {
-                s.append((char)x);
-            } else {
-                s.append("\\x");
-                int c = x & 0xFF;
-                s.append("0123456789abcdef".charAt(c >> 4));
-                s.append("0123456789abcdef".charAt(c & 15));
-            }
-        }
-        return s + "'";
-    }
+    @Override public String repr() { return PyRuntime.pyfunc_bytes____repr__(this).value; }
 
     public PyObject pymethod_center(PyObject width, PyObject fillchar) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_decode(PyObject encoding, PyObject errors) { throw new UnsupportedOperationException(); }

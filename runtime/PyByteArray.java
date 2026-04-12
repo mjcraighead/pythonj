@@ -212,30 +212,7 @@ public final class PyByteArray extends PyObject {
     }
     @Override public int hashCode() { throw raiseUnhashable(); }
     @Override public long len() { return value.length; }
-    @Override public String repr() {
-        var s = new StringBuilder("bytearray(b'");
-        for (byte x: value) {
-            if (x == '\n') {
-                s.append("\\n");
-            } else if (x == '\r') {
-                s.append("\\r");
-            } else if (x == '\t') {
-                s.append("\\t");
-            } else if (x == '\'') {
-                s.append("\\'");
-            } else if (x == '\\') {
-                s.append("\\\\");
-            } else if ((x >= 0x20) && (x < 0x7F)) {
-                s.append((char)x);
-            } else {
-                s.append("\\x");
-                int c = x & 0xFF;
-                s.append("0123456789abcdef".charAt(c >> 4));
-                s.append("0123456789abcdef".charAt(c & 15));
-            }
-        }
-        return s + "')";
-    }
+    @Override public String repr() { return PyRuntime.pyfunc_bytearray____repr__(this).value; }
 
     public static PyObject pymethod_fromhex(PyType self, PyObject string) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_append(PyObject item) { throw new UnsupportedOperationException(); }

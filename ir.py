@@ -848,6 +848,8 @@ def static_method_call(class_name: str, method: str, args: list[Expr], return_ty
             return CreateObject('PyInt', [CastExpr('long', MethodCall(args[0], 'hashCode', [], 'int'))])
         case ('Runtime', 'pythonjHasIter'):
             return static_method_call('PyBool', 'create', [MethodCall(args[0], 'hasIter', [], 'boolean')])
+        case ('Runtime', 'pythonjIntJavaStr'):
+            return CreateObject('PyString', [StaticMethodCall('Long', 'toString', [unbox_int(args[0])], 'String')])
         case ('Runtime', 'pythonjIter'):
             return iter(args[0])
         case ('Runtime', 'pythonjLen'):

@@ -157,19 +157,7 @@ public final class PyTuple extends PyObject {
     }
     @Override public int hashCode() { return Arrays.hashCode(items); }
     @Override public long len() { return items.length; }
-    @Override public String repr() {
-        var s = new StringBuilder("(");
-        for (int i = 0; i < items.length; i++) {
-            if (i != 0) {
-                s.append(", ");
-            }
-            s.append(items[i].repr());
-        }
-        if (items.length == 1) {
-            s.append(",");
-        }
-        return s + ")";
-    }
+    @Override public String repr() { return PyRuntime.pyfunc_tuple____repr__(this).value; }
 
     public PyInt pymethod_count(PyObject arg) {
         long n = 0;

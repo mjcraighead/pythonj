@@ -25,11 +25,7 @@ PYTHON_AUTHORED_IMPLS = {
     'range': {'count'},
     'str': {'join', 'removeprefix', 'removesuffix'},
 }
-HIDDEN_PYTHON_AUTHORED_METHOD_IMPLS = {
-    'bool': {'__format__'},
-    'float': {'__format__'},
-    'int': {'__format__'},
-}
+HIDDEN_PYTHON_AUTHORED_METHODS = {'__format__', '__repr__'}
 PYTHON_AUTHORED_CONSTRUCTOR_IMPLS = {'enumerate', 'zip'}
 SUPPORTED_HELPER_RETURN_TYPES = {'bool', 'bytes', 'dict', 'float', 'int', 'list', 'str', 'tuple'}
 
@@ -561,7 +557,10 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
                     else:
                         assert False, (name, method_name, kind)
                     method_impl_target = None
-                    if kind in {'method', 'classmethod'} and method_name in PYTHON_AUTHORED_IMPLS.get(name, set()):
+                    if kind in {'method', 'classmethod'} and (
+                        method_name in PYTHON_AUTHORED_IMPLS.get(name, set()) or
+                        (method_name in HIDDEN_PYTHON_AUTHORED_METHODS and method_name in pythonj_builtins_classes.get(name, {}))
+                    ):
                         helper_name = f'{name.replace(".", "_")}__{method_name}'
                         method_impl_target = f'PyRuntime.pyfunc_{helper_name}'
                         (helper_classes, helper_method) = translate_python_method_impl(
@@ -691,8 +690,8 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
             )
             python_helper_classes.extend(helper_classes)
             python_helper_methods.append(helper_method)
-        for (type_name, method_names) in sorted(HIDDEN_PYTHON_AUTHORED_METHOD_IMPLS.items()):
-            for method_name in sorted(method_names):
+        for (type_name, methods) in sorted(pythonj_builtins_classes.items()):
+            for method_name in sorted(method_name for method_name in methods if method_name in HIDDEN_PYTHON_AUTHORED_METHODS):
                 (helper_classes, helper_method) = translate_python_method_impl(
                     pythonj_builtins_node, type_name, method_name, pool,
                     class_funcs=pythonj_builtins_classes, scope_infos=builtins_scope_infos,

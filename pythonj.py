@@ -42,6 +42,7 @@ INTRINSIC_SIGNATURES = {
     '__pythonj_getattr__': ('pythonjGetAttr', 2, 'object'),
     '__pythonj_hash__': ('pythonjHash', 1, 'int'),
     '__pythonj_hasiter__': ('pythonjHasIter', 1, 'bool'),
+    '__pythonj_int_java_str__': ('pythonjIntJavaStr', 1, 'str'),
     '__pythonj_isinstance__': ('pythonjIsInstance', 2, 'bool'),
     '__pythonj_issubclass__': ('pythonjIsSubclass', 2, 'bool'),
     '__pythonj_iter__': ('pythonjIter', 1, 'object'),

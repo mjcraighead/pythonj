@@ -133,13 +133,7 @@ public final class PyRange extends PyObject {
             return (start - stop - step - 1) / (-step);
         }
     }
-    @Override public String repr() {
-        if (step == 1) {
-            return String.format("range(%d, %d)", start, stop);
-        } else {
-            return String.format("range(%d, %d, %d)", start, stop, step);
-        }
-    }
+    @Override public String repr() { return PyRuntime.pyfunc_range____repr__(this).value; }
 
     static PyObject pymember_start(PyObject obj) { return new PyInt(((PyRange)obj).start); }
     static PyObject pymember_step(PyObject obj) { return new PyInt(((PyRange)obj).step); }

@@ -204,18 +204,7 @@ public final class PyList extends PyObject {
     }
     @Override public int hashCode() { throw raiseUnhashable(); }
     @Override public long len() { return items.size(); }
-    @Override public String repr() {
-        var s = new StringBuilder("[");
-        boolean first = true;
-        for (var x: items) {
-            if (!first) {
-                s.append(", ");
-            }
-            first = false;
-            s.append(x.repr());
-        }
-        return s + "]";
-    }
+    @Override public String repr() { return PyRuntime.pyfunc_list____repr__(this).value; }
 
     public PyNone pymethod_append(PyObject arg) {
         items.add(arg);

@@ -208,5 +208,5 @@ public final class PyBool extends PyObject {
     @Override public boolean hasIndex() { return true; }
     @Override public long indexValue() { return asInt(); }
     @Override public long intValue() { return asInt(); }
-    @Override public String repr() { return value ? "True" : "False"; }
+    @Override public String repr() { return PyRuntime.pyfunc_bool____repr__(this).value; }
 }

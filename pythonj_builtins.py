@@ -156,7 +156,37 @@ class bool:
     def __format__(self, format_spec) -> str:
         return pyj_bool_format(self, format_spec)
 
+    def __repr__(self) -> str:
+        return 'True' if self else 'False'
+
+class bytearray:
+    def __repr__(self: bytearray) -> str:
+        return 'bytearray(' + repr(bytes(self)) + ')'
+
 class bytes:
+    def __repr__(self: bytes) -> str:
+        ret = __pythonj_str_builder__(len(self) + 3)
+        __pythonj_str_builder_append__(ret, "b'")
+        c: int
+        for c in self:
+            if c == 10:
+                __pythonj_str_builder_append__(ret, '\\n')
+            elif c == 13:
+                __pythonj_str_builder_append__(ret, '\\r')
+            elif c == 9:
+                __pythonj_str_builder_append__(ret, '\\t')
+            elif c == 39:
+                __pythonj_str_builder_append__(ret, "\\'")
+            elif c == 92:
+                __pythonj_str_builder_append__(ret, '\\\\')
+            elif 32 <= c < 127:
+                __pythonj_str_builder_append__(ret, chr(c))
+            else:
+                __pythonj_str_builder_append__(ret, '\\x')
+                __pythonj_str_builder_append__(ret, format(c, '02x'))
+        __pythonj_str_builder_append__(ret, "'")
+        return __pythonj_str_builder_finish__(ret)
+
     def capitalize(self: bytes) -> bytes:
         ret = __pythonj_bytes_builder__(__pythonj_len__(self))
         seen_alpha = False
@@ -585,6 +615,20 @@ class bytes:
         return __pythonj_bytes_builder_finish__(ret)
 
 class dict:
+    def __repr__(self: dict) -> str:
+        ret = __pythonj_str_builder__(None)
+        __pythonj_str_builder_append__(ret, '{')
+        first = True
+        for (key, value) in self.items():
+            if not first:
+                __pythonj_str_builder_append__(ret, ', ')
+            first = False
+            __pythonj_str_builder_append__(ret, repr(key))
+            __pythonj_str_builder_append__(ret, ': ')
+            __pythonj_str_builder_append__(ret, repr(value))
+        __pythonj_str_builder_append__(ret, '}')
+        return __pythonj_str_builder_finish__(ret)
+
     def fromkeys(self, iterable, value) -> dict:
         ret = {}
         for key in iterable:
@@ -602,12 +646,18 @@ class float:
     def __format__(self, format_spec) -> str:
         return pyj_float_format(self, format_spec)
 
+    def __repr__(self) -> str:
+        return pyj_float_str(self)
+
     def conjugate(self) -> float:
         return self
 
 class int:
     def __format__(self, format_spec) -> str:
         return pyj_int_format(self, format_spec)
+
+    def __repr__(self) -> str:
+        return __pythonj_int_java_str__(self)
 
     def as_integer_ratio(self) -> tuple:
         return (self, 1)
@@ -618,9 +668,46 @@ class int:
     def is_integer(self) -> bool:
         return True
 
+class list:
+    def __repr__(self: list) -> str:
+        ret = __pythonj_str_builder__(None)
+        __pythonj_str_builder_append__(ret, '[')
+        first = True
+        for item in self:
+            if not first:
+                __pythonj_str_builder_append__(ret, ', ')
+            first = False
+            __pythonj_str_builder_append__(ret, repr(item))
+        __pythonj_str_builder_append__(ret, ']')
+        return __pythonj_str_builder_finish__(ret)
+
 class range:
+    def __repr__(self) -> str:
+        if self.step == 1:
+            return f'range({self.start}, {self.stop})'
+        return f'range({self.start}, {self.stop}, {self.step})'
+
     def count(self, value) -> int:
         return 1 if value in self else 0
+
+class set:
+    def __repr__(self: set) -> str:
+        if not self:
+            return 'set()'
+        ret = __pythonj_str_builder__(None)
+        __pythonj_str_builder_append__(ret, '{')
+        first = True
+        for item in self:
+            if not first:
+                __pythonj_str_builder_append__(ret, ', ')
+            first = False
+            __pythonj_str_builder_append__(ret, repr(item))
+        __pythonj_str_builder_append__(ret, '}')
+        return __pythonj_str_builder_finish__(ret)
+
+class slice:
+    def __repr__(self) -> str:
+        return f'slice({self.start!r}, {self.stop!r}, {self.step!r})'
 
 class str:
     def join(self: str, iterable) -> str:
@@ -650,3 +737,18 @@ class str:
         if suffix and self.endswith(suffix):
             return self[:-len(suffix)]
         return self
+
+class tuple:
+    def __repr__(self: tuple) -> str:
+        ret = __pythonj_str_builder__(None)
+        __pythonj_str_builder_append__(ret, '(')
+        first = True
+        for item in self:
+            if not first:
+                __pythonj_str_builder_append__(ret, ', ')
+            first = False
+            __pythonj_str_builder_append__(ret, repr(item))
+        if len(self) == 1:
+            __pythonj_str_builder_append__(ret, ',')
+        __pythonj_str_builder_append__(ret, ')')
+        return __pythonj_str_builder_finish__(ret)

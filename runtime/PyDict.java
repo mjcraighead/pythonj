@@ -393,20 +393,7 @@ public final class PyDict extends PyObject {
     }
     @Override public int hashCode() { throw raiseUnhashable(); }
     @Override public long len() { return items.size(); }
-    @Override public String repr() {
-        var s = new StringBuilder("{");
-        boolean first = true;
-        for (var x: items.entrySet()) {
-            if (!first) {
-                s.append(", ");
-            }
-            first = false;
-            s.append(x.getKey().repr());
-            s.append(": ");
-            s.append(x.getValue().repr());
-        }
-        return s + "}";
-    }
+    @Override public String repr() { return PyRuntime.pyfunc_dict____repr__(this).value; }
 
     public PyNone pymethod_clear() {
         items.clear();

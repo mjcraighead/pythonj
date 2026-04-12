@@ -735,7 +735,7 @@ def pyj_int_format(value, spec) -> str:
     prefix = ''
     group_size = 3
     if type_char == 'd':
-        digits = str(abs_value)
+        digits = __pythonj_int_java_str__(abs_value)
     elif type_char == 'x':
         digits = _pyj_int_base_digits(abs_value, 16, '0123456789abcdef')
         if alt:

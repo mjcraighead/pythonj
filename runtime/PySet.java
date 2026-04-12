@@ -242,21 +242,7 @@ public final class PySet extends PyObject {
     }
     @Override public int hashCode() { throw raiseUnhashable(); }
     @Override public long len() { return items.size(); }
-    @Override public String repr() {
-        if (items.isEmpty()) {
-            return "set()";
-        }
-        var s = new StringBuilder("{");
-        boolean first = true;
-        for (var x: items) {
-            if (!first) {
-                s.append(", ");
-            }
-            first = false;
-            s.append(x.repr());
-        }
-        return s + "}";
-    }
+    @Override public String repr() { return PyRuntime.pyfunc_set____repr__(this).value; }
 
     public PyNone pymethod_add(PyObject arg) {
         items.add(arg);
