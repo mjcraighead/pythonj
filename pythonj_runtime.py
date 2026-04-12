@@ -967,7 +967,7 @@ def _pyj_percent_char_text(arg) -> str:
         raise OverflowError('%c arg not in range(0x110000)')
     return chr(code)
 
-def _pyj_percent_item_text(conv, flags, width, precision, arg) -> str:
+def _pyj_percent_item_text(conv: str, flags, width, precision, arg) -> str:
     if conv == 's':
         text = str(arg)
         if precision is not None:

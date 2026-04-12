@@ -1769,6 +1769,15 @@ class LoweringVisitor(ast.NodeVisitor):
                 }[type(op)], lhs_unboxed, rhs_unboxed))
                 lhs_expr = rhs_expr
             return ir.static_method_call('PyBool', 'create', [ir.chained_binary_op('&&', exprs)])
+        if (n_compares == 1 and exact_compare_type == 'str' and
+            isinstance(node.ops[0], (ast.Eq, ast.NotEq)) and
+            self.exact_builtin_type_of_expr(comparator_exprs[0]) == 'str'):
+            lhs_unboxed = ir.unbox_str(lhs_expr)
+            rhs_unboxed = ir.unbox_str(comparator_exprs[0])
+            expr = ir.MethodCall(lhs_unboxed, 'equals', [rhs_unboxed], 'boolean')
+            if isinstance(node.ops[0], ast.NotEq):
+                expr = ir.unary_op('!', expr)
+            return ir.static_method_call('PyBool', 'create', [expr])
 
         lhs = lhs_expr
         exprs: list[ir.Expr] = []
