@@ -8,22 +8,20 @@ import _operator
 def _init_bound_args(args: tuple, max_total: int) -> list:
     args_len = len(args)
     bound_args = []
-    i: int = 0
-    while i < max_total:
+    i: int
+    for i in range(max_total):
         if i < args_len:
             bound_args.append(args[i])
         else:
             bound_args.append(__pythonj_null__)
-        i += 1
     return bound_args
 
 def _find_name(names: tuple, kw: str, start: int) -> int:
     names_len = len(names)
-    i: int = start
-    while i < names_len:
+    i: int
+    for i in range(start, names_len):
         if kw == names[i]:
             return i
-        i += 1
     return __pythonj_null__
 
 def _type_error_at_most_args(positional_name: str, max_total: int, given: int) -> TypeError:
@@ -41,16 +39,15 @@ def _type_error_user_missing_args(name: str, missing_arg_names) -> TypeError:
     missing = len(missing_arg_names)
     suffix = '' if missing == 1 else 's'
     ret: str = f'{name}() missing {missing} required positional argument{suffix}:'
-    i: int = 0
     last_missing_index = missing - 1
     penultimate_missing_index = missing - 2
-    while i < missing:
+    i: int
+    for i in range(missing):
         ret += f' {missing_arg_names[i]!r}'
         if missing >= 3 and i != last_missing_index:
             ret += ','
         if i == penultimate_missing_index:
             ret += ' and'
-        i += 1
     return TypeError(ret)
 
 def _type_error_user_posonly_as_keyword(name: str, arg_names: list) -> TypeError:
@@ -118,11 +115,10 @@ def bind_min_max_positional_or_keyword(args: tuple, kwargs: dict, kw_name: str, 
         raise TypeError(f'{positional_name}() takes at most {max_positional} positional arguments ({args_len} given)')
 
     if not min_positional_style:
-        i: int = 0
-        while i < min_args:
+        i: int
+        for i in range(min_args):
             if bound_args[i] is __pythonj_null__:
                 raise TypeError(f'{positional_name}() missing required argument {positional_names[i]!r} (pos {i + 1})')
-            i += 1
 
     if unknown_kw is not None:
         raise _type_error_unexpected_kw_arg(kw_name, unknown_kw)
@@ -234,11 +230,10 @@ def bind_user_function(args: tuple, kwargs: dict, name: str, arg_names: tuple, n
             raise TypeError(f'{name}() takes from {n_required} to {n_args} positional arguments but {args_len} {was_were} given')
         if n_required != 0:
             missing_arg_names = []
-            i: int = 0
-            while i < n_required:
+            i: int
+            for i in range(n_required):
                 if bound_args[i] is __pythonj_null__:
                     missing_arg_names.append(arg_names[i])
-                i += 1
             if missing_arg_names:
                 raise _type_error_user_missing_args(name, missing_arg_names)
 

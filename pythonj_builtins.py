@@ -1242,9 +1242,8 @@ class tuple:
         n = len(self)
         start_index: int = pyj_slice_index_allow_null(start, 0, n)
         stop_index: int = pyj_slice_index_allow_null(stop, n, n)
-        i: int = start_index
-        while i < stop_index:
+        i: int
+        for i in range(start_index, stop_index):
             if self[i] == value:
                 return i
-            i += 1
         raise ValueError('tuple.index(x): x not in tuple')
