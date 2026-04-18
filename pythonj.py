@@ -2802,6 +2802,9 @@ class LoweringVisitor(ast.NodeVisitor):
                     generators: list[ast.comprehension], elts: list[ast.expr]) -> ir.Expr:
         java_name = f'pycomp{self.n_lambdas}'
         self.n_lambdas += 1
+        iterable_java_type = self.expr_exact_java_type(generators[0].iter)
+        if iterable_java_type == ir.JAVA_TYPE_UNKNOWN:
+            iterable_java_type = 'PyObject'
 
         qualname = self.qualname(py_name)
         scope_info = self.scope_infos[node]
@@ -2834,7 +2837,7 @@ class LoweringVisitor(ast.NodeVisitor):
             assert java_name not in self.classes
             self.classes[java_name] = ir.ClassDecl('private static final', java_name, None, [
                 ir.MethodDecl('public static', type_name, 'invoke',
-                    [*(f'PyCell pycell_{name}' for name in free_var_names), 'PyObject iterable'],
+                    [*(f'PyCell pycell_{name}' for name in free_var_names), f'{iterable_java_type} iterable'],
                     call_body,
                 ),
             ])
@@ -2865,6 +2868,9 @@ class LoweringVisitor(ast.NodeVisitor):
         qualname = self.qualname('<genexpr>')
         java_name = f'pylambda{self.n_lambdas}'
         self.n_lambdas += 1
+        iterable_java_type = self.expr_exact_java_type(generator.iter)
+        if iterable_java_type == ir.JAVA_TYPE_UNKNOWN:
+            iterable_java_type = 'PyObject'
 
         scope_info = self.scope_infos[node]
         assert not scope_info.explicit_globals, scope_info.explicit_globals
@@ -2889,7 +2895,7 @@ class LoweringVisitor(ast.NodeVisitor):
                 next_body.extend(ir.while_statement(ir.Bool(True), body))
 
             free_var_names = sorted(self.scope.free_vars)
-            ctor_args = [*(f'PyCell _pycell_{name}' for name in free_var_names), 'PyObject iterable']
+            ctor_args = [*(f'PyCell _pycell_{name}' for name in free_var_names), f'{iterable_java_type} iterable']
             ctor_body: list[ir.Statement] = [
                 ir.SuperConstructorCall([ir.StrLiteral('<genexpr>'), ir.StrLiteral(qualname)]),
                 *(ir.AssignStatement(ir.Identifier(f'pycell_{name}'), ir.Identifier(f'_pycell_{name}')) for name in free_var_names),
