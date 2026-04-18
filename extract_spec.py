@@ -9,7 +9,7 @@ import inspect
 import json
 import os
 import types
-from typing import Any
+from typing import Any, cast
 import _io
 
 BUILTIN_FUNCTIONS = {
@@ -55,12 +55,12 @@ BUILTIN_TYPES = {
     'type': 'PyType',
     'zip': 'PyZip',
 }
-
 EXCEPTION_TYPES = {
     'ArithmeticError', 'AssertionError', 'AttributeError', 'BaseException', 'Exception', 'IndexError',
     'KeyError', 'LookupError', 'NameError', 'OverflowError', 'RuntimeError', 'StopIteration', 'SystemExit',
     'TypeError', 'UnboundLocalError', 'ValueError', 'ZeroDivisionError',
 }
+BASE_TYPE_OVERRIDES = {'bool': 'object'}
 
 NULL = object()
 
@@ -336,6 +336,17 @@ def get_type_newobj_call_range(spec: dict[str, Any], name: str) -> tuple[int, in
 
 def get_type_attrs(spec: dict[str, Any], name: str) -> dict[str, dict[str, Any]]:
     return spec[name]['attrs']
+
+def get_type_base_name(name: str) -> str | None:
+    if name in BASE_TYPE_OVERRIDES:
+        return BASE_TYPE_OVERRIDES[name]
+    obj = cast(type, _get_runtime_obj(name))
+    if (base_type := obj.__base__) is None:
+        return None
+    base_name = base_type.__name__
+    if base_name not in BUILTIN_TYPES and base_name not in EXCEPTION_TYPES:
+        return 'object' # if the base class isn't in pythonj's type system, fall back to object
+    return base_name
 
 def iter_type_attrs(spec: dict[str, Any], name: str) -> list[tuple[str, dict[str, Any]]]:
     return list(get_type_attrs(spec, name).items())

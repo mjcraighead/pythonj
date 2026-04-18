@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: MIT
 
 final class PyRangeIter extends PyIter {
-    private static final PyConcreteType type_singleton = new PyConcreteType("range_iterator", PyRangeIter.class);
+    private static final PyConcreteType type_singleton = new PyConcreteType("range_iterator", PyRangeIter.class, PyObjectType.singleton);
 
     private long start;
     private final long stop, step;

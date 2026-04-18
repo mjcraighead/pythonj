@@ -328,10 +328,12 @@ abstract class PyType extends PyTruthyObject {
 class PyConcreteType extends PyType {
     protected final String typeName;
     protected final Class<? extends PyObject> instanceClass;
+    protected final PyType baseType;
 
-    protected PyConcreteType(String name, Class<? extends PyObject> _instanceClass) {
+    protected PyConcreteType(String name, Class<? extends PyObject> _instanceClass, PyType _baseType) {
         typeName = name;
         instanceClass = _instanceClass;
+        baseType = _baseType;
     }
     @Override public final PyObject getAttr(String key) {
         var desc = lookupAttr(key);
@@ -339,6 +341,7 @@ class PyConcreteType extends PyType {
             return desc.get(null);
         }
         switch (key) {
+            case "__base__": return (baseType != null) ? baseType : PyNone.singleton;
             case "__dict__": {
                 var attrs = getAttributes();
                 if (attrs == null) {
@@ -364,13 +367,13 @@ class PyConcreteType extends PyType {
 final class PyModuleType extends PyConcreteType {
     public static final PyModuleType singleton = new PyModuleType();
 
-    private PyModuleType() { super("module", PyModule.class); }
+    private PyModuleType() { super("module", PyModule.class, PyObjectType.singleton); }
 }
 
 final class PyZlibErrorType extends PyConcreteType {
     public static final PyZlibErrorType singleton = new PyZlibErrorType();
 
-    private PyZlibErrorType() { super("error", PyZlibError.class); }
+    private PyZlibErrorType() { super("error", PyZlibError.class, PyExceptionType.singleton); }
 
     @Override public PyObject call(PyObject[] args, PyDict kwargs) {
         return PyZlibError.newObj(this, args, kwargs);

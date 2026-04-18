@@ -6,7 +6,7 @@ import java.util.Arrays;
 import java.util.ArrayList;
 
 final class PyTupleIter extends PyIter {
-    private static final PyConcreteType type_singleton = new PyConcreteType("tuple_iterator", PyTupleIter.class);
+    private static final PyConcreteType type_singleton = new PyConcreteType("tuple_iterator", PyTupleIter.class, PyObjectType.singleton);
 
     private final PyObject[] items;
     private int index = 0;

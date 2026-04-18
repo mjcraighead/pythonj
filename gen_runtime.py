@@ -531,11 +531,17 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
                 for k in attrs
             ]))
             type_decls.append(ir.ClassDecl('static final', 'AttrsHolder', None, attr_holder_decls))
+            super_args: list[ir.Expr] = [
+                ir.StrLiteral(py_name),
+                ir.Field(ir.Identifier(java_name), 'class'),
+            ]
+            if (base_type_name := extract_spec.get_type_base_name(name)) is not None:
+                base_type_java = pythonj.get_java_name(base_type_name)
+                super_args.append(ir.Field(ir.Identifier(f'{base_type_java}Type'), 'singleton'))
+            else:
+                super_args.append(ir.Null())
             type_decls.append(ir.ConstructorDecl('private', f'{java_name}Type', [], [
-                ir.SuperConstructorCall([
-                    ir.StrLiteral(py_name),
-                    ir.Field(ir.Identifier(java_name), 'class'),
-                ]),
+                ir.SuperConstructorCall(super_args),
             ]))
             type_decls.append(ir.MethodDecl('@Override public', 'PyObject', 'call', ['PyObject[] args', 'PyDict kwargs'], [
                 ir.ReturnStatement(

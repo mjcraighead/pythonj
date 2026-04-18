@@ -2691,7 +2691,7 @@ class LoweringVisitor(ast.NodeVisitor):
         class_decls.append(ir.ClassDecl('private static final', type_class_name, 'PyConcreteType', [
             ir.FieldDecl('private static final', type_class_name, 'singleton', ir.CreateObject(type_class_name, [])),
             ir.ConstructorDecl('private', type_class_name, [], [
-                ir.SuperConstructorCall([ir.StrLiteral(node.name), ir.Field(ir.Identifier(java_name), 'class')]),
+                ir.SuperConstructorCall([ir.StrLiteral(node.name), ir.Field(ir.Identifier(java_name), 'class'), ir.Field(ir.Identifier('PyObjectType'), 'singleton')]),
             ]),
             ir.MethodDecl('@Override public', 'PyObject', 'call', ['PyObject[] args', 'PyDict kwargs'], [
                 ir.ReturnStatement(ir.StaticMethodCall(java_name, 'newObj', [ir.This(), ir.Identifier('args'), ir.Identifier('kwargs')])),
@@ -2837,7 +2837,8 @@ class LoweringVisitor(ast.NodeVisitor):
             ]
             assert java_name not in self.classes
             self.classes[java_name] = ir.ClassDecl('private static final', java_name, 'PyIter', [
-                ir.FieldDecl('private static final', 'PyConcreteType', 'type_singleton', ir.CreateObject('PyConcreteType', [ir.StrLiteral('generator'), ir.Field(ir.Identifier(java_name), 'class')])),
+                # XXX Fix this to be types.GeneratorType
+                ir.FieldDecl('private static final', 'PyConcreteType', 'type_singleton', ir.CreateObject('PyConcreteType', [ir.StrLiteral('generator'), ir.Field(ir.Identifier(java_name), 'class'), ir.Field(ir.Identifier('PyObjectType'), 'singleton')])),
                 *(ir.FieldDecl('private final', 'PyCell', f'pycell_{name}', None) for name in free_var_names),
                 ir.FieldDecl('private final', 'PyIter', 'pyiter_iterable', None),
                 *(ir.FieldDecl('private final', 'PyCell', f'pycell_{name}', ir.CreateObject('PyCell', [ir.Null()])) for name in sorted(self.scope.info.cell_vars)),
