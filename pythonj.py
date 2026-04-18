@@ -2836,9 +2836,7 @@ class LoweringVisitor(ast.NodeVisitor):
                 ir.AssignStatement(ir.Identifier('pyiter_iterable'), ir.iter(ir.Identifier('iterable'))),
             ]
             assert java_name not in self.classes
-            self.classes[java_name] = ir.ClassDecl('private static final', java_name, 'PyIter', [
-                # XXX Fix this to be types.GeneratorType
-                ir.FieldDecl('private static final', 'PyConcreteType', 'type_singleton', ir.CreateObject('PyConcreteType', [ir.StrLiteral('generator'), ir.Field(ir.Identifier(java_name), 'class'), ir.Field(ir.Identifier('PyObjectType'), 'singleton')])),
+            self.classes[java_name] = ir.ClassDecl('private static final', java_name, 'PyGenerator', [
                 *(ir.FieldDecl('private final', 'PyCell', f'pycell_{name}', None) for name in free_var_names),
                 ir.FieldDecl('private final', 'PyIter', 'pyiter_iterable', None),
                 *(ir.FieldDecl('private final', 'PyCell', f'pycell_{name}', ir.CreateObject('PyCell', [ir.Null()])) for name in sorted(self.scope.info.cell_vars)),
@@ -2846,7 +2844,6 @@ class LoweringVisitor(ast.NodeVisitor):
                 ir.ConstructorDecl('', java_name, ctor_args, ctor_body),
                 ir.MethodDecl('@Override public', 'PyObject', 'next', [], next_body),
                 ir.MethodDecl('@Override public', 'String', 'repr', [], [ir.ReturnStatement(ir.StrLiteral(f'<generator object {qualname}>'))]),
-                ir.MethodDecl('@Override public', 'PyConcreteType', 'type', [], [ir.ReturnStatement(ir.Identifier('type_singleton'))]),
             ])
 
         return ir.CreateObject(java_name, [*(ir.Identifier(f'pycell_{name}') for name in sorted(free_vars)), self.visit(generator.iter)])

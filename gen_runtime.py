@@ -424,6 +424,7 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
                 case '_types.BuiltinFunctionType': py_name = 'builtin_function_or_method'
                 case '_types.ClassMethodDescriptorType': py_name = 'classmethod_descriptor'
                 case '_types.FunctionType': py_name = 'function'
+                case '_types.GeneratorType': py_name = 'generator'
                 case '_types.GetSetDescriptorType': py_name = 'getset_descriptor'
                 case '_types.MappingProxyType': py_name = 'mappingproxy'
                 case '_types.MemberDescriptorType': py_name = 'member_descriptor'
@@ -437,7 +438,9 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
             attr_holder_decls: list[ir.Decl] = []
             for (k, v) in extract_spec.iter_type_attrs(spec, name):
                 doc_value = v.get('doc')
-                if v['kind'] == 'string':
+                if v['kind'] == 'none':
+                    value = ir.Field(ir.Identifier('PyNone'), 'singleton', 'PyNone')
+                elif v['kind'] == 'string':
                     value = ir.CreateObject('PyString', [ir.StrLiteral(v['value'])])
                 elif v['kind'] == 'member':
                     getter_target_class = java_name
@@ -515,7 +518,7 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
                     ])
                 else:
                     assert False, (name, k, v)
-                attr_holder_decls.append(ir.FieldDecl('static final', value.type, f'pyattr_{k}', value))
+                attr_holder_decls.append(ir.FieldDecl('static final', value.java_type(), f'pyattr_{k}', value))
             attr_holder_decls.append(ir.FieldDecl(
                 'static final',
                 'java.util.LinkedHashMap<PyObject, PyObject>',

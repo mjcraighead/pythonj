@@ -258,6 +258,7 @@ final class PyTypesModule extends PyModule {
             case "BuiltinFunctionType": return PyBuiltinFunctionOrMethodType.singleton;
             case "ClassMethodDescriptorType": return PyClassMethodDescriptorType.singleton;
             case "FunctionType": return PyFunctionType.singleton;
+            case "GeneratorType": return PyGeneratorType.singleton;
             case "GetSetDescriptorType": return PyGetSetDescriptorType.singleton;
             case "MappingProxyType": return PyMappingProxyType.singleton;
             case "MemberDescriptorType": return PyMemberDescriptorType.singleton;
@@ -553,6 +554,22 @@ abstract class PyFunction extends PyTruthyObject {
     }
 }
 
+abstract class PyGenerator extends PyIter {
+    @Override public PyConcreteType type() { return PyGeneratorType.singleton; }
+
+    public PyObject pymethod_send(PyObject value) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_throw(PyObject[] args, PyDict kwargs) { throw new UnsupportedOperationException(); }                                                                                                           public PyObject pymethod_close() { throw new UnsupportedOperationException(); }
+
+    static PyObject pygetset_gi_yieldfrom(PyObject obj) { throw new UnsupportedOperationException(); }
+    static PyObject pygetset_gi_running(PyObject obj) { throw new UnsupportedOperationException(); }
+    static PyObject pygetset_gi_frame(PyObject obj) { throw new UnsupportedOperationException(); }
+    static PyObject pygetset_gi_suspended(PyObject obj) { throw new UnsupportedOperationException(); }
+    static PyObject pygetset_gi_code(PyObject obj) { throw new UnsupportedOperationException(); }
+
+    public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
+        throw PyTypeError.raise("cannot create 'generator' instances");
+    }
+}
 // Helper functions used by the builtins and code generator
 public final class Runtime {
     public static PyList sysArgv = new PyList(new PyObject[] {new PyString("")});

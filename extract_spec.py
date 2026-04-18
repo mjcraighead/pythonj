@@ -30,7 +30,7 @@ BUILTIN_MODULE_ATTRS = {
     '_io': {'BufferedReader', 'TextIOWrapper'},
     '_json': {'encode_basestring_ascii', 'scanstring'},
     '_operator': {'contains', 'delitem', 'getitem', 'index', 'setitem'},
-    '_types': {'BuiltinFunctionType', 'ClassMethodDescriptorType', 'FunctionType', 'GetSetDescriptorType', 'MappingProxyType', 'MemberDescriptorType', 'MethodDescriptorType', 'NoneType'},
+    '_types': {'BuiltinFunctionType', 'ClassMethodDescriptorType', 'FunctionType', 'GeneratorType', 'GetSetDescriptorType', 'MappingProxyType', 'MemberDescriptorType', 'MethodDescriptorType', 'NoneType'},
     'math': {'copysign', 'isfinite', 'isinf', 'isnan'},
     'sys': {'exit', 'implementation'},
     'zlib': {'compress', 'decompress', 'error'},
@@ -441,7 +441,9 @@ def _build_type_entry(name: str) -> dict[str, Any]:
         if k.startswith('__') and k not in {'__doc__', '__format__'}:
             continue
         v_type = type(v)
-        if v_type is str:
+        if v_type is types.NoneType:
+            attrs[k] = _encode_attr('none')
+        elif v_type is str:
             attrs[k] = _encode_attr('string', value=v)
         elif v_type is types.MemberDescriptorType:
             attrs[k] = _encode_attr('member', doc=v.__doc__)
@@ -529,7 +531,7 @@ def gen_spec(spec_path: str) -> None:
     spec = {'builtins': _build_builtin_module_entry()}
     for name in [*BUILTIN_TYPES, *sorted(EXCEPTION_TYPES),
                  '_types.BuiltinFunctionType', '_types.ClassMethodDescriptorType',
-                 '_types.FunctionType', '_types.GetSetDescriptorType', '_types.MappingProxyType', '_types.MemberDescriptorType',
+                 '_types.FunctionType', '_types.GeneratorType', '_types.GetSetDescriptorType', '_types.MappingProxyType', '_types.MemberDescriptorType',
                  '_types.MethodDescriptorType', '_types.NoneType', '_io.BufferedReader', '_io.TextIOWrapper']:
         spec[name] = _build_type_entry(name)
     for name in sorted(BUILTIN_MODULES):
