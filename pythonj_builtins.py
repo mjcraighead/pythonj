@@ -24,8 +24,8 @@ def any(iterable) -> bool:
 def bin(arg) -> str:
     value: int = _operator.index(arg)
     if value < 0:
-        return '-0b' + format(-value, 'b')
-    return '0b' + format(value, 'b')
+        return f'-0b{-value:b}'
+    return f'0b{value:b}'
 
 def delattr(obj, name) -> None:
     if not __pythonj_isinstance__(name, str):
@@ -67,8 +67,8 @@ def hash(arg) -> int:
 def hex(arg) -> str:
     value: int = _operator.index(arg)
     if value < 0:
-        return '-0x' + format(-value, 'x')
-    return '0x' + format(value, 'x')
+        return f'-0x{-value:x}'
+    return f'0x{value:x}'
 
 def isinstance(obj, class_or_tuple) -> bool:
     if __pythonj_isinstance__(class_or_tuple, tuple):
@@ -100,8 +100,8 @@ def next(iterator, default):
 def oct(arg) -> str:
     value: int = _operator.index(arg)
     if value < 0:
-        return '-0o' + format(-value, 'o')
-    return '0o' + format(value, 'o')
+        return f'-0o{-value:o}'
+    return f'0o{value:o}'
 
 def repr(arg) -> str:
     return __pythonj_repr__(arg)
