@@ -181,7 +181,7 @@ class object:
             return __pythonj_get__(desc, self, type(self))
         raise AttributeError(f'{type(self).__name__!r} object has no attribute {name!r}')
 
-    def __setattr__(self, name, value):
+    def __setattr__(self, name, value) -> None:
         if not __pythonj_isinstance__(name, str):
             raise TypeError(f'attribute name must be string, not {type(name).__name__!r}')
         desc = __pythonj_lookup_attr__(type(self), name)
@@ -196,7 +196,7 @@ class object:
             raise AttributeError(f'{type(self).__name__!r} object attribute {name!r} is read-only')
         raise AttributeError(f'{type(self).__name__!r} object has no attribute {name!r} and no __dict__ for setting new attributes')
 
-    def __delattr__(self, name):
+    def __delattr__(self, name) -> None:
         if not __pythonj_isinstance__(name, str):
             raise TypeError(f'attribute name must be string, not {type(name).__name__!r}')
         desc = __pythonj_lookup_attr__(type(self), name)
@@ -224,7 +224,7 @@ class object:
         return f'<{type(self).__name__} object>'
 
 class type:
-    def __getattribute__(self, name):
+    def __getattribute__(self: type, name):
         if not __pythonj_isinstance__(name, str):
             raise TypeError(f'attribute name must be string, not {type(name).__name__!r}')
         meta_desc = __pythonj_lookup_attr__(type(self), name)
@@ -237,10 +237,10 @@ class type:
             return __pythonj_get__(meta_desc, self, type(self))
         raise AttributeError(f'type object {self.__name__!r} has no attribute {name!r}')
 
-    def __setattr__(self, name, value):
+    def __setattr__(self: type, name, value):
         raise TypeError(f'cannot set {name!r} attribute of immutable type {self.__name__!r}')
 
-    def __delattr__(self, name):
+    def __delattr__(self: type, name):
         raise TypeError(f'cannot set {name!r} attribute of immutable type {self.__name__!r}')
 
 class bool:
@@ -827,11 +827,11 @@ class dict:
 
 class float:
     @__pythonj_getter__
-    def imag(self) -> float:
+    def imag(self: float) -> float:
         return 0.0
 
     @__pythonj_getter__
-    def real(self) -> float:
+    def real(self: float) -> float:
         return self
 
     def __bool__(self: float) -> bool:
@@ -888,19 +888,19 @@ class float:
 
 class int:
     @__pythonj_getter__
-    def denominator(self) -> int:
+    def denominator(self: int) -> int:
         return 1
 
     @__pythonj_getter__
-    def imag(self) -> int:
+    def imag(self: int) -> int:
         return 0
 
     @__pythonj_getter__
-    def numerator(self) -> int:
+    def numerator(self: int) -> int:
         return self
 
     @__pythonj_getter__
-    def real(self) -> int:
+    def real(self: int) -> int:
         return self
 
     def __bool__(self: int) -> bool:
@@ -994,7 +994,7 @@ class int:
     def is_integer(self) -> bool:
         return True
 
-    def to_bytes(self, length, byteorder, signed) -> bytes:
+    def to_bytes(self: int, length, byteorder, signed) -> bytes:
         length = _operator.index(length)
         little_endian = False
         if byteorder is not None:
@@ -1050,15 +1050,15 @@ class list:
 
 class range:
     @__pythonj_getter__
-    def start(self) -> int:
+    def start(self: range) -> int:
         return __pythonj_range_start__(self)
 
     @__pythonj_getter__
-    def step(self) -> int:
+    def step(self: range) -> int:
         return __pythonj_range_step__(self)
 
     @__pythonj_getter__
-    def stop(self) -> int:
+    def stop(self: range) -> int:
         return __pythonj_range_stop__(self)
 
     def __contains__(self: range, rhs) -> bool:
@@ -1084,10 +1084,10 @@ class range:
             return f'range({self.start}, {self.stop})'
         return f'range({self.start}, {self.stop}, {self.step})'
 
-    def count(self, value) -> int:
+    def count(self: range, value) -> int:
         return 1 if value in self else 0
 
-    def index(self, value) -> int:
+    def index(self: range, value) -> int:
         if __pythonj_isinstance__(value, float):
             if not math.isfinite(value) or value != __pythonj_float_java_rint__(value):
                 raise ValueError('sequence.index(x): x not in sequence')
@@ -1121,15 +1121,15 @@ class set:
 
 class slice:
     @__pythonj_getter__
-    def start(self):
+    def start(self: slice):
         return __pythonj_slice_start__(self)
 
     @__pythonj_getter__
-    def step(self):
+    def step(self: slice):
         return __pythonj_slice_step__(self)
 
     @__pythonj_getter__
-    def stop(self):
+    def stop(self: slice):
         return __pythonj_slice_stop__(self)
 
     def __repr__(self: slice) -> str:
@@ -1223,14 +1223,14 @@ class tuple:
         __pythonj_str_builder_append__(ret, ')')
         return __pythonj_str_builder_finish__(ret)
 
-    def count(self, value) -> int:
+    def count(self: tuple, value) -> int:
         n: int = 0
         for item in self:
             if item == value:
                 n += 1
         return n
 
-    def index(self, value, start, stop) -> int:
+    def index(self: tuple, value, start, stop) -> int:
         n = len(self)
         start_index: int = pyj_slice_index_allow_null(start, 0, n)
         stop_index: int = pyj_slice_index_allow_null(stop, n, n)
