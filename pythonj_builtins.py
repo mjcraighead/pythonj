@@ -717,6 +717,9 @@ class bytes:
     def zfill(self, width): __pythonj_unsupported__()
 
 class dict:
+    def __contains__(self: dict, key) -> bool:
+        return key in self
+
     def __repr__(self: dict) -> str:
         ret = __pythonj_str_builder__(8*len(self) + 2)
         __pythonj_str_builder_append__(ret, '{')
@@ -1015,6 +1018,9 @@ class range:
         return (value - self.start) // self.step
 
 class set:
+    def __contains__(self: set, key) -> bool:
+        return key in self
+
     def __repr__(self: set) -> str:
         if not self:
             return 'set()'

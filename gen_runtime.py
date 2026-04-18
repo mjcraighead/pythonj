@@ -22,7 +22,8 @@ PYTHON_AUTHORED_IMPLS = {
         'abs', 'all', 'any', 'bin', 'delattr', 'divmod', 'format', 'getattr', 'hasattr', 'hash', 'hex',
         'isinstance', 'issubclass', 'len', 'next', 'oct', 'repr', 'setattr', 'sum',
     },
-    'dict': {'fromkeys', 'setdefault'},
+    'dict': {'__contains__', 'fromkeys', 'setdefault'},
+    'set': {'__contains__'},
     'str': {
         '__format__', 'capitalize', 'casefold', 'center', 'encode', 'expandtabs', 'format_map', 'isalnum',
         'isalpha', 'isascii', 'isidentifier', 'islower', 'isnumeric', 'isprintable', 'isspace', 'istitle',
@@ -31,9 +32,9 @@ PYTHON_AUTHORED_IMPLS = {
         'translate', 'zfill',
     },
 }
-HIDDEN_PYTHON_AUTHORED_METHODS = {'__contains__'}
 PYTHON_AUTHORED_CONSTRUCTOR_IMPLS = {'enumerate', 'zip'}
 SUPPORTED_HELPER_RETURN_TYPES = {'bool', 'bytes', 'dict', 'float', 'int', 'list', 'str', 'tuple'}
+SLOT_WRAPPER_ARITY = {'__repr__': 0, '__contains__': 1}
 
 def is_pythonj_getter(func: ast.FunctionDef) -> bool:
     return any(isinstance(decorator, ast.Name) and decorator.id == '__pythonj_getter__' for decorator in func.decorator_list)
@@ -603,7 +604,7 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
             for (method_name, attr_spec) in attrs.items():
                 if attr_spec['kind'] != 'wrapper_descriptor':
                     continue
-                assert method_name == '__repr__', (name, method_name)
+                arity = SLOT_WRAPPER_ARITY[method_name]
                 if method_name in pythonj_builtins_classes.get(name, {}):
                     helper_key = (name, method_name)
                     helper_name = f'{name.replace(".", "_")}__{method_name}'
@@ -622,11 +623,21 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
                     wrapper_return_expr: ir.Expr = ir.StaticMethodCall(
                         'PyRuntime',
                         f'pyfunc_{helper_name}',
-                        [ir.Identifier('self')],
+                        [ir.Identifier('self')] if arity == 0 else [ir.Identifier('self'), ir.Identifier('arg0')],
                         metadata.builtin_method_return_java_types.get((name.rsplit('.', 1)[-1], method_name), 'PyObject'),
                     )
                 else:
-                    wrapper_return_expr = ir.CreateObject('PyString', [ir.MethodCall(ir.Identifier('self'), 'repr', [], 'String')])
+                    if arity == 0:
+                        wrapper_return_expr = ir.CreateObject('PyString', [ir.MethodCall(ir.Identifier('self'), 'repr', [], 'String')])
+                    else:
+                        wrapper_return_expr = ir.StaticMethodCall('PyBool', 'create', [ir.MethodCall(ir.Identifier('self'), 'contains', [ir.Identifier('arg0')], 'boolean')], 'PyBool')
+                wrapper_call_body = [ir.method_call_statement(ir.This(), 'requireNoArgs', [ir.Identifier('args'), ir.Identifier('kwargs')]), ir.ReturnStatement(wrapper_return_expr)]
+                if arity == 1:
+                    wrapper_call_body = [
+                        ir.method_call_statement(ir.This(), 'requireExactArgs', [ir.Identifier('args'), ir.Identifier('kwargs'), ir.IntLiteral(1)]),
+                        ir.LocalDecl('PyObject', 'arg0', ir.ArrayAccess(ir.Identifier('args'), ir.IntLiteral(0))),
+                        ir.ReturnStatement(wrapper_return_expr),
+                    ]
                 top_level_decls.append(ir.ClassDecl(
                     'final',
                     f'{java_name}MethodWrapper_{method_name}',
@@ -635,10 +646,7 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
                         ir.ConstructorDecl('', f'{java_name}MethodWrapper_{method_name}', ['PyObject _self'], [
                             ir.SuperConstructorCall([ir.StrLiteral(method_name), ir.CastExpr(java_name, ir.Identifier('_self'))]),
                         ]),
-                        ir.MethodDecl('@Override public', 'PyObject', 'call', ['PyObject[] args', 'PyDict kwargs'], [
-                            ir.method_call_statement(ir.This(), 'requireNoArgs', [ir.Identifier('args'), ir.Identifier('kwargs')]),
-                            ir.ReturnStatement(wrapper_return_expr),
-                        ]),
+                        ir.MethodDecl('@Override public', 'PyObject', 'call', ['PyObject[] args', 'PyDict kwargs'], wrapper_call_body),
                     ],
                 ))
 
@@ -675,8 +683,7 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
                     method_impl_target = None
                     if kind in {'method', 'classmethod'} and (
                         name in ALL_PYTHON_AUTHORED_IMPLS or
-                        method_name in PYTHON_AUTHORED_IMPLS.get(name, set()) or
-                        (method_name in HIDDEN_PYTHON_AUTHORED_METHODS and method_name in pythonj_builtins_classes.get(name, {}))
+                        method_name in PYTHON_AUTHORED_IMPLS.get(name, set())
                     ):
                         helper_name = f'{name.replace(".", "_")}__{method_name}'
                         method_impl_target = f'PyRuntime.pyfunc_{helper_name}'
@@ -807,22 +814,6 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
             )
             python_helper_classes.extend(helper_classes)
             python_helper_methods.append(helper_method)
-        for (type_name, methods) in sorted(pythonj_builtins_classes.items()):
-            for method_name in sorted(method_name for method_name in methods if method_name in HIDDEN_PYTHON_AUTHORED_METHODS):
-                helper_key = (type_name, method_name)
-                if helper_key in emitted_python_method_helpers:
-                    continue
-                (helper_classes, helper_method) = translate_python_method_impl(
-                    pythonj_builtins_node, type_name, method_name, pool,
-                    class_funcs=pythonj_builtins_classes, scope_infos=builtins_scope_infos,
-                    metadata=metadata,
-                    python_helper_names=set(pythonj_runtime_funcs),
-                    python_helper_class='PyRuntime',
-                    python_helper_return_java_types=metadata.runtime_function_return_java_types,
-                )
-                python_helper_classes.extend(helper_classes)
-                python_helper_methods.append(helper_method)
-                emitted_python_method_helpers.add(helper_key)
         top_level_decls.extend(python_helper_classes)
 
         for module_name in sorted(extract_spec.BUILTIN_MODULES):

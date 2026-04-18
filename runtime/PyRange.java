@@ -71,7 +71,7 @@ public final class PyRange extends PyObject {
     @Override public void delItem(PyObject key) {
         throw PyTypeError.raise(PyString.reprOf(type().name()) + " object doesn't support item deletion");
     }
-    @Override public boolean contains(PyObject rhs) { return PyRuntime.pyfunc_range____contains__(this, rhs).boolValue(); }
+    @Override public boolean contains(PyObject rhs) { return slotBasedContains(rhs); }
 
     @Override public final boolean hasIter() { return true; }
     @Override public PyRangeIter iter() { return new PyRangeIter(this); }

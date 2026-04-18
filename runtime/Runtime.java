@@ -541,6 +541,12 @@ abstract class PyMethodWrapper<T extends PyObject> extends PyTruthyObject {
             throw PyTypeError.raise("expected 0 arguments, got " + args.length);
         }
     }
+    protected final void requireExactArgs(PyObject[] args, PyDict kwargs, int expected) {
+        Runtime.requireNoKwArgs(kwargs, name);
+        if (args.length != expected) {
+            throw PyTypeError.raise("expected " + expected + " argument" + (expected == 1 ? "" : "s") + ", got " + args.length);
+        }
+    }
 
     @Override public final int hashCode() { return defaultHashCode(); }
     @Override public final String repr() {

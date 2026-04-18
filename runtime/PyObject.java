@@ -226,6 +226,9 @@ public abstract class PyObject implements Comparable<PyObject> {
         }
         return false;
     }
+    protected final boolean slotBasedContains(PyObject rhs) {
+        return type().getAttr("__contains__").call(new PyObject[]{this, rhs}, null).boolValue();
+    }
     protected final String defaultRepr() { return "<" + type().name() + " object>"; }
     protected final String slotBasedRepr() {
         PyObject ret = type().getAttr("__repr__").call(new PyObject[]{this}, null);

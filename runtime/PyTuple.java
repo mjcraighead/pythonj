@@ -141,7 +141,7 @@ public final class PyTuple extends PyObject {
     @Override public PyConcreteType type() { return PyTupleType.singleton; }
 
     @Override public boolean boolValue() { return items.length != 0; }
-    @Override public boolean contains(PyObject rhs) { return PyRuntime.pyfunc_tuple____contains__(this, rhs).boolValue(); }
+    @Override public boolean contains(PyObject rhs) { return slotBasedContains(rhs); }
     @Override public boolean equals(Object rhs) {
         if (rhs instanceof PyTuple rhsTuple) {
             return Arrays.equals(items, rhsTuple.items);
