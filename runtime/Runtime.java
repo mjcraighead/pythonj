@@ -326,6 +326,9 @@ abstract class PyType extends PyTruthyObject {
         String doc = ((PyConcreteType)obj).docString;
         return (doc != null) ? new PyString(doc) : PyNone.singleton;
     }
+    static PyObject pygetset___name__(PyObject obj) {
+        return new PyString(((PyType)obj).name());
+    }
     static PyObject pymember___base__(PyObject obj) {
         PyType base = ((PyType)obj).base();
         return base != null ? base : PyNone.singleton;
@@ -367,7 +370,6 @@ class PyConcreteType extends PyType {
                 }
                 return new PyMappingProxy(attrs);
             }
-            case "__name__": return new PyString(typeName);
             default: return super.getAttr(key);
         }
     }
@@ -427,6 +429,9 @@ abstract class PyGettableDescriptor extends PyTruthyObject {
     static PyObject pygetset___doc__(PyObject obj) {
         String doc = ((PyGettableDescriptor)obj).doc;
         return (doc != null) ? new PyString(doc) : PyNone.singleton;
+    }
+    static PyObject pymember___name__(PyObject obj) {
+        return new PyString(((PyGettableDescriptor)obj).name);
     }
 }
 
@@ -516,6 +521,9 @@ final class PyClassMethodDescriptor extends PyTruthyObject {
         String doc = ((PyClassMethodDescriptor)obj).doc;
         return (doc != null) ? new PyString(doc) : PyNone.singleton;
     }
+    static PyObject pymember___name__(PyObject obj) {
+        return new PyString(((PyClassMethodDescriptor)obj).name);
+    }
 }
 
 final class PyStaticMethod extends PyTruthyObject {
@@ -544,6 +552,9 @@ abstract class PyBuiltinFunctionOrMethod extends PyTruthyObject {
     static PyObject pygetset___doc__(PyObject obj) {
         throw new UnsupportedOperationException("builtin_function_or_method.__doc__ unimplemented");
     }
+    static PyObject pygetset___name__(PyObject obj) {
+        throw new UnsupportedOperationException("builtin_function_or_method.__name__ unimplemented");
+    }
 }
 
 abstract class PyBuiltinMethod<T extends PyObject> extends PyBuiltinFunctionOrMethod {
@@ -565,6 +576,9 @@ abstract class PyFunction extends PyTruthyObject {
     static PyObject pymember___doc__(PyObject obj) {
         throw new UnsupportedOperationException("function.__doc__ unimplemented");
     }
+    static PyObject pygetset___name__(PyObject obj) {
+        return new PyString(((PyFunction)obj).funcName);
+    }
 }
 
 abstract class PyGenerator extends PyIter {
@@ -573,6 +587,7 @@ abstract class PyGenerator extends PyIter {
     public PyObject pymethod_send(PyObject value) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_throw(PyObject[] args, PyDict kwargs) { throw new UnsupportedOperationException(); }                                                                                                           public PyObject pymethod_close() { throw new UnsupportedOperationException(); }
 
+    static PyObject pygetset___name__(PyObject obj) { throw new UnsupportedOperationException("generator.__name__ unimplemented"); }
     static PyObject pygetset_gi_yieldfrom(PyObject obj) { throw new UnsupportedOperationException(); }
     static PyObject pygetset_gi_running(PyObject obj) { throw new UnsupportedOperationException(); }
     static PyObject pygetset_gi_frame(PyObject obj) { throw new UnsupportedOperationException(); }
