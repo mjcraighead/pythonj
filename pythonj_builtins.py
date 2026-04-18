@@ -30,7 +30,7 @@ def bin(arg) -> str:
 def delattr(obj, name) -> None:
     if not __pythonj_isinstance__(name, str):
         raise TypeError(f'attribute name must be string, not {type(name).__name__!r}')
-    __pythonj_delattr__(obj, name)
+    type(obj).__delattr__(obj, name)
     return None
 
 def divmod(a, b) -> tuple:
@@ -166,6 +166,12 @@ def zip__newobj(type, args: tuple, kwargs: dict):
 
 # Builtin classes
 class object:
+    def __delattr__(self, name):
+        if not __pythonj_isinstance__(name, str):
+            raise TypeError(f'attribute name must be string, not {type(name).__name__!r}')
+        __pythonj_delattr__(self, name)
+        return None
+
     def __format__(self, format_spec) -> str:
         if not __pythonj_isinstance__(format_spec, str):
             raise TypeError(f'__format__() argument must be str, not {type(format_spec).__name__}')

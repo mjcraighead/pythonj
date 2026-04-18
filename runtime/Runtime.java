@@ -375,7 +375,7 @@ class PyConcreteType extends PyType {
     @Override public final void setAttr(String key, PyObject value) {
         throw PyTypeError.raise("cannot set " + PyString.reprOf(key) + " attribute of immutable type " + PyString.reprOf(typeName));
     }
-    @Override public final void delAttr(String key) {
+    @Override public final void rawDelAttr(String key) {
         throw PyTypeError.raise("cannot set " + PyString.reprOf(key) + " attribute of immutable type " + PyString.reprOf(typeName));
     }
     @Override public String repr() {

@@ -2674,10 +2674,10 @@ class LoweringVisitor(ast.NodeVisitor):
                         *(ir.SwitchCase(ir.StrLiteral(name), ir.MethodCall(ir.This(), f'pysetslot_{name}', [ir.Identifier('value')])) for name in slots),
                     ], ir.MethodCall(ir.Super(), 'setAttr', [ir.Identifier('key'), ir.Identifier('value')])),
                 ]),
-                ir.MethodDecl('@Override public', 'void', 'delAttr', ['String key'], [
+                ir.MethodDecl('@Override public', 'void', 'rawDelAttr', ['String key'], [
                     ir.SwitchVoidStatement(ir.Identifier('key'), [
                         *(ir.SwitchCase(ir.StrLiteral(name), ir.MethodCall(ir.This(), f'pydelslot_{name}', [])) for name in slots),
-                    ], ir.MethodCall(ir.Super(), 'delAttr', [ir.Identifier('key')])),
+                    ], ir.MethodCall(ir.Super(), 'rawDelAttr', [ir.Identifier('key')])),
                 ]),
             ]))
         type_decls: list[ir.Decl] = [

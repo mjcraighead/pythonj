@@ -112,7 +112,7 @@ public abstract class PyObject implements Comparable<PyObject> {
         }
         throw PyAttributeError.raise(PyString.reprOf(type().name()) + " object has no attribute " + PyString.reprOf(key) + " and no __dict__ for setting new attributes");
     }
-    public void delAttr(String key) {
+    public void rawDelAttr(String key) {
         var desc = type().lookupAttr(key);
         if ((desc != null) && desc.isDataDescriptor()) {
             desc.delete(this, type());
@@ -129,6 +129,14 @@ public abstract class PyObject implements Comparable<PyObject> {
             throw Runtime.raiseNamedReadOnlyAttr(type(), key);
         }
         throw PyAttributeError.raise(PyString.reprOf(type().name()) + " object has no attribute " + PyString.reprOf(key) + " and no __dict__ for setting new attributes");
+    }
+    public void delAttr(String key) {
+        PyObject delAttrDesc = type().lookupAttr("__delattr__");
+        if (delAttrDesc != null) {
+            delAttrDesc.get(this, type()).call(new PyObject[]{new PyString(key)}, null);
+            return;
+        }
+        rawDelAttr(key);
     }
     public PyObject get(PyObject obj, PyType owner) { return this; }
     public boolean isDataDescriptor() { return false; }

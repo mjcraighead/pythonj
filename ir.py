@@ -846,7 +846,7 @@ def static_method_call(class_name: str, method: str, args: list[Expr], return_ty
         case ('Runtime', 'pythonjBytesBuilderFinish'):
             return CreateObject('PyBytes', [MethodCall(Field(CastExpr('PyBytesBuilder', args[0]), 'value'), 'toByteArray', [], 'byte[]')])
         case ('Runtime', 'pythonjDelAttr'):
-            return MethodCall(args[0], 'delAttr', [unbox_str(args[1])], 'void')
+            return MethodCall(args[0], 'rawDelAttr', [unbox_str(args[1])], 'void')
         case ('Runtime', 'pythonjDictGet'):
             return MethodCall(Field(CastExpr('PyDict', args[0]), 'items'), 'get', [args[1]], 'PyObject')
         case ('Runtime', 'pythonjFloatJavaBits'):
