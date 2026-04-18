@@ -2289,27 +2289,32 @@ class LoweringVisitor(ast.NodeVisitor):
             loop = [ir.LabeledBlock(block_name, [*loop, *orelse])]
         self.code.extend(loop)
 
+    def _lower_iter_bind_loop(self, target: ast.expr, iterable: ir.Expr, body: list[ir.Statement]) -> list[ir.Statement]:
+        temp_iter = self.scope.make_temp()
+        temp_element = self.scope.make_temp()
+        return [
+            ir.LocalDecl('var', temp_iter, ir.iter(iterable)),
+            ir.ForStatement(
+                'var', temp_element, ir.MethodCall(ir.Identifier(temp_iter), 'next', []),
+                ir.BinaryOp('!=', ir.Identifier(temp_element), ir.Null()),
+                temp_element, ir.MethodCall(ir.Identifier(temp_iter), 'next', []),
+                [
+                    *self.emit_bind(target, ir.Identifier(temp_element)),
+                    *body,
+                ]
+            ),
+        ]
+
     def visit_For(self, node) -> None:
         block_name = self.scope.make_temp() if node.orelse else None
-        temp_name0 = self.scope.make_temp()
-        temp_name1 = self.scope.make_temp()
-        self.code.append(ir.LocalDecl('var', temp_name0, ir.iter(self.visit(node.iter))))
-
         with self.push_break_name(block_name):
-            loop = ir.ForStatement(
-                'var', temp_name1, ir.MethodCall(ir.Identifier(temp_name0), 'next', []),
-                ir.BinaryOp('!=', ir.Identifier(temp_name1), ir.Null()),
-                temp_name1, ir.MethodCall(ir.Identifier(temp_name0), 'next', []),
-                [
-                    *self.emit_bind(node.target, ir.Identifier(temp_name1)),
-                    *self.visit_block(node.body),
-                ]
-            )
+            loop = self._lower_iter_bind_loop(node.target, self.visit(node.iter), self.visit_block(node.body))
         if node.orelse:
             orelse = self.visit_block(node.orelse)
             assert block_name is not None
-            loop = ir.LabeledBlock(block_name, [loop, *orelse])
-        self.code.append(loop)
+            self.code.append(ir.LabeledBlock(block_name, [*loop, *orelse]))
+        else:
+            self.code.extend(loop)
 
     def visit_With(self, node) -> None:
         # node.type_comment is ignored; we only plan to support "real" type annotations.
@@ -2782,21 +2787,7 @@ class LoweringVisitor(ast.NodeVisitor):
     def _lower_comp_generator(self, generator: ast.comprehension, iterable: ir.Expr, statements: list[ir.Statement]) -> list[ir.Statement]:
         for _if in reversed(generator.ifs):
             statements = list(ir.if_statement(self.emit_condition(_if), statements, []))
-
-        temp_iter = self.scope.make_temp()
-        temp_element = self.scope.make_temp()
-        return [
-            ir.LocalDecl('var', temp_iter, ir.iter(iterable)),
-            ir.ForStatement(
-                'var', temp_element, ir.MethodCall(ir.Identifier(temp_iter), 'next', []),
-                ir.BinaryOp('!=', ir.Identifier(temp_element), ir.Null()),
-                temp_element, ir.MethodCall(ir.Identifier(temp_iter), 'next', []),
-                [
-                    *self.emit_bind(generator.target, ir.Identifier(temp_element)),
-                    *statements,
-                ]
-            )
-        ]
+        return self._lower_iter_bind_loop(generator.target, iterable, statements)
 
     def _lower_comp(self, node: ast.expr, py_name: str, type_name: str, method_name: str, lineno: int,
                     generators: list[ast.comprehension], elts: list[ast.expr]) -> ir.Expr:
