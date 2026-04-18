@@ -110,24 +110,41 @@ abstract class PyBagObject extends PyTruthyObject {
     }
 
     @Override public PyObject getAttr(String key) {
+        var desc = type().lookupAttr(key);
+        if ((desc != null) && desc.isDataDescriptor()) {
+            return desc.get(this, type());
+        }
         PyObject value = attrs.items.get(new PyString(key));
         if (value != null) {
             return value;
         }
+        if (desc != null) {
+            return desc.get(this, type());
+        }
         if (key.equals("__dict__")) {
             return attrs;
         }
-        return super.getAttr(key);
+        throw raiseMissingAttr(key);
     }
     @Override public void setAttr(String key, PyObject value) {
-        if (key.equals("__class__") || key.equals("__dict__")) {
+        if (key.equals("__dict__")) {
             throw Runtime.raiseNamedReadOnlyAttr(type(), key);
+        }
+        var desc = type().lookupAttr(key);
+        if ((desc != null) && desc.isDataDescriptor()) {
+            desc.set(this, type(), value);
+            return;
         }
         attrs.items.put(new PyString(key), value);
     }
     @Override public void delAttr(String key) {
-        if (key.equals("__class__") || key.equals("__dict__")) {
+        if (key.equals("__dict__")) {
             throw Runtime.raiseNamedReadOnlyAttr(type(), key);
+        }
+        var desc = type().lookupAttr(key);
+        if ((desc != null) && desc.isDataDescriptor()) {
+            desc.delete(this, type());
+            return;
         }
         if (attrs.items.remove(new PyString(key)) == null) {
             throw raiseMissingAttr(key);
