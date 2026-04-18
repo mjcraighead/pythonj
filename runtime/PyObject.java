@@ -77,21 +77,7 @@ public abstract class PyObject implements Comparable<PyObject> {
     public PyDict getInstanceDict() { return null; }
 
     public PyObject getAttr(String key) {
-        var desc = type().lookupAttr(key);
-        if ((desc != null) && desc.isDataDescriptor()) {
-            return desc.get(this, type());
-        }
-        PyDict instanceDict = getInstanceDict();
-        if (instanceDict != null) {
-            PyObject value = instanceDict.items.get(new PyString(key));
-            if (value != null) {
-                return value;
-            }
-        }
-        if (desc != null) {
-            return desc.get(this, type());
-        }
-        throw raiseMissingAttr(key);
+        return type().lookupAttr("__getattribute__").call(new PyObject[]{this, new PyString(key)}, null);
     }
     public final void setAttr(String key, PyObject value) {
         type().lookupAttr("__setattr__").call(new PyObject[]{this, new PyString(key), value}, null);

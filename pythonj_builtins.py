@@ -48,7 +48,7 @@ def getattr(obj, name, default):
     if not __pythonj_isinstance__(name, str):
         raise TypeError(f'attribute name must be string, not {type(name).__name__!r}')
     try:
-        return __pythonj_getattr__(obj, name)
+        return __pythonj_lookup_attr__(type(obj), '__getattribute__')(obj, name)
     except AttributeError as e:
         if default is not __pythonj_null__:
             return default
@@ -166,6 +166,21 @@ def zip__newobj(type, args: tuple, kwargs: dict):
 
 # Builtin classes
 class object:
+    def __getattribute__(self, name):
+        if not __pythonj_isinstance__(name, str):
+            raise TypeError(f'attribute name must be string, not {type(name).__name__!r}')
+        desc = __pythonj_lookup_attr__(type(self), name)
+        if desc is not __pythonj_null__ and __pythonj_is_data_descriptor__(desc):
+            return __pythonj_get__(desc, self, type(self))
+        d = __pythonj_instance_dict__(self)
+        if d is not __pythonj_null__:
+            value = __pythonj_dict_get__(d, name)
+            if value is not __pythonj_null__:
+                return value
+        if desc is not __pythonj_null__:
+            return __pythonj_get__(desc, self, type(self))
+        raise AttributeError(f'{type(self).__name__!r} object has no attribute {name!r}')
+
     def __setattr__(self, name, value):
         if not __pythonj_isinstance__(name, str):
             raise TypeError(f'attribute name must be string, not {type(name).__name__!r}')
@@ -209,6 +224,19 @@ class object:
         return f'<{type(self).__name__} object>'
 
 class type:
+    def __getattribute__(self, name):
+        if not __pythonj_isinstance__(name, str):
+            raise TypeError(f'attribute name must be string, not {type(name).__name__!r}')
+        meta_desc = __pythonj_lookup_attr__(type(self), name)
+        if meta_desc is not __pythonj_null__ and __pythonj_is_data_descriptor__(meta_desc):
+            return __pythonj_get__(meta_desc, self, type(self))
+        desc = __pythonj_lookup_attr__(self, name)
+        if desc is not __pythonj_null__:
+            return __pythonj_get__(desc, __pythonj_null__, self)
+        if meta_desc is not __pythonj_null__:
+            return __pythonj_get__(meta_desc, self, type(self))
+        raise AttributeError(f'type object {self.__name__!r} has no attribute {name!r}')
+
     def __setattr__(self, name, value):
         raise TypeError(f'cannot set {name!r} attribute of immutable type {self.__name__!r}')
 

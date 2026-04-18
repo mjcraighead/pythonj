@@ -41,7 +41,7 @@ INTRINSIC_SIGNATURES = {
     '__pythonj_float_java_format__': ('pythonjFloatJavaFormat', 2, 'str'),
     '__pythonj_float_java_rint__': ('pythonjFloatJavaRint', 1, 'float'),
     '__pythonj_float_java_str__': ('pythonjFloatJavaStr', 1, 'str'),
-    '__pythonj_getattr__': ('pythonjGetAttr', 2, 'object'),
+    '__pythonj_get__': ('pythonjGet', 3, 'object'),
     '__pythonj_hash__': ('pythonjHash', 1, 'int'),
     '__pythonj_hasindex__': ('pythonjHasIndex', 1, 'bool'),
     '__pythonj_hasiter__': ('pythonjHasIter', 1, 'bool'),

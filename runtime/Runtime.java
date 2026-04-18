@@ -369,21 +369,7 @@ class PyConcreteType extends PyType {
         return lookupBaseAttr(name);
     }
     @Override public final PyObject getAttr(String key) {
-        var metaDesc = type().lookupAttr(key);
-        if ((metaDesc != null) && metaDesc.isDataDescriptor()) {
-            return metaDesc.get(this, type());
-        }
-        var desc = lookupAttr(key);
-        if (desc != null) {
-            return desc.get(null, this);
-        }
-        if (metaDesc != null) {
-            return metaDesc.get(this, type());
-        }
-        if (key.startsWith("__")) {
-            throw new UnsupportedOperationException(typeName + "." + key + " is not implemented");
-        }
-        throw PyAttributeError.raise("type object " + PyString.reprOf(typeName) + " has no attribute " + PyString.reprOf(key));
+        return type().lookupAttr("__getattribute__").call(new PyObject[]{this, new PyString(key)}, null);
     }
     @Override public String repr() {
         if (moduleName.equals("builtins")) {
