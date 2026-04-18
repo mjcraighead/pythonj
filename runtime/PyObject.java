@@ -170,7 +170,13 @@ public abstract class PyObject implements Comparable<PyObject> {
     public boolean contains(PyObject rhs) { throw unimplementedMethod("contains"); }
     @Override public boolean equals(Object rhs) { throw unimplementedMethod("equals"); }
     public double floatValue() { throw unimplementedMethod("floatValue"); }
-    public String format(String formatSpec) { return PyRuntime.pyfunc_object____format__(this, new PyString(formatSpec)).value; }
+    public final String format(String formatSpec) {
+        PyObject ret = type().getAttr("__format__").call(new PyObject[]{this, new PyString(formatSpec)}, null);
+        if (!(ret instanceof PyString retStr)) {
+            throw PyTypeError.raise("__format__ must return a str, not " + ret.type().name());
+        }
+        return retStr.value;
+    }
     @Override public int hashCode() { throw unimplementedMethod("hashCode"); }
     public boolean hasIndex() { return false; }
     public long indexValue() {

@@ -244,7 +244,4 @@ public final class PyFloat extends PyObject {
     @Override public String repr() { return PyRuntime.pyfunc_float____repr__(this).value; }
     @Override public String str() { return PyRuntime.pyfunc_pyj_float_str(this).value; }
     @Override public PyConcreteType type() { return PyFloatType.singleton; }
-    @Override public String format(String formatSpec) {
-        return PyRuntime.pyfunc_float____format__(this, new PyString(formatSpec)).value;
-    }
 }

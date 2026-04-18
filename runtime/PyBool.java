@@ -201,9 +201,6 @@ public final class PyBool extends PyObject {
         }
     }
     @Override public double floatValue() { return asInt(); }
-    @Override public String format(String formatSpec) {
-        return PyRuntime.pyfunc_bool____format__(this, new PyString(formatSpec)).value;
-    }
     @Override public int hashCode() { return Long.hashCode(asInt()); }
     @Override public boolean hasIndex() { return true; }
     @Override public long indexValue() { return asInt(); }

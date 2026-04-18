@@ -37,9 +37,12 @@ def divmod(a, b) -> tuple:
     return (a // b, a % b)
 
 def format(value, format_spec) -> str:
-    if not __pythonj_isinstance__(format_spec, str):
+    if not isinstance(format_spec, str):
         raise TypeError(f'format() argument 2 must be str, not {type(format_spec).__name__}')
-    return __pythonj_format__(value, format_spec)
+    ret = type(value).__format__(value, format_spec)
+    if not isinstance(ret, str):
+        raise TypeError(f'__format__ must return a str, not {type(ret).__name__}')
+    return ret
 
 def getattr(obj, name, default):
     if not __pythonj_isinstance__(name, str):
