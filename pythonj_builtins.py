@@ -177,12 +177,12 @@ class object:
         return f'<{type(self).__name__} object>'
 
 class bool:
-    def __format__(self, format_spec) -> str:
+    def __format__(self: bool, format_spec) -> str:
         if not __pythonj_isinstance__(format_spec, str):
             raise TypeError(f'__format__() argument must be str, not {type(format_spec).__name__}')
         return pyj_bool_format(self, format_spec)
 
-    def __repr__(self) -> str:
+    def __repr__(self: bool) -> str:
         return 'True' if self else 'False'
 
 class bytearray:
@@ -756,12 +756,12 @@ class float:
     def real(self) -> float:
         return self
 
-    def __format__(self, format_spec) -> str:
+    def __format__(self: float, format_spec) -> str:
         if not __pythonj_isinstance__(format_spec, str):
             raise TypeError(f'__format__() argument must be str, not {type(format_spec).__name__}')
         return pyj_float_format(self, format_spec)
 
-    def __repr__(self) -> str:
+    def __repr__(self: float) -> str:
         return pyj_float_str(self)
 
     def as_integer_ratio(self) -> tuple:
@@ -822,12 +822,12 @@ class int:
     def real(self) -> int:
         return self
 
-    def __format__(self, format_spec) -> str:
+    def __format__(self: int, format_spec) -> str:
         if not __pythonj_isinstance__(format_spec, str):
             raise TypeError(f'__format__() argument must be str, not {type(format_spec).__name__}')
         return pyj_int_format(self, format_spec)
 
-    def __repr__(self) -> str:
+    def __repr__(self: int) -> str:
         return __pythonj_int_java_str__(self)
 
     def as_integer_ratio(self) -> tuple:
@@ -977,7 +977,7 @@ class range:
     def stop(self) -> int:
         return __pythonj_range_stop__(self)
 
-    def __contains__(self, rhs) -> bool:
+    def __contains__(self: range, rhs) -> bool:
         value: int
         if __pythonj_isinstance__(rhs, float):
             if not math.isfinite(rhs) or rhs != __pythonj_float_java_rint__(rhs):
@@ -995,7 +995,7 @@ class range:
                 return False
         return (value - self.start) % self.step == 0
 
-    def __repr__(self) -> str:
+    def __repr__(self: range) -> str:
         if self.step == 1:
             return f'range({self.start}, {self.stop})'
         return f'range({self.start}, {self.stop}, {self.step})'
@@ -1048,7 +1048,7 @@ class slice:
     def stop(self):
         return __pythonj_slice_stop__(self)
 
-    def __repr__(self) -> str:
+    def __repr__(self: slice) -> str:
         return f'slice({self.start!r}, {self.stop!r}, {self.step!r})'
 
 class str:
@@ -1119,7 +1119,7 @@ class str:
     def zfill(self, width): __pythonj_unsupported__()
 
 class tuple:
-    def __contains__(self, rhs) -> bool:
+    def __contains__(self: tuple, rhs) -> bool:
         for item in self:
             if item == rhs:
                 return True
