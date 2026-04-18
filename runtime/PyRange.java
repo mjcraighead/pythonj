@@ -25,7 +25,7 @@ final class PyRangeIter extends PyIter {
             }
         }
         var ret = new PyInt(start);
-        start += step;
+        start = Math.addExact(start, step);
         return ret;
     }
     @Override public String repr() { return defaultRepr(); }
