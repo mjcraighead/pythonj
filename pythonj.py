@@ -2107,11 +2107,9 @@ class LoweringVisitor(ast.NodeVisitor):
             yield ir.method_call_statement(self.visit(target.value), 'setItem', [self.visit(target.slice), ir.Identifier(temp_name)])
         elif isinstance(target, (ast.Tuple, ast.List)):
             temp_name = self.scope.make_temp()
-            yield ir.LocalDecl('var', temp_name, ir.iter(value))
-            # XXX This is not atomic if an exception is thrown; a subset of LHS's will be left assigned
-            for subtarget in target.elts:
-                yield from self.emit_bind(subtarget, ir.StaticMethodCall('Runtime', 'nextRequireNonNull', [ir.Identifier(temp_name)]))
-            yield ir.method_call_statement(ir.Identifier('Runtime'), 'nextRequireNull', [ir.Identifier(temp_name)])
+            yield ir.LocalDecl('var', temp_name, ir.StaticMethodCall('Runtime', 'unpackSequence', [value, ir.IntLiteral(len(target.elts))]))
+            for (i, subtarget) in enumerate(target.elts):
+                yield from self.emit_bind(subtarget, ir.ArrayAccess(ir.Identifier(temp_name), ir.IntLiteral(i)))
         else:
             self.error(target.lineno, f'binding to {type(target).__name__} is unsupported')
 

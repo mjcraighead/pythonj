@@ -770,18 +770,32 @@ public final class Runtime {
         list.toArray(array);
         return array;
     }
-    public static PyObject nextRequireNonNull(PyIter iter) {
-        PyObject obj = iter.next();
-        if (obj == null) {
-            throw new IllegalStateException("not enough values to unpack");
+    public static PyObject[] unpackSequence(PyObject obj, int expected) {
+        if (obj instanceof PyTuple t) {
+            if (t.items.length < expected) {
+                throw PyValueError.raise("not enough values to unpack (expected " + expected + ", got " + t.items.length + ")");
+            }
+            if (t.items.length > expected) {
+                throw PyValueError.raise("too many values to unpack (expected " + expected + ", got " + t.items.length + ")");
+            }
+            return t.items;
         }
-        return obj;
-    }
-    public static void nextRequireNull(PyIter iter) {
-        PyObject obj = iter.next();
-        if (obj != null) {
-            throw new IllegalStateException("too many values to unpack");
+        PyIter iter = obj.iter();
+        PyObject[] result = new PyObject[expected];
+        for (int i = 0; i < expected; i++) {
+            PyObject item = iter.next();
+            if (item == null) {
+                throw PyValueError.raise("not enough values to unpack (expected " + expected + ", got " + i + ")");
+            }
+            result[i] = item;
         }
+        if (iter.next() != null) {
+            if ((obj instanceof PyList) || (obj instanceof PyDict)) {
+                throw PyValueError.raise("too many values to unpack (expected " + expected + ", got " + obj.len() + ")");
+            }
+            throw PyValueError.raise("too many values to unpack (expected " + expected + ")");
+        }
+        return result;
     }
     public static int asSliceIndexAllowNull(PyObject obj, int defaultIndex, int n) {
         if (obj == null) {
