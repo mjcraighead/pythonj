@@ -6,25 +6,25 @@ import java.io.ByteArrayOutputStream;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 
-public final class PyByteArray extends PyObject {
-    static final class PyByteArrayIter extends PyIter {
-        private static final PyConcreteType type_singleton = new PyConcreteType("bytearray_iterator", "bytearray_iterator", "builtins", PyByteArrayIter.class, PyObjectType.singleton, null);
+final class PyByteArrayIter extends PyIter {
+    private static final PyConcreteType type_singleton = new PyConcreteType("bytearray_iterator", "bytearray_iterator", "builtins", PyByteArrayIter.class, PyObjectType.singleton, null);
 
-        private byte[] b;
-        private int index = 0;
+    private byte[] b;
+    private int index = 0;
 
-        PyByteArrayIter(PyByteArray _b) { b = _b.value; }
+    PyByteArrayIter(PyByteArray _b) { b = _b.value; }
 
-        @Override public PyInt next() {
-            if (index >= b.length) {
-                return null;
-            }
-            return new PyInt(b[index++] & 0xFF);
+    @Override public PyInt next() {
+        if (index >= b.length) {
+            return null;
         }
-        @Override public String repr() { return defaultRepr(); }
-        @Override public PyConcreteType type() { return type_singleton; }
-    };
+        return new PyInt(b[index++] & 0xFF);
+    }
+    @Override public String repr() { return defaultRepr(); }
+    @Override public PyConcreteType type() { return type_singleton; }
+};
 
+public final class PyByteArray extends PyObject {
     protected byte[] value;
 
     PyByteArray(byte[] _value) { value = _value; }

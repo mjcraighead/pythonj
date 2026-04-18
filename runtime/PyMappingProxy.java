@@ -42,7 +42,7 @@ public final class PyMappingProxy extends PyObject {
     }
     @Override public boolean boolValue() { return !items.isEmpty(); }
     @Override public boolean hasIter() { return true; }
-    @Override public PyIter iter() { return new PyDict.PyDictIter(items.keySet().iterator()); }
+    @Override public PyIter iter() { return new PyDictIter(items.keySet().iterator()); }
     @Override public long len() { return items.size(); }
     @Override public int hashCode() { throw raiseUnhashable(); }
     @Override public boolean equals(Object rhs) { return this == rhs; }
@@ -71,7 +71,7 @@ public final class PyMappingProxy extends PyObject {
         PyObject ret = items.get(key);
         return (ret != null) ? ret : defaultValue;
     }
-    public PyDict.PyDictItems pymethod_items() { return new PyDict.PyDictItems(items); }
-    public PyDict.PyDictKeys pymethod_keys() { return new PyDict.PyDictKeys(items); }
-    public PyDict.PyDictValues pymethod_values() { return new PyDict.PyDictValues(items); }
+    public PyDictItems pymethod_items() { return new PyDictItems(items); }
+    public PyDictKeys pymethod_keys() { return new PyDictKeys(items); }
+    public PyDictValues pymethod_values() { return new PyDictValues(items); }
 }
