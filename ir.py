@@ -767,6 +767,8 @@ def iter(obj: Expr) -> Expr:
     match obj.java_type():
         case 'PyBytes':
             return CreateObject('PyBytesIter', [obj])
+        case 'PyDict':
+            return CreateObject('PyDictIter', [MethodCall(MethodCall(Field(obj, 'items'), 'keySet', []), 'iterator', [])])
         case 'PyEnumerate':
             return obj
         case 'PyList':
