@@ -8,7 +8,7 @@ import java.util.Collections;
 import java.util.Iterator;
 
 final class PyListIter extends PyIter {
-    private static final PyConcreteType type_singleton = new PyConcreteType("list_iterator", PyListIter.class, PyObjectType.singleton, null);
+    private static final PyConcreteType type_singleton = new PyConcreteType("list_iterator", "list_iterator", "builtins", PyListIter.class, PyObjectType.singleton, null);
 
     private final Iterator<PyObject> it;
 

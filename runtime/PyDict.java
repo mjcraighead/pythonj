@@ -10,7 +10,7 @@ import java.util.Set;
 
 public final class PyDict extends PyObject {
     static final class PyDictIter extends PyIter {
-        private static final PyConcreteType type_singleton = new PyConcreteType("dict_keyiterator", PyDictIter.class, PyObjectType.singleton, null);
+        private static final PyConcreteType type_singleton = new PyConcreteType("dict_keyiterator", "dict_keyiterator", "builtins", PyDictIter.class, PyObjectType.singleton, null);
 
         private final Iterator<PyObject> it;
 
@@ -22,7 +22,7 @@ public final class PyDict extends PyObject {
     };
 
     static final class PyDictItemIter extends PyIter {
-        private static final PyConcreteType type_singleton = new PyConcreteType("dict_itemiterator", PyDictItemIter.class, PyObjectType.singleton, null);
+        private static final PyConcreteType type_singleton = new PyConcreteType("dict_itemiterator", "dict_itemiterator", "builtins", PyDictItemIter.class, PyObjectType.singleton, null);
 
         private final Iterator<Map.Entry<PyObject, PyObject>> it;
 
@@ -40,7 +40,7 @@ public final class PyDict extends PyObject {
     };
 
     static final class PyDictValueIter extends PyIter {
-        private static final PyConcreteType type_singleton = new PyConcreteType("dict_valueiterator", PyDictValueIter.class, PyObjectType.singleton, null);
+        private static final PyConcreteType type_singleton = new PyConcreteType("dict_valueiterator", "dict_valueiterator", "builtins", PyDictValueIter.class, PyObjectType.singleton, null);
 
         private final Iterator<Map.Entry<PyObject, PyObject>> it;
 
@@ -52,7 +52,7 @@ public final class PyDict extends PyObject {
     };
 
     static final class PyDictItems extends PyObject {
-        private static final PyConcreteType type_singleton = new PyConcreteType("dict_items", PyDictItems.class, PyObjectType.singleton, null);
+        private static final PyConcreteType type_singleton = new PyConcreteType("dict_items", "dict_items", "builtins", PyDictItems.class, PyObjectType.singleton, null);
 
         private final Map<PyObject, PyObject> items;
 
@@ -171,7 +171,7 @@ public final class PyDict extends PyObject {
     };
 
     static final class PyDictKeys extends PyObject {
-        private static final PyConcreteType type_singleton = new PyConcreteType("dict_keys", PyDictKeys.class, PyObjectType.singleton, null);
+        private static final PyConcreteType type_singleton = new PyConcreteType("dict_keys", "dict_keys", "builtins", PyDictKeys.class, PyObjectType.singleton, null);
 
         private final Map<PyObject, PyObject> items;
 
@@ -270,7 +270,7 @@ public final class PyDict extends PyObject {
     };
 
     static final class PyDictValues extends PyObject {
-        private static final PyConcreteType type_singleton = new PyConcreteType("dict_values", PyDictValues.class, PyObjectType.singleton, null);
+        private static final PyConcreteType type_singleton = new PyConcreteType("dict_values", "dict_values", "builtins", PyDictValues.class, PyObjectType.singleton, null);
 
         private final Map<PyObject, PyObject> items;
 

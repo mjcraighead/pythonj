@@ -538,6 +538,8 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
             doc_string = spec[name].get('doc')
             super_args: list[ir.Expr] = [
                 ir.StrLiteral(py_name),
+                ir.StrLiteral(py_name),
+                ir.StrLiteral('builtins'),
                 ir.Field(ir.Identifier(java_name), 'class'),
             ]
             if (base_type_name := extract_spec.get_type_base_name(name)) is not None:

@@ -321,19 +321,29 @@ abstract class PyType extends PyTruthyObject {
         String doc = ((PyType)obj).doc();
         return (doc != null) ? new PyString(doc) : PyNone.singleton;
     }
+    static PyObject pygetset___module__(PyObject obj) {
+        return new PyString(((PyConcreteType)obj).moduleName);
+    }
     static PyObject pygetset___name__(PyObject obj) {
         return new PyString(((PyType)obj).name());
+    }
+    static PyObject pygetset___qualname__(PyObject obj) {
+        return new PyString(((PyConcreteType)obj).qualName);
     }
 }
 
 class PyConcreteType extends PyType {
     protected final String typeName;
+    protected final String qualName;
+    protected final String moduleName;
     protected final Class<? extends PyObject> instanceClass;
     protected final PyType baseType;
     protected final String docString;
 
-    protected PyConcreteType(String name, Class<? extends PyObject> _instanceClass, PyType _baseType, String _docString) {
+    protected PyConcreteType(String name, String _qualName, String _moduleName, Class<? extends PyObject> _instanceClass, PyType _baseType, String _docString) {
         typeName = name;
+        qualName = _qualName;
+        moduleName = _moduleName;
         instanceClass = _instanceClass;
         baseType = _baseType;
         docString = _docString;
@@ -367,7 +377,12 @@ class PyConcreteType extends PyType {
     @Override public final void delAttr(String key) {
         throw PyTypeError.raise("cannot set " + PyString.reprOf(key) + " attribute of immutable type " + PyString.reprOf(typeName));
     }
-    @Override public String repr() { return "<class '" + typeName + "'>"; }
+    @Override public String repr() {
+        if (moduleName.equals("builtins")) {
+            return "<class '" + typeName + "'>";
+        }
+        return "<class '" + moduleName + "." + qualName + "'>";
+    }
     @Override public final PyTypeType type() { return PyTypeType.singleton; }
     @Override public final PyType base() { return baseType; }
     @Override public final String doc() { return docString; }
@@ -377,7 +392,7 @@ class PyConcreteType extends PyType {
 final class PyZlibErrorType extends PyConcreteType {
     public static final PyZlibErrorType singleton = new PyZlibErrorType();
 
-    private PyZlibErrorType() { super("error", PyZlibError.class, PyExceptionType.singleton, null); }
+    private PyZlibErrorType() { super("error", "error", "zlib", PyZlibError.class, PyExceptionType.singleton, null); }
 
     @Override public PyObject call(PyObject[] args, PyDict kwargs) {
         return PyZlibError.newObj(this, args, kwargs);
@@ -415,6 +430,9 @@ abstract class PyGettableDescriptor extends PyTruthyObject {
     }
     static PyObject pymember___name__(PyObject obj) {
         return new PyString(((PyGettableDescriptor)obj).name);
+    }
+    static PyObject pygetset___qualname__(PyObject obj) {
+        throw new UnsupportedOperationException("descriptor.__qualname__ unimplemented");
     }
 }
 
@@ -507,6 +525,9 @@ final class PyClassMethodDescriptor extends PyTruthyObject {
     static PyObject pymember___name__(PyObject obj) {
         return new PyString(((PyClassMethodDescriptor)obj).name);
     }
+    static PyObject pygetset___qualname__(PyObject obj) {
+        throw new UnsupportedOperationException("classmethod_descriptor.__qualname__ unimplemented");
+    }
 }
 
 final class PyStaticMethod extends PyTruthyObject {
@@ -542,6 +563,12 @@ abstract class PyBuiltinFunctionOrMethod extends PyTruthyObject {
     static PyObject pygetset___name__(PyObject obj) {
         throw new UnsupportedOperationException("builtin_function_or_method.__name__ unimplemented");
     }
+    static PyObject pygetset___qualname__(PyObject obj) {
+        throw new UnsupportedOperationException("builtin_function_or_method.__qualname__ unimplemented");
+    }
+    static PyObject pymember___module__(PyObject obj) {
+        throw new UnsupportedOperationException("builtin_function_or_method.__module__ unimplemented");
+    }
 }
 
 abstract class PyBuiltinMethod<T extends PyObject> extends PyBuiltinFunctionOrMethod {
@@ -569,6 +596,12 @@ abstract class PyFunction extends PyTruthyObject {
     static PyObject pygetset___dict__(PyObject obj) {
         throw new UnsupportedOperationException("function.__dict__ unimplemented");
     }
+    static PyObject pygetset___qualname__(PyObject obj) {
+        throw new UnsupportedOperationException("function.__qualname__ unimplemented");
+    }
+    static PyObject pymember___module__(PyObject obj) {
+        throw new UnsupportedOperationException("function.__module__ unimplemented");
+    }
 }
 
 abstract class PyGenerator extends PyIter {
@@ -578,6 +611,7 @@ abstract class PyGenerator extends PyIter {
     public PyObject pymethod_throw(PyObject[] args, PyDict kwargs) { throw new UnsupportedOperationException(); }                                                                                                           public PyObject pymethod_close() { throw new UnsupportedOperationException(); }
 
     static PyObject pygetset___name__(PyObject obj) { throw new UnsupportedOperationException("generator.__name__ unimplemented"); }
+    static PyObject pygetset___qualname__(PyObject obj) { throw new UnsupportedOperationException("generator.__qualname__ unimplemented"); }
     static PyObject pygetset_gi_yieldfrom(PyObject obj) { throw new UnsupportedOperationException(); }
     static PyObject pygetset_gi_running(PyObject obj) { throw new UnsupportedOperationException(); }
     static PyObject pygetset_gi_frame(PyObject obj) { throw new UnsupportedOperationException(); }

@@ -8,7 +8,7 @@ import java.util.Arrays;
 
 public final class PyByteArray extends PyObject {
     static final class PyByteArrayIter extends PyIter {
-        private static final PyConcreteType type_singleton = new PyConcreteType("bytearray_iterator", PyByteArrayIter.class, PyObjectType.singleton, null);
+        private static final PyConcreteType type_singleton = new PyConcreteType("bytearray_iterator", "bytearray_iterator", "builtins", PyByteArrayIter.class, PyObjectType.singleton, null);
 
         private byte[] b;
         private int index = 0;

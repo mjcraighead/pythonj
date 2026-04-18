@@ -2699,13 +2699,11 @@ class LoweringVisitor(ast.NodeVisitor):
                     ]),
                 ]),
             ]))
-        module_name = '__main__'
+        qualname = self.qualname(node.name)
         type_decls.extend([
             ir.ConstructorDecl('private', type_class_name, [], [
-                ir.SuperConstructorCall([ir.StrLiteral(node.name), ir.Field(ir.Identifier(java_name), 'class'), ir.Field(ir.Identifier('PyObjectType'), 'singleton'), ir.Null()]),
-            ]),
-            ir.MethodDecl('@Override public', 'String', 'repr', [], [
-                ir.ReturnStatement(ir.StrLiteral(f"<class '{module_name}.{node.name}'>")),
+                ir.SuperConstructorCall([ir.StrLiteral(node.name), ir.StrLiteral(qualname), ir.StrLiteral('__main__'),
+                    ir.Field(ir.Identifier(java_name), 'class'), ir.Field(ir.Identifier('PyObjectType'), 'singleton'), ir.Null()]),
             ]),
             ir.MethodDecl('@Override public', 'PyObject', 'call', ['PyObject[] args', 'PyDict kwargs'], [
                 ir.ReturnStatement(ir.StaticMethodCall(java_name, 'newObj', [ir.This(), ir.Identifier('args'), ir.Identifier('kwargs')])),
