@@ -386,8 +386,9 @@ class bytes:
         return ret
 
     def endswith(self: bytes, suffix, start, end) -> bool:
-        if __pythonj_isinstance__(suffix, tuple):
-            for item in suffix:
+        if isinstance(suffix, tuple):
+            suffix_tuple: tuple = suffix
+            for item in suffix_tuple:
                 if self.endswith(item, start, end):
                     return True
             return False
@@ -710,8 +711,9 @@ class bytes:
         return self[:i]
 
     def startswith(self: bytes, prefix, start, end) -> bool:
-        if __pythonj_isinstance__(prefix, tuple):
-            for item in prefix:
+        if isinstance(prefix, tuple):
+            prefix_tuple: tuple = prefix
+            for item in prefix_tuple:
                 if self.startswith(item, start, end):
                     return True
             return False
