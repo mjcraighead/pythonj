@@ -635,6 +635,8 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
                 else:
                     if method_name == '__bool__':
                         wrapper_return_expr = ir.StaticMethodCall('PyBool', 'create', [ir.MethodCall(ir.Identifier('self'), 'boolValue', [], 'boolean')], 'PyBool')
+                    elif method_name == '__hash__':
+                        wrapper_return_expr = ir.CreateObject('PyInt', [ir.CastExpr('long', ir.MethodCall(ir.Identifier('self'), 'hashCode', [], 'int'))])
                     elif method_name == '__repr__':
                         wrapper_return_expr = ir.CreateObject('PyString', [ir.MethodCall(ir.Identifier('self'), 'repr', [], 'String')])
                     elif method_name == '__contains__':

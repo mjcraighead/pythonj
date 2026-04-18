@@ -865,8 +865,6 @@ def static_method_call(class_name: str, method: str, args: list[Expr], return_ty
             return py_format(args[0], args[1])
         case ('Runtime', 'pythonjGet'):
             return MethodCall(args[0], 'get', [args[1], CastExpr('PyType', args[2])], 'PyObject')
-        case ('Runtime', 'pythonjHash'):
-            return CreateObject('PyInt', [CastExpr('long', MethodCall(args[0], 'hashCode', [], 'int'))])
         case ('Runtime', 'pythonjHasIndex'):
             return static_method_call('PyBool', 'create', [MethodCall(args[0], 'hasIndex', [], 'boolean')])
         case ('Runtime', 'pythonjHasIter'):

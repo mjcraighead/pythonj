@@ -62,7 +62,13 @@ def hasattr(obj, name) -> bool:
     return True
 
 def hash(arg) -> int:
-    return __pythonj_hash__(arg)
+    hash_func = __pythonj_lookup_attr__(type(arg), '__hash__')
+    if hash_func is __pythonj_null__ or hash_func is None:
+        raise TypeError(f'unhashable type: {type(arg).__name__!r}')
+    ret = hash_func(arg)
+    if not __pythonj_isinstance__(ret, int):
+        raise TypeError('__hash__ method should return an integer')
+    return ret
 
 def hex(arg) -> str:
     value: int = _operator.index(arg)

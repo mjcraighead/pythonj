@@ -42,7 +42,6 @@ INTRINSIC_SIGNATURES = {
     '__pythonj_float_java_rint__': ('pythonjFloatJavaRint', 1, 'float'),
     '__pythonj_float_java_str__': ('pythonjFloatJavaStr', 1, 'str'),
     '__pythonj_get__': ('pythonjGet', 3, 'object'),
-    '__pythonj_hash__': ('pythonjHash', 1, 'int'),
     '__pythonj_hasindex__': ('pythonjHasIndex', 1, 'bool'),
     '__pythonj_hasiter__': ('pythonjHasIter', 1, 'bool'),
     '__pythonj_instance_dict__': ('pythonjInstanceDict', 1, 'object'),
@@ -1586,7 +1585,7 @@ class LoweringVisitor(ast.NodeVisitor):
 
     def emit_call_positional(self, func: ir.Expr, node: ast.Call, max_args: int, *, return_node: Optional[ast.expr] = None) -> ir.Expr:
         if isinstance(func, ir.PyBuiltinFunction):
-            if func.name in {'abs', 'hash', 'len', 'repr'}:
+            if func.name in {'abs', 'len', 'repr'}:
                 method_name = INTRINSIC_SIGNATURES[f'__pythonj_{func.name}__'][0]
                 return ir.static_method_call('Runtime', method_name, [self.visit(node.args[0])])
             if func.name == 'isinstance':
