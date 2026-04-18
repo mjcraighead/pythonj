@@ -1196,8 +1196,8 @@ class tuple:
 
     def index(self, value, start, stop) -> int:
         n = len(self)
-        start_index: int = _pyj_slice_index_allow_null(start, 0, n)
-        stop_index: int = _pyj_slice_index_allow_null(stop, n, n)
+        start_index: int = pyj_slice_index_allow_null(start, 0, n)
+        stop_index: int = pyj_slice_index_allow_null(stop, n, n)
         i: int = start_index
         while i < stop_index:
             if self[i] == value:

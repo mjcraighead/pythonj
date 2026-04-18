@@ -107,10 +107,6 @@ public abstract class PyObject implements Comparable<PyObject> {
     public void set(PyObject obj, PyType owner, PyObject value) { throw unimplementedMethod("set"); }
     public void delete(PyObject obj, PyType owner) { throw unimplementedMethod("delete"); }
 
-    static PyObject pyget___class__(PyObject obj) {
-        return obj.type();
-    }
-
     public PyObject call(PyObject args[], PyDict kwargs) {
         throw PyTypeError.raise(PyString.reprOf(type().name()) + " object is not callable");
     }
@@ -175,6 +171,10 @@ public abstract class PyObject implements Comparable<PyObject> {
     }
     public abstract String repr();
     public String str() { return repr(); }
+
+    static PyObject pyget___class__(PyObject obj) {
+        return obj.type();
+    }
 
     public PyObject pymethod___bytes__() { throw new UnsupportedOperationException(type().name() + ".__bytes__() unimplemented"); }
     public PyObject pymethod___ceil__() { throw new UnsupportedOperationException(type().name() + ".__ceil__() unimplemented"); }
