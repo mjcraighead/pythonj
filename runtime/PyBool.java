@@ -188,7 +188,6 @@ public final class PyBool extends PyObject {
     @Override public PyBoolType type() { return PyBoolType.singleton; }
 
     @Override public boolean boolValue() { return value; }
-    @Override public boolean contains(PyObject rhs) { return defaultContains(rhs); }
     @Override public boolean equals(Object rhs) {
         if (rhs instanceof PyInt rhsInt) {
             return asInt() == rhsInt.value;

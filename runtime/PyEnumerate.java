@@ -29,7 +29,6 @@ public final class PyEnumerate extends PyIter {
         return ret;
     }
 
-    @Override public boolean contains(PyObject rhs) { return defaultContains(rhs); }
     @Override public String repr() { return defaultRepr(); }
     @Override public PyConcreteType type() { return PyEnumerateType.singleton; }
 }

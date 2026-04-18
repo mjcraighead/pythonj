@@ -28,7 +28,6 @@ public final class PyNone extends PyObject {
     @Override public PyConcreteType type() { return PyNoneType.singleton; }
 
     @Override public boolean boolValue() { return false; }
-    @Override public boolean contains(PyObject rhs) { return defaultContains(rhs); }
     @Override public boolean equals(Object rhs) { return this == rhs; } // always works because this is a singleton
     @Override public int hashCode() { return 0; }
     @Override public String repr() { return "None"; }

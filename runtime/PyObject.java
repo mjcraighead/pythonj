@@ -167,7 +167,22 @@ public abstract class PyObject implements Comparable<PyObject> {
         }
         return lt(rhs) ? -1 : 1;
     }
-    public boolean contains(PyObject rhs) { throw unimplementedMethod("contains"); }
+    public boolean contains(PyObject rhs) {
+        PyObject containsDesc = type().lookupAttr("__contains__");
+        if (containsDesc != null) {
+            return containsDesc.get(this, type()).call(new PyObject[]{rhs}, null).boolValue();
+        }
+        if (!hasIter()) {
+            throw PyTypeError.raise("argument of type " + PyString.reprOf(type().name()) + " is not a container or iterable");
+        }
+        var iter = iter();
+        for (var item = iter.next(); item != null; item = iter.next()) {
+            if (item.equals(rhs)) {
+                return true;
+            }
+        }
+        return false;
+    }
     @Override public boolean equals(Object rhs) { throw unimplementedMethod("equals"); }
     public double floatValue() { throw unimplementedMethod("floatValue"); }
     public final String format(String formatSpec) {
@@ -213,21 +228,6 @@ public abstract class PyObject implements Comparable<PyObject> {
     }
     protected final int defaultHashCode() {
         return System.identityHashCode(this);
-    }
-    protected final boolean defaultContains(PyObject rhs) {
-        if (!hasIter()) {
-            throw PyTypeError.raise("argument of type " + PyString.reprOf(type().name()) + " is not a container or iterable");
-        }
-        var iter = iter();
-        for (var item = iter.next(); item != null; item = iter.next()) {
-            if (item.equals(rhs)) {
-                return true;
-            }
-        }
-        return false;
-    }
-    protected final boolean slotBasedContains(PyObject rhs) {
-        return type().getAttr("__contains__").call(new PyObject[]{this, rhs}, null).boolValue();
     }
     protected final String defaultRepr() { return "<" + type().name() + " object>"; }
     protected final String slotBasedRepr() {

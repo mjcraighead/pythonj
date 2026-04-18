@@ -314,7 +314,6 @@ public final class PyInt extends PyObject {
     @Override public PyConcreteType type() { return PyIntType.singleton; }
 
     @Override public boolean boolValue() { return value != 0; }
-    @Override public boolean contains(PyObject rhs) { return defaultContains(rhs); }
     @Override public boolean equals(Object rhs) {
         if (rhs instanceof PyInt rhsInt) {
             return value == rhsInt.value;

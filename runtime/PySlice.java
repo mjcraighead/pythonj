@@ -39,7 +39,6 @@ public final class PySlice extends PyTruthyObject {
     @Override public boolean le(PyObject rhs) { throw unimplementedMethod("le"); }
     @Override public boolean lt(PyObject rhs) { throw unimplementedMethod("lt"); }
 
-    @Override public boolean contains(PyObject rhs) { return defaultContains(rhs); }
     @Override public boolean equals(Object rhs) {
         if (rhs instanceof PySlice rhsSlice) {
             return start.equals(rhsSlice.start) &&

@@ -301,7 +301,6 @@ abstract class PyType extends PyTruthyObject {
     public Map<PyObject, PyObject> getAttributes() { return null; }
     public PyObject lookupAttr(String name) { return null; }
 
-    @Override public boolean contains(PyObject rhs) { return defaultContains(rhs); }
     @Override public int hashCode() { return defaultHashCode(); }
 
     public abstract PyType base();
