@@ -97,10 +97,10 @@ public abstract class PyObject implements Comparable<PyObject> {
         throw raiseMissingAttr(key);
     }
     public final void setAttr(String key, PyObject value) {
-        type().lookupAttr("__setattr__").get(this, type()).call(new PyObject[]{new PyString(key), value}, null);
+        type().lookupAttr("__setattr__").call(new PyObject[]{this, new PyString(key), value}, null);
     }
     public final void delAttr(String key) {
-        type().lookupAttr("__delattr__").get(this, type()).call(new PyObject[]{new PyString(key)}, null);
+        type().lookupAttr("__delattr__").call(new PyObject[]{this, new PyString(key)}, null);
     }
     public PyObject get(PyObject obj, PyType owner) { return this; }
     public boolean isDataDescriptor() { return false; }
@@ -142,7 +142,7 @@ public abstract class PyObject implements Comparable<PyObject> {
     public boolean contains(PyObject rhs) {
         PyObject containsDesc = type().lookupAttr("__contains__");
         if (containsDesc != null) {
-            return containsDesc.get(this, type()).call(new PyObject[]{rhs}, null).boolValue();
+            return containsDesc.call(new PyObject[]{this, rhs}, null).boolValue();
         }
         if (!hasIter()) {
             throw PyTypeError.raise("argument of type " + PyString.reprOf(type().name()) + " is not a container or iterable");
@@ -158,7 +158,7 @@ public abstract class PyObject implements Comparable<PyObject> {
     @Override public boolean equals(Object rhs) { throw unimplementedMethod("equals"); }
     public double floatValue() { throw unimplementedMethod("floatValue"); }
     public final String format(String formatSpec) {
-        PyObject ret = type().getAttr("__format__").call(new PyObject[]{this, new PyString(formatSpec)}, null);
+        PyObject ret = type().lookupAttr("__format__").call(new PyObject[]{this, new PyString(formatSpec)}, null);
         if (!(ret instanceof PyString retStr)) {
             throw PyTypeError.raise("__format__ must return a str, not " + ret.type().name());
         }
@@ -219,7 +219,7 @@ public abstract class PyObject implements Comparable<PyObject> {
     }
     protected final String defaultRepr() { return "<" + type().name() + " object>"; }
     protected final String slotBasedRepr() {
-        PyObject ret = type().getAttr("__repr__").call(new PyObject[]{this}, null);
+        PyObject ret = type().lookupAttr("__repr__").call(new PyObject[]{this}, null);
         if (!(ret instanceof PyString retStr)) {
             throw PyTypeError.raise("__repr__ must return a str, not " + ret.type().name());
         }

@@ -30,7 +30,7 @@ def bin(arg) -> str:
 def delattr(obj, name) -> None:
     if not __pythonj_isinstance__(name, str):
         raise TypeError(f'attribute name must be string, not {type(name).__name__!r}')
-    type(obj).__delattr__(obj, name)
+    __pythonj_lookup_attr__(type(obj), '__delattr__')(obj, name)
     return None
 
 def divmod(a, b) -> tuple:
@@ -39,7 +39,7 @@ def divmod(a, b) -> tuple:
 def format(value, format_spec) -> str:
     if not isinstance(format_spec, str):
         raise TypeError(f'format() argument 2 must be str, not {type(format_spec).__name__}')
-    ret = type(value).__format__(value, format_spec)
+    ret = __pythonj_lookup_attr__(type(value), '__format__')(value, format_spec)
     if not isinstance(ret, str):
         raise TypeError(f'__format__ must return a str, not {type(ret).__name__}')
     return ret
@@ -104,7 +104,7 @@ def oct(arg) -> str:
     return f'0o{value:o}'
 
 def repr(arg) -> str:
-    ret = type(arg).__repr__(arg)
+    ret = __pythonj_lookup_attr__(type(arg), '__repr__')(arg)
     if not isinstance(ret, str):
         raise TypeError(f'__repr__ returned non-string (type {type(ret).__name__})')
     return ret
@@ -112,7 +112,7 @@ def repr(arg) -> str:
 def setattr(obj, name, value) -> None:
     if not __pythonj_isinstance__(name, str):
         raise TypeError(f'attribute name must be string, not {type(name).__name__!r}')
-    type(obj).__setattr__(obj, name, value)
+    __pythonj_lookup_attr__(type(obj), '__setattr__')(obj, name, value)
     return None
 
 def sum(iterable, start):
@@ -169,7 +169,7 @@ class object:
     def __setattr__(self, name, value):
         if not __pythonj_isinstance__(name, str):
             raise TypeError(f'attribute name must be string, not {type(name).__name__!r}')
-        desc = __pythonj_lookup_attr__(self, name)
+        desc = __pythonj_lookup_attr__(type(self), name)
         if desc is not __pythonj_null__ and __pythonj_is_data_descriptor__(desc):
             __pythonj_set__(desc, self, value)
             return None
@@ -184,7 +184,7 @@ class object:
     def __delattr__(self, name):
         if not __pythonj_isinstance__(name, str):
             raise TypeError(f'attribute name must be string, not {type(name).__name__!r}')
-        desc = __pythonj_lookup_attr__(self, name)
+        desc = __pythonj_lookup_attr__(type(self), name)
         if desc is not __pythonj_null__ and __pythonj_is_data_descriptor__(desc):
             __pythonj_delete__(desc, self)
             return None

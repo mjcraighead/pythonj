@@ -886,7 +886,7 @@ def static_method_call(class_name: str, method: str, args: list[Expr], return_ty
         case ('Runtime', 'pythonjLen'):
             return py_len(args[0])
         case ('Runtime', 'pythonjLookupAttr'):
-            return MethodCall(MethodCall(args[0], 'type', [], 'PyType'), 'lookupAttr', [unbox_str(args[1])], 'PyObject')
+            return MethodCall(CastExpr('PyType', args[0]), 'lookupAttr', [unbox_str(args[1])], 'PyObject')
         case ('Runtime', 'pythonjNext'):
             return MethodCall(args[0], 'next', [], 'PyObject')
         case ('Runtime', 'pythonjRangeStart'):
