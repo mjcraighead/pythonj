@@ -301,18 +301,12 @@ abstract class PyType extends PyTruthyObject {
     @Override public int hashCode() { return defaultHashCode(); }
 
     public abstract PyType base();
+    public abstract String doc();
     public abstract String name();
 
-    static PyObject pygetset___doc__(PyObject obj) {
-        String doc = ((PyConcreteType)obj).docString;
-        return (doc != null) ? new PyString(doc) : PyNone.singleton;
-    }
-    static PyObject pygetset___name__(PyObject obj) {
-        return new PyString(((PyType)obj).name());
-    }
     static PyObject pymember___base__(PyObject obj) {
         PyType base = ((PyType)obj).base();
-        return base != null ? base : PyNone.singleton;
+        return (base != null) ? base : PyNone.singleton;
     }
     static PyObject pygetset___dict__(PyObject obj) {
         var attrs = ((PyType)obj).getAttributes();
@@ -320,6 +314,13 @@ abstract class PyType extends PyTruthyObject {
             throw new UnsupportedOperationException(((PyType)obj).name() + ".__dict__ is not implemented");
         }
         return new PyMappingProxy(attrs);
+    }
+    static PyObject pygetset___doc__(PyObject obj) {
+        String doc = ((PyType)obj).doc();
+        return (doc != null) ? new PyString(doc) : PyNone.singleton;
+    }
+    static PyObject pygetset___name__(PyObject obj) {
+        return new PyString(((PyType)obj).name());
     }
 }
 
@@ -364,6 +365,7 @@ class PyConcreteType extends PyType {
     @Override public final String repr() { return "<class '" + typeName + "'>"; }
     @Override public final PyTypeType type() { return PyTypeType.singleton; }
     @Override public final PyType base() { return baseType; }
+    @Override public final String doc() { return docString; }
     @Override public final String name() { return typeName; }
 }
 
