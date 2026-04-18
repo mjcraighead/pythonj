@@ -587,20 +587,20 @@ abstract class PyFunction extends PyTruthyObject {
     @Override public PyConcreteType type() { return PyFunctionType.singleton; }
     @Override public String repr() { return "<function " + funcName + ">"; }
 
+    static PyObject pygetset___dict__(PyObject obj) {
+        throw new UnsupportedOperationException("function.__dict__ unimplemented");
+    }
     static PyObject pymember___doc__(PyObject obj) {
         throw new UnsupportedOperationException("function.__doc__ unimplemented");
+    }
+    static PyObject pymember___module__(PyObject obj) {
+        throw new UnsupportedOperationException("function.__module__ unimplemented");
     }
     static PyObject pygetset___name__(PyObject obj) {
         return new PyString(((PyFunction)obj).funcName);
     }
-    static PyObject pygetset___dict__(PyObject obj) {
-        throw new UnsupportedOperationException("function.__dict__ unimplemented");
-    }
     static PyObject pygetset___qualname__(PyObject obj) {
         throw new UnsupportedOperationException("function.__qualname__ unimplemented");
-    }
-    static PyObject pymember___module__(PyObject obj) {
-        throw new UnsupportedOperationException("function.__module__ unimplemented");
     }
 }
 
@@ -622,6 +622,7 @@ abstract class PyGenerator extends PyIter {
         throw PyTypeError.raise("cannot create 'generator' instances");
     }
 }
+
 // Helper functions used by the builtins and code generator
 public final class Runtime {
     public static PyList sysArgv = new PyList(new PyObject[] {new PyString("")});
