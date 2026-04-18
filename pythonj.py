@@ -2107,7 +2107,8 @@ class LoweringVisitor(ast.NodeVisitor):
             yield ir.method_call_statement(self.visit(target.value), 'setItem', [self.visit(target.slice), ir.Identifier(temp_name)])
         elif isinstance(target, (ast.Tuple, ast.List)):
             temp_name = self.scope.make_temp()
-            yield ir.LocalDecl('var', temp_name, ir.StaticMethodCall('Runtime', 'unpackSequence', [value, ir.IntLiteral(len(target.elts))]))
+            unpack_method = 'unpackSequenceTuple' if value.java_type() == 'PyTuple' else 'unpackSequence'
+            yield ir.LocalDecl('var', temp_name, ir.StaticMethodCall('Runtime', unpack_method, [value, ir.IntLiteral(len(target.elts))]))
             for (i, subtarget) in enumerate(target.elts):
                 yield from self.emit_bind(subtarget, ir.ArrayAccess(ir.Identifier(temp_name), ir.IntLiteral(i)))
         else:

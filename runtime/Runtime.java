@@ -778,15 +778,18 @@ public final class Runtime {
         list.toArray(array);
         return array;
     }
+    public static PyObject[] unpackSequenceTuple(PyTuple t, int expected) {
+        PyObject[] items = t.items;
+        int len = items.length;
+        if (len != expected) {
+            String prefix = (len < expected) ? "not enough" : "too many";
+            throw PyValueError.raise(prefix + " values to unpack (expected " + expected + ", got " + len + ")");
+        }
+        return items;
+    }
     public static PyObject[] unpackSequence(PyObject obj, int expected) {
         if (obj instanceof PyTuple t) {
-            if (t.items.length < expected) {
-                throw PyValueError.raise("not enough values to unpack (expected " + expected + ", got " + t.items.length + ")");
-            }
-            if (t.items.length > expected) {
-                throw PyValueError.raise("too many values to unpack (expected " + expected + ", got " + t.items.length + ")");
-            }
-            return t.items;
+            return unpackSequenceTuple(t, expected);
         }
         PyIter iter = obj.iter();
         PyObject[] result = new PyObject[expected];
