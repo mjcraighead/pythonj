@@ -581,11 +581,13 @@ abstract class PyBuiltinMethod<T extends PyObject> extends PyBuiltinFunctionOrMe
 }
 
 abstract class PyFunction extends PyTruthyObject {
-    private final String funcName;
-    protected PyFunction(String name) { funcName = name; }
+    private final String name;
+    private final String qualName;
+
+    protected PyFunction(String _name, String _qualName) { name = _name; qualName = _qualName; }
     @Override public int hashCode() { return defaultHashCode(); }
     @Override public PyConcreteType type() { return PyFunctionType.singleton; }
-    @Override public String repr() { return "<function " + funcName + ">"; }
+    @Override public String repr() { return "<function " + qualName + ">"; }
 
     static PyObject pygetset___dict__(PyObject obj) {
         throw new UnsupportedOperationException("function.__dict__ unimplemented");
@@ -597,21 +599,26 @@ abstract class PyFunction extends PyTruthyObject {
         throw new UnsupportedOperationException("function.__module__ unimplemented");
     }
     static PyObject pygetset___name__(PyObject obj) {
-        return new PyString(((PyFunction)obj).funcName);
+        return new PyString(((PyFunction)obj).name);
     }
     static PyObject pygetset___qualname__(PyObject obj) {
-        throw new UnsupportedOperationException("function.__qualname__ unimplemented");
+        return new PyString(((PyFunction)obj).qualName);
     }
 }
 
 abstract class PyGenerator extends PyIter {
+    private final String name;
+    private final String qualName;
+
+    protected PyGenerator(String _name, String _qualName) { name = _name; qualName = _qualName; }
     @Override public PyConcreteType type() { return PyGeneratorType.singleton; }
+    @Override public String repr() { return "<generator object " + qualName + ">"; }
 
     public PyObject pymethod_send(PyObject value) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_throw(PyObject[] args, PyDict kwargs) { throw new UnsupportedOperationException(); }                                                                                                           public PyObject pymethod_close() { throw new UnsupportedOperationException(); }
 
-    static PyObject pygetset___name__(PyObject obj) { throw new UnsupportedOperationException("generator.__name__ unimplemented"); }
-    static PyObject pygetset___qualname__(PyObject obj) { throw new UnsupportedOperationException("generator.__qualname__ unimplemented"); }
+    static PyObject pygetset___name__(PyObject obj) { return new PyString(((PyGenerator)obj).name); }
+    static PyObject pygetset___qualname__(PyObject obj) { return new PyString(((PyGenerator)obj).qualName); }
     static PyObject pygetset_gi_yieldfrom(PyObject obj) { throw new UnsupportedOperationException(); }
     static PyObject pygetset_gi_running(PyObject obj) { throw new UnsupportedOperationException(); }
     static PyObject pygetset_gi_frame(PyObject obj) { throw new UnsupportedOperationException(); }

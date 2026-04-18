@@ -2431,7 +2431,7 @@ class LoweringVisitor(ast.NodeVisitor):
     def qualname(self, name: str) -> str:
         return name if self.scope.qualname is None else f'{self.scope.qualname}.<locals>.{name}'
 
-    def add_function(self, py_name: str, java_name: str, params: list[inspect.Parameter], body: list[ir.Statement]) -> None:
+    def add_function(self, py_name: str, qualname: str, java_name: str, params: list[inspect.Parameter], body: list[ir.Statement]) -> None:
         arg_names = [param.name for param in params]
         arg_defaults = [param.default for param in params if param.default is not inspect.Parameter.empty]
         n_args = len(arg_names)
@@ -2443,7 +2443,7 @@ class LoweringVisitor(ast.NodeVisitor):
         func_decls: list[ir.Decl] = [
             *(ir.FieldDecl('private final', 'PyCell', f'pycell_{name}', None) for name in free_var_names),
             ir.ConstructorDecl('', java_name, constructor_args, [
-                ir.SuperConstructorCall([ir.StrLiteral(py_name)]),
+                ir.SuperConstructorCall([ir.StrLiteral(py_name), ir.StrLiteral(qualname)]),
                 *(ir.AssignStatement(ir.Identifier(f'pycell_{name}'), ir.Identifier(f'_pycell_{name}')) for name in free_var_names),
             ]),
         ]
@@ -2454,7 +2454,7 @@ class LoweringVisitor(ast.NodeVisitor):
                     ir.method_call_statement(ir.Identifier('PyRuntime'), 'pyfunc_require_user_exact_positional', [
                         ir.CreateObject('PyInt', [ir.Field(ir.Identifier('args'), 'length')]),
                         ir.Identifier('kwargs'),
-                        ir.PyConstant(py_name),
+                        ir.PyConstant(qualname),
                         ir.PyConstant(tuple(arg_names)),
                     ]),
                     ir.ReturnStatement(ir.MethodCall(
@@ -2469,7 +2469,7 @@ class LoweringVisitor(ast.NodeVisitor):
                     ir.method_call_statement(ir.Identifier('PyRuntime'), 'pyfunc_require_user_min_max_positional', [
                         ir.CreateObject('PyInt', [ir.Identifier('argsLength')]),
                         ir.Identifier('kwargs'),
-                        ir.PyConstant(py_name),
+                        ir.PyConstant(qualname),
                         ir.PyConstant(tuple(arg_names)),
                         ir.PyConstant(n_required),
                     ]),
@@ -2490,7 +2490,7 @@ class LoweringVisitor(ast.NodeVisitor):
                 ir.LocalDecl('var', 'boundArgs', ir.Field(ir.StaticMethodCall('PyRuntime', 'pyfunc_bind_user_function', [
                     ir.CreateObject('PyTuple', [ir.Identifier('args')]),
                     ir.Identifier('kwargs'),
-                    ir.PyConstant(py_name),
+                    ir.PyConstant(qualname),
                     ir.PyConstant(tuple(arg_names)),
                     ir.PyConstant(n_required),
                     ir.PyConstant(len(shape.posonly_params)),
@@ -2568,7 +2568,7 @@ class LoweringVisitor(ast.NodeVisitor):
             body = self.visit_block(node.body)
             if return_java_type != 'PyObject' and not ir.block_ends_control_flow(body):
                 self.error(node.lineno, f'annotated function {node.name} may implicitly return None')
-            self.add_function(qualname, java_name, params, body)
+            self.add_function(node.name, qualname, java_name, params, body)
 
     def visit_ClassDef(self, node) -> None:
         if self.scope.info.kind is not ScopeKind.MODULE:
@@ -2738,7 +2738,7 @@ class LoweringVisitor(ast.NodeVisitor):
         with self.new_function(scope_info, free_vars, qualname):
             with self.new_block() as body:
                 body.append(ir.ReturnStatement(self.visit(node.body)))
-            self.add_function(qualname, java_name, params, body)
+            self.add_function('<lambda>', qualname, java_name, params, body)
 
         return ir.CreateObject(java_name, [ir.Identifier(f'pycell_{name}') for name in sorted(free_vars)])
 
@@ -2854,6 +2854,7 @@ class LoweringVisitor(ast.NodeVisitor):
             free_var_names = sorted(self.scope.free_vars)
             ctor_args = [*(f'PyCell _pycell_{name}' for name in free_var_names), 'PyObject iterable']
             ctor_body: list[ir.Statement] = [
+                ir.SuperConstructorCall([ir.StrLiteral('<genexpr>'), ir.StrLiteral(qualname)]),
                 *(ir.AssignStatement(ir.Identifier(f'pycell_{name}'), ir.Identifier(f'_pycell_{name}')) for name in free_var_names),
                 ir.AssignStatement(ir.Identifier('pyiter_iterable'), ir.iter(ir.Identifier('iterable'))),
             ]
@@ -2865,7 +2866,6 @@ class LoweringVisitor(ast.NodeVisitor):
                 *(ir.FieldDecl('private', 'PyObject', f'pylocal_{name}', ir.Null()) for name in sorted(self.scope.info.locals - self.scope.info.cell_vars)),
                 ir.ConstructorDecl('', java_name, ctor_args, ctor_body),
                 ir.MethodDecl('@Override public', 'PyObject', 'next', [], next_body),
-                ir.MethodDecl('@Override public', 'String', 'repr', [], [ir.ReturnStatement(ir.StrLiteral(f'<generator object {qualname}>'))]),
             ])
 
         return ir.CreateObject(java_name, [*(ir.Identifier(f'pycell_{name}') for name in sorted(free_vars)), self.visit(generator.iter)])
