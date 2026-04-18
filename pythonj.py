@@ -401,6 +401,16 @@ class AstSimplifier(ast.NodeTransformer):
             return node.orelse
         return node
 
+    def visit_FunctionDef(self, node):
+        node = cast(ast.FunctionDef, self.generic_visit(node))
+        node.body.append(ast.copy_location(ast.Return(ast.Constant(None)), node))
+        return node
+
+    def visit_AsyncFunctionDef(self, node):
+        node = cast(ast.AsyncFunctionDef, self.generic_visit(node))
+        node.body.append(ast.copy_location(ast.Return(ast.Constant(None)), node))
+        return node
+
 def simplify_ast(node: ast.AST) -> ast.AST:
     return ast.fix_missing_locations(AstSimplifier().visit(node))
 
@@ -2527,10 +2537,7 @@ class LoweringVisitor(ast.NodeVisitor):
         for name in sorted(self.scope.info.locals - self.scope.info.cell_vars - set(arg_names) - set(self.scope.info.initial_builtin_module_locals)):
             if name not in arg_names:
                 call_positional_body.append(ir.LocalDecl(self.java_local_type(name), f'pylocal_{name}', ir.Null()))
-        implicit_return: ir.Statement = ir.ReturnStatement(ir.PyConstant(None))
-        if self.scope.expected_return_java_type is not None and self.scope.expected_return_java_type != 'PyObject':
-            implicit_return = ir.ReturnStatement(ir.CastExpr(self.scope.expected_return_java_type, ir.PyConstant(None)))
-        call_positional_body.extend(ir.block_simplify([*body, implicit_return]))
+        call_positional_body.extend(ir.block_simplify(body))
         func_decls.append(ir.MethodDecl(
             'public',
             self.scope.expected_return_java_type or 'PyObject',
