@@ -74,37 +74,59 @@ public abstract class PyObject implements Comparable<PyObject> {
         throw PyTypeError.raise(PyString.reprOf(type().name()) + " object does not support item deletion");
     }
 
+    public PyDict getInstanceDict() { return null; }
+
     public PyObject getAttr(String key) {
         var desc = type().lookupAttr(key);
+        if ((desc != null) && desc.isDataDescriptor()) {
+            return desc.get(this, type());
+        }
+        PyDict instanceDict = getInstanceDict();
+        if (instanceDict != null) {
+            PyObject value = instanceDict.items.get(new PyString(key));
+            if (value != null) {
+                return value;
+            }
+        }
         if (desc != null) {
             return desc.get(this, type());
         }
-        if (!key.startsWith("__")) { // we assume all of these are handled by descriptors or derived class
-            throw raiseMissingAttr(key);
+        if (key.startsWith("__")) {
+            throw new UnsupportedOperationException(type().name() + "." + key + " is not implemented");
         }
-        throw new UnsupportedOperationException(PyString.reprOf(key) + " attribute is not handled");
+        throw raiseMissingAttr(key);
     }
     public void setAttr(String key, PyObject value) {
         var desc = type().lookupAttr(key);
-        if (desc != null) {
-            if (desc.isDataDescriptor()) {
-                desc.set(this, type(), value);
-            } else {
-                throw Runtime.raiseNamedReadOnlyAttr(type(), key);
-            }
+        if ((desc != null) && desc.isDataDescriptor()) {
+            desc.set(this, type(), value);
             return;
+        }
+        PyDict instanceDict = getInstanceDict();
+        if (instanceDict != null) {
+            instanceDict.items.put(new PyString(key), value);
+            return;
+        }
+        if (desc != null) {
+            throw Runtime.raiseNamedReadOnlyAttr(type(), key);
         }
         throw PyAttributeError.raise(PyString.reprOf(type().name()) + " object has no attribute " + PyString.reprOf(key) + " and no __dict__ for setting new attributes");
     }
     public void delAttr(String key) {
         var desc = type().lookupAttr(key);
-        if (desc != null) {
-            if (desc.isDataDescriptor()) {
-                desc.delete(this, type());
-            } else {
-                throw Runtime.raiseNamedReadOnlyAttr(type(), key);
+        if ((desc != null) && desc.isDataDescriptor()) {
+            desc.delete(this, type());
+            return;
+        }
+        PyDict instanceDict = getInstanceDict();
+        if (instanceDict != null) {
+            if (instanceDict.items.remove(new PyString(key)) == null) {
+                throw raiseMissingAttr(key);
             }
             return;
+        }
+        if (desc != null) {
+            throw Runtime.raiseNamedReadOnlyAttr(type(), key);
         }
         throw PyAttributeError.raise(PyString.reprOf(type().name()) + " object has no attribute " + PyString.reprOf(key) + " and no __dict__ for setting new attributes");
     }

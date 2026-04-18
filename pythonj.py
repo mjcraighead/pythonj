@@ -2680,15 +2680,45 @@ class LoweringVisitor(ast.NodeVisitor):
                     ], ir.MethodCall(ir.Super(), 'delAttr', [ir.Identifier('key')])),
                 ]),
             ]))
-        class_decls.append(ir.ClassDecl('private static final', type_class_name, 'PyConcreteType', [
+        type_decls: list[ir.Decl] = [
             ir.FieldDecl('private static final', type_class_name, 'singleton', ir.CreateObject(type_class_name, [])),
+        ]
+        if slots is None:
+            type_decls.append(ir.ClassDecl('static final', 'AttrsHolder', None, [
+                ir.FieldDecl('static final', 'PyGetSetDescriptor', 'pyattr___dict__',
+                    ir.CreateObject('PyGetSetDescriptor', [
+                        ir.Identifier('singleton'), ir.StrLiteral('__dict__'),
+                        ir.MethodRef('PyBagObject', 'pygetset___dict__'), ir.Null(),
+                    ])),
+                ir.FieldDecl('static final', 'java.util.LinkedHashMap<PyObject, PyObject>', 'attrs',
+                    ir.CreateObject('java.util.LinkedHashMap<PyObject, PyObject>', [ir.IntLiteral(1)])),
+                ir.StaticBlock([
+                    ir.method_call_statement(ir.Identifier('attrs'), 'put', [
+                        ir.CreateObject('PyString', [ir.StrLiteral('__dict__')]),
+                        ir.Identifier('pyattr___dict__'),
+                    ]),
+                ]),
+            ]))
+        type_decls.extend([
             ir.ConstructorDecl('private', type_class_name, [], [
                 ir.SuperConstructorCall([ir.StrLiteral(node.name), ir.Field(ir.Identifier(java_name), 'class'), ir.Field(ir.Identifier('PyObjectType'), 'singleton'), ir.Null()]),
             ]),
             ir.MethodDecl('@Override public', 'PyObject', 'call', ['PyObject[] args', 'PyDict kwargs'], [
                 ir.ReturnStatement(ir.StaticMethodCall(java_name, 'newObj', [ir.This(), ir.Identifier('args'), ir.Identifier('kwargs')])),
             ]),
-        ]))
+        ])
+        if slots is None:
+            type_decls.extend([
+                ir.MethodDecl('@Override public', 'java.util.Map<PyObject, PyObject>', 'getAttributes', [], [
+                    ir.ReturnStatement(ir.Field(ir.Identifier('AttrsHolder'), 'attrs')),
+                ]),
+                ir.MethodDecl('@Override public', 'PyObject', 'lookupAttr', ['String name'], [
+                    ir.SwitchStatement(ir.Identifier('name'), [
+                        ir.SwitchCase(ir.StrLiteral('__dict__'), ir.Field(ir.Identifier('AttrsHolder'), 'pyattr___dict__')),
+                    ], ir.MethodCall(ir.This(), 'lookupBaseAttr', [ir.Identifier('name')])),
+                ]),
+            ])
+        class_decls.append(ir.ClassDecl('private static final', type_class_name, 'PyConcreteType', type_decls))
         for class_decl in class_decls:
             assert class_decl.name not in self.classes
             self.classes[class_decl.name] = class_decl

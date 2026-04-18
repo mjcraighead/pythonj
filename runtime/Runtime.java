@@ -109,46 +109,10 @@ abstract class PyBagObject extends PyTruthyObject {
         bagType = _bagType;
     }
 
-    @Override public PyObject getAttr(String key) {
-        var desc = type().lookupAttr(key);
-        if ((desc != null) && desc.isDataDescriptor()) {
-            return desc.get(this, type());
-        }
-        PyObject value = attrs.items.get(new PyString(key));
-        if (value != null) {
-            return value;
-        }
-        if (desc != null) {
-            return desc.get(this, type());
-        }
-        if (key.equals("__dict__")) {
-            return attrs;
-        }
-        throw raiseMissingAttr(key);
-    }
-    @Override public void setAttr(String key, PyObject value) {
-        if (key.equals("__dict__")) {
-            throw Runtime.raiseNamedReadOnlyAttr(type(), key);
-        }
-        var desc = type().lookupAttr(key);
-        if ((desc != null) && desc.isDataDescriptor()) {
-            desc.set(this, type(), value);
-            return;
-        }
-        attrs.items.put(new PyString(key), value);
-    }
-    @Override public void delAttr(String key) {
-        if (key.equals("__dict__")) {
-            throw Runtime.raiseNamedReadOnlyAttr(type(), key);
-        }
-        var desc = type().lookupAttr(key);
-        if ((desc != null) && desc.isDataDescriptor()) {
-            desc.delete(this, type());
-            return;
-        }
-        if (attrs.items.remove(new PyString(key)) == null) {
-            throw raiseMissingAttr(key);
-        }
+    @Override public PyDict getInstanceDict() { return attrs; }
+
+    static PyObject pygetset___dict__(PyObject obj) {
+        return ((PyBagObject)obj).attrs;
     }
 
     @Override public boolean equals(Object rhs) { return this == rhs; }
@@ -386,7 +350,10 @@ class PyConcreteType extends PyType {
         if (metaDesc != null) {
             return metaDesc.get(this, type());
         }
-        return super.getAttr(key);
+        if (key.startsWith("__")) {
+            throw new UnsupportedOperationException(typeName + "." + key + " is not implemented");
+        }
+        throw PyAttributeError.raise("type object " + PyString.reprOf(typeName) + " has no attribute " + PyString.reprOf(key));
     }
     @Override public final void setAttr(String key, PyObject value) {
         throw PyTypeError.raise("cannot set " + PyString.reprOf(key) + " attribute of immutable type " + PyString.reprOf(typeName));
