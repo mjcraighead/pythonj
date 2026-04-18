@@ -6,6 +6,7 @@ import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.zip.DataFormatException;
 import java.util.zip.Deflater;
 import java.util.zip.Inflater;
@@ -242,11 +243,16 @@ final class PyBuiltinFunctionsImpl {
         } else {
             attrsType = object.type();
         }
-        var attrs = attrsType.getAttributes();
-        if (attrs == null) {
-            throw new UnsupportedOperationException(attrsType.name() + ".__dict__ is not implemented");
-        }
-        ArrayList<PyObject> list = new ArrayList<>(attrs.keySet());
+        var names = new HashSet<PyObject>();
+        do {
+            var attrs = attrsType.getAttributes();
+            if (attrs == null) {
+                throw new UnsupportedOperationException(attrsType.name() + ".__dict__ is not implemented");
+            }
+            names.addAll(attrs.keySet());
+            attrsType = attrsType.base();
+        } while (attrsType != null);
+        ArrayList<PyObject> list = new ArrayList<>(names);
         Collections.sort(list);
         return new PyList(list);
     }

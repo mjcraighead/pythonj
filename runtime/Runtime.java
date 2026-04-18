@@ -318,6 +318,7 @@ abstract class PyType extends PyTruthyObject {
     @Override public boolean contains(PyObject rhs) { return defaultContains(rhs); }
     @Override public int hashCode() { return defaultHashCode(); }
 
+    public abstract PyType base();
     public abstract String name();
 
     static PyObject pygetset___doc__(PyObject obj) {
@@ -334,6 +335,9 @@ class PyConcreteType extends PyType {
         typeName = name;
         instanceClass = _instanceClass;
         baseType = _baseType;
+    }
+    public final PyObject lookupBaseAttr(String name) {
+        return (baseType != null) ? baseType.lookupAttr(name) : null;
     }
     @Override public final PyObject getAttr(String key) {
         var desc = lookupAttr(key);
@@ -361,6 +365,7 @@ class PyConcreteType extends PyType {
     }
     @Override public final String repr() { return "<class '" + typeName + "'>"; }
     @Override public final PyTypeType type() { return PyTypeType.singleton; }
+    @Override public final PyType base() { return baseType; }
     @Override public final String name() { return typeName; }
 }
 

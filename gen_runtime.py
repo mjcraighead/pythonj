@@ -16,7 +16,7 @@ import ir
 import pythonj
 
 RAW_ARGS_KWARGS_BUILTINS = {'max', 'min'}
-ALL_PYTHON_AUTHORED_IMPLS = {'bytearray', 'bytes', 'float', 'int', 'range', 'tuple'}
+ALL_PYTHON_AUTHORED_IMPLS = {'bool', 'bytearray', 'bytes', 'float', 'int', 'object', 'range', 'tuple'}
 PYTHON_AUTHORED_IMPLS = {
     'builtins': {
         'abs', 'all', 'any', 'bin', 'delattr', 'divmod', 'format', 'getattr', 'hasattr', 'hash', 'hex',
@@ -24,14 +24,14 @@ PYTHON_AUTHORED_IMPLS = {
     },
     'dict': {'fromkeys', 'setdefault'},
     'str': {
-        'capitalize', 'casefold', 'center', 'encode', 'expandtabs', 'format_map', 'isalnum', 'isalpha',
-        'isascii', 'isidentifier', 'islower', 'isnumeric', 'isprintable', 'isspace', 'istitle', 'isupper',
-        'join', 'ljust', 'lstrip', 'partition', 'replace', 'rfind', 'rindex', 'rjust', 'rpartition', 'rsplit',
-        'removeprefix', 'removesuffix', 'rstrip', 'splitlines', 'strip', 'swapcase', 'title', 'translate',
-        'zfill',
+        '__format__', 'capitalize', 'casefold', 'center', 'encode', 'expandtabs', 'format_map', 'isalnum',
+        'isalpha', 'isascii', 'isidentifier', 'islower', 'isnumeric', 'isprintable', 'isspace', 'istitle',
+        'isupper', 'join', 'ljust', 'lstrip', 'partition', 'replace', 'rfind', 'rindex', 'rjust', 'rpartition',
+        'rsplit', 'removeprefix', 'removesuffix', 'rstrip', 'splitlines', 'strip', 'swapcase', 'title',
+        'translate', 'zfill',
     },
 }
-HIDDEN_PYTHON_AUTHORED_METHODS = {'__contains__', '__format__', '__repr__'}
+HIDDEN_PYTHON_AUTHORED_METHODS = {'__contains__', '__repr__'}
 PYTHON_AUTHORED_CONSTRUCTOR_IMPLS = {'enumerate', 'zip'}
 SUPPORTED_HELPER_RETURN_TYPES = {'bool', 'bytes', 'dict', 'float', 'int', 'list', 'str', 'tuple'}
 
@@ -559,7 +559,7 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
                 ir.SwitchStatement(ir.Identifier('name'), [
                     ir.SwitchCase(ir.StrLiteral(k), ir.Field(ir.Identifier('AttrsHolder'), f'pyattr_{k}'))
                     for k in attrs
-                ], ir.Null()),
+                ], ir.MethodCall(ir.This(), 'lookupBaseAttr', [ir.Identifier('name')])),
             ]))
             top_level_decls.append(ir.ClassDecl('final', f'{java_name}Type', 'PyConcreteType', type_decls))
 

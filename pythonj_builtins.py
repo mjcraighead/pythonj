@@ -1037,6 +1037,11 @@ class slice:
         return f'slice({self.start!r}, {self.stop!r}, {self.step!r})'
 
 class str:
+    def __format__(self: str, format_spec) -> str:
+        if not __pythonj_isinstance__(format_spec, str):
+            raise TypeError(f'__format__() argument must be str, not {type(format_spec).__name__}')
+        return pyj_str_format(self, format_spec)
+
     def join(self: str, iterable) -> str:
         ret = __pythonj_str_builder__(4*len(self) + 2)
         if not __pythonj_hasiter__(iterable):

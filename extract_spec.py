@@ -438,7 +438,7 @@ def _build_type_entry(name: str) -> dict[str, Any]:
     obj = _get_runtime_obj(name)
     attrs = {}
     for (k, v) in list(obj.__dict__.items()):
-        if k.startswith('__') and k not in {'__doc__'}:
+        if k.startswith('__') and k not in {'__doc__', '__format__'}:
             continue
         v_type = type(v)
         if v_type is str:
@@ -455,6 +455,9 @@ def _build_type_entry(name: str) -> dict[str, Any]:
             attrs[k] = _encode_attr('staticmethod', signature=_get_method_signature(name, k))
         else:
             assert False, (name, k, v, v_type)
+    if name == 'bool': # patch up bool to reflect it not being inherited from int
+        assert '__format__' not in attrs
+        attrs['__format__'] = _encode_attr('method', doc=int.__dict__['__format__'].__doc__, signature=_get_method_signature('int', '__format__'))
     return {'kind': 'type', 'signature': _get_type_signature(name), 'attrs': attrs}
 
 def _build_builtin_module_entry() -> dict[str, Any]:
