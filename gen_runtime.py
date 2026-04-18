@@ -429,6 +429,7 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
                 case '_types.MappingProxyType': py_name = 'mappingproxy'
                 case '_types.MemberDescriptorType': py_name = 'member_descriptor'
                 case '_types.MethodDescriptorType': py_name = 'method_descriptor'
+                case '_types.ModuleType': py_name = 'module'
                 case '_types.NoneType': py_name = 'NoneType'
                 case _: py_name = name
 

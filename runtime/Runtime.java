@@ -151,6 +151,8 @@ abstract class PyModule extends PyTruthyObject {
     @Override public int hashCode() { return defaultHashCode(); }
     @Override public String repr() { return "<module '" + moduleName + "' (built-in)>"; }
     @Override public PyType type() { return PyModuleType.singleton; }
+
+    static PyObject pymember___dict__(PyObject obj) { throw new UnsupportedOperationException(); }
 }
 
 final class PyJsonModule extends PyModule {
@@ -367,12 +369,6 @@ class PyConcreteType extends PyType {
     @Override public final PyType base() { return baseType; }
     @Override public final String doc() { return docString; }
     @Override public final String name() { return typeName; }
-}
-
-final class PyModuleType extends PyConcreteType {
-    public static final PyModuleType singleton = new PyModuleType();
-
-    private PyModuleType() { super("module", PyModule.class, PyObjectType.singleton, null); }
 }
 
 final class PyZlibErrorType extends PyConcreteType {

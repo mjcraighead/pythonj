@@ -30,7 +30,7 @@ BUILTIN_MODULE_ATTRS = {
     '_io': {'BufferedReader', 'TextIOWrapper'},
     '_json': {'encode_basestring_ascii', 'scanstring'},
     '_operator': {'contains', 'delitem', 'getitem', 'index', 'setitem'},
-    '_types': {'BuiltinFunctionType', 'ClassMethodDescriptorType', 'FunctionType', 'GeneratorType', 'GetSetDescriptorType', 'MappingProxyType', 'MemberDescriptorType', 'MethodDescriptorType', 'NoneType'},
+    '_types': {'BuiltinFunctionType', 'ClassMethodDescriptorType', 'FunctionType', 'GeneratorType', 'GetSetDescriptorType', 'MappingProxyType', 'MemberDescriptorType', 'MethodDescriptorType', 'ModuleType', 'NoneType'},
     'math': {'copysign', 'isfinite', 'isinf', 'isnan'},
     'sys': {'exit', 'implementation'},
     'zlib': {'compress', 'decompress', 'error'},
@@ -533,9 +533,10 @@ def _write_pretty_json(f, value: object, indent: int = 0) -> None:
 def gen_spec(spec_path: str) -> None:
     spec = {'builtins': _build_builtin_module_entry()}
     for name in [*BUILTIN_TYPES, *sorted(EXCEPTION_TYPES),
-                 '_types.BuiltinFunctionType', '_types.ClassMethodDescriptorType',
-                 '_types.FunctionType', '_types.GeneratorType', '_types.GetSetDescriptorType', '_types.MappingProxyType', '_types.MemberDescriptorType',
-                 '_types.MethodDescriptorType', '_types.NoneType', '_io.BufferedReader', '_io.TextIOWrapper']:
+                 '_types.BuiltinFunctionType', '_types.ClassMethodDescriptorType', '_types.FunctionType',
+                 '_types.GeneratorType', '_types.GetSetDescriptorType', '_types.MappingProxyType',
+                 '_types.MemberDescriptorType', '_types.MethodDescriptorType', '_types.ModuleType', '_types.NoneType',
+                 '_io.BufferedReader', '_io.TextIOWrapper']:
         spec[name] = _build_type_entry(name)
     for name in sorted(BUILTIN_MODULES):
         spec[name] = _build_module_entry(name)
