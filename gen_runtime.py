@@ -34,7 +34,7 @@ PYTHON_AUTHORED_IMPLS = {
 }
 PYTHON_AUTHORED_CONSTRUCTOR_IMPLS = {'enumerate', 'zip'}
 SUPPORTED_HELPER_RETURN_TYPES = {'bool', 'bytes', 'dict', 'float', 'int', 'list', 'str', 'tuple'}
-SLOT_WRAPPER_ARITY = {'__repr__': 0, '__contains__': 1, '__delattr__': 1, '__setattr__': 2}
+SLOT_WRAPPER_ARITY = {'__bool__': 0, '__repr__': 0, '__contains__': 1, '__delattr__': 1, '__setattr__': 2}
 
 def is_pythonj_getter(func: ast.FunctionDef) -> bool:
     return any(isinstance(decorator, ast.Name) and decorator.id == '__pythonj_getter__' for decorator in func.decorator_list)
@@ -629,7 +629,9 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
                         metadata.builtin_method_return_java_types.get((name.rsplit('.', 1)[-1], method_name), 'PyObject'),
                     )
                 else:
-                    if method_name == '__repr__':
+                    if method_name == '__bool__':
+                        wrapper_return_expr = ir.StaticMethodCall('PyBool', 'create', [ir.MethodCall(ir.Identifier('self'), 'boolValue', [], 'boolean')], 'PyBool')
+                    elif method_name == '__repr__':
                         wrapper_return_expr = ir.CreateObject('PyString', [ir.MethodCall(ir.Identifier('self'), 'repr', [], 'String')])
                     elif method_name == '__contains__':
                         wrapper_return_expr = ir.StaticMethodCall('PyBool', 'create', [ir.MethodCall(ir.Identifier('self'), 'contains', [ir.Identifier('arg0')], 'boolean')], 'PyBool')

@@ -216,6 +216,9 @@ class type:
         raise TypeError(f'cannot set {name!r} attribute of immutable type {self.__name__!r}')
 
 class bool:
+    def __bool__(self: bool) -> bool:
+        return self
+
     def __format__(self: bool, format_spec) -> str:
         if not __pythonj_isinstance__(format_spec, str):
             raise TypeError(f'__format__() argument must be str, not {type(format_spec).__name__}')
@@ -795,6 +798,9 @@ class float:
     def real(self) -> float:
         return self
 
+    def __bool__(self: float) -> bool:
+        return self != 0.0
+
     def __format__(self: float, format_spec) -> str:
         if not __pythonj_isinstance__(format_spec, str):
             raise TypeError(f'__format__() argument must be str, not {type(format_spec).__name__}')
@@ -860,6 +866,9 @@ class int:
     @__pythonj_getter__
     def real(self) -> int:
         return self
+
+    def __bool__(self: int) -> bool:
+        return self != 0
 
     def __format__(self: int, format_spec) -> str:
         if not __pythonj_isinstance__(format_spec, str):

@@ -438,7 +438,7 @@ def _build_type_entry(name: str) -> dict[str, Any]:
     obj = _get_runtime_obj(name)
     attrs = {}
     for (k, v) in list(obj.__dict__.items()):
-        if k.startswith('__') and k not in {'__base__', '__class__', '__contains__', '__delattr__', '__dict__', '__doc__', '__format__', '__module__', '__name__', '__qualname__', '__repr__', '__setattr__'}:
+        if k.startswith('__') and k not in {'__base__', '__bool__', '__class__', '__contains__', '__delattr__', '__dict__', '__doc__', '__format__', '__module__', '__name__', '__qualname__', '__repr__', '__setattr__'}:
             continue
         v_type = type(v)
         if v_type is types.NoneType:
@@ -460,6 +460,8 @@ def _build_type_entry(name: str) -> dict[str, Any]:
         else:
             assert False, (name, k, v, v_type)
     if name == 'bool': # patch up bool to reflect it not being inherited from int
+        assert '__bool__' not in attrs
+        attrs['__bool__'] = _encode_attr('wrapper_descriptor', doc=int.__dict__['__bool__'].__doc__)
         assert '__format__' not in attrs
         attrs['__format__'] = _encode_attr('method', doc=int.__dict__['__format__'].__doc__, signature=_get_method_signature('int', '__format__'))
     ret: dict[str, Any] = {'kind': 'type', 'signature': _get_type_signature(name), 'attrs': attrs}
