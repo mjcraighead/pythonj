@@ -7,25 +7,6 @@ class PyBaseException extends PyTruthyObject {
     PyBaseException(PyObject[] _args) { args = new PyTuple(_args); }
     @Override public PyConcreteType type() { return PyBaseExceptionType.singleton; }
 
-    @Override public PyObject getAttr(String key) {
-        if (key.equals("args")) {
-            return args;
-        }
-        return super.getAttr(key);
-    }
-    @Override public void setAttr(String key, PyObject value) {
-        if (key.equals("args")) {
-            throw Runtime.raiseNamedReadOnlyAttr(type(), key);
-        }
-        super.setAttr(key, value);
-    }
-    @Override public void delAttr(String key) {
-        if (key.equals("args")) {
-            throw Runtime.raiseNamedReadOnlyAttr(type(), key);
-        }
-        super.delAttr(key);
-    }
-
     static PyObject pygetset___dict__(PyObject obj) {
         throw new UnsupportedOperationException("BaseException.__dict__ unimplemented");
     }
