@@ -112,7 +112,7 @@ def repr(arg) -> str:
 def setattr(obj, name, value) -> None:
     if not __pythonj_isinstance__(name, str):
         raise TypeError(f'attribute name must be string, not {type(name).__name__!r}')
-    __pythonj_setattr__(obj, name, value)
+    type(obj).__setattr__(obj, name, value)
     return None
 
 def sum(iterable, start):
@@ -166,6 +166,21 @@ def zip__newobj(type, args: tuple, kwargs: dict):
 
 # Builtin classes
 class object:
+    def __setattr__(self, name, value):
+        if not __pythonj_isinstance__(name, str):
+            raise TypeError(f'attribute name must be string, not {type(name).__name__!r}')
+        desc = __pythonj_lookup_attr__(self, name)
+        if desc is not __pythonj_null__ and __pythonj_is_data_descriptor__(desc):
+            __pythonj_set__(desc, self, value)
+            return None
+        d = __pythonj_instance_dict__(self)
+        if d is not __pythonj_null__:
+            d[name] = value
+            return None
+        if desc is not __pythonj_null__:
+            raise AttributeError(f'{type(self).__name__!r} object attribute {name!r} is read-only')
+        raise AttributeError(f'{type(self).__name__!r} object has no attribute {name!r} and no __dict__ for setting new attributes')
+
     def __delattr__(self, name):
         if not __pythonj_isinstance__(name, str):
             raise TypeError(f'attribute name must be string, not {type(name).__name__!r}')
@@ -194,6 +209,9 @@ class object:
         return f'<{type(self).__name__} object>'
 
 class type:
+    def __setattr__(self, name, value):
+        raise TypeError(f'cannot set {name!r} attribute of immutable type {self.__name__!r}')
+
     def __delattr__(self, name):
         raise TypeError(f'cannot set {name!r} attribute of immutable type {self.__name__!r}')
 

@@ -60,7 +60,7 @@ INTRINSIC_SIGNATURES = {
     '__pythonj_range_step__': ('pythonjRangeStep', 1, 'int'),
     '__pythonj_range_stop__': ('pythonjRangeStop', 1, 'int'),
     '__pythonj_repr__': ('pythonjRepr', 1, 'str'),
-    '__pythonj_setattr__': ('pythonjSetAttr', 3, 'void'),
+    '__pythonj_set__': ('pythonjSet', 3, 'void'),
     '__pythonj_slice_start__': ('pythonjSliceStart', 1, 'object'),
     '__pythonj_slice_step__': ('pythonjSliceStep', 1, 'object'),
     '__pythonj_slice_stop__': ('pythonjSliceStop', 1, 'object'),

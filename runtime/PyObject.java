@@ -96,21 +96,8 @@ public abstract class PyObject implements Comparable<PyObject> {
         }
         throw raiseMissingAttr(key);
     }
-    public void setAttr(String key, PyObject value) {
-        var desc = type().lookupAttr(key);
-        if ((desc != null) && desc.isDataDescriptor()) {
-            desc.set(this, type(), value);
-            return;
-        }
-        PyDict instanceDict = getInstanceDict();
-        if (instanceDict != null) {
-            instanceDict.items.put(new PyString(key), value);
-            return;
-        }
-        if (desc != null) {
-            throw Runtime.raiseNamedReadOnlyAttr(type(), key);
-        }
-        throw PyAttributeError.raise(PyString.reprOf(type().name()) + " object has no attribute " + PyString.reprOf(key) + " and no __dict__ for setting new attributes");
+    public final void setAttr(String key, PyObject value) {
+        type().lookupAttr("__setattr__").get(this, type()).call(new PyObject[]{new PyString(key), value}, null);
     }
     public final void delAttr(String key) {
         type().lookupAttr("__delattr__").get(this, type()).call(new PyObject[]{new PyString(key)}, null);

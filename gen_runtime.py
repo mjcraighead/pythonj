@@ -34,7 +34,7 @@ PYTHON_AUTHORED_IMPLS = {
 }
 PYTHON_AUTHORED_CONSTRUCTOR_IMPLS = {'enumerate', 'zip'}
 SUPPORTED_HELPER_RETURN_TYPES = {'bool', 'bytes', 'dict', 'float', 'int', 'list', 'str', 'tuple'}
-SLOT_WRAPPER_ARITY = {'__repr__': 0, '__contains__': 1, '__delattr__': 1}
+SLOT_WRAPPER_ARITY = {'__repr__': 0, '__contains__': 1, '__delattr__': 1, '__setattr__': 2}
 
 def is_pythonj_getter(func: ast.FunctionDef) -> bool:
     return any(isinstance(decorator, ast.Name) and decorator.id == '__pythonj_getter__' for decorator in func.decorator_list)
@@ -623,7 +623,9 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
                     wrapper_return_expr: ir.Expr = ir.StaticMethodCall(
                         'PyRuntime',
                         f'pyfunc_{helper_name}',
-                        [ir.Identifier('self')] if arity == 0 else [ir.Identifier('self'), ir.Identifier('arg0')],
+                        [ir.Identifier('self')] if arity == 0 else
+                        [ir.Identifier('self'), ir.Identifier('arg0')] if arity == 1 else
+                        [ir.Identifier('self'), ir.Identifier('arg0'), ir.Identifier('arg1')],
                         metadata.builtin_method_return_java_types.get((name.rsplit('.', 1)[-1], method_name), 'PyObject'),
                     )
                 else:
@@ -640,6 +642,24 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
                         ir.LocalDecl('PyObject', 'arg0', ir.ArrayAccess(ir.Identifier('args'), ir.IntLiteral(0))),
                     ]
                     wrapper_call_body.append(ir.ReturnStatement(wrapper_return_expr))
+                if arity == 2:
+                    wrapper_call_body = [
+                        ir.method_call_statement(ir.Identifier('Runtime'), 'requireNoKwArgs', [ir.Identifier('kwargs'), ir.StrLiteral(method_name)]),
+                        ir.IfStatement(
+                            ir.BinaryOp('!=', ir.Field(ir.Identifier('args'), 'length', 'int'), ir.IntLiteral(2)),
+                            [ir.ThrowStatement(ir.StaticMethodCall('PyTypeError', 'raise', [
+                                ir.BinaryOp(
+                                    '+',
+                                    ir.StrLiteral(f'{method_name} expected 2 arguments, got '),
+                                    ir.StaticMethodCall('String', 'valueOf', [ir.Field(ir.Identifier('args'), 'length', 'int')], 'String'),
+                                )
+                            ]))],
+                            [],
+                        ),
+                        ir.LocalDecl('PyObject', 'arg0', ir.ArrayAccess(ir.Identifier('args'), ir.IntLiteral(0))),
+                        ir.LocalDecl('PyObject', 'arg1', ir.ArrayAccess(ir.Identifier('args'), ir.IntLiteral(1))),
+                        ir.ReturnStatement(wrapper_return_expr),
+                    ]
                 top_level_decls.append(ir.ClassDecl(
                     'final',
                     f'{java_name}MethodWrapper_{method_name}',

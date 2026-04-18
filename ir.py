@@ -899,8 +899,8 @@ def static_method_call(class_name: str, method: str, args: list[Expr], return_ty
             if args[0].java_type() == 'PyString':
                 return CreateObject('PyString', [static_method_call('PyString', 'reprOf', [unbox_str(args[0])])])
             return CreateObject('PyString', [MethodCall(args[0], 'repr', [], 'String')])
-        case ('Runtime', 'pythonjSetAttr'):
-            return MethodCall(args[0], 'setAttr', [unbox_str(args[1]), args[2]], 'void')
+        case ('Runtime', 'pythonjSet'):
+            return MethodCall(args[0], 'set', [args[1], MethodCall(args[1], 'type', [], 'PyType'), args[2]], 'void')
         case ('Runtime', 'pythonjSliceStart'):
             return Field(CastExpr('PySlice', args[0]), 'start', 'PyObject')
         case ('Runtime', 'pythonjSliceStep'):
