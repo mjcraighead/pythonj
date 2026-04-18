@@ -2312,16 +2312,27 @@ class LoweringVisitor(ast.NodeVisitor):
                 *body,
             ])]
         elif iterable_java_type == 'PyRange':
-            temp_range = self.scope.make_temp()
-            temp_current = self.scope.make_temp()
-            temp_stop = self.scope.make_temp()
-            temp_step = self.scope.make_temp()
+            if isinstance(iterable, ir.CreateObject) and isinstance(iterable.args[2], ir.IntLiteral) and iterable.args[2].value > 0:
+                (start_expr, stop_expr, step_expr) = iterable.args
+                return [
+                    ir.LocalDecl('final long', temp_start := self.scope.make_temp(), start_expr),
+                    ir.LocalDecl('final long', temp_stop := self.scope.make_temp(), stop_expr),
+                    ir.ForStatement(
+                        'long', temp_current := self.scope.make_temp(), ir.Identifier(temp_start),
+                        ir.BinaryOp('<', ir.Identifier(temp_current), ir.Identifier(temp_stop)),
+                        temp_current, ir.StaticMethodCall('Math', 'addExact', [ir.Identifier(temp_current), step_expr], 'long'),
+                        [
+                            *self.emit_bind(target, ir.CreateObject('PyInt', [ir.Identifier(temp_current)])),
+                            *body,
+                        ]
+                    ),
+                ]
             return [
-                ir.LocalDecl('var', temp_range, iterable),
-                ir.LocalDecl('long', temp_stop, ir.Field(ir.Identifier(temp_range), 'stop', 'long')),
-                ir.LocalDecl('long', temp_step, ir.Field(ir.Identifier(temp_range), 'step', 'long')),
+                ir.LocalDecl('final var', temp_range := self.scope.make_temp(), iterable),
+                ir.LocalDecl('final long', temp_stop := self.scope.make_temp(), ir.Field(ir.Identifier(temp_range), 'stop', 'long')),
+                ir.LocalDecl('final long', temp_step := self.scope.make_temp(), ir.Field(ir.Identifier(temp_range), 'step', 'long')),
                 ir.ForStatement(
-                    'long', temp_current, ir.Field(ir.Identifier(temp_range), 'start', 'long'),
+                    'long', temp_current := self.scope.make_temp(), ir.Field(ir.Identifier(temp_range), 'start', 'long'),
                     ir.CondOp(
                         ir.BinaryOp('>', ir.Identifier(temp_step), ir.IntLiteral(0)),
                         ir.BinaryOp('<', ir.Identifier(temp_current), ir.Identifier(temp_stop)),
