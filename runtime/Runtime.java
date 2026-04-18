@@ -341,6 +341,9 @@ class PyConcreteType extends PyType {
     public final PyObject lookupBaseAttr(String name) {
         return (baseType != null) ? baseType.lookupAttr(name) : null;
     }
+    @Override public PyObject lookupAttr(String name) {
+        return lookupBaseAttr(name);
+    }
     @Override public final PyObject getAttr(String key) {
         var metaDesc = type().lookupAttr(key);
         if ((metaDesc != null) && metaDesc.isDataDescriptor()) {
