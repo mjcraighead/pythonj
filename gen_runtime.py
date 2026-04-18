@@ -415,6 +415,7 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
         python_helper_classes: list[ir.ClassDecl] = []
         python_helper_methods: list[ir.Decl] = []
         emitted_python_getter_helpers: set[tuple[str, str]] = set()
+        emitted_python_method_helpers: set[tuple[str, str]] = set()
         for (name, obj_spec) in spec.items():
             if obj_spec['kind'] != 'type':
                 continue
@@ -427,10 +428,12 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
                 case '_types.GeneratorType': py_name = 'generator'
                 case '_types.GetSetDescriptorType': py_name = 'getset_descriptor'
                 case '_types.MappingProxyType': py_name = 'mappingproxy'
+                case '_types.MethodWrapperType': py_name = 'method-wrapper'
                 case '_types.MemberDescriptorType': py_name = 'member_descriptor'
                 case '_types.MethodDescriptorType': py_name = 'method_descriptor'
                 case '_types.ModuleType': py_name = 'module'
                 case '_types.NoneType': py_name = 'NoneType'
+                case '_types.WrapperDescriptorType': py_name = 'wrapper_descriptor'
                 case _: py_name = name
 
             type_decls: list[ir.Decl] = [
@@ -502,6 +505,13 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
                         ir.Identifier('singleton'),
                         ir.StrLiteral(k),
                         ir.MethodRef(f'{java_name}Method_{k}', 'new'),
+                        ir.Null() if doc_value is None else ir.StrLiteral(doc_value),
+                    ])
+                elif v['kind'] == 'wrapper_descriptor':
+                    value = ir.CreateObject('PyWrapperDescriptor', [
+                        ir.Identifier('singleton'),
+                        ir.StrLiteral(k),
+                        ir.MethodRef(f'{java_name}MethodWrapper_{k}', 'new'),
                         ir.Null() if doc_value is None else ir.StrLiteral(doc_value),
                     ])
                 elif v['kind'] == 'classmethod':
@@ -589,6 +599,48 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
                             ]),
                         ],
                     ))
+
+            for (method_name, attr_spec) in attrs.items():
+                if attr_spec['kind'] != 'wrapper_descriptor':
+                    continue
+                assert method_name == '__repr__', (name, method_name)
+                if method_name in pythonj_builtins_classes.get(name, {}):
+                    helper_key = (name, method_name)
+                    helper_name = f'{name.replace(".", "_")}__{method_name}'
+                    if helper_key not in emitted_python_method_helpers:
+                        (helper_classes, helper_method) = translate_python_method_impl(
+                            pythonj_builtins_node, name, method_name, pool,
+                            class_funcs=pythonj_builtins_classes, scope_infos=builtins_scope_infos,
+                            metadata=metadata,
+                            python_helper_names=set(pythonj_runtime_funcs),
+                            python_helper_class='PyRuntime',
+                            python_helper_return_java_types=metadata.runtime_function_return_java_types,
+                        )
+                        python_helper_classes.extend(helper_classes)
+                        python_helper_methods.append(helper_method)
+                        emitted_python_method_helpers.add(helper_key)
+                    wrapper_return_expr: ir.Expr = ir.StaticMethodCall(
+                        'PyRuntime',
+                        f'pyfunc_{helper_name}',
+                        [ir.Identifier('self')],
+                        metadata.builtin_method_return_java_types.get((name.rsplit('.', 1)[-1], method_name), 'PyObject'),
+                    )
+                else:
+                    wrapper_return_expr = ir.CreateObject('PyString', [ir.MethodCall(ir.Identifier('self'), 'repr', [], 'String')])
+                top_level_decls.append(ir.ClassDecl(
+                    'final',
+                    f'{java_name}MethodWrapper_{method_name}',
+                    f'PyMethodWrapper<{java_name}>',
+                    [
+                        ir.ConstructorDecl('', f'{java_name}MethodWrapper_{method_name}', ['PyObject _self'], [
+                            ir.SuperConstructorCall([ir.StrLiteral(method_name), ir.CastExpr(java_name, ir.Identifier('_self'))]),
+                        ]),
+                        ir.MethodDecl('@Override public', 'PyObject', 'call', ['PyObject[] args', 'PyDict kwargs'], [
+                            ir.method_call_statement(ir.This(), 'requireNoArgs', [ir.Identifier('args'), ir.Identifier('kwargs')]),
+                            ir.ReturnStatement(wrapper_return_expr),
+                        ]),
+                    ],
+                ))
 
             gen_methods = {}
             for (method_name, kind, params) in extract_spec.iter_type_methods(spec, name):
@@ -757,6 +809,9 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
             python_helper_methods.append(helper_method)
         for (type_name, methods) in sorted(pythonj_builtins_classes.items()):
             for method_name in sorted(method_name for method_name in methods if method_name in HIDDEN_PYTHON_AUTHORED_METHODS):
+                helper_key = (type_name, method_name)
+                if helper_key in emitted_python_method_helpers:
+                    continue
                 (helper_classes, helper_method) = translate_python_method_impl(
                     pythonj_builtins_node, type_name, method_name, pool,
                     class_funcs=pythonj_builtins_classes, scope_infos=builtins_scope_infos,
@@ -767,6 +822,7 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
                 )
                 python_helper_classes.extend(helper_classes)
                 python_helper_methods.append(helper_method)
+                emitted_python_method_helpers.add(helper_key)
         top_level_decls.extend(python_helper_classes)
 
         for module_name in sorted(extract_spec.BUILTIN_MODULES):

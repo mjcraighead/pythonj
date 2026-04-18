@@ -104,7 +104,10 @@ def oct(arg) -> str:
     return f'0o{value:o}'
 
 def repr(arg) -> str:
-    return __pythonj_repr__(arg)
+    ret = type(arg).__repr__(arg)
+    if not isinstance(ret, str):
+        raise TypeError(f'__repr__ returned non-string (type {type(ret).__name__})')
+    return ret
 
 def setattr(obj, name, value) -> None:
     if not __pythonj_isinstance__(name, str):
@@ -169,6 +172,9 @@ class object:
         if format_spec != '':
             raise TypeError(f'unsupported format string passed to {type(self).__name__}.__format__')
         return str(self)
+
+    def __repr__(self) -> str:
+        return f'<{type(self).__name__} object>'
 
 class bool:
     def __format__(self, format_spec) -> str:

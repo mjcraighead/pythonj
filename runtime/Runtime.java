@@ -246,7 +246,9 @@ final class PyTypesModule extends PyModule {
             case "MappingProxyType": return PyMappingProxyType.singleton;
             case "MemberDescriptorType": return PyMemberDescriptorType.singleton;
             case "MethodDescriptorType": return PyMethodDescriptorType.singleton;
+            case "MethodWrapperType": return PyMethodWrapperType.singleton;
             case "NoneType": return PyNoneType.singleton;
+            case "WrapperDescriptorType": return PyWrapperDescriptorType.singleton;
             default: return super.getAttr(key);
         }
     }
@@ -492,6 +494,69 @@ final class PyMethodDescriptor extends PyGettableDescriptor {
 
     @Override public final String repr() { return "<method " + PyString.reprOf(name) + " of " + PyString.reprOf(owner.name()) + " objects>"; }
     @Override public final PyConcreteType type() { return PyMethodDescriptorType.singleton; }
+}
+
+final class PyWrapperDescriptor extends PyGettableDescriptor {
+    protected PyWrapperDescriptor(PyType _owner, String _name, Function<PyObject, PyObject> _getter, String _doc) {
+        super(_owner, _name, _getter, _doc);
+    }
+
+    @Override public final PyObject call(PyObject[] args, PyDict kwargs) {
+        if (args.length == 0) {
+            throw PyTypeError.raise(
+                "descriptor " + PyString.reprOf(name) + " of " + PyString.reprOf(owner.name()) + " object needs an argument"
+            );
+        }
+        PyObject self = args[0];
+        if (!Runtime.pythonjIsInstance(self, owner).boolValue()) {
+            throw PyTypeError.raise(
+                "descriptor " + PyString.reprOf(name) + " for " + PyString.reprOf(owner.name()) +
+                " objects doesn't apply to a " + PyString.reprOf(self.type().name()) + " object"
+            );
+        }
+        PyObject[] rest = Arrays.copyOfRange(args, 1, args.length);
+        return getter.apply(self).call(rest, kwargs);
+    }
+
+    @Override public final String repr() { return "<slot wrapper " + PyString.reprOf(name) + " of " + PyString.reprOf(owner.name()) + " objects>"; }
+    @Override public final PyConcreteType type() { return PyWrapperDescriptorType.singleton; }
+}
+
+abstract class PyMethodWrapper<T extends PyObject> extends PyTruthyObject {
+    protected final T self;
+    private final String name;
+
+    protected PyMethodWrapper(String _name, T _self) {
+        self = _self;
+        name = _name;
+    }
+
+    public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
+        throw PyTypeError.raise("cannot create " + PyString.reprOf(type.name()) + " instances");
+    }
+
+    protected final void requireNoArgs(PyObject[] args, PyDict kwargs) {
+        Runtime.requireNoKwArgs(kwargs, name);
+        if (args.length != 0) {
+            throw PyTypeError.raise("expected 0 arguments, got " + args.length);
+        }
+    }
+
+    @Override public final int hashCode() { return defaultHashCode(); }
+    @Override public final String repr() {
+        return "<method-wrapper " + PyString.reprOf(name) + " of " + PyString.reprOf(self.type().name()) + " object>";
+    }
+    @Override public final PyConcreteType type() { return PyMethodWrapperType.singleton; }
+
+    static PyObject pygetset___doc__(PyObject obj) {
+        throw new UnsupportedOperationException("method-wrapper.__doc__ unimplemented");
+    }
+    static PyObject pygetset___name__(PyObject obj) {
+        return new PyString(((PyMethodWrapper<?>)obj).name);
+    }
+    static PyObject pygetset___qualname__(PyObject obj) {
+        throw new UnsupportedOperationException("method-wrapper.__qualname__ unimplemented");
+    }
 }
 
 final class PyClassMethodDescriptor extends PyTruthyObject {

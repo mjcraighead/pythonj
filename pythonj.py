@@ -1614,6 +1614,8 @@ class LoweringVisitor(ast.NodeVisitor):
             return None
         if type_name == 'type' and attr == '__name__':
             return ir.CreateObject('PyString', [ir.MethodCall(value, 'name', [], 'String')])
+        if type_name == 'type':
+            return None
         attr_kind = self.metadata.direct_getattr_builtin_type_attrs.get(type_name, {}).get(attr)
         if attr_kind is None:
             return None
@@ -2981,7 +2983,7 @@ DIRECT_NEWOBJ_POSITIONAL_SUPPORTED_BUILTIN_TYPES = {
     'str',
     'tuple',
 }
-DIRECT_GETATTR_IDENTITY_KINDS = {'string', 'member', 'getset', 'method'}
+DIRECT_GETATTR_IDENTITY_KINDS = {'string', 'member', 'getset', 'method', 'wrapper_descriptor'}
 
 def is_constant_default(default: object) -> bool:
     if isinstance(default, (types.NoneType, bool, int, float, str, bytes)):
@@ -3003,6 +3005,8 @@ def get_builtin_type_attr_expr(type_name: str, attr_name: str, attr_kind: str, r
                 return ir.MethodCall(attr_expr, 'get', [singleton, singleton])
             return attr_expr
         return ir.MethodCall(attr_expr, 'get', [ir.Null(), ir.Field(ir.Identifier(f'{java_name}Type'), 'singleton')])
+    if type_name == 'type' and attr_kind in {'method', 'wrapper_descriptor'}:
+        return attr_expr
     if attr_kind == 'string':
         return attr_expr
     return ir.MethodCall(attr_expr, 'get', [receiver, ir.MethodCall(receiver, 'type', [], 'PyType')])

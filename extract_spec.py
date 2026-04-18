@@ -30,7 +30,7 @@ BUILTIN_MODULE_ATTRS = {
     '_io': {'BufferedReader', 'TextIOWrapper'},
     '_json': {'encode_basestring_ascii', 'scanstring'},
     '_operator': {'contains', 'delitem', 'getitem', 'index', 'setitem'},
-    '_types': {'BuiltinFunctionType', 'ClassMethodDescriptorType', 'FunctionType', 'GeneratorType', 'GetSetDescriptorType', 'MappingProxyType', 'MemberDescriptorType', 'MethodDescriptorType', 'ModuleType', 'NoneType'},
+    '_types': {'BuiltinFunctionType', 'ClassMethodDescriptorType', 'FunctionType', 'GeneratorType', 'GetSetDescriptorType', 'MappingProxyType', 'MemberDescriptorType', 'MethodDescriptorType', 'MethodWrapperType', 'ModuleType', 'NoneType', 'WrapperDescriptorType'},
     'math': {'copysign', 'isfinite', 'isinf', 'isnan'},
     'sys': {'exit', 'implementation'},
     'zlib': {'compress', 'decompress', 'error'},
@@ -438,7 +438,7 @@ def _build_type_entry(name: str) -> dict[str, Any]:
     obj = _get_runtime_obj(name)
     attrs = {}
     for (k, v) in list(obj.__dict__.items()):
-        if k.startswith('__') and k not in {'__base__', '__class__', '__dict__', '__doc__', '__format__', '__module__', '__name__', '__qualname__'}:
+        if k.startswith('__') and k not in {'__base__', '__class__', '__dict__', '__doc__', '__format__', '__module__', '__name__', '__qualname__', '__repr__'}:
             continue
         v_type = type(v)
         if v_type is types.NoneType:
@@ -451,6 +451,8 @@ def _build_type_entry(name: str) -> dict[str, Any]:
             attrs[k] = _encode_attr('getset', doc=v.__doc__)
         elif v_type is types.MethodDescriptorType:
             attrs[k] = _encode_attr('method', doc=v.__doc__, signature=_get_method_signature(name, k))
+        elif v_type is types.WrapperDescriptorType:
+            attrs[k] = _encode_attr('wrapper_descriptor', doc=v.__doc__)
         elif v_type is types.ClassMethodDescriptorType:
             attrs[k] = _encode_attr('classmethod', doc=v.__doc__, signature=_get_method_signature(name, k))
         elif v_type is staticmethod:
@@ -535,7 +537,8 @@ def gen_spec(spec_path: str) -> None:
     for name in [*BUILTIN_TYPES, *sorted(EXCEPTION_TYPES),
                  '_types.BuiltinFunctionType', '_types.ClassMethodDescriptorType', '_types.FunctionType',
                  '_types.GeneratorType', '_types.GetSetDescriptorType', '_types.MappingProxyType',
-                 '_types.MemberDescriptorType', '_types.MethodDescriptorType', '_types.ModuleType', '_types.NoneType',
+                 '_types.MemberDescriptorType', '_types.MethodDescriptorType', '_types.MethodWrapperType',
+                 '_types.ModuleType', '_types.NoneType', '_types.WrapperDescriptorType',
                  '_io.BufferedReader', '_io.TextIOWrapper']:
         spec[name] = _build_type_entry(name)
     for name in sorted(BUILTIN_MODULES):
