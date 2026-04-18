@@ -2974,11 +2974,16 @@ def get_builtin_type_attr_expr(type_name: str, attr_name: str, attr_kind: str, r
     attr_expr = ir.Field(ir.Identifier(f'{java_name}Type.AttrsHolder'), f'pyattr_{attr_name}')
     if receiver is None:
         if attr_kind in DIRECT_GETATTR_IDENTITY_KINDS:
+            # 'type' is its own metaclass, so its data descriptors (member/getset)
+            # must be invoked via the metatype protocol, not returned as-is.
+            if type_name == 'type' and attr_kind in ('member', 'getset'):
+                singleton = ir.Field(ir.Identifier(f'{java_name}Type'), 'singleton')
+                return ir.MethodCall(attr_expr, 'get', [singleton, singleton])
             return attr_expr
-        return ir.MethodCall(attr_expr, 'get', [ir.Null()])
+        return ir.MethodCall(attr_expr, 'get', [ir.Null(), ir.Field(ir.Identifier(f'{java_name}Type'), 'singleton')])
     if attr_kind == 'string':
         return attr_expr
-    return ir.MethodCall(attr_expr, 'get', [receiver])
+    return ir.MethodCall(attr_expr, 'get', [receiver, ir.MethodCall(receiver, 'type', [], 'PyType')])
 
 @dataclass(slots=True)
 class SignatureShape:

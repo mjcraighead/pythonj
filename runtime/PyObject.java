@@ -77,7 +77,7 @@ public abstract class PyObject implements Comparable<PyObject> {
     public PyObject getAttr(String key) {
         var desc = type().lookupAttr(key);
         if (desc != null) {
-            return desc.get(this);
+            return desc.get(this, type());
         }
         if (!key.startsWith("__")) { // we assume all of these are handled by descriptors or derived class
             throw raiseMissingAttr(key);
@@ -91,7 +91,7 @@ public abstract class PyObject implements Comparable<PyObject> {
         var desc = type().lookupAttr(key);
         if (desc != null) {
             if (desc.isDataDescriptor()) {
-                desc.set(this, value);
+                desc.set(this, type(), value);
             } else {
                 throw Runtime.raiseNamedReadOnlyAttr(type(), key);
             }
@@ -103,7 +103,7 @@ public abstract class PyObject implements Comparable<PyObject> {
         var desc = type().lookupAttr(key);
         if (desc != null) {
             if (desc.isDataDescriptor()) {
-                desc.delete(this);
+                desc.delete(this, type());
             } else {
                 throw Runtime.raiseNamedReadOnlyAttr(type(), key);
             }
@@ -111,10 +111,10 @@ public abstract class PyObject implements Comparable<PyObject> {
         }
         throw PyAttributeError.raise(PyString.reprOf(type().name()) + " object has no attribute " + PyString.reprOf(key) + " and no __dict__ for setting new attributes");
     }
-    public PyObject get(PyObject instance) { return this; }
+    public PyObject get(PyObject obj, PyType owner) { return this; }
     public boolean isDataDescriptor() { return false; }
-    public void set(PyObject instance, PyObject value) { throw unimplementedMethod("set"); }
-    public void delete(PyObject instance) { throw unimplementedMethod("delete"); }
+    public void set(PyObject obj, PyType owner, PyObject value) { throw unimplementedMethod("set"); }
+    public void delete(PyObject obj, PyType owner) { throw unimplementedMethod("delete"); }
 
     public PyObject call(PyObject args[], PyDict kwargs) {
         throw PyTypeError.raise(PyString.reprOf(type().name()) + " object is not callable");

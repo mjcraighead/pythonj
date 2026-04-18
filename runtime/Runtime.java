@@ -323,7 +323,12 @@ abstract class PyType extends PyTruthyObject {
     public abstract String name();
 
     static PyObject pygetset___doc__(PyObject obj) {
-        throw new UnsupportedOperationException("type.__doc__ unimplemented");
+        var doc = ((PyType)obj).lookupAttr("__doc__");
+        return (doc != null) ? doc : PyNone.singleton;
+    }
+    static PyObject pymember___base__(PyObject obj) {
+        PyType base = ((PyType)obj).base();
+        return base != null ? base : PyNone.singleton;
     }
 }
 
@@ -341,12 +346,18 @@ class PyConcreteType extends PyType {
         return (baseType != null) ? baseType.lookupAttr(name) : null;
     }
     @Override public final PyObject getAttr(String key) {
+        var metaDesc = type().lookupAttr(key);
+        if ((metaDesc != null) && metaDesc.isDataDescriptor()) {
+            return metaDesc.get(this, type());
+        }
         var desc = lookupAttr(key);
         if (desc != null) {
-            return desc.get(null);
+            return desc.get(null, this);
+        }
+        if (metaDesc != null) {
+            return metaDesc.get(this, type());
         }
         switch (key) {
-            case "__base__": return (baseType != null) ? baseType : PyNone.singleton;
             case "__dict__": {
                 var attrs = getAttributes();
                 if (attrs == null) {
@@ -403,11 +414,11 @@ abstract class PyGettableDescriptor extends PyTruthyObject {
         throw PyTypeError.raise("cannot create " + PyString.reprOf(type.name()) + " instances");
     }
 
-    @Override public final PyObject get(PyObject instance) {
-        if (instance == null) {
+    @Override public final PyObject get(PyObject obj, PyType owner) {
+        if (obj == null) {
             return this;
         } else {
-            return getter.apply(instance);
+            return getter.apply(obj);
         }
     }
 
@@ -423,10 +434,10 @@ final class PyMemberDescriptor extends PyGettableDescriptor {
     }
 
     @Override public final boolean isDataDescriptor() { return true; }
-    @Override public final void set(PyObject instance, PyObject value) {
+    @Override public final void set(PyObject obj, PyType owner, PyObject value) {
         throw PyAttributeError.raise("readonly attribute");
     }
-    @Override public final void delete(PyObject instance) {
+    @Override public final void delete(PyObject obj, PyType owner) {
         throw PyAttributeError.raise("readonly attribute");
     }
 
@@ -440,11 +451,11 @@ final class PyGetSetDescriptor extends PyGettableDescriptor {
     }
 
     @Override public final boolean isDataDescriptor() { return true; }
-    @Override public final void set(PyObject instance, PyObject value) {
-        throw PyAttributeError.raise("attribute " + PyString.reprOf(name) + " of " + PyString.reprOf(owner.name()) + " objects is not writable");
+    @Override public final void set(PyObject obj, PyType owner, PyObject value) {
+        throw PyAttributeError.raise("attribute " + PyString.reprOf(name) + " of " + PyString.reprOf(this.owner.name()) + " objects is not writable");
     }
-    @Override public final void delete(PyObject instance) {
-        throw PyAttributeError.raise("attribute " + PyString.reprOf(name) + " of " + PyString.reprOf(owner.name()) + " objects is not writable");
+    @Override public final void delete(PyObject obj, PyType owner) {
+        throw PyAttributeError.raise("attribute " + PyString.reprOf(name) + " of " + PyString.reprOf(this.owner.name()) + " objects is not writable");
     }
 
     @Override public final String repr() { return "<attribute " + PyString.reprOf(name) + " of " + PyString.reprOf(owner.name()) + " objects>"; }
@@ -492,8 +503,8 @@ final class PyClassMethodDescriptor extends PyTruthyObject {
         throw PyTypeError.raise("cannot create " + PyString.reprOf(type.name()) + " instances");
     }
 
-    @Override public final PyObject get(PyObject instance) {
-        return getter.apply(owner);
+    @Override public final PyObject get(PyObject obj, PyType owner) {
+        return getter.apply(this.owner);
     }
 
     @Override public final String repr() { return "<method " + PyString.reprOf(name) + " of " + PyString.reprOf(owner.name()) + " objects>"; }
@@ -516,7 +527,7 @@ final class PyStaticMethod extends PyTruthyObject {
         func = _func;
     }
 
-    @Override public final PyObject get(PyObject instance) {
+    @Override public final PyObject get(PyObject obj, PyType owner) {
         return func;
     }
 
