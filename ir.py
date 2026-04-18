@@ -166,6 +166,12 @@ class Expr(ABC):
     def java_type(self) -> str:
         return JAVA_TYPE_UNKNOWN
 
+    def visit_children(self, visitor: IRVisitor) -> None:
+        pass
+
+    def transform_children(self, transformer: IRTransformer) -> Expr:
+        return self
+
     @abstractmethod
     def emit_java(self, pool: ConstantPool) -> str:
         raise NotImplementedError()
@@ -266,6 +272,11 @@ class Field(Expr):
     field_type: str = JAVA_TYPE_UNKNOWN
     def java_type(self) -> str:
         return self.field_type
+    def visit_children(self, visitor: IRVisitor) -> None:
+        visitor.visit_expr(self.obj)
+    def transform_children(self, transformer: IRTransformer) -> Expr:
+        self.obj = transformer.transform_expr(self.obj)
+        return self
     def emit_java(self, pool: ConstantPool) -> str:
         return f'{self.obj.emit_java(pool)}.{self.field}'
 
@@ -273,6 +284,13 @@ class Field(Expr):
 class ArrayAccess(Expr):
     obj: Expr
     index: Expr
+    def visit_children(self, visitor: IRVisitor) -> None:
+        visitor.visit_expr(self.obj)
+        visitor.visit_expr(self.index)
+    def transform_children(self, transformer: IRTransformer) -> Expr:
+        self.obj = transformer.transform_expr(self.obj)
+        self.index = transformer.transform_expr(self.index)
+        return self
     def emit_java(self, pool: ConstantPool) -> str:
         return f'{self.obj.emit_java(pool)}[{self.index.emit_java(pool)}]'
 
@@ -282,6 +300,11 @@ class CastExpr(Expr):
     expr: Expr
     def java_type(self) -> str:
         return self.type
+    def visit_children(self, visitor: IRVisitor) -> None:
+        visitor.visit_expr(self.expr)
+    def transform_children(self, transformer: IRTransformer) -> Expr:
+        self.expr = transformer.transform_expr(self.expr)
+        return self
     def emit_java(self, pool: ConstantPool) -> str:
         if self.expr.java_type() == self.type:
             return self.expr.emit_java(pool)
@@ -295,6 +318,11 @@ class UnaryOp(Expr):
         if self.op == '!':
             return 'boolean'
         return JAVA_TYPE_UNKNOWN
+    def visit_children(self, visitor: IRVisitor) -> None:
+        visitor.visit_expr(self.operand)
+    def transform_children(self, transformer: IRTransformer) -> Expr:
+        self.operand = transformer.transform_expr(self.operand)
+        return self
     def emit_java(self, pool: ConstantPool) -> str:
         return f'({self.op}{self.operand.emit_java(pool)})'
 
@@ -307,6 +335,13 @@ class BinaryOp(Expr):
         if self.op in {'==', '!=', '<', '<=', '>', '>=', '&&', '||', 'instanceof'}:
             return 'boolean'
         return JAVA_TYPE_UNKNOWN
+    def visit_children(self, visitor: IRVisitor) -> None:
+        visitor.visit_expr(self.lhs)
+        visitor.visit_expr(self.rhs)
+    def transform_children(self, transformer: IRTransformer) -> Expr:
+        self.lhs = transformer.transform_expr(self.lhs)
+        self.rhs = transformer.transform_expr(self.rhs)
+        return self
     def emit_java(self, pool: ConstantPool) -> str:
         return f'({self.lhs.emit_java(pool)} {self.op} {self.rhs.emit_java(pool)})'
 
@@ -321,6 +356,15 @@ class CondOp(Expr):
         if true_type == false_type:
             return true_type
         return JAVA_TYPE_UNKNOWN
+    def visit_children(self, visitor: IRVisitor) -> None:
+        visitor.visit_expr(self.cond)
+        visitor.visit_expr(self.true)
+        visitor.visit_expr(self.false)
+    def transform_children(self, transformer: IRTransformer) -> Expr:
+        self.cond = transformer.transform_expr(self.cond)
+        self.true = transformer.transform_expr(self.true)
+        self.false = transformer.transform_expr(self.false)
+        return self
     def emit_java(self, pool: ConstantPool) -> str:
         return f'({self.cond.emit_java(pool)} ? {self.true.emit_java(pool)} : {self.false.emit_java(pool)})'
 
@@ -330,6 +374,12 @@ class CreateObject(Expr):
     args: list[Expr]
     def java_type(self) -> str:
         return self.type
+    def visit_children(self, visitor: IRVisitor) -> None:
+        for arg in self.args:
+            visitor.visit_expr(arg)
+    def transform_children(self, transformer: IRTransformer) -> Expr:
+        self.args = [transformer.transform_expr(arg) for arg in self.args]
+        return self
     def emit_java(self, pool: ConstantPool) -> str:
         return f"new {self.type}({', '.join(arg.emit_java(pool) for arg in self.args)})"
 
@@ -339,6 +389,12 @@ class CreateArray(Expr):
     elts: list[Expr]
     def java_type(self) -> str:
         return f'{self.type}[]'
+    def visit_children(self, visitor: IRVisitor) -> None:
+        for elt in self.elts:
+            visitor.visit_expr(elt)
+    def transform_children(self, transformer: IRTransformer) -> Expr:
+        self.elts = [transformer.transform_expr(elt) for elt in self.elts]
+        return self
     def emit_java(self, pool: ConstantPool) -> str:
         return f"new {self.type}[] {{{', '.join(x.emit_java(pool) for x in self.elts)}}}"
 
@@ -350,6 +406,14 @@ class MethodCall(Expr):
     return_type: str = JAVA_TYPE_UNKNOWN
     def java_type(self) -> str:
         return self.return_type
+    def visit_children(self, visitor: IRVisitor) -> None:
+        visitor.visit_expr(self.obj)
+        for arg in self.args:
+            visitor.visit_expr(arg)
+    def transform_children(self, transformer: IRTransformer) -> Expr:
+        self.obj = transformer.transform_expr(self.obj)
+        self.args = [transformer.transform_expr(arg) for arg in self.args]
+        return self
     def emit_java(self, pool: ConstantPool) -> str:
         return f"{self.obj.emit_java(pool)}.{self.method}({', '.join(arg.emit_java(pool) for arg in self.args)})"
 
@@ -361,6 +425,12 @@ class StaticMethodCall(Expr):
     return_type: str = JAVA_TYPE_UNKNOWN
     def java_type(self) -> str:
         return self.return_type
+    def visit_children(self, visitor: IRVisitor) -> None:
+        for arg in self.args:
+            visitor.visit_expr(arg)
+    def transform_children(self, transformer: IRTransformer) -> Expr:
+        self.args = [transformer.transform_expr(arg) for arg in self.args]
+        return self
     def emit_java(self, pool: ConstantPool) -> str:
         return f"{self.class_name}.{self.method}({', '.join(arg.emit_java(pool) for arg in self.args)})"
 
@@ -380,6 +450,13 @@ class AssignExpr(Expr):
         if lhs_type != JAVA_TYPE_UNKNOWN:
             return lhs_type
         return self.rhs.java_type()
+    def visit_children(self, visitor: IRVisitor) -> None:
+        visitor.visit_expr(self.lhs)
+        visitor.visit_expr(self.rhs)
+    def transform_children(self, transformer: IRTransformer) -> Expr:
+        self.lhs = transformer.transform_expr(self.lhs)
+        self.rhs = transformer.transform_expr(self.rhs)
+        return self
     def emit_java(self, pool: ConstantPool) -> str:
         return f'({self.lhs.emit_java(pool)} = {self.rhs.emit_java(pool)})'
 
@@ -409,6 +486,12 @@ class Statement(ABC):
     def ends_control_flow(self) -> bool:
         return False
 
+    def visit_children(self, visitor: IRVisitor) -> None:
+        pass
+
+    def transform_children(self, transformer: IRTransformer) -> Statement:
+        return self
+
     @abstractmethod
     def emit_java(self, pool: ConstantPool) -> Iterator[str]:
         raise NotImplementedError()
@@ -418,6 +501,13 @@ class LocalDecl(Statement):
     type: str
     name: str
     value: Optional[Expr]
+    def visit_children(self, visitor: IRVisitor) -> None:
+        if self.value is not None:
+            visitor.visit_expr(self.value)
+    def transform_children(self, transformer: IRTransformer) -> Statement:
+        if self.value is not None:
+            self.value = transformer.transform_expr(self.value)
+        return self
     def emit_java(self, pool: ConstantPool) -> Iterator[str]:
         if self.value is not None:
             yield f'{self.type} {self.name} = {self.value.emit_java(pool)};'
@@ -428,18 +518,36 @@ class LocalDecl(Statement):
 class AssignStatement(Statement):
     lhs: Expr
     rhs: Expr
+    def visit_children(self, visitor: IRVisitor) -> None:
+        visitor.visit_expr(self.lhs)
+        visitor.visit_expr(self.rhs)
+    def transform_children(self, transformer: IRTransformer) -> Statement:
+        self.lhs = transformer.transform_expr(self.lhs)
+        self.rhs = transformer.transform_expr(self.rhs)
+        return self
     def emit_java(self, pool: ConstantPool) -> Iterator[str]:
         yield f'{self.lhs.emit_java(pool)} = {self.rhs.emit_java(pool)};'
 
 @dataclass(slots=True)
 class ExprStatement(Statement):
     call: CreateObject | MethodCall | StaticMethodCall # only limited types of expressions allowed by Java grammar
+    def visit_children(self, visitor: IRVisitor) -> None:
+        visitor.visit_expr(self.call)
+    def transform_children(self, transformer: IRTransformer) -> Statement:
+        self.call = transformer.transform_expr(self.call)
+        return self
     def emit_java(self, pool: ConstantPool) -> Iterator[str]:
         yield f'{self.call.emit_java(pool)};'
 
 @dataclass(slots=True)
 class SuperConstructorCall(Statement):
     args: list[Expr]
+    def visit_children(self, visitor: IRVisitor) -> None:
+        for arg in self.args:
+            visitor.visit_expr(arg)
+    def transform_children(self, transformer: IRTransformer) -> Statement:
+        self.args = [transformer.transform_expr(arg) for arg in self.args]
+        return self
     def emit_java(self, pool: ConstantPool) -> Iterator[str]:
         yield f"super({', '.join(arg.emit_java(pool) for arg in self.args)});"
 
@@ -463,6 +571,13 @@ class ReturnStatement(Statement):
     expr: Optional[Expr] = None
     def ends_control_flow(self) -> bool:
         return True
+    def visit_children(self, visitor: IRVisitor) -> None:
+        if self.expr is not None:
+            visitor.visit_expr(self.expr)
+    def transform_children(self, transformer: IRTransformer) -> Statement:
+        if self.expr is not None:
+            self.expr = transformer.transform_expr(self.expr)
+        return self
     def emit_java(self, pool: ConstantPool) -> Iterator[str]:
         if self.expr is None:
             yield 'return;'
@@ -474,6 +589,11 @@ class ThrowStatement(Statement):
     expr: Expr
     def ends_control_flow(self) -> bool:
         return True
+    def visit_children(self, visitor: IRVisitor) -> None:
+        visitor.visit_expr(self.expr)
+    def transform_children(self, transformer: IRTransformer) -> Statement:
+        self.expr = transformer.transform_expr(self.expr)
+        return self
     def emit_java(self, pool: ConstantPool) -> Iterator[str]:
         yield f'throw {self.expr.emit_java(pool)};'
 
@@ -505,6 +625,19 @@ class IfStatement(Statement):
     def ends_control_flow(self) -> bool:
         return block_ends_control_flow(self.body) and block_ends_control_flow(self.orelse)
 
+    def visit_children(self, visitor: IRVisitor) -> None:
+        visitor.visit_expr(self.cond)
+        for s in self.body:
+            visitor.visit_stmt(s)
+        for s in self.orelse:
+            visitor.visit_stmt(s)
+
+    def transform_children(self, transformer: IRTransformer) -> Statement:
+        self.cond = transformer.transform_expr(self.cond)
+        self.body = [transformer.transform_stmt(s) for s in self.body]
+        self.orelse = [transformer.transform_stmt(s) for s in self.orelse]
+        return self
+
     def emit_java(self, pool: ConstantPool) -> Iterator[str]:
         node = self
         prefix = ''
@@ -529,6 +662,16 @@ class WhileStatement(Statement):
     def __post_init__(self):
         self.body = block_simplify(self.body)
 
+    def visit_children(self, visitor: IRVisitor) -> None:
+        visitor.visit_expr(self.cond)
+        for s in self.body:
+            visitor.visit_stmt(s)
+
+    def transform_children(self, transformer: IRTransformer) -> Statement:
+        self.cond = transformer.transform_expr(self.cond)
+        self.body = [transformer.transform_stmt(s) for s in self.body]
+        return self
+
     def emit_java(self, pool: ConstantPool) -> Iterator[str]:
         yield f'while ({self.cond.emit_java(pool)}) {{'
         yield from block_emit_java(self.body, pool)
@@ -548,6 +691,20 @@ class ForStatement(Statement):
     def __post_init__(self):
         self.body = block_simplify(self.body)
 
+    def visit_children(self, visitor: IRVisitor) -> None:
+        visitor.visit_expr(self.init_value)
+        visitor.visit_expr(self.cond)
+        visitor.visit_expr(self.incr_value)
+        for s in self.body:
+            visitor.visit_stmt(s)
+
+    def transform_children(self, transformer: IRTransformer) -> Statement:
+        self.init_value = transformer.transform_expr(self.init_value)
+        self.cond = transformer.transform_expr(self.cond)
+        self.incr_value = transformer.transform_expr(self.incr_value)
+        self.body = [transformer.transform_stmt(s) for s in self.body]
+        return self
+
     def emit_java(self, pool: ConstantPool) -> Iterator[str]:
         yield f'for ({self.init_type} {self.init_name} = {self.init_value.emit_java(pool)}; {self.cond.emit_java(pool)}; {self.incr_name} = {self.incr_value.emit_java(pool)}) {{'
         yield from block_emit_java(self.body, pool)
@@ -562,6 +719,16 @@ class ForEachStatement(Statement):
 
     def __post_init__(self):
         self.body = block_simplify(self.body)
+
+    def visit_children(self, visitor: IRVisitor) -> None:
+        visitor.visit_expr(self.iterable)
+        for s in self.body:
+            visitor.visit_stmt(s)
+
+    def transform_children(self, transformer: IRTransformer) -> Statement:
+        self.iterable = transformer.transform_expr(self.iterable)
+        self.body = [transformer.transform_stmt(s) for s in self.body]
+        return self
 
     def emit_java(self, pool: ConstantPool) -> Iterator[str]:
         yield f'for ({self.var_type} {self.var_name}: {self.iterable.emit_java(pool)}) {{'
@@ -589,6 +756,20 @@ class TryStatement(Statement):
         else:
             return block_ends_control_flow(self.try_body)
 
+    def visit_children(self, visitor: IRVisitor) -> None:
+        for s in self.try_body:
+            visitor.visit_stmt(s)
+        for s in self.catch_body:
+            visitor.visit_stmt(s)
+        for s in self.finally_body:
+            visitor.visit_stmt(s)
+
+    def transform_children(self, transformer: IRTransformer) -> Statement:
+        self.try_body = [transformer.transform_stmt(s) for s in self.try_body]
+        self.catch_body = [transformer.transform_stmt(s) for s in self.catch_body]
+        self.finally_body = [transformer.transform_stmt(s) for s in self.finally_body]
+        return self
+
     def emit_java(self, pool: ConstantPool) -> Iterator[str]:
         yield 'try {'
         yield from block_emit_java(self.try_body, pool)
@@ -611,6 +792,14 @@ class LabeledBlock(Statement):
     def __post_init__(self):
         self.body = block_simplify(self.body)
 
+    def visit_children(self, visitor: IRVisitor) -> None:
+        for s in self.body:
+            visitor.visit_stmt(s)
+
+    def transform_children(self, transformer: IRTransformer) -> Statement:
+        self.body = [transformer.transform_stmt(s) for s in self.body]
+        return self
+
     def emit_java(self, pool: ConstantPool) -> Iterator[str]:
         yield f'{self.name}: {{'
         yield from block_emit_java(self.body, pool)
@@ -630,6 +819,19 @@ class SwitchStatement(Statement):
     def __post_init__(self):
         assert self.cases, self.cases
 
+    def visit_children(self, visitor: IRVisitor) -> None:
+        visitor.visit_expr(self.expr)
+        for case in self.cases:
+            visitor.visit_expr(case.expr)
+            visitor.visit_expr(case.value)
+        visitor.visit_expr(self.default)
+
+    def transform_children(self, transformer: IRTransformer) -> Statement:
+        self.expr = transformer.transform_expr(self.expr)
+        self.cases = [SwitchCase(transformer.transform_expr(case.expr), transformer.transform_expr(case.value)) for case in self.cases]
+        self.default = transformer.transform_expr(self.default)
+        return self
+
     def emit_java(self, pool: ConstantPool) -> Iterator[str]:
         yield f'switch ({self.expr.emit_java(pool)}) {{'
         for case in self.cases:
@@ -646,6 +848,19 @@ class SwitchVoidStatement(Statement):
     def __post_init__(self):
         assert self.cases, self.cases
 
+    def visit_children(self, visitor: IRVisitor) -> None:
+        visitor.visit_expr(self.expr)
+        for case in self.cases:
+            visitor.visit_expr(case.expr)
+            visitor.visit_expr(case.value)
+        visitor.visit_expr(self.default)
+
+    def transform_children(self, transformer: IRTransformer) -> Statement:
+        self.expr = transformer.transform_expr(self.expr)
+        self.cases = [SwitchCase(transformer.transform_expr(case.expr), transformer.transform_expr(case.value)) for case in self.cases]
+        self.default = transformer.transform_expr(self.default)
+        return self
+
     def emit_java(self, pool: ConstantPool) -> Iterator[str]:
         yield f'switch ({self.expr.emit_java(pool)}) {{'
         for case in self.cases:
@@ -658,6 +873,12 @@ class SwitchVoidStatement(Statement):
         yield '}'
 
 class Decl(ABC):
+    def visit_children(self, visitor: IRVisitor) -> None:
+        pass
+
+    def transform_children(self, transformer: IRTransformer) -> Decl:
+        return self
+
     @abstractmethod
     def emit_java(self, pool: ConstantPool) -> Iterator[str]:
         raise NotImplementedError()
@@ -668,6 +889,13 @@ class FieldDecl(Decl):
     type: str
     name: str
     value: Optional[Expr]
+    def visit_children(self, visitor: IRVisitor) -> None:
+        if self.value is not None:
+            visitor.visit_expr(self.value)
+    def transform_children(self, transformer: IRTransformer) -> Decl:
+        if self.value is not None:
+            self.value = transformer.transform_expr(self.value)
+        return self
     def emit_java(self, pool: ConstantPool) -> Iterator[str]:
         if self.value is not None:
             yield f'{self.modifiers} {self.type} {self.name} = {self.value.emit_java(pool)};'
@@ -681,6 +909,12 @@ class MethodDecl(Decl):
     name: str
     args: list[str]
     body: list[Statement]
+    def visit_children(self, visitor: IRVisitor) -> None:
+        for stmt in self.body:
+            visitor.visit_stmt(stmt)
+    def transform_children(self, transformer: IRTransformer) -> Decl:
+        self.body = [transformer.transform_stmt(stmt) for stmt in self.body]
+        return self
     def emit_java(self, pool: ConstantPool) -> Iterator[str]:
         yield f"{self.modifiers} {self.return_type} {self.name}({', '.join(self.args)}) {{"
         yield from block_emit_java(block_simplify(self.body), pool)
@@ -692,6 +926,12 @@ class ConstructorDecl(Decl):
     name: str
     args: list[str]
     body: list[Statement]
+    def visit_children(self, visitor: IRVisitor) -> None:
+        for stmt in self.body:
+            visitor.visit_stmt(stmt)
+    def transform_children(self, transformer: IRTransformer) -> Decl:
+        self.body = [transformer.transform_stmt(stmt) for stmt in self.body]
+        return self
     def emit_java(self, pool: ConstantPool) -> Iterator[str]:
         if self.modifiers:
             yield f"{self.modifiers} {self.name}({', '.join(self.args)}) {{"
@@ -703,6 +943,12 @@ class ConstructorDecl(Decl):
 @dataclass(slots=True)
 class StaticBlock(Decl):
     body: list[Statement]
+    def visit_children(self, visitor: IRVisitor) -> None:
+        for stmt in self.body:
+            visitor.visit_stmt(stmt)
+    def transform_children(self, transformer: IRTransformer) -> Decl:
+        self.body = [transformer.transform_stmt(stmt) for stmt in self.body]
+        return self
     def emit_java(self, pool: ConstantPool) -> Iterator[str]:
         yield 'static {'
         yield from block_emit_java(block_simplify(self.body), pool)
@@ -714,12 +960,243 @@ class ClassDecl(Decl):
     name: str
     extends: Optional[str]
     decls: list[Decl]
+    def visit_children(self, visitor: IRVisitor) -> None:
+        for decl in self.decls:
+            visitor.visit_decl(decl)
+    def transform_children(self, transformer: IRTransformer) -> Decl:
+        self.decls = [transformer.transform_decl(decl) for decl in self.decls]
+        return self
     def emit_java(self, pool: ConstantPool) -> Iterator[str]:
         extends = f' extends {self.extends}' if self.extends else ''
         yield f'{self.modifiers} class {self.name}{extends} {{'
         for decl in self.decls:
             yield from decl.emit_java(pool)
         yield '}'
+
+class IRVisitor:
+    def visit_expr(self, expr: Expr) -> None:
+        expr.visit_children(self)
+
+    def visit_stmt(self, stmt: Statement) -> None:
+        stmt.visit_children(self)
+
+    def visit_decl(self, decl: Decl) -> None:
+        decl.visit_children(self)
+
+class IRTransformer:
+    def transform_expr(self, expr: Expr) -> Expr:
+        return expr.transform_children(self)
+
+    def transform_stmt(self, stmt: Statement) -> Statement:
+        return stmt.transform_children(self)
+
+    def transform_decl(self, decl: Decl) -> Decl:
+        return decl.transform_children(self)
+
+def _pyint_local_assignment_expr(expr: Expr) -> bool:
+    return (
+        isinstance(expr, Null) or
+        (isinstance(expr, PyConstant) and isinstance(expr.value, int) and not isinstance(expr.value, bool)) or
+        expr.java_type() == 'PyInt'
+    )
+
+def _is_candidate_value_field(expr: Expr, names: set[str]) -> Optional[str]:
+    if not isinstance(expr, Field) or expr.field != 'value':
+        return None
+    obj = expr.obj
+    if isinstance(obj, Identifier) and obj.name in names:
+        return obj.name
+    if isinstance(obj, CastExpr) and obj.type == 'PyInt' and isinstance(obj.expr, Identifier) and obj.expr.name in names:
+        return obj.expr.name
+    return None
+
+class PyIntLocalUsageValidator(IRVisitor):
+    def __init__(self, names: set[str]):
+        self.names = names
+        self.valid = True
+
+    def invalidate(self) -> None:
+        self.valid = False
+
+    def visit_lhs(self, expr: Expr) -> None:
+        if not self.valid:
+            return
+        match expr:
+            case Identifier(name, _):
+                if name in self.names:
+                    self.invalidate()
+            case Field(obj, _, _):
+                self.visit_expr(obj)
+            case ArrayAccess(obj, index):
+                self.visit_expr(obj)
+                self.visit_expr(index)
+            case _:
+                self.visit_expr(expr)
+
+    def check_assignment_expr(self, expr: Expr) -> None:
+        if not _pyint_local_assignment_expr(expr):
+            self.invalidate()
+            return
+        self.visit_expr(expr)
+
+    def visit_expr(self, expr: Expr) -> None:
+        if not self.valid:
+            return
+        if _is_candidate_value_field(expr, self.names) is not None:
+            return
+        if isinstance(expr, Identifier) and expr.name in self.names:
+            self.invalidate()
+            return
+        if isinstance(expr, AssignExpr):
+            self.visit_lhs(expr.lhs)
+            self.visit_expr(expr.rhs)
+            return
+        super().visit_expr(expr)
+
+    def visit_stmt(self, stmt: Statement) -> None:
+        if not self.valid:
+            return
+        match stmt:
+            case LocalDecl(_, name, value):
+                if name in self.names:
+                    if value is not None:
+                        self.check_assignment_expr(value)
+                    return
+            case AssignStatement(lhs, rhs):
+                if isinstance(lhs, Identifier) and lhs.name in self.names:
+                    self.check_assignment_expr(rhs)
+                    return
+                self.visit_lhs(lhs)
+                self.visit_expr(rhs)
+                return
+            case ForStatement(_, init_name, init_value, _, incr_name, incr_value, body):
+                if init_name in self.names or incr_name in self.names:
+                    self.invalidate()
+                    return
+                self.visit_expr(init_value)
+                self.visit_expr(stmt.cond)
+                self.visit_expr(incr_value)
+                for child in body:
+                    self.visit_stmt(child)
+                return
+            case ForEachStatement(_, var_name, iterable, body):
+                if var_name in self.names:
+                    self.invalidate()
+                    return
+                self.visit_expr(iterable)
+                for child in body:
+                    self.visit_stmt(child)
+                return
+            case TryStatement(try_body, _, exc_name, catch_body, finally_body):
+                if exc_name is not None and exc_name in self.names:
+                    self.invalidate()
+                    return
+                for child in try_body:
+                    self.visit_stmt(child)
+                for child in catch_body:
+                    self.visit_stmt(child)
+                for child in finally_body:
+                    self.visit_stmt(child)
+                return
+        super().visit_stmt(stmt)
+
+class PyIntLocalRewriter(IRTransformer):
+    def __init__(self, names: set[str]):
+        self.names = names
+
+    def rewrite_assignment_expr(self, expr: Expr) -> Expr:
+        expr = self.transform_expr(expr)
+        if isinstance(expr, Null):
+            return IntLiteral(0, 'L')
+        if isinstance(expr, PyConstant) and isinstance(expr.value, int) and not isinstance(expr.value, bool):
+            return IntLiteral(expr.value, 'L')
+        return unbox_int(expr)
+
+    def transform_expr(self, expr: Expr) -> Expr:
+        matched_name = _is_candidate_value_field(expr, self.names)
+        if matched_name is not None:
+            return Identifier(matched_name, 'long')
+        if isinstance(expr, Identifier) and expr.name in self.names:
+            return Identifier(expr.name, 'long')
+        expr = super().transform_expr(expr)
+        if isinstance(expr, CastExpr) and expr.type == 'PyInt' and expr.expr.java_type() == 'long':
+            return expr.expr
+        return expr
+
+    def transform_stmt(self, stmt: Statement) -> Statement:
+        match stmt:
+            case LocalDecl(_, name, value):
+                if name in self.names:
+                    stmt.type = 'long'
+                    stmt.value = IntLiteral(0, 'L') if value is None else self.rewrite_assignment_expr(value)
+                    return stmt
+            case AssignStatement(lhs, rhs):
+                if isinstance(lhs, Identifier) and lhs.name in self.names:
+                    stmt.lhs = Identifier(lhs.name, 'long')
+                    stmt.rhs = self.rewrite_assignment_expr(rhs)
+                    return stmt
+        return super().transform_stmt(stmt)
+
+def _pyint_local_is_valid_in_block(body: list[Statement], name: str) -> bool:
+    validator = PyIntLocalUsageValidator({name})
+    for stmt in body:
+        validator.visit_stmt(stmt)
+        if not validator.valid:
+            return False
+    return True
+
+def lower_pyint_locals_in_method(method: MethodDecl) -> MethodDecl:
+    candidates = {
+        stmt.name
+        for stmt in method.body
+        if isinstance(stmt, LocalDecl) and stmt.type == 'PyInt'
+    }
+    if not candidates:
+        return method
+    valid = {
+        name
+        for name in candidates
+        if _pyint_local_is_valid_in_block(method.body, name)
+    }
+    if not valid:
+        return method
+    rewriter = PyIntLocalRewriter(valid)
+    method.body = [rewriter.transform_stmt(stmt) for stmt in method.body]
+    return method
+
+def lower_pyint_locals_in_block(body: list[Statement]) -> list[Statement]:
+    candidates = {
+        stmt.name
+        for stmt in body
+        if isinstance(stmt, LocalDecl) and stmt.type == 'PyInt'
+    }
+    if not candidates:
+        return body
+    valid = {
+        name
+        for name in candidates
+        if _pyint_local_is_valid_in_block(body, name)
+    }
+    if not valid:
+        return body
+    rewriter = PyIntLocalRewriter(valid)
+    return [rewriter.transform_stmt(stmt) for stmt in body]
+
+def lower_pyint_locals_in_decl(decl: Decl) -> Decl:
+    match decl:
+        case MethodDecl():
+            return lower_pyint_locals_in_method(decl)
+        case ConstructorDecl(_, _, _, body):
+            decl.body = lower_pyint_locals_in_block(body)
+            return decl
+        case StaticBlock(body):
+            decl.body = lower_pyint_locals_in_block(body)
+            return decl
+        case ClassDecl(_, _, _, decls):
+            decl.decls = [lower_pyint_locals_in_decl(d) for d in decls]
+            return decl
+        case _:
+            return decl
 
 def unary_op(op: str, operand: Expr) -> Expr:
     if op == '!' and isinstance(operand, Bool):
@@ -738,6 +1215,20 @@ def bool_value(expr: Expr) -> Expr:
 def unbox_int(expr: Expr) -> Expr:
     if isinstance(expr, PyConstant) and isinstance(expr.value, int) and not isinstance(expr.value, bool):
         return IntLiteral(expr.value, 'L')
+    if isinstance(expr, CondOp):
+        return CondOp(expr.cond, unbox_int(expr.true), unbox_int(expr.false))
+    if isinstance(expr, Field) and expr.field == 'value' and expr.field_type == 'long':
+        if isinstance(expr.obj, PyConstant) and isinstance(expr.obj.value, int) and not isinstance(expr.obj.value, bool):
+            return IntLiteral(expr.obj.value, 'L')
+        if isinstance(expr.obj, CreateObject) and expr.obj.type == 'PyInt':
+            arg = expr.obj.args[0]
+            return arg if arg.java_type() == 'long' else CastExpr('long', arg)
+        if expr.obj.java_type() == 'PyInt':
+            return expr
+    if isinstance(expr, CastExpr) and expr.type == 'PyInt':
+        if expr.expr.java_type() == 'long':
+            return expr.expr
+        return unbox_int(expr.expr)
     if isinstance(expr, CreateObject) and expr.type == 'PyInt':
         arg = expr.args[0]
         return arg if arg.java_type() == 'long' else CastExpr('long', arg)
@@ -954,6 +1445,7 @@ def while_statement(cond: Expr, body: list[Statement]) -> Iterator[Statement]:
         yield WhileStatement(cond, body)
 
 def write_decls(f: TextIO, decls: list[Decl], pool: ConstantPool) -> None:
+    decls = [lower_pyint_locals_in_decl(decl) for decl in decls]
     for decl in decls:
         for _ in decl.emit_java(pool):
             pass
