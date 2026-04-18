@@ -2290,20 +2290,65 @@ class LoweringVisitor(ast.NodeVisitor):
         self.code.extend(loop)
 
     def _lower_iter_bind_loop(self, target: ast.expr, iterable: ir.Expr, body: list[ir.Statement]) -> list[ir.Statement]:
-        temp_iter = self.scope.make_temp()
         temp_element = self.scope.make_temp()
-        return [
-            ir.LocalDecl('var', temp_iter, ir.iter(iterable)),
-            ir.ForStatement(
-                'var', temp_element, ir.MethodCall(ir.Identifier(temp_iter), 'next', []),
-                ir.BinaryOp('!=', ir.Identifier(temp_element), ir.Null()),
-                temp_element, ir.MethodCall(ir.Identifier(temp_iter), 'next', []),
-                [
-                    *self.emit_bind(target, ir.Identifier(temp_element)),
-                    *body,
-                ]
-            ),
-        ]
+        iterable_java_type = iterable.java_type()
+        if iterable_java_type in {'PyList', 'PySet', 'PyTuple'}:
+            return [ir.ForEachStatement('var', temp_element, ir.Field(iterable, 'items'), [
+                *self.emit_bind(target, ir.Identifier(temp_element)),
+                *body,
+            ])]
+        elif iterable_java_type == 'PyDict':
+            return [ir.ForEachStatement('var', temp_element, ir.MethodCall(ir.Field(iterable, 'items'), 'keySet', []), [
+                *self.emit_bind(target, ir.Identifier(temp_element)),
+                *body,
+            ])]
+        elif iterable_java_type in {'PyBytes', 'PyByteArray'}:
+            return [ir.ForEachStatement('byte', temp_element, ir.Field(iterable, 'value', 'byte[]'), [
+                *self.emit_bind(
+                    target,
+                    ir.CreateObject('PyInt', [
+                        ir.BinaryOp('&', ir.CastExpr('long', ir.Identifier(temp_element, 'byte')), ir.IntLiteral(255, 'L')),
+                    ]),
+                ),
+                *body,
+            ])]
+        elif iterable_java_type == 'PyRange':
+            temp_range = self.scope.make_temp()
+            temp_current = self.scope.make_temp()
+            temp_stop = self.scope.make_temp()
+            temp_step = self.scope.make_temp()
+            return [
+                ir.LocalDecl('var', temp_range, iterable),
+                ir.LocalDecl('long', temp_stop, ir.Field(ir.Identifier(temp_range), 'stop', 'long')),
+                ir.LocalDecl('long', temp_step, ir.Field(ir.Identifier(temp_range), 'step', 'long')),
+                ir.ForStatement(
+                    'long', temp_current, ir.Field(ir.Identifier(temp_range), 'start', 'long'),
+                    ir.CondOp(
+                        ir.BinaryOp('>', ir.Identifier(temp_step), ir.IntLiteral(0)),
+                        ir.BinaryOp('<', ir.Identifier(temp_current), ir.Identifier(temp_stop)),
+                        ir.BinaryOp('>', ir.Identifier(temp_current), ir.Identifier(temp_stop)),
+                    ),
+                    temp_current, ir.StaticMethodCall('Math', 'addExact', [ir.Identifier(temp_current), ir.Identifier(temp_step)], 'long'),
+                    [
+                        *self.emit_bind(target, ir.CreateObject('PyInt', [ir.Identifier(temp_current)])),
+                        *body,
+                    ]
+                ),
+            ]
+        else:
+            temp_iter = self.scope.make_temp()
+            return [
+                ir.LocalDecl('var', temp_iter, ir.iter(iterable)),
+                ir.ForStatement(
+                    'var', temp_element, ir.MethodCall(ir.Identifier(temp_iter), 'next', []),
+                    ir.BinaryOp('!=', ir.Identifier(temp_element), ir.Null()),
+                    temp_element, ir.MethodCall(ir.Identifier(temp_iter), 'next', []),
+                    [
+                        *self.emit_bind(target, ir.Identifier(temp_element)),
+                        *body,
+                    ]
+                ),
+            ]
 
     def visit_For(self, node) -> None:
         block_name = self.scope.make_temp() if node.orelse else None
@@ -2809,7 +2854,7 @@ class LoweringVisitor(ast.NodeVisitor):
                     ir.method_call_statement(ir.Identifier(temp_result), method_name, [self.visit(elt) for elt in elts])
                 ]
                 for (i, generator) in enumerate(reversed(generators)):
-                    iterable = ir.Identifier('iterable') if i == len(generators)-1 else self.visit(generator.iter)
+                    iterable = ir.Identifier('iterable', iterable_java_type) if i == len(generators)-1 else self.visit(generator.iter)
                     statements = self._lower_comp_generator(generator, iterable, statements)
                 body += [
                     ir.LocalDecl('var', temp_result, ir.CreateObject(type_name, [])),
