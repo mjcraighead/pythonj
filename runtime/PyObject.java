@@ -82,10 +82,7 @@ public abstract class PyObject implements Comparable<PyObject> {
         if (!key.startsWith("__")) { // we assume all of these are handled by descriptors or derived class
             throw raiseMissingAttr(key);
         }
-        switch (key) {
-            case "__class__": return type();
-            default: throw new UnsupportedOperationException(PyString.reprOf(key) + " attribute is not handled");
-        }
+        throw new UnsupportedOperationException(PyString.reprOf(key) + " attribute is not handled");
     }
     public void setAttr(String key, PyObject value) {
         var desc = type().lookupAttr(key);
@@ -115,6 +112,10 @@ public abstract class PyObject implements Comparable<PyObject> {
     public boolean isDataDescriptor() { return false; }
     public void set(PyObject obj, PyType owner, PyObject value) { throw unimplementedMethod("set"); }
     public void delete(PyObject obj, PyType owner) { throw unimplementedMethod("delete"); }
+
+    static PyObject pygetset___class__(PyObject obj) {
+        return obj.type();
+    }
 
     public PyObject call(PyObject args[], PyDict kwargs) {
         throw PyTypeError.raise(PyString.reprOf(type().name()) + " object is not callable");

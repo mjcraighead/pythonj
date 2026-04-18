@@ -2663,12 +2663,6 @@ class LoweringVisitor(ast.NodeVisitor):
                 ir.MethodDecl('private', 'PyObject', 'pygetslot___dict__', [], [
                     ir.ThrowStatement(ir.MethodCall(ir.This(), 'raiseMissingAttr', [ir.StrLiteral('__dict__')])),
                 ]),
-                ir.MethodDecl('private', 'void', 'pyraise_readonly___class__', ['String key'], [
-                    ir.ThrowStatement(ir.StaticMethodCall('Runtime', 'raiseNamedReadOnlyAttr', [
-                        ir.MethodCall(ir.This(), 'type', []),
-                        ir.Identifier('key'),
-                    ])),
-                ]),
                 ir.MethodDecl('@Override public', 'PyObject', 'getAttr', ['String key'], [
                     ir.SwitchStatement(ir.Identifier('key'), [
                         *(ir.SwitchCase(ir.StrLiteral(name), ir.MethodCall(ir.This(), f'pygetslot_{name}', [])) for name in slots),
@@ -2678,13 +2672,11 @@ class LoweringVisitor(ast.NodeVisitor):
                 ir.MethodDecl('@Override public', 'void', 'setAttr', ['String key', 'PyObject value'], [
                     ir.SwitchVoidStatement(ir.Identifier('key'), [
                         *(ir.SwitchCase(ir.StrLiteral(name), ir.MethodCall(ir.This(), f'pysetslot_{name}', [ir.Identifier('value')])) for name in slots),
-                        ir.SwitchCase(ir.StrLiteral('__class__'), ir.MethodCall(ir.This(), 'pyraise_readonly___class__', [ir.Identifier('key')])),
                     ], ir.MethodCall(ir.Super(), 'setAttr', [ir.Identifier('key'), ir.Identifier('value')])),
                 ]),
                 ir.MethodDecl('@Override public', 'void', 'delAttr', ['String key'], [
                     ir.SwitchVoidStatement(ir.Identifier('key'), [
                         *(ir.SwitchCase(ir.StrLiteral(name), ir.MethodCall(ir.This(), f'pydelslot_{name}', [])) for name in slots),
-                        ir.SwitchCase(ir.StrLiteral('__class__'), ir.MethodCall(ir.This(), 'pyraise_readonly___class__', [ir.Identifier('key')])),
                     ], ir.MethodCall(ir.Super(), 'delAttr', [ir.Identifier('key')])),
                 ]),
             ]))
