@@ -22,7 +22,7 @@ PYTHON_AUTHORED_IMPLS = {
         'abs', 'all', 'any', 'bin', 'delattr', 'divmod', 'format', 'getattr', 'hasattr', 'hash', 'hex',
         'isinstance', 'issubclass', 'len', 'next', 'oct', 'repr', 'setattr', 'sum',
     },
-    'dict': {'__contains__', 'fromkeys', 'setdefault'},
+    'dict': {'__contains__', 'fromkeys', 'pop', 'setdefault'},
     'set': {'__contains__'},
     'str': {
         '__format__', 'capitalize', 'casefold', 'center', 'encode', 'expandtabs', 'format_map', 'isalnum',

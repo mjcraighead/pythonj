@@ -409,16 +409,6 @@ public final class PyDict extends PyObject {
     }
     public PyDictItems pymethod_items() { return new PyDictItems(items); }
     public PyDictKeys pymethod_keys() { return new PyDictKeys(items); }
-    public PyObject pymethod_pop(PyObject key, PyObject defaultValue) {
-        PyObject value = items.remove(key);
-        if (value != null) {
-            return value;
-        }
-        if (defaultValue != null) {
-            return defaultValue;
-        }
-        throw new PyRaise(new PyKeyError(key));
-    }
     public PyObject pymethod_popitem() {
         Map.Entry<PyObject, PyObject> last = null;
         for (var e: items.entrySet()) {

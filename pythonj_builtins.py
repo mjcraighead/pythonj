@@ -782,12 +782,20 @@ class dict:
             ret[key] = value
         return ret
 
-    def setdefault(self, key, defaultValue):
+    def pop(self: dict, key, default):
+        value = __pythonj_dict_remove__(self, key)
+        if value is not __pythonj_null__:
+            return value
+        if default is not __pythonj_null__:
+            return default
+        raise KeyError(key)
+
+    def setdefault(self: dict, key, default):
         value = __pythonj_dict_get__(self, key)
         if value is not __pythonj_null__:
             return value
-        self[key] = defaultValue
-        return defaultValue
+        self[key] = default
+        return default
 
 class float:
     @__pythonj_getter__
