@@ -323,8 +323,8 @@ abstract class PyType extends PyTruthyObject {
     public abstract String name();
 
     static PyObject pygetset___doc__(PyObject obj) {
-        var doc = ((PyType)obj).lookupAttr("__doc__");
-        return (doc != null) ? doc : PyNone.singleton;
+        String doc = ((PyConcreteType)obj).docString;
+        return (doc != null) ? new PyString(doc) : PyNone.singleton;
     }
     static PyObject pymember___base__(PyObject obj) {
         PyType base = ((PyType)obj).base();
@@ -336,11 +336,13 @@ class PyConcreteType extends PyType {
     protected final String typeName;
     protected final Class<? extends PyObject> instanceClass;
     protected final PyType baseType;
+    protected final String docString;
 
-    protected PyConcreteType(String name, Class<? extends PyObject> _instanceClass, PyType _baseType) {
+    protected PyConcreteType(String name, Class<? extends PyObject> _instanceClass, PyType _baseType, String _docString) {
         typeName = name;
         instanceClass = _instanceClass;
         baseType = _baseType;
+        docString = _docString;
     }
     public final PyObject lookupBaseAttr(String name) {
         return (baseType != null) ? baseType.lookupAttr(name) : null;
@@ -384,13 +386,13 @@ class PyConcreteType extends PyType {
 final class PyModuleType extends PyConcreteType {
     public static final PyModuleType singleton = new PyModuleType();
 
-    private PyModuleType() { super("module", PyModule.class, PyObjectType.singleton); }
+    private PyModuleType() { super("module", PyModule.class, PyObjectType.singleton, null); }
 }
 
 final class PyZlibErrorType extends PyConcreteType {
     public static final PyZlibErrorType singleton = new PyZlibErrorType();
 
-    private PyZlibErrorType() { super("error", PyZlibError.class, PyExceptionType.singleton); }
+    private PyZlibErrorType() { super("error", PyZlibError.class, PyExceptionType.singleton, null); }
 
     @Override public PyObject call(PyObject[] args, PyDict kwargs) {
         return PyZlibError.newObj(this, args, kwargs);

@@ -7,7 +7,7 @@ import java.nio.charset.Charset;
 import java.util.Arrays;
 
 final class PyBytesIter extends PyIter {
-    private static final PyConcreteType type_singleton = new PyConcreteType("bytes_iterator", PyBytesIter.class, PyObjectType.singleton);
+    private static final PyConcreteType type_singleton = new PyConcreteType("bytes_iterator", PyBytesIter.class, PyObjectType.singleton, null);
 
     private final byte[] b;
     private int index = 0;

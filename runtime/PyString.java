@@ -6,7 +6,7 @@ import java.nio.charset.Charset;
 import java.util.Locale;
 
 final class PyStringIter extends PyIter {
-    private static final PyConcreteType type_singleton = new PyConcreteType("str_iterator", PyStringIter.class, PyObjectType.singleton);
+    private static final PyConcreteType type_singleton = new PyConcreteType("str_iterator", PyStringIter.class, PyObjectType.singleton, null);
 
     private final String s;
     private int index = 0;

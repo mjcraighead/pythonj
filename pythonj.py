@@ -2691,7 +2691,7 @@ class LoweringVisitor(ast.NodeVisitor):
         class_decls.append(ir.ClassDecl('private static final', type_class_name, 'PyConcreteType', [
             ir.FieldDecl('private static final', type_class_name, 'singleton', ir.CreateObject(type_class_name, [])),
             ir.ConstructorDecl('private', type_class_name, [], [
-                ir.SuperConstructorCall([ir.StrLiteral(node.name), ir.Field(ir.Identifier(java_name), 'class'), ir.Field(ir.Identifier('PyObjectType'), 'singleton')]),
+                ir.SuperConstructorCall([ir.StrLiteral(node.name), ir.Field(ir.Identifier(java_name), 'class'), ir.Field(ir.Identifier('PyObjectType'), 'singleton'), ir.Null()]),
             ]),
             ir.MethodDecl('@Override public', 'PyObject', 'call', ['PyObject[] args', 'PyDict kwargs'], [
                 ir.ReturnStatement(ir.StaticMethodCall(java_name, 'newObj', [ir.This(), ir.Identifier('args'), ir.Identifier('kwargs')])),

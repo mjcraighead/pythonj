@@ -534,6 +534,7 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
                 for k in attrs
             ]))
             type_decls.append(ir.ClassDecl('static final', 'AttrsHolder', None, attr_holder_decls))
+            doc_string = spec[name].get('doc')
             super_args: list[ir.Expr] = [
                 ir.StrLiteral(py_name),
                 ir.Field(ir.Identifier(java_name), 'class'),
@@ -543,6 +544,7 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
                 super_args.append(ir.Field(ir.Identifier(f'{base_type_java}Type'), 'singleton'))
             else:
                 super_args.append(ir.Null())
+            super_args.append(ir.StrLiteral(doc_string) if doc_string is not None else ir.Null())
             type_decls.append(ir.ConstructorDecl('private', f'{java_name}Type', [], [
                 ir.SuperConstructorCall(super_args),
             ]))

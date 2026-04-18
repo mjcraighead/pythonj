@@ -8,7 +8,7 @@ import java.util.Iterator;
 import java.util.Set;
 
 final class PySetIter extends PyIter {
-    private static final PyConcreteType type_singleton = new PyConcreteType("set_iterator", PySetIter.class, PyObjectType.singleton);
+    private static final PyConcreteType type_singleton = new PyConcreteType("set_iterator", PySetIter.class, PyObjectType.singleton, null);
 
     private final Iterator<PyObject> it;
 
