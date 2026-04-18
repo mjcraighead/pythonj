@@ -368,9 +368,6 @@ class PyConcreteType extends PyType {
     @Override public PyObject lookupAttr(String name) {
         return lookupBaseAttr(name);
     }
-    @Override public final PyObject getAttr(String key) {
-        return type().lookupAttr("__getattribute__").call(new PyObject[]{this, new PyString(key)}, null);
-    }
     @Override public String repr() {
         if (moduleName.equals("builtins")) {
             return "<class '" + typeName + "'>";
