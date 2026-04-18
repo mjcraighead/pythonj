@@ -10,6 +10,8 @@ import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 abstract class PyTruthyObject extends PyObject {
@@ -111,7 +113,7 @@ abstract class PyBagObject extends PyTruthyObject {
 
     @Override public PyDict getInstanceDict() { return attrs; }
 
-    static PyObject pygetset___dict__(PyObject obj) {
+    static PyObject pyget___dict__(PyObject obj) {
         return ((PyBagObject)obj).attrs;
     }
 
@@ -152,7 +154,7 @@ abstract class PyModule extends PyTruthyObject {
     @Override public String repr() { return "<module '" + moduleName + "' (built-in)>"; }
     @Override public PyType type() { return PyModuleType.singleton; }
 
-    static PyObject pymember___dict__(PyObject obj) { throw new UnsupportedOperationException(); }
+    static PyObject pyget___dict__(PyObject obj) { throw new UnsupportedOperationException(); }
 }
 
 final class PyJsonModule extends PyModule {
@@ -307,28 +309,28 @@ abstract class PyType extends PyTruthyObject {
     public abstract String doc();
     public abstract String name();
 
-    static PyObject pymember___base__(PyObject obj) {
+    static PyObject pyget___base__(PyObject obj) {
         PyType base = ((PyType)obj).base();
         return (base != null) ? base : PyNone.singleton;
     }
-    static PyObject pygetset___dict__(PyObject obj) {
+    static PyObject pyget___dict__(PyObject obj) {
         var attrs = ((PyType)obj).getAttributes();
         if (attrs == null) {
             throw new UnsupportedOperationException(((PyType)obj).name() + ".__dict__ is not implemented");
         }
         return new PyMappingProxy(attrs);
     }
-    static PyObject pygetset___doc__(PyObject obj) {
+    static PyObject pyget___doc__(PyObject obj) {
         String doc = ((PyType)obj).doc();
         return (doc != null) ? new PyString(doc) : PyNone.singleton;
     }
-    static PyObject pygetset___module__(PyObject obj) {
+    static PyObject pyget___module__(PyObject obj) {
         return new PyString(((PyConcreteType)obj).moduleName);
     }
-    static PyObject pygetset___name__(PyObject obj) {
+    static PyObject pyget___name__(PyObject obj) {
         return new PyString(((PyType)obj).name());
     }
-    static PyObject pygetset___qualname__(PyObject obj) {
+    static PyObject pyget___qualname__(PyObject obj) {
         return new PyString(((PyConcreteType)obj).qualName);
     }
 }
@@ -425,29 +427,45 @@ abstract class PyGettableDescriptor extends PyTruthyObject {
         }
     }
 
-    static PyObject pygetset___doc__(PyObject obj) {
+    static PyObject pyget___doc__(PyObject obj) {
         String doc = ((PyGettableDescriptor)obj).doc;
         return (doc != null) ? new PyString(doc) : PyNone.singleton;
     }
-    static PyObject pymember___name__(PyObject obj) {
+    static PyObject pyget___name__(PyObject obj) {
         return new PyString(((PyGettableDescriptor)obj).name);
     }
-    static PyObject pygetset___qualname__(PyObject obj) {
+    static PyObject pyget___qualname__(PyObject obj) {
         throw new UnsupportedOperationException("descriptor.__qualname__ unimplemented");
     }
 }
 
 final class PyMemberDescriptor extends PyGettableDescriptor {
+    private final BiConsumer<PyObject, PyObject> setter;
+    private final Consumer<PyObject> deleter;
+
     protected PyMemberDescriptor(PyType _owner, String _name, Function<PyObject, PyObject> _getter, String _doc) {
+        this(_owner, _name, _getter, null, null, _doc);
+    }
+
+    protected PyMemberDescriptor(PyType _owner, String _name, Function<PyObject, PyObject> _getter,
+                                 BiConsumer<PyObject, PyObject> _setter, Consumer<PyObject> _deleter, String _doc) {
         super(_owner, _name, _getter, _doc);
+        setter = _setter;
+        deleter = _deleter;
     }
 
     @Override public final boolean isDataDescriptor() { return true; }
     @Override public final void set(PyObject obj, PyType owner, PyObject value) {
-        throw PyAttributeError.raise("readonly attribute");
+        if (setter == null) {
+            throw PyAttributeError.raise("readonly attribute");
+        }
+        setter.accept(obj, value);
     }
     @Override public final void delete(PyObject obj, PyType owner) {
-        throw PyAttributeError.raise("readonly attribute");
+        if (deleter == null) {
+            throw PyAttributeError.raise("readonly attribute");
+        }
+        deleter.accept(obj);
     }
 
     @Override public final String repr() { return "<member " + PyString.reprOf(name) + " of " + PyString.reprOf(owner.name()) + " objects>"; }
@@ -553,13 +571,13 @@ abstract class PyMethodWrapper<T extends PyObject> extends PyTruthyObject {
     }
     @Override public final PyConcreteType type() { return PyMethodWrapperType.singleton; }
 
-    static PyObject pygetset___doc__(PyObject obj) {
+    static PyObject pyget___doc__(PyObject obj) {
         throw new UnsupportedOperationException("method-wrapper.__doc__ unimplemented");
     }
-    static PyObject pygetset___name__(PyObject obj) {
+    static PyObject pyget___name__(PyObject obj) {
         return new PyString(((PyMethodWrapper<?>)obj).name);
     }
-    static PyObject pygetset___qualname__(PyObject obj) {
+    static PyObject pyget___qualname__(PyObject obj) {
         throw new UnsupportedOperationException("method-wrapper.__qualname__ unimplemented");
     }
 }
@@ -588,14 +606,14 @@ final class PyClassMethodDescriptor extends PyTruthyObject {
     @Override public final String repr() { return "<method " + PyString.reprOf(name) + " of " + PyString.reprOf(owner.name()) + " objects>"; }
     @Override public final PyConcreteType type() { return PyClassMethodDescriptorType.singleton; }
 
-    static PyObject pygetset___doc__(PyObject obj) {
+    static PyObject pyget___doc__(PyObject obj) {
         String doc = ((PyClassMethodDescriptor)obj).doc;
         return (doc != null) ? new PyString(doc) : PyNone.singleton;
     }
-    static PyObject pymember___name__(PyObject obj) {
+    static PyObject pyget___name__(PyObject obj) {
         return new PyString(((PyClassMethodDescriptor)obj).name);
     }
-    static PyObject pygetset___qualname__(PyObject obj) {
+    static PyObject pyget___qualname__(PyObject obj) {
         throw new UnsupportedOperationException("classmethod_descriptor.__qualname__ unimplemented");
     }
 }
@@ -618,7 +636,7 @@ final class PyStaticMethod extends PyTruthyObject {
     @Override public final String repr() { return "<staticmethod(" + func.repr() + ")>"; }
     @Override public final PyConcreteType type() { return PyStaticMethodType.singleton; }
 
-    static PyObject pygetset___dict__(PyObject obj) {
+    static PyObject pyget___dict__(PyObject obj) {
         throw new UnsupportedOperationException("staticmethod.__dict__ unimplemented");
     }
 }
@@ -627,16 +645,16 @@ abstract class PyBuiltinFunctionOrMethod extends PyTruthyObject {
     @Override public int hashCode() { return defaultHashCode(); }
     @Override public final PyConcreteType type() { return PyBuiltinFunctionOrMethodType.singleton; }
 
-    static PyObject pygetset___doc__(PyObject obj) {
+    static PyObject pyget___doc__(PyObject obj) {
         throw new UnsupportedOperationException("builtin_function_or_method.__doc__ unimplemented");
     }
-    static PyObject pygetset___name__(PyObject obj) {
+    static PyObject pyget___name__(PyObject obj) {
         throw new UnsupportedOperationException("builtin_function_or_method.__name__ unimplemented");
     }
-    static PyObject pygetset___qualname__(PyObject obj) {
+    static PyObject pyget___qualname__(PyObject obj) {
         throw new UnsupportedOperationException("builtin_function_or_method.__qualname__ unimplemented");
     }
-    static PyObject pymember___module__(PyObject obj) {
+    static PyObject pyget___module__(PyObject obj) {
         throw new UnsupportedOperationException("builtin_function_or_method.__module__ unimplemented");
     }
 }
@@ -659,19 +677,19 @@ abstract class PyFunction extends PyTruthyObject {
     @Override public PyConcreteType type() { return PyFunctionType.singleton; }
     @Override public String repr() { return "<function " + qualName + ">"; }
 
-    static PyObject pygetset___dict__(PyObject obj) {
+    static PyObject pyget___dict__(PyObject obj) {
         throw new UnsupportedOperationException("function.__dict__ unimplemented");
     }
-    static PyObject pymember___doc__(PyObject obj) {
+    static PyObject pyget___doc__(PyObject obj) {
         throw new UnsupportedOperationException("function.__doc__ unimplemented");
     }
-    static PyObject pymember___module__(PyObject obj) {
+    static PyObject pyget___module__(PyObject obj) {
         throw new UnsupportedOperationException("function.__module__ unimplemented");
     }
-    static PyObject pygetset___name__(PyObject obj) {
+    static PyObject pyget___name__(PyObject obj) {
         return new PyString(((PyFunction)obj).name);
     }
-    static PyObject pygetset___qualname__(PyObject obj) {
+    static PyObject pyget___qualname__(PyObject obj) {
         return new PyString(((PyFunction)obj).qualName);
     }
 }
@@ -687,13 +705,13 @@ abstract class PyGenerator extends PyIter {
     public PyObject pymethod_send(PyObject value) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_throw(PyObject[] args, PyDict kwargs) { throw new UnsupportedOperationException(); }                                                                                                           public PyObject pymethod_close() { throw new UnsupportedOperationException(); }
 
-    static PyObject pygetset___name__(PyObject obj) { return new PyString(((PyGenerator)obj).name); }
-    static PyObject pygetset___qualname__(PyObject obj) { return new PyString(((PyGenerator)obj).qualName); }
-    static PyObject pygetset_gi_yieldfrom(PyObject obj) { throw new UnsupportedOperationException(); }
-    static PyObject pygetset_gi_running(PyObject obj) { throw new UnsupportedOperationException(); }
-    static PyObject pygetset_gi_frame(PyObject obj) { throw new UnsupportedOperationException(); }
-    static PyObject pygetset_gi_suspended(PyObject obj) { throw new UnsupportedOperationException(); }
-    static PyObject pygetset_gi_code(PyObject obj) { throw new UnsupportedOperationException(); }
+    static PyObject pyget___name__(PyObject obj) { return new PyString(((PyGenerator)obj).name); }
+    static PyObject pyget___qualname__(PyObject obj) { return new PyString(((PyGenerator)obj).qualName); }
+    static PyObject pyget_gi_yieldfrom(PyObject obj) { throw new UnsupportedOperationException(); }
+    static PyObject pyget_gi_running(PyObject obj) { throw new UnsupportedOperationException(); }
+    static PyObject pyget_gi_frame(PyObject obj) { throw new UnsupportedOperationException(); }
+    static PyObject pyget_gi_suspended(PyObject obj) { throw new UnsupportedOperationException(); }
+    static PyObject pyget_gi_code(PyObject obj) { throw new UnsupportedOperationException(); }
 
     public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
         throw PyTypeError.raise("cannot create 'generator' instances");
@@ -785,7 +803,7 @@ public final class Runtime {
     public static void handleTopLevelPyRaise(PyRaise exc) {
         PyBaseException baseExc = exc.exc;
         if (baseExc instanceof PySystemExit) {
-            PyObject code = PySystemExit.pymember_code(baseExc);
+            PyObject code = PySystemExit.pyget_code(baseExc);
             if (code == PyNone.singleton) {
                 System.exit(0);
             } else if (code.hasIndex()) {

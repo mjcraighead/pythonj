@@ -449,7 +449,7 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
                     value = ir.CreateObject('PyString', [ir.StrLiteral(v['value'])])
                 elif v['kind'] == 'member':
                     getter_target_class = java_name
-                    getter_target_method = f'pymember_{k}'
+                    getter_target_method = f'pyget_{k}'
                     getter_func = pythonj_builtins_classes.get(name, {}).get(k)
                     if getter_func is not None and is_pythonj_getter(getter_func):
                         helper_key = (name, k)
@@ -476,7 +476,7 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
                     ])
                 elif v['kind'] == 'getset':
                     getter_target_class = java_name
-                    getter_target_method = f'pygetset_{k}'
+                    getter_target_method = f'pyget_{k}'
                     getter_func = pythonj_builtins_classes.get(name, {}).get(k)
                     if getter_func is not None and is_pythonj_getter(getter_func):
                         helper_key = (name, k)

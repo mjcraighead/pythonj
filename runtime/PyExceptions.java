@@ -7,7 +7,7 @@ class PyBaseException extends PyTruthyObject {
     PyBaseException(PyObject[] _args) { args = new PyTuple(_args); }
     @Override public PyConcreteType type() { return PyBaseExceptionType.singleton; }
 
-    static PyObject pygetset___dict__(PyObject obj) {
+    static PyObject pyget___dict__(PyObject obj) {
         throw new UnsupportedOperationException("BaseException.__dict__ unimplemented");
     }
 
@@ -38,7 +38,7 @@ class PyBaseException extends PyTruthyObject {
         return s.append(")").toString();
     }
 
-    static PyObject pygetset_args(PyObject obj) { return ((PyBaseException)obj).args; }
+    static PyObject pyget_args(PyObject obj) { return ((PyBaseException)obj).args; }
 
     public PyObject pymethod_add_note(PyObject note) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_with_traceback(PyObject tb) { throw new UnsupportedOperationException(); }
@@ -77,8 +77,8 @@ final class PyAttributeError extends PyException {
         return new PyRaise(new PyAttributeError(new PyString(msg)));
     }
 
-    static PyObject pymember_name(PyObject obj) { throw new UnsupportedOperationException(); }
-    static PyObject pymember_obj(PyObject obj) { throw new UnsupportedOperationException(); }
+    static PyObject pyget_name(PyObject obj) { throw new UnsupportedOperationException(); }
+    static PyObject pyget_obj(PyObject obj) { throw new UnsupportedOperationException(); }
 
     public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
         if ((kwargs != null) && kwargs.boolValue()) {
@@ -184,7 +184,7 @@ class PyNameError extends PyException {
         return new PyRaise(new PyNameError(new PyString(msg)));
     }
 
-    static PyObject pymember_name(PyObject obj) { throw new UnsupportedOperationException(); }
+    static PyObject pyget_name(PyObject obj) { throw new UnsupportedOperationException(); }
 
     public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, type.name());
@@ -214,7 +214,7 @@ final class PyStopIteration extends PyException {
         return new PyStopIteration(args);
     }
 
-    static PyObject pymember_value(PyObject obj) { throw new UnsupportedOperationException(); }
+    static PyObject pyget_value(PyObject obj) { throw new UnsupportedOperationException(); }
 }
 
 final class PyRuntimeError extends PyException {
@@ -282,7 +282,7 @@ final class PySystemExit extends PyBaseException {
         return new PySystemExit(args);
     }
 
-    static PyObject pymember_code(PyObject obj) {
+    static PyObject pyget_code(PyObject obj) {
         PyTuple args = ((PySystemExit)obj).args;
         if (args.items.length == 0) {
             return PyNone.singleton;

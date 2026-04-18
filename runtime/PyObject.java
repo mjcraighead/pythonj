@@ -143,7 +143,7 @@ public abstract class PyObject implements Comparable<PyObject> {
     public void set(PyObject obj, PyType owner, PyObject value) { throw unimplementedMethod("set"); }
     public void delete(PyObject obj, PyType owner) { throw unimplementedMethod("delete"); }
 
-    static PyObject pygetset___class__(PyObject obj) {
+    static PyObject pyget___class__(PyObject obj) {
         return obj.type();
     }
 
