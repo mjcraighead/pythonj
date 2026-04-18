@@ -438,7 +438,7 @@ def _build_type_entry(name: str) -> dict[str, Any]:
     obj = _get_runtime_obj(name)
     attrs = {}
     for (k, v) in list(obj.__dict__.items()):
-        if k.startswith('__') and k not in {'__base__', '__class__', '__doc__', '__format__', '__name__'}:
+        if k.startswith('__') and k not in {'__base__', '__class__', '__dict__', '__doc__', '__format__', '__name__'}:
             continue
         v_type = type(v)
         if v_type is types.NoneType:

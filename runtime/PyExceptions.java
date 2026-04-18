@@ -26,6 +26,10 @@ class PyBaseException extends PyTruthyObject {
         super.delAttr(key);
     }
 
+    static PyObject pygetset___dict__(PyObject obj) {
+        throw new UnsupportedOperationException("BaseException.__dict__ unimplemented");
+    }
+
     @Override public boolean contains(PyObject rhs) { return defaultContains(rhs); }
     @Override public String str() {
         if (args.items.length == 0) {

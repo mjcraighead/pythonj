@@ -350,6 +350,13 @@ abstract class PyType extends PyTruthyObject {
         PyType base = ((PyType)obj).base();
         return base != null ? base : PyNone.singleton;
     }
+    static PyObject pygetset___dict__(PyObject obj) {
+        var attrs = ((PyType)obj).getAttributes();
+        if (attrs == null) {
+            throw new UnsupportedOperationException(((PyType)obj).name() + ".__dict__ is not implemented");
+        }
+        return new PyMappingProxy(attrs);
+    }
 }
 
 class PyConcreteType extends PyType {
@@ -379,16 +386,7 @@ class PyConcreteType extends PyType {
         if (metaDesc != null) {
             return metaDesc.get(this, type());
         }
-        switch (key) {
-            case "__dict__": {
-                var attrs = getAttributes();
-                if (attrs == null) {
-                    throw new UnsupportedOperationException(name() + ".__dict__ is not implemented");
-                }
-                return new PyMappingProxy(attrs);
-            }
-            default: return super.getAttr(key);
-        }
+        return super.getAttr(key);
     }
     @Override public final void setAttr(String key, PyObject value) {
         throw PyTypeError.raise("cannot set " + PyString.reprOf(key) + " attribute of immutable type " + PyString.reprOf(typeName));
@@ -560,6 +558,10 @@ final class PyStaticMethod extends PyTruthyObject {
 
     @Override public final String repr() { return "<staticmethod(" + func.repr() + ")>"; }
     @Override public final PyConcreteType type() { return PyStaticMethodType.singleton; }
+
+    static PyObject pygetset___dict__(PyObject obj) {
+        throw new UnsupportedOperationException("staticmethod.__dict__ unimplemented");
+    }
 }
 
 abstract class PyBuiltinFunctionOrMethod extends PyTruthyObject {
@@ -595,6 +597,9 @@ abstract class PyFunction extends PyTruthyObject {
     }
     static PyObject pygetset___name__(PyObject obj) {
         return new PyString(((PyFunction)obj).funcName);
+    }
+    static PyObject pygetset___dict__(PyObject obj) {
+        throw new UnsupportedOperationException("function.__dict__ unimplemented");
     }
 }
 
