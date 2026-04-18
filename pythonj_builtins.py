@@ -161,12 +161,16 @@ def zip__newobj(type, args: tuple, kwargs: dict):
 # Builtin classes
 class object:
     def __format__(self, format_spec) -> str:
+        if not __pythonj_isinstance__(format_spec, str):
+            raise TypeError(f'__format__() argument must be str, not {type(format_spec).__name__}')
         if format_spec != '':
             raise TypeError(f'unsupported format string passed to {type(self).__name__}.__format__')
         return str(self)
 
 class bool:
     def __format__(self, format_spec) -> str:
+        if not __pythonj_isinstance__(format_spec, str):
+            raise TypeError(f'__format__() argument must be str, not {type(format_spec).__name__}')
         return pyj_bool_format(self, format_spec)
 
     def __repr__(self) -> str:
@@ -741,6 +745,8 @@ class float:
         return self
 
     def __format__(self, format_spec) -> str:
+        if not __pythonj_isinstance__(format_spec, str):
+            raise TypeError(f'__format__() argument must be str, not {type(format_spec).__name__}')
         return pyj_float_format(self, format_spec)
 
     def __repr__(self) -> str:
@@ -805,6 +811,8 @@ class int:
         return self
 
     def __format__(self, format_spec) -> str:
+        if not __pythonj_isinstance__(format_spec, str):
+            raise TypeError(f'__format__() argument must be str, not {type(format_spec).__name__}')
         return pyj_int_format(self, format_spec)
 
     def __repr__(self) -> str:

@@ -344,10 +344,10 @@ def _pyj_format_parse_common(spec: str) -> tuple:
         i += 1
     return (fill, align, sign, z, alt, zero, width, grouping, precision, type_char, i, n)
 
-def _pyj_unknown_format_code(type_char, type_name: str) -> ValueError:
+def _pyj_unknown_format_code(type_char: str, type_name: str) -> ValueError:
     return ValueError(f'Unknown format code {type_char!r} for object of type {type_name!r}')
 
-def _pyj_invalid_format_spec(spec, type_name: str) -> ValueError:
+def _pyj_invalid_format_spec(spec: str, type_name: str) -> ValueError:
     return ValueError(f'Invalid format specifier {spec!r} for object of type {type_name!r}')
 
 def _pyj_format_split_sign(text: str) -> tuple:
@@ -413,7 +413,7 @@ def _pyj_int_base_digits(value: int, base: int, alphabet: str) -> str:
     ret.reverse()
     return ''.join(ret)
 
-def pyj_float_parse_spec(spec) -> tuple:
+def _pyj_float_parse_spec(spec: str) -> tuple:
     fill: str
     sign: str
     z: bool
@@ -438,10 +438,10 @@ def pyj_float_parse_spec(spec) -> tuple:
 
     return (fill, align, sign, z, alt, width, grouping, precision, type_char)
 
-def pyj_int_parse_spec(spec) -> tuple:
+def _pyj_int_parse_spec(spec: str) -> tuple:
     return _pyj_int_like_parse_spec(spec, 'int')
 
-def _pyj_int_like_parse_spec(spec, type_name: str) -> tuple:
+def _pyj_int_like_parse_spec(spec: str, type_name: str) -> tuple:
     fill: str
     sign: str
     z: bool
@@ -480,7 +480,7 @@ def _pyj_int_like_parse_spec(spec, type_name: str) -> tuple:
 
     return (fill, align, sign, alt, width, grouping, type_char)
 
-def pyj_str_parse_spec(spec) -> tuple:
+def _pyj_str_parse_spec(spec: str) -> tuple:
     fill: str
     sign: str
     z: bool
@@ -712,7 +712,7 @@ def _pyj_float_format_finite_core(value: float, alt: bool, grouping, precision, 
     return ret
 
 def pyj_float_format(value: float, format_spec: str) -> str:
-    fill, align, sign, z, alt, width, grouping, precision, type_char = pyj_float_parse_spec(format_spec)
+    fill, align, sign, z, alt, width, grouping, precision, type_char = _pyj_float_parse_spec(format_spec)
 
     magnitude_text: str
     if not math.isfinite(value):
@@ -736,8 +736,8 @@ def pyj_float_format(value: float, format_spec: str) -> str:
 
     return _pyj_float_finish_text(fill, align, sign, z, width, grouping, value, magnitude_text)
 
-def pyj_int_format(value, spec) -> str:
-    fill, align, sign, alt, width, grouping, type_char = pyj_int_parse_spec(spec)
+def pyj_int_format(value: int, spec: str) -> str:
+    fill, align, sign, alt, width, grouping, type_char = _pyj_int_parse_spec(spec)
 
     is_negative = value < 0
     abs_value = -value if is_negative else value
@@ -789,7 +789,7 @@ def pyj_int_format(value, spec) -> str:
     text = sign_prefix + prefix + grouped_digits
     return _pyj_format_apply_width(text, fill, align, width, '>')
 
-def pyj_bool_format(value, spec) -> str:
+def pyj_bool_format(value: bool, spec: str) -> str:
     if spec == '':
         return 'True' if value else 'False'
     _pyj_int_like_parse_spec(spec, 'bool')
@@ -869,8 +869,8 @@ def pyj_int_parse_stringlike(s: str, original_obj, base_obj: int) -> int:
         value = value * base + digit
     return sign * value
 
-def pyj_str_format(value, spec) -> str:
-    fill, align, width, precision = pyj_str_parse_spec(spec)
+def pyj_str_format(value: str, spec: str) -> str:
+    fill, align, width, precision = _pyj_str_parse_spec(spec)
     text = value if precision is None else value[:precision]
     return _pyj_format_apply_width(text, fill, align, width, '<')
 
@@ -884,12 +884,12 @@ def _pyj_percent_real_arg(arg) -> float:
         return float(arg)
     raise TypeError(f'must be real number, not {type(arg).__name__}')
 
-def _pyj_percent_signed_int_arg(arg, conv) -> int:
+def _pyj_percent_signed_int_arg(arg, conv: str) -> int:
     if __pythonj_isinstance__(arg, (bool, int, float)):
         return int(arg)
     raise TypeError(f'%{conv} format: a real number is required, not {type(arg).__name__}')
 
-def _pyj_percent_index_arg(arg, conv) -> int:
+def _pyj_percent_index_arg(arg, conv: str) -> int:
     if __pythonj_isinstance__(arg, (int, bool)):
         return int(arg)
     raise TypeError(f'%{conv} format: an integer is required, not {type(arg).__name__}')
