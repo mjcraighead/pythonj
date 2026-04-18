@@ -91,9 +91,6 @@ public abstract class PyObject implements Comparable<PyObject> {
         if (desc != null) {
             return desc.get(this, type());
         }
-        if (key.startsWith("__")) {
-            throw new UnsupportedOperationException(type().name() + "." + key + " is not implemented");
-        }
         throw raiseMissingAttr(key);
     }
     public final void setAttr(String key, PyObject value) {
