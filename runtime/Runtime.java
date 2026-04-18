@@ -377,9 +377,6 @@ class PyConcreteType extends PyType {
     @Override public final void setAttr(String key, PyObject value) {
         throw PyTypeError.raise("cannot set " + PyString.reprOf(key) + " attribute of immutable type " + PyString.reprOf(typeName));
     }
-    @Override public final void rawDelAttr(String key) {
-        throw PyTypeError.raise("cannot set " + PyString.reprOf(key) + " attribute of immutable type " + PyString.reprOf(typeName));
-    }
     @Override public String repr() {
         if (moduleName.equals("builtins")) {
             return "<class '" + typeName + "'>";
@@ -527,8 +524,8 @@ final class PyWrapperDescriptor extends PyGettableDescriptor {
         PyObject self = args[0];
         if (!Runtime.pythonjIsInstance(self, owner).boolValue()) {
             throw PyTypeError.raise(
-                "descriptor " + PyString.reprOf(name) + " for " + PyString.reprOf(owner.name()) +
-                " objects doesn't apply to a " + PyString.reprOf(self.type().name()) + " object"
+                "descriptor " + PyString.reprOf(name) + " requires a " + PyString.reprOf(owner.name()) +
+                " object but received a " + PyString.reprOf(self.type().name())
             );
         }
         PyObject[] rest = Arrays.copyOfRange(args, 1, args.length);

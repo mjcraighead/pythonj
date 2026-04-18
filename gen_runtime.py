@@ -632,18 +632,14 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
                     elif method_name == '__contains__':
                         wrapper_return_expr = ir.StaticMethodCall('PyBool', 'create', [ir.MethodCall(ir.Identifier('self'), 'contains', [ir.Identifier('arg0')], 'boolean')], 'PyBool')
                     else:
-                        wrapper_return_expr = ir.MethodCall(ir.Identifier('self'), 'rawDelAttr', [ir.MethodCall(ir.Identifier('arg0'), 'str', [], 'String')], 'void')
+                        raise AssertionError(f'missing wrapper_descriptor implementation for {name}.{method_name}')
                 wrapper_call_body = [ir.method_call_statement(ir.This(), 'requireNoArgs', [ir.Identifier('args'), ir.Identifier('kwargs')]), ir.ReturnStatement(wrapper_return_expr)]
                 if arity == 1:
                     wrapper_call_body = [
                         ir.method_call_statement(ir.This(), 'requireExactArgs', [ir.Identifier('args'), ir.Identifier('kwargs'), ir.IntLiteral(1)]),
                         ir.LocalDecl('PyObject', 'arg0', ir.ArrayAccess(ir.Identifier('args'), ir.IntLiteral(0))),
                     ]
-                    if method_name == '__delattr__':
-                        wrapper_call_body.append(ir.ExprStatement(wrapper_return_expr))
-                        wrapper_call_body.append(ir.ReturnStatement(ir.PyConstant(None)))
-                    else:
-                        wrapper_call_body.append(ir.ReturnStatement(wrapper_return_expr))
+                    wrapper_call_body.append(ir.ReturnStatement(wrapper_return_expr))
                 top_level_decls.append(ir.ClassDecl(
                     'final',
                     f'{java_name}MethodWrapper_{method_name}',

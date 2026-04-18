@@ -845,10 +845,12 @@ def static_method_call(class_name: str, method: str, args: list[Expr], return_ty
             )
         case ('Runtime', 'pythonjBytesBuilderFinish'):
             return CreateObject('PyBytes', [MethodCall(Field(CastExpr('PyBytesBuilder', args[0]), 'value'), 'toByteArray', [], 'byte[]')])
-        case ('Runtime', 'pythonjDelAttr'):
-            return MethodCall(args[0], 'rawDelAttr', [unbox_str(args[1])], 'void')
+        case ('Runtime', 'pythonjDelete'):
+            return MethodCall(args[0], 'delete', [args[1], MethodCall(args[1], 'type', [], 'PyType')], 'void')
         case ('Runtime', 'pythonjDictGet'):
             return MethodCall(Field(CastExpr('PyDict', args[0]), 'items'), 'get', [args[1]], 'PyObject')
+        case ('Runtime', 'pythonjDictRemove'):
+            return MethodCall(Field(CastExpr('PyDict', args[0]), 'items'), 'remove', [args[1]], 'PyObject')
         case ('Runtime', 'pythonjFloatJavaBits'):
             return CreateObject('PyInt', [StaticMethodCall('Double', 'doubleToLongBits', [unbox_float(args[0])], 'long')])
         case ('Runtime', 'pythonjFloatJavaFormat'):
@@ -869,16 +871,22 @@ def static_method_call(class_name: str, method: str, args: list[Expr], return_ty
             return static_method_call('PyBool', 'create', [MethodCall(args[0], 'hasIndex', [], 'boolean')])
         case ('Runtime', 'pythonjHasIter'):
             return static_method_call('PyBool', 'create', [MethodCall(args[0], 'hasIter', [], 'boolean')])
+        case ('Runtime', 'pythonjInstanceDict'):
+            return MethodCall(args[0], 'getInstanceDict', [], 'PyDict')
         case ('Runtime', 'pythonjIntJavaBitCount'):
             return CreateObject('PyInt', [CastExpr('long', StaticMethodCall('Long', 'bitCount', [unbox_int(args[0])], 'int'))])
         case ('Runtime', 'pythonjIntJavaLeadingZeros'):
             return CreateObject('PyInt', [CastExpr('long', StaticMethodCall('Long', 'numberOfLeadingZeros', [unbox_int(args[0])], 'int'))])
         case ('Runtime', 'pythonjIntJavaStr'):
             return CreateObject('PyString', [static_method_call('Long', 'toString', [unbox_int(args[0])])])
+        case ('Runtime', 'pythonjIsDataDescriptor'):
+            return static_method_call('PyBool', 'create', [MethodCall(args[0], 'isDataDescriptor', [], 'boolean')])
         case ('Runtime', 'pythonjIter'):
             return iter(args[0])
         case ('Runtime', 'pythonjLen'):
             return py_len(args[0])
+        case ('Runtime', 'pythonjLookupAttr'):
+            return MethodCall(MethodCall(args[0], 'type', [], 'PyType'), 'lookupAttr', [unbox_str(args[1])], 'PyObject')
         case ('Runtime', 'pythonjNext'):
             return MethodCall(args[0], 'next', [], 'PyObject')
         case ('Runtime', 'pythonjRangeStart'):

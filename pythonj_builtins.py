@@ -169,8 +169,19 @@ class object:
     def __delattr__(self, name):
         if not __pythonj_isinstance__(name, str):
             raise TypeError(f'attribute name must be string, not {type(name).__name__!r}')
-        __pythonj_delattr__(self, name)
-        return None
+        desc = __pythonj_lookup_attr__(self, name)
+        if desc is not __pythonj_null__ and __pythonj_is_data_descriptor__(desc):
+            __pythonj_delete__(desc, self)
+            return None
+        d = __pythonj_instance_dict__(self)
+        if d is not __pythonj_null__:
+            if __pythonj_dict_remove__(d, name) is not __pythonj_null__:
+                return None
+        if desc is not __pythonj_null__:
+            raise AttributeError(f'{type(self).__name__!r} object attribute {name!r} is read-only')
+        if d is not __pythonj_null__:
+            raise AttributeError(f'{type(self).__name__!r} object has no attribute {name!r}')
+        raise AttributeError(f'{type(self).__name__!r} object has no attribute {name!r} and no __dict__ for setting new attributes')
 
     def __format__(self, format_spec) -> str:
         if not __pythonj_isinstance__(format_spec, str):
@@ -181,6 +192,10 @@ class object:
 
     def __repr__(self) -> str:
         return f'<{type(self).__name__} object>'
+
+class type:
+    def __delattr__(self, name):
+        raise TypeError(f'cannot set {name!r} attribute of immutable type {self.__name__!r}')
 
 class bool:
     def __format__(self: bool, format_spec) -> str:
