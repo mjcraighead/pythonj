@@ -331,5 +331,5 @@ public final class PyInt extends PyObject {
     @Override public boolean hasIndex() { return true; }
     @Override public long indexValue() { return value; }
     @Override public long intValue() { return value; }
-    @Override public String repr() { return PyRuntime.pyfunc_int____repr__(this).value; }
+    @Override public String repr() { return slotBasedRepr(); }
 }

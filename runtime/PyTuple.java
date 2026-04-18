@@ -150,5 +150,5 @@ public final class PyTuple extends PyObject {
     }
     @Override public int hashCode() { return Arrays.hashCode(items); }
     @Override public long len() { return items.length; }
-    @Override public String repr() { return PyRuntime.pyfunc_tuple____repr__(this).value; }
+    @Override public String repr() { return slotBasedRepr(); }
 }

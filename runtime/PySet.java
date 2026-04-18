@@ -242,7 +242,7 @@ public final class PySet extends PyObject {
     }
     @Override public int hashCode() { throw raiseUnhashable(); }
     @Override public long len() { return items.size(); }
-    @Override public String repr() { return PyRuntime.pyfunc_set____repr__(this).value; }
+    @Override public String repr() { return slotBasedRepr(); }
 
     public PyNone pymethod_add(PyObject arg) {
         items.add(arg);

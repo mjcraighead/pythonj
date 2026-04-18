@@ -227,4 +227,11 @@ public abstract class PyObject implements Comparable<PyObject> {
         return false;
     }
     protected final String defaultRepr() { return "<" + type().name() + " object>"; }
+    protected final String slotBasedRepr() {
+        PyObject ret = type().getAttr("__repr__").call(new PyObject[]{this}, null);
+        if (!(ret instanceof PyString retStr)) {
+            throw PyTypeError.raise("__repr__ must return a str, not " + ret.type().name());
+        }
+        return retStr.value;
+    }
 }

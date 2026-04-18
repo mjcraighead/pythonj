@@ -48,7 +48,7 @@ public final class PySlice extends PyTruthyObject {
         }
         return false;
     }
-    @Override public String repr() { return PyRuntime.pyfunc_slice____repr__(this).value; }
+    @Override public String repr() { return slotBasedRepr(); }
 
     public record Indices(int start, int stop, int step, int length) {}
     private static int asIndex(PyObject obj) {

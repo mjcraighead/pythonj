@@ -104,5 +104,5 @@ public final class PyRange extends PyObject {
             return (start - stop - step - 1) / (-step);
         }
     }
-    @Override public String repr() { return PyRuntime.pyfunc_range____repr__(this).value; }
+    @Override public String repr() { return slotBasedRepr(); }
 }

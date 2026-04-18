@@ -221,7 +221,7 @@ public final class PyBytes extends PyObject {
     }
     @Override public int hashCode() { return Arrays.hashCode(value); }
     @Override public long len() { return value.length; }
-    @Override public String repr() { return PyRuntime.pyfunc_bytes____repr__(this).value; }
+    @Override public String repr() { return slotBasedRepr(); }
 
     public static PyObject pymethod_maketrans(PyObject frm, PyObject to) { throw new UnsupportedOperationException(); }
 }

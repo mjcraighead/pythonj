@@ -212,7 +212,7 @@ public final class PyByteArray extends PyObject {
     }
     @Override public int hashCode() { throw raiseUnhashable(); }
     @Override public long len() { return value.length; }
-    @Override public String repr() { return PyRuntime.pyfunc_bytearray____repr__(this).value; }
+    @Override public String repr() { return slotBasedRepr(); }
 
     public static PyObject pymethod_maketrans(PyObject frm, PyObject to) { throw new UnsupportedOperationException(); }
 }
