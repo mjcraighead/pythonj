@@ -39,6 +39,10 @@ class PyBaseException extends PyTruthyObject {
     }
 
     static PyObject pyget_args(PyObject obj) { return ((PyBaseException)obj).args; }
+    static PyObject pyget___suppress_context__(PyObject obj) { throw new UnsupportedOperationException("BaseException.__suppress_context__ unimplemented"); }
+    static PyObject pyget___traceback__(PyObject obj) { throw new UnsupportedOperationException("BaseException.__traceback__ unimplemented"); }
+    static PyObject pyget___context__(PyObject obj) { throw new UnsupportedOperationException("BaseException.__context__ unimplemented"); }
+    static PyObject pyget___cause__(PyObject obj) { throw new UnsupportedOperationException("BaseException.__cause__ unimplemented"); }
 
     public PyObject pymethod_add_note(PyObject note) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_with_traceback(PyObject tb) { throw new UnsupportedOperationException(); }

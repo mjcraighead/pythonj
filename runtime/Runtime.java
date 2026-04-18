@@ -154,7 +154,11 @@ abstract class PyModule extends PyTruthyObject {
     @Override public String repr() { return "<module '" + moduleName + "' (built-in)>"; }
     @Override public PyType type() { return PyModuleType.singleton; }
 
+    public PyObject pymethod___dir__() { throw new UnsupportedOperationException("module.__dir__ unimplemented"); }
+
     static PyObject pyget___dict__(PyObject obj) { throw new UnsupportedOperationException(); }
+    static PyObject pyget___annotations__(PyObject obj) { throw new UnsupportedOperationException("module.__annotations__ unimplemented"); }
+    static PyObject pyget___annotate__(PyObject obj) { throw new UnsupportedOperationException("module.__annotate__ unimplemented"); }
 }
 
 final class PyJsonModule extends PyModule {
@@ -333,6 +337,13 @@ abstract class PyType extends PyTruthyObject {
     static PyObject pyget___qualname__(PyObject obj) {
         return new PyString(((PyConcreteType)obj).qualName);
     }
+    static PyObject pyget___bases__(PyObject obj) { throw new UnsupportedOperationException("type.__bases__ unimplemented"); }
+    static PyObject pyget___mro__(PyObject obj) { throw new UnsupportedOperationException("type.__mro__ unimplemented"); }
+    static PyObject pyget___abstractmethods__(PyObject obj) { throw new UnsupportedOperationException("type.__abstractmethods__ unimplemented"); }
+    static PyObject pyget___text_signature__(PyObject obj) { throw new UnsupportedOperationException("type.__text_signature__ unimplemented"); }
+    static PyObject pyget___annotations__(PyObject obj) { throw new UnsupportedOperationException("type.__annotations__ unimplemented"); }
+    static PyObject pyget___annotate__(PyObject obj) { throw new UnsupportedOperationException("type.__annotate__ unimplemented"); }
+    static PyObject pyget___type_params__(PyObject obj) { throw new UnsupportedOperationException("type.__type_params__ unimplemented"); }
 }
 
 class PyConcreteType extends PyType {
@@ -430,6 +441,12 @@ abstract class PyGettableDescriptor extends PyTruthyObject {
     }
     static PyObject pyget___qualname__(PyObject obj) {
         throw new UnsupportedOperationException("descriptor.__qualname__ unimplemented");
+    }
+    static PyObject pyget___objclass__(PyObject obj) {
+        return ((PyGettableDescriptor)obj).owner;
+    }
+    static PyObject pyget___text_signature__(PyObject obj) {
+        throw new UnsupportedOperationException(((PyGettableDescriptor)obj).type().name() + ".__text_signature__ unimplemented");
     }
 }
 
@@ -574,6 +591,16 @@ abstract class PyMethodWrapper<T extends PyObject> extends PyTruthyObject {
     static PyObject pyget___qualname__(PyObject obj) {
         throw new UnsupportedOperationException("method-wrapper.__qualname__ unimplemented");
     }
+    static PyObject pyget___self__(PyObject obj) {
+        return ((PyMethodWrapper<?>)obj).self;
+    }
+    static PyObject pyget___objclass__(PyObject obj) {
+        return ((PyMethodWrapper<?>)obj).self.type();
+    }
+    static PyObject pyget___text_signature__(PyObject obj) {
+        throw new UnsupportedOperationException("method-wrapper.__text_signature__ unimplemented");
+    }
+    public PyObject pymethod___reduce__() { throw new UnsupportedOperationException("method-wrapper.__reduce__ unimplemented"); }
 }
 
 final class PyClassMethodDescriptor extends PyTruthyObject {
@@ -607,8 +634,14 @@ final class PyClassMethodDescriptor extends PyTruthyObject {
     static PyObject pyget___name__(PyObject obj) {
         return new PyString(((PyClassMethodDescriptor)obj).name);
     }
+    static PyObject pyget___objclass__(PyObject obj) {
+        return ((PyClassMethodDescriptor)obj).owner;
+    }
     static PyObject pyget___qualname__(PyObject obj) {
         throw new UnsupportedOperationException("classmethod_descriptor.__qualname__ unimplemented");
+    }
+    static PyObject pyget___text_signature__(PyObject obj) {
+        throw new UnsupportedOperationException("classmethod_descriptor.__text_signature__ unimplemented");
     }
 }
 
@@ -633,6 +666,11 @@ final class PyStaticMethod extends PyTruthyObject {
     static PyObject pyget___dict__(PyObject obj) {
         throw new UnsupportedOperationException("staticmethod.__dict__ unimplemented");
     }
+    static PyObject pyget___func__(PyObject obj) { throw new UnsupportedOperationException("staticmethod.__func__ unimplemented"); }
+    static PyObject pyget___wrapped__(PyObject obj) { throw new UnsupportedOperationException("staticmethod.__wrapped__ unimplemented"); }
+    static PyObject pyget___isabstractmethod__(PyObject obj) { throw new UnsupportedOperationException("staticmethod.__isabstractmethod__ unimplemented"); }
+    static PyObject pyget___annotations__(PyObject obj) { throw new UnsupportedOperationException("staticmethod.__annotations__ unimplemented"); }
+    static PyObject pyget___annotate__(PyObject obj) { throw new UnsupportedOperationException("staticmethod.__annotate__ unimplemented"); }
 }
 
 abstract class PyBuiltinFunctionOrMethod extends PyTruthyObject {
@@ -651,6 +689,13 @@ abstract class PyBuiltinFunctionOrMethod extends PyTruthyObject {
     static PyObject pyget___module__(PyObject obj) {
         throw new UnsupportedOperationException("builtin_function_or_method.__module__ unimplemented");
     }
+    static PyObject pyget___self__(PyObject obj) {
+        throw new UnsupportedOperationException("builtin_function_or_method.__self__ unimplemented");
+    }
+    static PyObject pyget___text_signature__(PyObject obj) {
+        throw new UnsupportedOperationException("builtin_function_or_method.__text_signature__ unimplemented");
+    }
+    public PyObject pymethod___reduce__() { throw new UnsupportedOperationException("builtin_function_or_method.__reduce__ unimplemented"); }
 }
 
 abstract class PyBuiltinMethod<T extends PyObject> extends PyBuiltinFunctionOrMethod {
@@ -686,6 +731,15 @@ abstract class PyFunction extends PyTruthyObject {
     static PyObject pyget___qualname__(PyObject obj) {
         return new PyString(((PyFunction)obj).qualName);
     }
+    static PyObject pyget___closure__(PyObject obj) { throw new UnsupportedOperationException("function.__closure__ unimplemented"); }
+    static PyObject pyget___globals__(PyObject obj) { throw new UnsupportedOperationException("function.__globals__ unimplemented"); }
+    static PyObject pyget___builtins__(PyObject obj) { throw new UnsupportedOperationException("function.__builtins__ unimplemented"); }
+    static PyObject pyget___code__(PyObject obj) { throw new UnsupportedOperationException("function.__code__ unimplemented"); }
+    static PyObject pyget___defaults__(PyObject obj) { throw new UnsupportedOperationException("function.__defaults__ unimplemented"); }
+    static PyObject pyget___kwdefaults__(PyObject obj) { throw new UnsupportedOperationException("function.__kwdefaults__ unimplemented"); }
+    static PyObject pyget___annotations__(PyObject obj) { throw new UnsupportedOperationException("function.__annotations__ unimplemented"); }
+    static PyObject pyget___annotate__(PyObject obj) { throw new UnsupportedOperationException("function.__annotate__ unimplemented"); }
+    static PyObject pyget___type_params__(PyObject obj) { throw new UnsupportedOperationException("function.__type_params__ unimplemented"); }
 }
 
 abstract class PyGenerator extends PyIter {

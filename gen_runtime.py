@@ -34,10 +34,14 @@ PYTHON_AUTHORED_IMPLS = {
 }
 PYTHON_AUTHORED_CONSTRUCTOR_IMPLS = {'enumerate', 'zip'}
 SUPPORTED_HELPER_RETURN_TYPES = {'bool', 'bytes', 'dict', 'float', 'int', 'list', 'str', 'tuple'}
-SLOT_WRAPPER_ARITY = {'__bool__': 0, '__repr__': 0, '__contains__': 1, '__delattr__': 1, '__setattr__': 2}
 
 def is_pythonj_getter(func: ast.FunctionDef) -> bool:
     return any(isinstance(decorator, ast.Name) and decorator.id == '__pythonj_getter__' for decorator in func.decorator_list)
+
+def get_slot_wrapper_arity(attr_spec: dict[str, object]) -> int:
+    params = extract_spec.decode_signature(attr_spec.get('signature'))
+    assert params is not None, attr_spec
+    return len(params)
 
 def _annotation_to_metadata(annotation: Optional[ast.expr]) -> Optional[str]:
     if annotation is None:
@@ -604,7 +608,7 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
             for (method_name, attr_spec) in attrs.items():
                 if attr_spec['kind'] != 'wrapper_descriptor':
                     continue
-                arity = SLOT_WRAPPER_ARITY[method_name]
+                arity = get_slot_wrapper_arity(attr_spec)
                 if method_name in pythonj_builtins_classes.get(name, {}):
                     helper_key = (name, method_name)
                     helper_name = f'{name.replace(".", "_")}__{method_name}'
@@ -636,32 +640,36 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
                     elif method_name == '__contains__':
                         wrapper_return_expr = ir.StaticMethodCall('PyBool', 'create', [ir.MethodCall(ir.Identifier('self'), 'contains', [ir.Identifier('arg0')], 'boolean')], 'PyBool')
                     else:
-                        raise AssertionError(f'missing wrapper_descriptor implementation for {name}.{method_name}')
-                wrapper_call_body = [ir.method_call_statement(ir.This(), 'requireNoArgs', [ir.Identifier('args'), ir.Identifier('kwargs')]), ir.ReturnStatement(wrapper_return_expr)]
-                if arity == 1:
-                    wrapper_call_body = [
+                        wrapper_return_expr = None
+                wrapper_call_body: list[ir.Statement] = []
+                if arity == 0:
+                    wrapper_call_body.append(ir.method_call_statement(ir.This(), 'requireNoArgs', [ir.Identifier('args'), ir.Identifier('kwargs')]))
+                elif arity == 1:
+                    wrapper_call_body.extend([
                         ir.method_call_statement(ir.This(), 'requireExactArgs', [ir.Identifier('args'), ir.Identifier('kwargs'), ir.IntLiteral(1)]),
                         ir.LocalDecl('PyObject', 'arg0', ir.ArrayAccess(ir.Identifier('args'), ir.IntLiteral(0))),
-                    ]
-                    wrapper_call_body.append(ir.ReturnStatement(wrapper_return_expr))
-                if arity == 2:
-                    wrapper_call_body = [
+                    ])
+                else:
+                    wrapper_call_body.extend([
                         ir.method_call_statement(ir.Identifier('Runtime'), 'requireNoKwArgs', [ir.Identifier('kwargs'), ir.StrLiteral(method_name)]),
                         ir.IfStatement(
-                            ir.BinaryOp('!=', ir.Field(ir.Identifier('args'), 'length', 'int'), ir.IntLiteral(2)),
+                            ir.BinaryOp('!=', ir.Field(ir.Identifier('args'), 'length', 'int'), ir.IntLiteral(arity)),
                             [ir.ThrowStatement(ir.StaticMethodCall('PyTypeError', 'raise', [
                                 ir.BinaryOp(
                                     '+',
-                                    ir.StrLiteral(f'{method_name} expected 2 arguments, got '),
+                                    ir.StrLiteral(f'{method_name} expected {arity} arguments, got '),
                                     ir.StaticMethodCall('String', 'valueOf', [ir.Field(ir.Identifier('args'), 'length', 'int')], 'String'),
                                 )
                             ]))],
                             [],
                         ),
-                        ir.LocalDecl('PyObject', 'arg0', ir.ArrayAccess(ir.Identifier('args'), ir.IntLiteral(0))),
-                        ir.LocalDecl('PyObject', 'arg1', ir.ArrayAccess(ir.Identifier('args'), ir.IntLiteral(1))),
-                        ir.ReturnStatement(wrapper_return_expr),
-                    ]
+                    ])
+                    for i in range(arity):
+                        wrapper_call_body.append(ir.LocalDecl('PyObject', f'arg{i}', ir.ArrayAccess(ir.Identifier('args'), ir.IntLiteral(i))))
+                if wrapper_return_expr is not None:
+                    wrapper_call_body.append(ir.ReturnStatement(wrapper_return_expr))
+                else:
+                    wrapper_call_body.append(ir.ThrowStatement(ir.CreateObject('UnsupportedOperationException', [ir.StrLiteral(f'{name}.{method_name}() unimplemented')])))
                 top_level_decls.append(ir.ClassDecl(
                     'final',
                     f'{java_name}MethodWrapper_{method_name}',
@@ -705,8 +713,9 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
                     else:
                         assert False, (name, method_name, kind)
                     method_impl_target = None
+                    has_python_builtin_body = method_name in pythonj_builtins_classes.get(name, {})
                     if kind in {'method', 'classmethod'} and (
-                        name in ALL_PYTHON_AUTHORED_IMPLS or
+                        (name in ALL_PYTHON_AUTHORED_IMPLS and has_python_builtin_body) or
                         method_name in PYTHON_AUTHORED_IMPLS.get(name, set())
                     ):
                         helper_name = f'{name.replace(".", "_")}__{method_name}'

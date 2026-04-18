@@ -176,6 +176,22 @@ public abstract class PyObject implements Comparable<PyObject> {
     public abstract String repr();
     public String str() { return repr(); }
 
+    public PyObject pymethod___bytes__() { throw new UnsupportedOperationException(type().name() + ".__bytes__() unimplemented"); }
+    public PyObject pymethod___ceil__() { throw new UnsupportedOperationException(type().name() + ".__ceil__() unimplemented"); }
+    public PyObject pymethod___dir__() { throw new UnsupportedOperationException(type().name() + ".__dir__() unimplemented"); }
+    public PyObject pymethod___floor__() { throw new UnsupportedOperationException(type().name() + ".__floor__() unimplemented"); }
+    public PyObject pymethod___getitem__(PyObject key) { throw new UnsupportedOperationException(type().name() + ".__getitem__() unimplemented"); }
+    public PyObject pymethod___getnewargs__() { throw new UnsupportedOperationException(type().name() + ".__getnewargs__() unimplemented"); }
+    public PyObject pymethod___getstate__() { throw new UnsupportedOperationException(type().name() + ".__getstate__() unimplemented"); }
+    public PyObject pymethod___length_hint__() { throw new UnsupportedOperationException(type().name() + ".__length_hint__() unimplemented"); }
+    public PyObject pymethod___reduce__() { throw new UnsupportedOperationException(type().name() + ".__reduce__() unimplemented"); }
+    public PyObject pymethod___reduce_ex__(PyObject proto) { throw new UnsupportedOperationException(type().name() + ".__reduce_ex__() unimplemented"); }
+    public PyObject pymethod___reversed__() { throw new UnsupportedOperationException(type().name() + ".__reversed__() unimplemented"); }
+    public PyObject pymethod___round__(PyObject ndigits) { throw new UnsupportedOperationException(type().name() + ".__round__() unimplemented"); }
+    public PyObject pymethod___setstate__(PyObject state) { throw new UnsupportedOperationException(type().name() + ".__setstate__() unimplemented"); }
+    public PyObject pymethod___subclasses__() { throw new UnsupportedOperationException(type().name() + ".__subclasses__() unimplemented"); }
+    public PyObject pymethod___trunc__() { throw new UnsupportedOperationException(type().name() + ".__trunc__() unimplemented"); }
+
     // Wrapper that reverses the order of evaluation vs. "contains" to assist translator
     public final boolean in(PyObject rhs) { return rhs.contains(this); }
 

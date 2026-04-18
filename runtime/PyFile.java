@@ -111,6 +111,7 @@ final class PyTextIOWrapper extends PyIter {
     public PyObject pymethod_truncate(PyObject pos) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_writable() { throw new UnsupportedOperationException(); }
     public PyObject pymethod_write(PyObject text) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod___getstate__() { throw new UnsupportedOperationException(); }
 
     static PyObject pyget_encoding(PyObject obj) { throw new UnsupportedOperationException(); }
     static PyObject pyget_buffer(PyObject obj) { throw new UnsupportedOperationException(); }
@@ -182,6 +183,7 @@ final class PyBufferedReader extends PyIter {
     public PyObject pymethod_seekable() { throw new UnsupportedOperationException(); }
     public PyObject pymethod_tell() { throw new UnsupportedOperationException(); }
     public PyObject pymethod_truncate(PyObject pos) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod___getstate__() { throw new UnsupportedOperationException(); }
 
     static PyObject pyget_raw(PyObject obj) { throw new UnsupportedOperationException(); }
     static PyObject pyget__finalizing(PyObject obj) { throw new UnsupportedOperationException(); }

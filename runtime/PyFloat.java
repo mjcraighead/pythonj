@@ -204,6 +204,9 @@ public final class PyFloat extends PyObject {
         return false;
     }
     @Override public double floatValue() { return value; }
+    public static PyObject pymethod___getformat__(PyType self, PyObject arg) {
+        throw new UnsupportedOperationException("float.__getformat__ unimplemented");
+    }
     @Override public int hashCode() {
         if (Double.isFinite(value) && (value >= Long.MIN_VALUE) && (value <= Long.MAX_VALUE)) {
             long longValue = (long)value;

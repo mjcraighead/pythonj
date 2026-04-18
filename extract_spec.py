@@ -61,6 +61,11 @@ EXCEPTION_TYPES = {
     'TypeError', 'UnboundLocalError', 'ValueError', 'ZeroDivisionError',
 }
 BASE_TYPE_OVERRIDES = {'bool': 'object'}
+EXCLUDED_DUNDER_ATTRS = {
+    '__alloc__', '__basicsize__', '__class_getitem__', '__dictoffset__', '__flags__', '__init_subclass__',
+    '__instancecheck__', '__itemsize__', '__new__', '__prepare__', '__sizeof__', '__subclasscheck__',
+    '__subclasshook__', '__weakrefoffset__',
+}
 
 NULL = object()
 
@@ -381,6 +386,8 @@ def _get_method_signature(name: str, method_name: str) -> dict[str, Any] | None:
     desc_type = type(desc)
     if desc_type is types.MethodDescriptorType:
         params = _get_signature_params(desc, 'self')
+    elif desc_type is types.WrapperDescriptorType:
+        params = _get_signature_params(desc, 'self')
     elif desc_type is types.ClassMethodDescriptorType:
         params = _get_signature_params(desc, 'type')
     elif desc_type is staticmethod:
@@ -438,7 +445,7 @@ def _build_type_entry(name: str) -> dict[str, Any]:
     obj = _get_runtime_obj(name)
     attrs = {}
     for (k, v) in list(obj.__dict__.items()):
-        if k.startswith('__') and k not in {'__base__', '__bool__', '__class__', '__contains__', '__delattr__', '__dict__', '__doc__', '__format__', '__module__', '__name__', '__qualname__', '__repr__', '__setattr__'}:
+        if k in EXCLUDED_DUNDER_ATTRS:
             continue
         v_type = type(v)
         if v_type is types.NoneType:
@@ -452,7 +459,7 @@ def _build_type_entry(name: str) -> dict[str, Any]:
         elif v_type is types.MethodDescriptorType:
             attrs[k] = _encode_attr('method', doc=v.__doc__, signature=_get_method_signature(name, k))
         elif v_type is types.WrapperDescriptorType:
-            attrs[k] = _encode_attr('wrapper_descriptor', doc=v.__doc__)
+            attrs[k] = _encode_attr('wrapper_descriptor', doc=v.__doc__, signature=_get_method_signature(name, k))
         elif v_type is types.ClassMethodDescriptorType:
             attrs[k] = _encode_attr('classmethod', doc=v.__doc__, signature=_get_method_signature(name, k))
         elif v_type is staticmethod:
@@ -461,7 +468,7 @@ def _build_type_entry(name: str) -> dict[str, Any]:
             assert False, (name, k, v, v_type)
     if name == 'bool': # patch up bool to reflect it not being inherited from int
         assert '__bool__' not in attrs
-        attrs['__bool__'] = _encode_attr('wrapper_descriptor', doc=int.__dict__['__bool__'].__doc__)
+        attrs['__bool__'] = _encode_attr('wrapper_descriptor', doc=int.__dict__['__bool__'].__doc__, signature=_get_method_signature('int', '__bool__'))
         assert '__format__' not in attrs
         attrs['__format__'] = _encode_attr('method', doc=int.__dict__['__format__'].__doc__, signature=_get_method_signature('int', '__format__'))
     ret: dict[str, Any] = {'kind': 'type', 'signature': _get_type_signature(name), 'attrs': attrs}
