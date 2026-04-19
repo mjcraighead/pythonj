@@ -23,9 +23,7 @@ def any(iterable) -> bool:
 
 def bin(arg) -> str:
     value: int = _operator.index(arg)
-    if value < 0:
-        return f'-0b{-value:b}'
-    return f'0b{value:b}'
+    return f'{value:#b}'
 
 def delattr(obj, name) -> None:
     if not __pythonj_isinstance__(name, str):
@@ -72,9 +70,7 @@ def hash(arg) -> int:
 
 def hex(arg) -> str:
     value: int = _operator.index(arg)
-    if value < 0:
-        return f'-0x{-value:x}'
-    return f'0x{value:x}'
+    return f'{value:#x}'
 
 def isinstance(obj, class_or_tuple) -> bool:
     if __pythonj_isinstance__(class_or_tuple, tuple):
@@ -105,9 +101,7 @@ def next(iterator, default):
 
 def oct(arg) -> str:
     value: int = _operator.index(arg)
-    if value < 0:
-        return f'-0o{-value:o}'
-    return f'0o{value:o}'
+    return f'{value:#o}'
 
 def repr(arg) -> str:
     ret = __pythonj_lookup_attr__(type(arg), '__repr__')(arg)
@@ -449,11 +443,14 @@ class bytes:
                 continue
             if i + 1 >= n:
                 raise ValueError('fromhex() arg must contain an even number of hexadecimal digits')
-            hi = string[i]
-            lo = string[i + 1]
+            hi: int
+            lo: int
             if is_str:
-                hi = ord(hi)
-                lo = ord(lo)
+                hi = ord(string[i])
+                lo = ord(string[i + 1])
+            else:
+                hi = string[i]
+                lo = string[i + 1]
             value: int
             if 48 <= hi <= 57:
                 value = hi - 48

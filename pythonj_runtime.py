@@ -17,9 +17,8 @@ def _init_bound_args(args: tuple, max_total: int) -> list:
     return bound_args
 
 def _find_name(names: tuple, kw: str, start: int) -> int:
-    names_len = len(names)
     i: int
-    for i in range(start, names_len):
+    for i in range(start, len(names)):
         if kw == names[i]:
             return i
     return __pythonj_null__
@@ -419,13 +418,10 @@ def _pyj_float_parse_spec(spec: str) -> tuple:
     n: int
     fill, align, sign, z, alt, zero, width, grouping, precision, type_char, i, n = _pyj_format_parse_common(spec)
 
-    if type_char and type_char not in 'eEfFgGn%':
-        if i != n:
-            raise _pyj_invalid_format_spec(spec, 'float')
-        raise _pyj_unknown_format_code(type_char, 'float')
-
     if i != n:
         raise _pyj_invalid_format_spec(spec, 'float')
+    if type_char and type_char not in 'eEfFgGn%':
+        raise _pyj_unknown_format_code(type_char, 'float')
 
     if zero and align is None:
         fill = '0'
@@ -451,14 +447,10 @@ def _pyj_int_like_parse_spec(spec: str, type_name: str) -> tuple:
         raise ValueError('Negative zero coercion (z) not allowed in integer format specifier')
     if precision is not None:
         raise ValueError('Precision not allowed in integer format specifier')
-
-    if type_char and type_char not in 'boxXdn':
-        if i != n:
-            raise _pyj_invalid_format_spec(spec, type_name)
-        raise _pyj_unknown_format_code(type_char, type_name)
-
     if i != n:
         raise _pyj_invalid_format_spec(spec, type_name)
+    if type_char and type_char not in 'boxXdn':
+        raise _pyj_unknown_format_code(type_char, type_name)
 
     if zero and align is None:
         fill = '0'
@@ -496,14 +488,10 @@ def _pyj_str_parse_spec(spec: str) -> tuple:
         raise ValueError('Cannot specify grouping in string format specifier')
     if align == '=':
         raise ValueError("'=' alignment not allowed in string format specifier")
-
-    if type_char and type_char != 's':
-        if i != n:
-            raise _pyj_invalid_format_spec(spec, 'str')
-        raise _pyj_unknown_format_code(type_char, 'str')
-
     if i != n:
         raise _pyj_invalid_format_spec(spec, 'str')
+    if type_char and type_char != 's':
+        raise _pyj_unknown_format_code(type_char, 'str')
 
     if zero and align is None:
         fill = '0'
@@ -523,6 +511,7 @@ def _pyj_float_special_text(value: float, type_char: str) -> str:
     return text
 
 def _pyj_float_is_zero_result(magnitude_text: str) -> bool:
+    c: str
     for c in magnitude_text:
         if c in '0.,_%':
             continue
@@ -599,6 +588,7 @@ def _pyj_float_finish_text(fill, align, sign, z, width, grouping, value, magnitu
 
 def _pyj_replace_commas_with_underscores(text: str) -> str:
     out: str = ''
+    c: str
     for c in text:
         out += '_' if c == ',' else c
     return out
@@ -707,13 +697,15 @@ def _pyj_float_format_finite_core(value: float, alt: bool, grouping, precision, 
     return ret
 
 def pyj_float_format(value: float, format_spec: str) -> str:
+    fill: str
+    type_char: str
     fill, align, sign, z, alt, width, grouping, precision, type_char = _pyj_float_parse_spec(format_spec)
 
     magnitude_text: str
     if not math.isfinite(value):
         magnitude_text = _pyj_float_special_text(value, type_char)
     else:
-        core_value = abs(value)
+        core_value: float = abs(value)
         if type_char == '%':
             core_value *= 100.0
             if not math.isfinite(core_value):
@@ -900,6 +892,7 @@ def _pyj_percent_apply_width(text: str, flags, width) -> str:
 
 def _pyj_percent_without_zero_flag(flags: str) -> str:
     ret = []
+    c: str
     for c in flags:
         if c != '0':
             ret.append(c)
@@ -1093,7 +1086,7 @@ def pyj_percent_format(fmt: str, args) -> str:
         conv = fmt[i]
         i += 1
         if conv not in 'diuoxXeEfFgGcrsa':
-            raise ValueError(f"unsupported format character {conv!r} (0x{ord(conv):x}) at index {i - 1}")
+            raise ValueError(f'unsupported format character {conv!r} ({ord(conv):#x}) at index {i - 1}')
 
         if mapping_key is None:
             if arg_index >= len(arg_seq):
