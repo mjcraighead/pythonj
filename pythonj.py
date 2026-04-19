@@ -2112,17 +2112,15 @@ class LoweringVisitor(ast.NodeVisitor):
             value = self.cast_assignment(target.id, resolution, value)
             yield ir.AssignStatement(self.visit(target), value)
         elif isinstance(target, ast.Attribute):
-            temp_name = self.scope.make_temp()
-            yield ir.LocalDecl('var', temp_name, value)
+            yield ir.LocalDecl('var', temp_name := self.scope.make_temp(), value)
             yield ir.method_call_statement(self.visit(target.value), 'setAttr', [ir.StrLiteral(target.attr), ir.Identifier(temp_name)])
         elif isinstance(target, ast.Subscript):
-            temp_name = self.scope.make_temp()
-            yield ir.LocalDecl('var', temp_name, value)
+            yield ir.LocalDecl('var', temp_name := self.scope.make_temp(), value)
             yield ir.method_call_statement(self.visit(target.value), 'setItem', [self.visit(target.slice), ir.Identifier(temp_name)])
         elif isinstance(target, (ast.Tuple, ast.List)):
-            temp_name = self.scope.make_temp()
             unpack_method = 'unpackSequenceTuple' if value.java_type() == 'PyTuple' else 'unpackSequence'
-            yield ir.LocalDecl('var', temp_name, ir.StaticMethodCall('Runtime', unpack_method, [value, ir.IntLiteral(len(target.elts))]))
+            value = ir.StaticMethodCall('Runtime', unpack_method, [value, ir.IntLiteral(len(target.elts))])
+            yield ir.LocalDecl('var', temp_name := self.scope.make_temp(), value)
             for (i, subtarget) in enumerate(target.elts):
                 yield from self.emit_bind(subtarget, ir.ArrayAccess(ir.Identifier(temp_name), ir.IntLiteral(i)))
         else:
@@ -2158,8 +2156,7 @@ class LoweringVisitor(ast.NodeVisitor):
             value = self.cast_assignment(node.target.id, resolution, value)
             code = ir.AssignStatement(self.ident_expr_by_resolution(node.target.id, resolution), value)
         elif isinstance(node.target, ast.Attribute):
-            temp_name = self.scope.make_temp()
-            self.code.append(ir.LocalDecl('var', temp_name, self.visit(node.target.value)))
+            self.code.append(ir.LocalDecl('var', temp_name := self.scope.make_temp(), self.visit(node.target.value)))
             code = ir.method_call_statement(ir.Identifier(temp_name), 'setAttr', [
                 ir.StrLiteral(node.target.attr),
                 ir.MethodCall(
@@ -2169,10 +2166,8 @@ class LoweringVisitor(ast.NodeVisitor):
                 )
             ])
         elif isinstance(node.target, ast.Subscript):
-            temp_name0 = self.scope.make_temp()
-            temp_name1 = self.scope.make_temp()
-            self.code.append(ir.LocalDecl('var', temp_name0, self.visit(node.target.value)))
-            self.code.append(ir.LocalDecl('var', temp_name1, self.visit(node.target.slice)))
+            self.code.append(ir.LocalDecl('var', temp_name0 := self.scope.make_temp(), self.visit(node.target.value)))
+            self.code.append(ir.LocalDecl('var', temp_name1 := self.scope.make_temp(), self.visit(node.target.slice)))
             code = ir.method_call_statement(ir.Identifier(temp_name0), 'setItem', [
                 ir.Identifier(temp_name1),
                 ir.MethodCall(
@@ -2346,9 +2341,8 @@ class LoweringVisitor(ast.NodeVisitor):
                 ),
             ]
         else:
-            temp_iter = self.scope.make_temp()
             return [
-                ir.LocalDecl('var', temp_iter, ir.iter(iterable)),
+                ir.LocalDecl('var', temp_iter := self.scope.make_temp(), ir.iter(iterable)),
                 ir.ForStatement(
                     'var', temp_element, ir.MethodCall(ir.Identifier(temp_iter), 'next', []),
                     ir.BinaryOp('!=', ir.Identifier(temp_element), ir.Null()),
@@ -2377,8 +2371,7 @@ class LoweringVisitor(ast.NodeVisitor):
             self.error(node.lineno, "multiple-item 'with' statements are unsupported")
         item = node.items[0]
 
-        temp_name = self.scope.make_temp()
-        self.code.append(ir.LocalDecl('var', temp_name, self.visit(item.context_expr)))
+        self.code.append(ir.LocalDecl('var', temp_name := self.scope.make_temp(), self.visit(item.context_expr)))
         if item.optional_vars is None:
             self.code.append(ir.method_call_statement(ir.Identifier(temp_name), 'enter', []))
         else:
