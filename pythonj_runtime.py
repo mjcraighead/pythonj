@@ -349,7 +349,7 @@ def _pyj_format_split_sign(text: str) -> tuple:
         return (text[0], text[1:])
     return ('', text)
 
-def _pyj_format_apply_width(text: str, fill, align, width, default_align) -> str:
+def _pyj_format_apply_width(text: str, fill, align, width, default_align: str) -> str:
     if width is None or len(text) >= width:
         return text
 
@@ -371,7 +371,7 @@ def _pyj_format_apply_width(text: str, fill, align, width, default_align) -> str
         return sign + pad + rest
     assert False, align
 
-def _pyj_format_group_digits(digits, grouping, group_size) -> str:
+def _pyj_format_group_digits(digits: str, grouping, group_size: int) -> str:
     if grouping is None:
         return digits
     parts = []
@@ -384,7 +384,7 @@ def _pyj_format_group_digits(digits, grouping, group_size) -> str:
     parts.reverse()
     return grouping_str.join(parts)
 
-def _pyj_format_zero_fill_grouped(sign, prefix, digits, grouping, group_size, suffix, width) -> str:
+def _pyj_format_zero_fill_grouped(sign: str, prefix: str, digits: str, grouping, group_size: int, suffix: str, width: int) -> str:
     if grouping is None:
         return sign + prefix + ('0' * (width - len(sign) - len(prefix) - len(digits) - len(suffix))) + digits + suffix
 
@@ -513,16 +513,11 @@ def _pyj_float_special_text(value: float, type_char: str) -> str:
 def _pyj_float_is_zero_result(magnitude_text: str) -> bool:
     c: str
     for c in magnitude_text:
-        if c in '0.,_%':
-            continue
-        if c in 'eE':
-            continue
-        if c in '+-':
-            continue
-        return False
+        if c not in '0.,_%eE+-':
+            return False
     return True
 
-def _pyj_float_sign_prefix(value, sign, z, magnitude_text: str) -> str:
+def _pyj_float_sign_prefix(value: float, sign: str, z: bool, magnitude_text: str) -> str:
     if not math.isfinite(value):
         if not math.isinf(value):
             if sign == '+':
@@ -530,7 +525,7 @@ def _pyj_float_sign_prefix(value, sign, z, magnitude_text: str) -> str:
             if sign == ' ':
                 return ' '
             return ''
-        if math.copysign(1.0, value) < 0.0:
+        if value < 0.0:
             return '-'
         if sign == '+':
             return '+'
@@ -580,22 +575,16 @@ def _pyj_float_apply_zero_fill(text: str, grouping, width) -> str:
 
     return _pyj_format_zero_fill_grouped(sign, '', integer_digits, grouping, 3, fractional_suffix + exp_suffix, width)
 
-def _pyj_float_finish_text(fill, align, sign, z, width, grouping, value, magnitude_text: str) -> str:
+def _pyj_float_finish_text(fill, align, sign: str, z: bool, width, grouping, value: float, magnitude_text: str) -> str:
     text = _pyj_float_sign_prefix(value, sign, z, magnitude_text) + magnitude_text
     if align == '=' and fill == '0' and width is not None:
         return _pyj_float_apply_zero_fill(text, grouping, width)
     return _pyj_format_apply_width(text, fill, align, width, '>')
 
-def _pyj_replace_commas_with_underscores(text: str) -> str:
-    out: str = ''
-    c: str
-    for c in text:
-        out += '_' if c == ',' else c
-    return out
-
 def _pyj_trim_fixed_fraction(text: str) -> str:
-    while text.endswith('0') and not text.endswith('.0'):
-        text = text[:-1]
+    text = text.rstrip('0')
+    if text.endswith('.'):
+        text += '0'
     return text
 
 def _pyj_float_python_style_finite_str(value: float) -> str:
@@ -672,7 +661,7 @@ def _pyj_float_format_finite_core(value: float, alt: bool, grouping, precision, 
 
     ret: str = __pythonj_float_java_format__(fmt, value)
     if grouping == '_':
-        ret = _pyj_replace_commas_with_underscores(ret)
+        ret = ret.replace(',', '_')
     if java_type == 'g' or java_type == 'G':
         exp_index: int = ret.find('e')
         if exp_index == -1:
@@ -698,6 +687,9 @@ def _pyj_float_format_finite_core(value: float, alt: bool, grouping, precision, 
 
 def pyj_float_format(value: float, format_spec: str) -> str:
     fill: str
+    sign: str
+    z: bool
+    alt: bool
     type_char: str
     fill, align, sign, z, alt, width, grouping, precision, type_char = _pyj_float_parse_spec(format_spec)
 
@@ -890,14 +882,6 @@ def _pyj_percent_apply_width(text: str, flags, width) -> str:
     align = '<' if '-' in flags else '>'
     return _pyj_format_apply_width(text, fill, align, width, '>')
 
-def _pyj_percent_without_zero_flag(flags: str) -> str:
-    ret = []
-    c: str
-    for c in flags:
-        if c != '0':
-            ret.append(c)
-    return ''.join(ret)
-
 def _pyj_percent_int_text(value, flags, width, precision, conv) -> str:
     is_negative = value < 0
     abs_value = -value if is_negative else value
@@ -974,19 +958,19 @@ def _pyj_percent_item_text(conv: str, flags, width, precision, arg) -> str:
         text = str(arg)
         if precision is not None:
             text = text[:precision]
-        return _pyj_percent_apply_width(text, _pyj_percent_without_zero_flag(flags), width)
+        return _pyj_percent_apply_width(text, flags.replace('0', ''), width)
     if conv == 'r':
         text = repr(arg)
         if precision is not None:
             text = text[:precision]
-        return _pyj_percent_apply_width(text, _pyj_percent_without_zero_flag(flags), width)
+        return _pyj_percent_apply_width(text, flags.replace('0', ''), width)
     if conv == 'a':
         text = ascii(arg)
         if precision is not None:
             text = text[:precision]
-        return _pyj_percent_apply_width(text, _pyj_percent_without_zero_flag(flags), width)
+        return _pyj_percent_apply_width(text, flags.replace('0', ''), width)
     if conv == 'c':
-        return _pyj_percent_apply_width(_pyj_percent_char_text(arg), _pyj_percent_without_zero_flag(flags), width)
+        return _pyj_percent_apply_width(_pyj_percent_char_text(arg), flags.replace('0', ''), width)
     if conv in 'diu':
         return _pyj_percent_int_text(_pyj_percent_signed_int_arg(arg, conv), flags, width, precision, conv)
     if conv in 'oxX':
