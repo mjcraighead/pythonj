@@ -2342,7 +2342,7 @@ class LoweringVisitor(ast.NodeVisitor):
             ]
         else:
             return [
-                ir.LocalDecl('var', temp_iter := self.scope.make_temp(), ir.iter(iterable)),
+                ir.LocalDecl('var', temp_iter := self.scope.make_temp(), ir.py_iter(iterable)),
                 ir.ForStatement(
                     'var', temp_element, ir.MethodCall(ir.Identifier(temp_iter), 'next', []),
                     ir.BinaryOp('!=', ir.Identifier(temp_element), ir.Null()),
@@ -2898,11 +2898,11 @@ class LoweringVisitor(ast.NodeVisitor):
     def visit_GeneratorExp(self, node) -> ir.Expr:
         if len(node.generators) != 1:
             self.error(node.lineno, 'generator expressions with multiple for clauses are unsupported')
-            return ir.iter(ir.CreateObject('PyTuple', []))
+            return ir.py_iter(ir.CreateObject('PyTuple', []))
         generator = node.generators[0]
         if generator.is_async:
             self.error(node.lineno, 'async generator expressions are unsupported')
-            return ir.iter(ir.CreateObject('PyTuple', []))
+            return ir.py_iter(ir.CreateObject('PyTuple', []))
 
         qualname = self.qualname('<genexpr>')
         java_name = f'pylambda{self.n_lambdas}'
@@ -2938,7 +2938,7 @@ class LoweringVisitor(ast.NodeVisitor):
             ctor_body: list[ir.Statement] = [
                 ir.SuperConstructorCall([ir.StrLiteral('<genexpr>'), ir.StrLiteral(qualname)]),
                 *(ir.AssignStatement(ir.Identifier(f'pycell_{name}'), ir.Identifier(f'_pycell_{name}')) for name in free_var_names),
-                ir.AssignStatement(ir.Identifier('pyiter_iterable'), ir.iter(ir.Identifier('iterable'))),
+                ir.AssignStatement(ir.Identifier('pyiter_iterable'), ir.py_iter(ir.Identifier('iterable'))),
             ]
             assert java_name not in self.classes
             self.classes[java_name] = ir.ClassDecl('private static final', java_name, 'PyGenerator', [

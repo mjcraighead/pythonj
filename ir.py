@@ -1254,7 +1254,21 @@ def unbox_str(expr: Expr) -> Expr:
         return Field(expr, 'value', 'String')
     return Field(CastExpr('PyString', expr), 'value', 'String')
 
-def iter(obj: Expr) -> Expr:
+def py_format(obj: Expr, spec: Expr) -> Expr:
+    if isinstance(spec, PyConstant) and isinstance(spec.value, str) and not spec.value:
+        java_type = obj.java_type()
+        if java_type == 'PyInt':
+            return CreateObject('PyString', [static_method_call('Long', 'toString', [unbox_int(obj)])])
+        if java_type == 'PyString':
+            return obj
+    return CreateObject('PyString', [MethodCall(obj, 'format', [unbox_str(spec)], 'String')])
+
+def py_index(obj: Expr) -> Expr:
+    if obj.java_type() == 'PyInt':
+        return unbox_int(obj)
+    return MethodCall(obj, 'indexValue', [], 'long')
+
+def py_iter(obj: Expr) -> Expr:
     match obj.java_type():
         case 'PyBytes':
             return CreateObject('PyBytesIter', [obj])
@@ -1273,20 +1287,6 @@ def iter(obj: Expr) -> Expr:
         case 'PyTuple':
             return CreateObject('PyTupleIter', [obj])
     return MethodCall(obj, 'iter', [], 'PyIter')
-
-def py_format(obj: Expr, spec: Expr) -> Expr:
-    if isinstance(spec, PyConstant) and isinstance(spec.value, str) and not spec.value:
-        java_type = obj.java_type()
-        if java_type == 'PyInt':
-            return CreateObject('PyString', [static_method_call('Long', 'toString', [unbox_int(obj)])])
-        if java_type == 'PyString':
-            return obj
-    return CreateObject('PyString', [MethodCall(obj, 'format', [unbox_str(spec)], 'String')])
-
-def py_index(obj: Expr) -> Expr:
-    if obj.java_type() == 'PyInt':
-        return unbox_int(obj)
-    return MethodCall(obj, 'indexValue', [], 'long')
 
 def py_len(obj: Expr) -> Expr:
     match obj.java_type():
@@ -1371,7 +1371,7 @@ def static_method_call(class_name: str, method: str, args: list[Expr], return_ty
         case ('Runtime', 'pythonjIsDataDescriptor'):
             return static_method_call('PyBool', 'create', [MethodCall(args[0], 'isDataDescriptor', [], 'boolean')])
         case ('Runtime', 'pythonjIter'):
-            return iter(args[0])
+            return py_iter(args[0])
         case ('Runtime', 'pythonjLen'):
             return py_len(args[0])
         case ('Runtime', 'pythonjLookupAttr'):
