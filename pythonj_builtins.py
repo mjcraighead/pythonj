@@ -1174,6 +1174,60 @@ class str:
             return self[:-len(suffix)]
         return self
 
+    def replace(self: str, old, new, count) -> str:
+        if not __pythonj_isinstance__(old, str):
+            raise TypeError(f'replace() argument 1 must be str, not {type(old).__name__}')
+        if not __pythonj_isinstance__(new, str):
+            raise TypeError(f'replace() argument 2 must be str, not {type(new).__name__}')
+        max_count: int = _operator.index(count)
+        if max_count == 0:
+            return self
+        replace_all: bool = max_count < 0
+        replacements_left: int = -1 if replace_all else max_count
+        self_len: int = len(self)
+        old_len: int = len(old)
+        i: int = 0
+        if old_len == 0:
+            max_inserts: int = self_len + 1 if replace_all or max_count > self_len + 1 else max_count
+            ret = __pythonj_str_builder__(self_len + max_inserts * len(new))
+            while i < self_len:
+                if replacements_left != 0:
+                    __pythonj_str_builder_append__(ret, new)
+                    if replacements_left > 0:
+                        replacements_left -= 1
+                __pythonj_str_builder_append__(ret, self[i])
+                i += 1
+            if replacements_left != 0:
+                __pythonj_str_builder_append__(ret, new)
+            return __pythonj_str_builder_finish__(ret)
+        ret = __pythonj_str_builder__(self_len + len(new))
+        limit: int = self_len - old_len
+        while i <= limit:
+            if replacements_left != 0 and self[i:i + old_len] == old:
+                __pythonj_str_builder_append__(ret, new)
+                i += old_len
+                if replacements_left > 0:
+                    replacements_left -= 1
+            else:
+                __pythonj_str_builder_append__(ret, self[i])
+                i += 1
+        while i < self_len:
+            __pythonj_str_builder_append__(ret, self[i])
+            i += 1
+        return __pythonj_str_builder_finish__(ret)
+
+    def rstrip(self: str, chars) -> str:
+        if chars is None:
+            strip_chars: str = ' \t\n\v\f\r\x1c\x1d\x1e\x1f\x85\xa0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u2028\u2029\u202f\u205f\u3000'
+        elif __pythonj_isinstance__(chars, str):
+            strip_chars = chars
+        else:
+            raise TypeError('rstrip arg must be None or str')
+        end: int = len(self)
+        while end > 0 and self[end - 1] in strip_chars:
+            end -= 1
+        return self[:end]
+
     def capitalize(self): __pythonj_unsupported__()
     def casefold(self): __pythonj_unsupported__()
     def center(self, width, fillchar): __pythonj_unsupported__()
@@ -1193,13 +1247,11 @@ class str:
     def ljust(self, width, fillchar): __pythonj_unsupported__()
     def lstrip(self, chars): __pythonj_unsupported__()
     def partition(self, sep): __pythonj_unsupported__()
-    def replace(self, old, new, count): __pythonj_unsupported__()
     def rfind(self, sub, start, end): __pythonj_unsupported__()
     def rindex(self, sub, start, end): __pythonj_unsupported__()
     def rjust(self, width, fillchar): __pythonj_unsupported__()
     def rpartition(self, sep): __pythonj_unsupported__()
     def rsplit(self, sep, maxsplit): __pythonj_unsupported__()
-    def rstrip(self, chars): __pythonj_unsupported__()
     def splitlines(self, keepends): __pythonj_unsupported__()
     def strip(self, chars): __pythonj_unsupported__()
     def swapcase(self): __pythonj_unsupported__()
