@@ -467,8 +467,9 @@ def _build_type_entry(name: str) -> dict[str, Any]:
         else:
             assert False, (name, k, v, v_type)
     if name == 'bool': # patch up bool to reflect it not being inherited from int
-        assert '__bool__' not in attrs
-        attrs['__bool__'] = _encode_attr('wrapper_descriptor', doc=int.__dict__['__bool__'].__doc__, signature=_get_method_signature('int', '__bool__'))
+        for method_name in ['__bool__', '__index__']:
+            assert method_name not in attrs, method_name
+            attrs[method_name] = _encode_attr('wrapper_descriptor', doc=int.__dict__[method_name].__doc__, signature=_get_method_signature('int', method_name))
         assert '__format__' not in attrs
         attrs['__format__'] = _encode_attr('method', doc=int.__dict__['__format__'].__doc__, signature=_get_method_signature('int', '__format__'))
     ret: dict[str, Any] = {'kind': 'type', 'signature': _get_type_signature(name), 'attrs': attrs}

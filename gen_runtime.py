@@ -638,6 +638,8 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
                     wrapper_return_expr = ir.static_method_call('PyBool', 'create', [ir.MethodCall(ir.Identifier('self'), 'contains', [ir.Identifier('arg0')], 'boolean')])
                 elif method_name == '__hash__':
                     wrapper_return_expr = ir.CreateObject('PyInt', [ir.CastExpr('long', ir.MethodCall(ir.Identifier('self'), 'hashCode', [], 'int'))])
+                elif method_name == '__index__':
+                    wrapper_return_expr = ir.CreateObject('PyInt', [ir.MethodCall(ir.Identifier('self'), 'indexValue', [], 'long')])
                 elif method_name == '__iter__':
                     wrapper_return_expr = ir.MethodCall(ir.Identifier('self'), 'iter', [], 'PyIter')
                 elif method_name == '__len__':
