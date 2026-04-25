@@ -224,6 +224,4 @@ public final class PyBytes extends PyObject {
     @Override public String repr() { return slotBasedRepr(); }
 
     public static PyObject pymethod_maketrans(PyObject frm, PyObject to) { throw new UnsupportedOperationException(); }
-
-    public PyObject pymethod___bytes__() { throw new UnsupportedOperationException(); }
 }

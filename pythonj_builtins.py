@@ -372,6 +372,12 @@ class bytearray:
     def zfill(self, width): __pythonj_unsupported__()
 
 class bytes:
+    def __bytes__(self: bytes) -> bytes:
+        return self
+
+    def __getnewargs__(self: bytes) -> tuple:
+        return (self,)
+
     def __repr__(self: bytes) -> str:
         ret = __pythonj_str_builder__(len(self) + 3)
         __pythonj_str_builder_append__(ret, "b'")
@@ -414,6 +420,27 @@ class bytes:
                     __pythonj_bytes_builder_append_int__(ret, c + 32)
             else:
                 __pythonj_bytes_builder_append_int__(ret, c)
+        return __pythonj_bytes_builder_finish__(ret)
+
+    def center(self: bytes, width, fillchar) -> bytes:
+        width = _operator.index(width)
+        if not __pythonj_isinstance__(fillchar, (bytes, bytearray)) or len(fillchar) != 1:
+            if __pythonj_isinstance__(fillchar, (bytes, bytearray)):
+                raise TypeError(f'center(): argument 2 must be a byte string of length 1, not a {type(fillchar).__name__} object of length {len(fillchar)}')
+            raise TypeError(f'center() argument 2 must be a byte string of length 1, not {type(fillchar).__name__}')
+        if width <= len(self):
+            return self
+        margin: int = width - len(self)
+        left: int = margin // 2
+        right: int = margin - left
+        fill: int = fillchar[0]
+        ret = __pythonj_bytes_builder__(width)
+        i: int
+        for i in range(left):
+            __pythonj_bytes_builder_append_int__(ret, fill)
+        __pythonj_bytes_builder_append_bytes__(ret, self)
+        for i in range(right):
+            __pythonj_bytes_builder_append_int__(ret, fill)
         return __pythonj_bytes_builder_finish__(ret)
 
     def count(self: bytes, sub, start, end) -> int:
@@ -464,6 +491,29 @@ class bytes:
         if suffix_len > end - start:
             return False
         return self[end - suffix_len:end] == suffix
+
+    def expandtabs(self: bytes, tabsize) -> bytes:
+        tabsize = _operator.index(tabsize)
+        ret = __pythonj_bytes_builder__(len(self))
+        col: int = 0
+        c: int
+        spaces: int
+        i: int
+        for c in self:
+            if c == 9:
+                spaces = tabsize - (col % tabsize)
+                if spaces <= 0:
+                    spaces = tabsize
+                for i in range(spaces):
+                    __pythonj_bytes_builder_append_int__(ret, 32)
+                col += spaces
+            else:
+                __pythonj_bytes_builder_append_int__(ret, c)
+                if c == 10 or c == 13:
+                    col = 0
+                else:
+                    col += 1
+        return __pythonj_bytes_builder_finish__(ret)
 
     def find(self: bytes, sub, start, end) -> int:
         indices = slice(start, end).indices(len(self))
@@ -681,6 +731,22 @@ class bytes:
                 has_cased = True
         return has_cased
 
+    def ljust(self: bytes, width, fillchar) -> bytes:
+        width = _operator.index(width)
+        if not __pythonj_isinstance__(fillchar, (bytes, bytearray)) or len(fillchar) != 1:
+            if __pythonj_isinstance__(fillchar, (bytes, bytearray)):
+                raise TypeError(f'ljust(): argument 2 must be a byte string of length 1, not a {type(fillchar).__name__} object of length {len(fillchar)}')
+            raise TypeError(f'ljust() argument 2 must be a byte string of length 1, not {type(fillchar).__name__}')
+        if width <= len(self):
+            return self
+        ret = __pythonj_bytes_builder__(width)
+        __pythonj_bytes_builder_append_bytes__(ret, self)
+        fill: int = fillchar[0]
+        i: int
+        for i in range(width - len(self)):
+            __pythonj_bytes_builder_append_int__(ret, fill)
+        return __pythonj_bytes_builder_finish__(ret)
+
     def lower(self: bytes) -> bytes:
         ret = __pythonj_bytes_builder__(__pythonj_len__(self))
         c: int
@@ -724,6 +790,53 @@ class bytes:
             return self[:-len(suffix)]
         return self
 
+    def replace(self: bytes, old, new, count) -> bytes:
+        if not __pythonj_isinstance__(old, (bytes, bytearray)):
+            raise TypeError(f'a bytes-like object is required, not {type(old).__name__!r}')
+        if not __pythonj_isinstance__(new, (bytes, bytearray)):
+            raise TypeError(f'a bytes-like object is required, not {type(new).__name__!r}')
+        count_left: int = _operator.index(count)
+        if count_left < 0:
+            count_left = len(self) + 1
+        if count_left == 0:
+            return self
+        old_len = len(old)
+        if old_len == 0:
+            ret = __pythonj_bytes_builder__(None)
+            i: int = 0
+            while i < len(self):
+                if count_left > 0:
+                    if __pythonj_isinstance__(new, bytes):
+                        __pythonj_bytes_builder_append_bytes__(ret, new)
+                    else:
+                        __pythonj_bytes_builder_append_bytearray__(ret, new)
+                    count_left -= 1
+                __pythonj_bytes_builder_append_int__(ret, self[i])
+                i += 1
+            if count_left > 0:
+                if __pythonj_isinstance__(new, bytes):
+                    __pythonj_bytes_builder_append_bytes__(ret, new)
+                else:
+                    __pythonj_bytes_builder_append_bytearray__(ret, new)
+            return __pythonj_bytes_builder_finish__(ret)
+        ret = __pythonj_bytes_builder__(None)
+        i = 0
+        while i + old_len <= len(self):
+            if count_left > 0 and self[i:i + old_len] == old:
+                if __pythonj_isinstance__(new, bytes):
+                    __pythonj_bytes_builder_append_bytes__(ret, new)
+                else:
+                    __pythonj_bytes_builder_append_bytearray__(ret, new)
+                count_left -= 1
+                i += old_len
+            else:
+                __pythonj_bytes_builder_append_int__(ret, self[i])
+                i += 1
+        while i < len(self):
+            __pythonj_bytes_builder_append_int__(ret, self[i])
+            i += 1
+        return __pythonj_bytes_builder_finish__(ret)
+
     def rfind(self: bytes, sub, start, end) -> int:
         indices = slice(start, end).indices(len(self))
         start = indices[0]
@@ -752,6 +865,22 @@ class bytes:
             raise ValueError('subsection not found')
         return ret
 
+    def rjust(self: bytes, width, fillchar) -> bytes:
+        width = _operator.index(width)
+        if not __pythonj_isinstance__(fillchar, (bytes, bytearray)) or len(fillchar) != 1:
+            if __pythonj_isinstance__(fillchar, (bytes, bytearray)):
+                raise TypeError(f'rjust(): argument 2 must be a byte string of length 1, not a {type(fillchar).__name__} object of length {len(fillchar)}')
+            raise TypeError(f'rjust() argument 2 must be a byte string of length 1, not {type(fillchar).__name__}')
+        if width <= len(self):
+            return self
+        ret = __pythonj_bytes_builder__(width)
+        fill: int = fillchar[0]
+        i: int
+        for i in range(width - len(self)):
+            __pythonj_bytes_builder_append_int__(ret, fill)
+        __pythonj_bytes_builder_append_bytes__(ret, self)
+        return __pythonj_bytes_builder_finish__(ret)
+
     def rpartition(self: bytes, sep) -> tuple:
         if not __pythonj_isinstance__(sep, (bytes, bytearray)):
             raise TypeError(f'a bytes-like object is required, not {type(sep).__name__!r}')
@@ -761,6 +890,46 @@ class bytes:
         if i == -1:
             return (b'', b'', self)
         return (self[:i], sep, self[i + len(sep):])
+
+    def rsplit(self: bytes, sep, maxsplit) -> list:
+        maxsplit = _operator.index(maxsplit)
+        if maxsplit < 0:
+            maxsplit = len(self)
+        ret = []
+        if sep is None:
+            end: int = len(self)
+            while end > 0 and maxsplit > 0:
+                while end > 0 and self[end - 1] in b' \t\n\r\x0b\x0c':
+                    end -= 1
+                if end == 0:
+                    break
+                start: int = end
+                while start > 0 and self[start - 1] not in b' \t\n\r\x0b\x0c':
+                    start -= 1
+                ret.append(self[start:end])
+                maxsplit -= 1
+                end = start
+            while end > 0 and self[end - 1] in b' \t\n\r\x0b\x0c':
+                end -= 1
+            if end > 0:
+                ret.append(self[:end])
+            ret.reverse()
+            return ret
+        if not __pythonj_isinstance__(sep, (bytes, bytearray)):
+            raise TypeError(f'a bytes-like object is required, not {type(sep).__name__!r}')
+        if len(sep) == 0:
+            raise ValueError('empty separator')
+        end = len(self)
+        while maxsplit > 0:
+            i = self.rfind(sep, 0, end)
+            if i == -1:
+                break
+            ret.append(self[i + len(sep):end])
+            maxsplit -= 1
+            end = i
+        ret.append(self[:end])
+        ret.reverse()
+        return ret
 
     def rstrip(self: bytes, bytes_arg) -> bytes:
         if bytes_arg is None:
@@ -773,6 +942,62 @@ class bytes:
         while i > 0 and self[i - 1] in strip_set:
             i -= 1
         return self[:i]
+
+    def split(self: bytes, sep, maxsplit) -> list:
+        maxsplit = _operator.index(maxsplit)
+        if maxsplit < 0:
+            maxsplit = len(self)
+        ret = []
+        if sep is None:
+            i: int = 0
+            n = len(self)
+            while i < n and self[i] in b' \t\n\r\x0b\x0c':
+                i += 1
+            while i < n and maxsplit > 0:
+                j: int = i
+                while j < n and self[j] not in b' \t\n\r\x0b\x0c':
+                    j += 1
+                ret.append(self[i:j])
+                maxsplit -= 1
+                i = j
+                while i < n and self[i] in b' \t\n\r\x0b\x0c':
+                    i += 1
+            if i < n:
+                ret.append(self[i:])
+            return ret
+        if not __pythonj_isinstance__(sep, (bytes, bytearray)):
+            raise TypeError(f'a bytes-like object is required, not {type(sep).__name__!r}')
+        if len(sep) == 0:
+            raise ValueError('empty separator')
+        i = 0
+        while maxsplit > 0:
+            j = self.find(sep, i, None)
+            if j == -1:
+                break
+            ret.append(self[i:j])
+            maxsplit -= 1
+            i = j + len(sep)
+        ret.append(self[i:])
+        return ret
+
+    def splitlines(self: bytes, keepends) -> list:
+        ret = []
+        i: int = 0
+        n = len(self)
+        keepends = bool(keepends)
+        while i < n:
+            start: int = i
+            while i < n and self[i] not in b'\n\r\x0b\x0c\x1c\x1d\x1e\x85':
+                i += 1
+            line_end: int = i
+            if i < n:
+                i += 1
+                if self[i - 1] == 13 and i < n and self[i] == 10:
+                    i += 1
+                ret.append(self[start:i] if keepends else self[start:line_end])
+            elif start != n:
+                ret.append(self[start:i])
+        return ret
 
     def startswith(self: bytes, prefix, start, end) -> bool:
         if isinstance(prefix, tuple):
@@ -840,17 +1065,27 @@ class bytes:
                 __pythonj_bytes_builder_append_int__(ret, c)
         return __pythonj_bytes_builder_finish__(ret)
 
-    def center(self, width, fillchar): __pythonj_unsupported__()
+    def zfill(self: bytes, width) -> bytes:
+        width = _operator.index(width)
+        if width <= len(self):
+            return self
+        fill: int = width - len(self)
+        ret = __pythonj_bytes_builder__(width)
+        i: int
+        start: int = 0
+        if self and (self[0] == 43 or self[0] == 45):
+            __pythonj_bytes_builder_append_int__(ret, self[0])
+            start = 1
+        for i in range(fill):
+            __pythonj_bytes_builder_append_int__(ret, 48)
+        i = start
+        while i < len(self):
+            __pythonj_bytes_builder_append_int__(ret, self[i])
+            i += 1
+        return __pythonj_bytes_builder_finish__(ret)
+
     def decode(self, encoding, errors): __pythonj_unsupported__()
-    def expandtabs(self, tabsize): __pythonj_unsupported__()
-    def ljust(self, width, fillchar): __pythonj_unsupported__()
-    def replace(self, old, new, count): __pythonj_unsupported__()
-    def rjust(self, width, fillchar): __pythonj_unsupported__()
-    def rsplit(self, sep, maxsplit): __pythonj_unsupported__()
-    def split(self, sep, maxsplit): __pythonj_unsupported__()
-    def splitlines(self, keepends): __pythonj_unsupported__()
     def translate(self, table, delete): __pythonj_unsupported__()
-    def zfill(self, width): __pythonj_unsupported__()
 
 class dict:
     def __contains__(self: dict, key) -> bool:

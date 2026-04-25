@@ -75,26 +75,24 @@ def require_min_max_positional(args_len: int, kwargs: dict, kw_name: str, positi
 
 def bind_min_max_positional_or_keyword(args: tuple, kwargs: dict, kw_name: str, positional_name: str, positional_names: tuple, posonly_count: int, kwonly_names: tuple, min_args: int, max_positional: int, max_total: int, min_positional_style: bool, exact_args_style: bool) -> list:
     args_len = len(args)
+    kwargs_len = 0 if kwargs is __pythonj_null__ or not kwargs else len(kwargs)
     if exact_args_style and args_len != min_args:
         suffix = '' if min_args == 1 else 's'
         raise TypeError(f'{positional_name} expected {min_args} argument{suffix}, got {args_len}')
     if min_positional_style and args_len < min_args:
         suffix = '' if min_args == 1 else 's'
         raise TypeError(f'{positional_name}() takes at least {min_args} positional argument{suffix} ({args_len} given)')
-    if args_len > max_total:
-        raise _type_error_at_most_args(positional_name, max_total, args_len)
+    total_args = args_len + kwargs_len
+    if total_args > max_total:
+        if args_len == 0:
+            raise _type_error_at_most_keyword_args(kw_name, max_total, kwargs_len)
+        raise _type_error_at_most_args(positional_name, max_total, total_args)
 
     bound_args = _init_bound_args(args, max_total)
 
     unknown_kw = None
     if kwargs is not __pythonj_null__ and kwargs:
-        kwargs_len = len(kwargs)
         positional_names_len = len(positional_names)
-        total_args = args_len + kwargs_len
-        if total_args > max_total:
-            if args_len == 0:
-                raise _type_error_at_most_keyword_args(kw_name, max_total, kwargs_len)
-            raise _type_error_at_most_args(positional_name, max_total, total_args)
         for (kw, value) in kwargs.items():
             matched_index: int = _find_name(positional_names, kw, posonly_count)
             if matched_index is not __pythonj_null__:
