@@ -133,6 +133,11 @@ def issubclass(obj, class_or_tuple) -> bool:
         return False
     return __pythonj_issubclass__(obj, class_or_tuple)
 
+def iter(obj, sentinel):
+    if sentinel is not __pythonj_null__:
+        __pythonj_unsupported__()
+    return __pythonj_iter__(obj)
+
 def len(arg) -> int:
     return __pythonj_len__(arg)
 
@@ -161,6 +166,12 @@ def setattr(obj, name, value) -> None:
         raise TypeError(f'attribute name must be string, not {type(name).__name__!r}')
     __pythonj_lookup_attr__(type(obj), '__setattr__')(obj, name, value)
     return None
+
+def sorted(iterable, key, reverse) -> list:
+    ret = []
+    ret.extend(iterable)
+    ret.sort(key=key, reverse=reverse)
+    return ret
 
 def sum(iterable, start):
     if isinstance(start, str):

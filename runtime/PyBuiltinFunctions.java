@@ -218,12 +218,6 @@ final class PyBuiltinFunctionsImpl {
         Collections.sort(list);
         return new PyList(list);
     }
-    static PyIter pyfunc_iter(PyObject obj, PyObject sentinel) {
-        if (sentinel != null) {
-            throw new UnsupportedOperationException("iter() with callable+sentinel is not implemented");
-        }
-        return obj.iter();
-    }
     static PyObject minMaxImpl(PyObject[] args, PyDict kwargs, String name, boolean isMax) {
         int argsLength = args.length;
         if (argsLength < 1) {
@@ -341,11 +335,5 @@ final class PyBuiltinFunctionsImpl {
             System.out.print(endStr);
         }
         return PyNone.singleton;
-    }
-    static PyList pyfunc_sorted(PyObject iterable, PyObject key, PyObject reverse) {
-        var ret = new PyList();
-        Runtime.addIterableToCollection(ret.items, iterable);
-        ret.pymethod_sort(key, reverse);
-        return ret;
     }
 }

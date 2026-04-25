@@ -20,7 +20,7 @@ ALL_PYTHON_AUTHORED_IMPLS = {'bool', 'bytearray', 'bytes', 'float', 'int', 'obje
 PYTHON_AUTHORED_IMPLS = {
     'builtins': {
         'abs', 'all', 'any', 'ascii', 'bin', 'delattr', 'divmod', 'format', 'getattr', 'hasattr', 'hash', 'hex',
-        'isinstance', 'issubclass', 'len', 'next', 'oct', 'repr', 'setattr', 'sum',
+        'isinstance', 'issubclass', 'iter', 'len', 'next', 'oct', 'repr', 'setattr', 'sorted', 'sum',
     },
     'dict': {'__contains__', 'fromkeys', 'pop', 'setdefault'},
     'set': {'__contains__'},
