@@ -2287,12 +2287,17 @@ class LoweringVisitor(ast.NodeVisitor):
         temp_element = self.scope.make_temp()
         iterable_java_type = iterable.java_type()
         if iterable_java_type in {'PyList', 'PySet', 'PyTuple'}:
-            return [ir.ForEachStatement('var', temp_element, ir.Field(iterable, 'items'), [
+            items_type = {
+                'PyList': 'ArrayList<PyObject>',
+                'PySet': 'HashSet<PyObject>',
+                'PyTuple': 'PyObject[]',
+            }[iterable_java_type]
+            return [ir.ForEachStatement('var', temp_element, ir.Field(iterable, 'items', items_type), [
                 *self.emit_bind(target, ir.Identifier(temp_element)),
                 *body,
             ])]
         elif iterable_java_type == 'PyDict':
-            return [ir.ForEachStatement('var', temp_element, ir.MethodCall(ir.Field(iterable, 'items'), 'keySet', []), [
+            return [ir.ForEachStatement('var', temp_element, ir.MethodCall(ir.Field(iterable, 'items', 'LinkedHashMap<PyObject, PyObject>'), 'keySet', []), [
                 *self.emit_bind(target, ir.Identifier(temp_element)),
                 *body,
             ])]

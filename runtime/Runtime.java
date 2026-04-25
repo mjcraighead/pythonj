@@ -60,6 +60,13 @@ final class PyCell {
 final class PyStringBuilder extends PyTruthyObject {
     final StringBuilder value;
 
+    static StringBuilder newUnboxed() {
+        return new StringBuilder();
+    }
+    static StringBuilder newUnboxed(long capacity) {
+        return new StringBuilder(Math.toIntExact(capacity));
+    }
+
     PyStringBuilder() {
         value = new StringBuilder();
     }
@@ -74,6 +81,13 @@ final class PyStringBuilder extends PyTruthyObject {
 
 final class PyBytesBuilder extends PyTruthyObject {
     final ByteArrayOutputStream value;
+
+    static ByteArrayOutputStream newUnboxed() {
+        return new ByteArrayOutputStream();
+    }
+    static ByteArrayOutputStream newUnboxed(long capacity) {
+        return new ByteArrayOutputStream(Math.toIntExact(capacity));
+    }
 
     PyBytesBuilder() {
         value = new ByteArrayOutputStream();

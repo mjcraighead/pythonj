@@ -21,6 +21,10 @@ STATIC_METHOD_RETURN_TYPES = {
     ('Long', 'toString'): 'String',
     ('PyBool', 'create'): 'PyBool',
     ('PyBuiltinFunctionsImpl', 'pyfunc_ascii'): 'PyString',
+    ('PyBytesBuilder', 'newUnboxed'): 'java.io.ByteArrayOutputStream',
+    ('PyFloat', 'addUnboxed'): 'double',
+    ('PyFloat', 'mulUnboxed'): 'double',
+    ('PyFloat', 'subUnboxed'): 'double',
     ('PyInt', 'addUnboxed'): 'long',
     ('PyInt', 'andUnboxed'): 'long',
     ('PyInt', 'floorDivUnboxed'): 'long',
@@ -34,6 +38,7 @@ STATIC_METHOD_RETURN_TYPES = {
     ('PyInt', 'trueDivUnboxed'): 'double',
     ('PyInt', 'xorUnboxed'): 'long',
     ('PyString', 'reprOf'): 'String',
+    ('PyStringBuilder', 'newUnboxed'): 'StringBuilder',
     ('PyType', 'newObjPositional'): 'PyType',
     ('PyZip', 'newObjPositional'): 'PyZip',
     ('Runtime', 'pythonjIsInstance'): 'PyBool',
@@ -993,38 +998,127 @@ class IRTransformer:
     def transform_decl(self, decl: Decl) -> Decl:
         return decl.transform_children(self)
 
-def _pyint_local_assignment_expr(expr: Expr) -> bool:
+@dataclass(frozen=True, slots=True)
+class LocalCarrierSpec:
+    boxed_type: str
+    raw_type: str
+    field: str = 'value'
+    raw_factory_class: Optional[str] = None
+    raw_factory_method: str = 'newUnboxed'
+
+    def matches_constant(self, value: object) -> bool:
+        match self.boxed_type:
+            case 'PyInt':
+                return isinstance(value, int) and not isinstance(value, bool)
+            case 'PyBool':
+                return value is False or value is True
+            case 'PyFloat':
+                return isinstance(value, float)
+            case 'PyString':
+                return isinstance(value, str)
+        return False
+
+    def raw_constant_expr(self, value: object) -> Expr:
+        match self.boxed_type:
+            case 'PyInt':
+                return IntLiteral(value, 'L')
+            case 'PyBool':
+                return Bool(value)
+            case 'PyFloat':
+                if math.isnan(value):
+                    return Identifier('Double.NaN', 'double')
+                if math.isinf(value):
+                    return Identifier('Double.POSITIVE_INFINITY' if value > 0 else 'Double.NEGATIVE_INFINITY', 'double')
+                return FloatLiteral(value)
+            case 'PyString':
+                return StrLiteral(value)
+        assert False, self.boxed_type
+
+    def default_raw_expr(self) -> Expr:
+        match self.raw_type:
+            case 'long':
+                return IntLiteral(0, 'L')
+            case 'boolean':
+                return Bool(False)
+            case 'double':
+                return FloatLiteral(0.0)
+            case 'String' | 'byte[]' | 'PyObject[]' | 'java.io.ByteArrayOutputStream' | 'StringBuilder' | 'ArrayList<PyObject>' | 'HashSet<PyObject>' | 'LinkedHashMap<PyObject, PyObject>':
+                return Null()
+        assert False, self.raw_type
+
+ALL_LOCAL_CARRIER_SPECS = {
+    spec.boxed_type: spec
+    for spec in [
+        LocalCarrierSpec('PyInt', 'long'),
+        LocalCarrierSpec('PyBool', 'boolean'),
+        LocalCarrierSpec('PyFloat', 'double'),
+        LocalCarrierSpec('PyString', 'String'),
+        LocalCarrierSpec('PyBytes', 'byte[]'),
+        LocalCarrierSpec('PyTuple', 'PyObject[]', 'items'),
+        LocalCarrierSpec('PyBytesBuilder', 'java.io.ByteArrayOutputStream', raw_factory_class='PyBytesBuilder'),
+        LocalCarrierSpec('PyStringBuilder', 'StringBuilder', raw_factory_class='PyStringBuilder'),
+        LocalCarrierSpec('PyByteArray', 'byte[]'),
+        LocalCarrierSpec('PyList', 'ArrayList<PyObject>', 'items'),
+        LocalCarrierSpec('PySet', 'HashSet<PyObject>', 'items'),
+        LocalCarrierSpec('PyDict', 'LinkedHashMap<PyObject, PyObject>', 'items'),
+    ]
+}
+
+# Final submit set. During development this can be widened to exercise more carrier types.
+ENABLED_LOCAL_CARRIER_TYPES = {
+    'PyInt',
+    'PyBool',
+    'PyFloat',
+    'PyString',
+    'PyBytes',
+    'PyTuple',
+    'PyBytesBuilder',
+    'PyStringBuilder',
+}
+
+LOCAL_CARRIER_SPECS = {
+    boxed_type: ALL_LOCAL_CARRIER_SPECS[boxed_type]
+    for boxed_type in ENABLED_LOCAL_CARRIER_TYPES
+}
+
+def _local_carrier_assignment_expr(expr: Expr, spec: LocalCarrierSpec) -> bool:
+    if isinstance(expr, CastExpr) and expr.type == 'PyObject':
+        expr = expr.expr
     return (
         isinstance(expr, Null) or
-        (isinstance(expr, PyConstant) and isinstance(expr.value, int) and not isinstance(expr.value, bool)) or
-        expr.java_type() == 'PyInt'
+        (isinstance(expr, PyConstant) and spec.matches_constant(expr.value)) or
+        expr.java_type() == spec.boxed_type
     )
 
-def _is_candidate_value_field(expr: Expr, names: set[str]) -> Optional[str]:
-    if not isinstance(expr, Field) or expr.field != 'value':
+def _matched_local_carrier_field(expr: Expr, specs_by_name: dict[str, LocalCarrierSpec]) -> Optional[tuple[str, LocalCarrierSpec]]:
+    if not isinstance(expr, Field):
         return None
     obj = expr.obj
-    if isinstance(obj, Identifier) and obj.name in names:
-        return obj.name
-    if isinstance(obj, CastExpr) and obj.type == 'PyInt' and isinstance(obj.expr, Identifier) and obj.expr.name in names:
-        return obj.expr.name
+    if isinstance(obj, Identifier) and obj.name in specs_by_name:
+        spec = specs_by_name[obj.name]
+        if expr.field == spec.field and expr.field_type == spec.raw_type:
+            return (obj.name, spec)
+    if isinstance(obj, CastExpr) and isinstance(obj.expr, Identifier) and obj.expr.name in specs_by_name:
+        spec = specs_by_name[obj.expr.name]
+        if obj.type == spec.boxed_type and expr.field == spec.field and expr.field_type == spec.raw_type:
+            return (obj.expr.name, spec)
     return None
 
-class PyIntLocalUsageValidator(IRVisitor):
-    def __init__(self, names: set[str]):
-        self.names = names
-        self.valid = True
+class LocalCarrierUsageValidator(IRVisitor):
+    def __init__(self, specs_by_name: dict[str, LocalCarrierSpec]):
+        self.specs_by_name = specs_by_name
+        self.valid = set(specs_by_name)
 
-    def invalidate(self) -> None:
-        self.valid = False
+    def invalidate(self, name: str) -> None:
+        self.valid.discard(name)
 
     def visit_lhs(self, expr: Expr) -> None:
         if not self.valid:
             return
         match expr:
             case Identifier(name, _):
-                if name in self.names:
-                    self.invalidate()
+                if name in self.valid:
+                    self.invalidate(name)
             case Field(obj, _, _):
                 self.visit_expr(obj)
             case ArrayAccess(obj, index):
@@ -1033,23 +1127,27 @@ class PyIntLocalUsageValidator(IRVisitor):
             case _:
                 self.visit_expr(expr)
 
-    def check_assignment_expr(self, expr: Expr) -> None:
-        if not _pyint_local_assignment_expr(expr):
-            self.invalidate()
+    def check_assignment_expr(self, expr: Expr, name: str, spec: LocalCarrierSpec) -> None:
+        if not _local_carrier_assignment_expr(expr, spec):
+            self.invalidate(name)
             return
         self.visit_expr(expr)
 
     def visit_expr(self, expr: Expr) -> None:
         if not self.valid:
             return
-        if _is_candidate_value_field(expr, self.names) is not None:
+        if _matched_local_carrier_field(expr, self.specs_by_name) is not None:
             return
-        if isinstance(expr, Identifier) and expr.name in self.names:
-            self.invalidate()
+        if isinstance(expr, Identifier) and expr.name in self.valid:
+            self.invalidate(expr.name)
             return
         if isinstance(expr, AssignExpr):
-            self.visit_lhs(expr.lhs)
-            self.visit_expr(expr.rhs)
+            if isinstance(expr.lhs, Identifier) and expr.lhs.name in self.valid:
+                name = expr.lhs.name
+                self.check_assignment_expr(expr.rhs, name, self.specs_by_name[name])
+            else:
+                self.visit_lhs(expr.lhs)
+                self.visit_expr(expr.rhs)
             return
         super().visit_expr(expr)
 
@@ -1058,21 +1156,22 @@ class PyIntLocalUsageValidator(IRVisitor):
             return
         match stmt:
             case LocalDecl(_, name, value):
-                if name in self.names:
+                if name in self.valid:
                     if value is not None:
-                        self.check_assignment_expr(value)
+                        self.check_assignment_expr(value, name, self.specs_by_name[name])
                     return
             case AssignStatement(lhs, rhs):
-                if isinstance(lhs, Identifier) and lhs.name in self.names:
-                    self.check_assignment_expr(rhs)
+                if isinstance(lhs, Identifier) and lhs.name in self.valid:
+                    self.check_assignment_expr(rhs, lhs.name, self.specs_by_name[lhs.name])
                     return
                 self.visit_lhs(lhs)
                 self.visit_expr(rhs)
                 return
             case ForStatement(_, init_name, init_value, _, incr_name, incr_value, body):
-                if init_name in self.names or incr_name in self.names:
-                    self.invalidate()
-                    return
+                if init_name in self.valid:
+                    self.invalidate(init_name)
+                if incr_name in self.valid:
+                    self.invalidate(incr_name)
                 self.visit_expr(init_value)
                 self.visit_expr(stmt.cond)
                 self.visit_expr(incr_value)
@@ -1080,17 +1179,15 @@ class PyIntLocalUsageValidator(IRVisitor):
                     self.visit_stmt(child)
                 return
             case ForEachStatement(_, var_name, iterable, body):
-                if var_name in self.names:
-                    self.invalidate()
-                    return
+                if var_name in self.valid:
+                    self.invalidate(var_name)
                 self.visit_expr(iterable)
                 for child in body:
                     self.visit_stmt(child)
                 return
             case TryStatement(try_body, _, exc_name, catch_body, finally_body):
-                if exc_name is not None and exc_name in self.names:
-                    self.invalidate()
-                    return
+                if exc_name is not None and exc_name in self.valid:
+                    self.invalidate(exc_name)
                 for child in try_body:
                     self.visit_stmt(child)
                 for child in catch_body:
@@ -1100,100 +1197,161 @@ class PyIntLocalUsageValidator(IRVisitor):
                 return
         super().visit_stmt(stmt)
 
-class PyIntLocalRewriter(IRTransformer):
-    def __init__(self, names: set[str]):
-        self.names = names
+class LocalCarrierRewriter(IRTransformer):
+    def __init__(self, specs_by_name: dict[str, LocalCarrierSpec]):
+        self.specs_by_name = specs_by_name
 
-    def rewrite_assignment_expr(self, expr: Expr) -> Expr:
+    def rewrite_assignment_expr(self, expr: Expr, spec: LocalCarrierSpec) -> Expr:
         expr = self.transform_expr(expr)
+        if isinstance(expr, CastExpr) and expr.type == 'PyObject':
+            expr = expr.expr
         if isinstance(expr, Null):
-            return IntLiteral(0, 'L')
-        if isinstance(expr, PyConstant) and isinstance(expr.value, int) and not isinstance(expr.value, bool):
-            return IntLiteral(expr.value, 'L')
-        return unbox_int(expr)
+            return spec.default_raw_expr()
+        if isinstance(expr, PyConstant) and spec.matches_constant(expr.value):
+            return spec.raw_constant_expr(expr.value)
+        return unbox_local_carrier(expr, spec)
 
     def transform_expr(self, expr: Expr) -> Expr:
-        matched_name = _is_candidate_value_field(expr, self.names)
-        if matched_name is not None:
-            return Identifier(matched_name, 'long')
-        if isinstance(expr, Identifier) and expr.name in self.names:
-            return Identifier(expr.name, 'long')
+        matched_field = _matched_local_carrier_field(expr, self.specs_by_name)
+        if matched_field is not None:
+            (name, spec) = matched_field
+            return Identifier(name, spec.raw_type)
         expr = super().transform_expr(expr)
-        if isinstance(expr, CastExpr) and expr.type == 'PyInt' and expr.expr.java_type() == 'long':
-            return expr.expr
+        if isinstance(expr, CastExpr) and expr.type in ALL_LOCAL_CARRIER_SPECS:
+            spec = ALL_LOCAL_CARRIER_SPECS[expr.type]
+            if expr.expr.java_type() == spec.raw_type:
+                return expr.expr
         return expr
 
     def transform_stmt(self, stmt: Statement) -> Statement:
         match stmt:
             case LocalDecl(_, name, value):
-                if name in self.names:
-                    stmt.type = 'long'
-                    stmt.value = IntLiteral(0, 'L') if value is None else self.rewrite_assignment_expr(value)
+                if name in self.specs_by_name:
+                    spec = self.specs_by_name[name]
+                    stmt.type = spec.raw_type
+                    stmt.value = spec.default_raw_expr() if value is None else self.rewrite_assignment_expr(value, spec)
                     return stmt
             case AssignStatement(lhs, rhs):
-                if isinstance(lhs, Identifier) and lhs.name in self.names:
-                    stmt.lhs = Identifier(lhs.name, 'long')
-                    stmt.rhs = self.rewrite_assignment_expr(rhs)
+                if isinstance(lhs, Identifier) and lhs.name in self.specs_by_name:
+                    spec = self.specs_by_name[lhs.name]
+                    stmt.lhs = Identifier(lhs.name, spec.raw_type)
+                    stmt.rhs = self.rewrite_assignment_expr(rhs, spec)
                     return stmt
         return super().transform_stmt(stmt)
 
-def _pyint_local_is_valid_in_block(body: list[Statement], name: str) -> bool:
-    validator = PyIntLocalUsageValidator({name})
+def _valid_local_carrier_locals_in_block(body: list[Statement], specs_by_name: dict[str, LocalCarrierSpec]) -> dict[str, LocalCarrierSpec]:
+    validator = LocalCarrierUsageValidator(specs_by_name)
     for stmt in body:
         validator.visit_stmt(stmt)
         if not validator.valid:
-            return False
-    return True
+            break
+    return {name: specs_by_name[name] for name in validator.valid}
 
-def lower_pyint_locals_in_method(method: MethodDecl) -> MethodDecl:
-    candidates = {
-        stmt.name
-        for stmt in method.body
-        if isinstance(stmt, LocalDecl) and stmt.type == 'PyInt'
-    }
-    if not candidates:
-        return method
-    valid = {
-        name
-        for name in candidates
-        if _pyint_local_is_valid_in_block(method.body, name)
-    }
-    if not valid:
-        return method
-    rewriter = PyIntLocalRewriter(valid)
-    method.body = [rewriter.transform_stmt(stmt) for stmt in method.body]
+class LocalCarrierAssignmentTypeCollector(IRVisitor):
+    def __init__(self, names: set[str]):
+        self.names = names
+        self.assigned_types: dict[str, set[str]] = {name: set() for name in names}
+
+    def _record(self, name: str, expr: Expr) -> None:
+        if isinstance(expr, CastExpr) and expr.type == 'PyObject':
+            expr = expr.expr
+        if isinstance(expr, Null):
+            return
+        expr_type = expr.java_type()
+        if expr_type in ALL_LOCAL_CARRIER_SPECS:
+            self.assigned_types[name].add(expr_type)
+
+    def visit_expr(self, expr: Expr) -> None:
+        if isinstance(expr, AssignExpr) and isinstance(expr.lhs, Identifier) and expr.lhs.name in self.names:
+            self._record(expr.lhs.name, expr.rhs)
+        super().visit_expr(expr)
+
+    def visit_stmt(self, stmt: Statement) -> None:
+        match stmt:
+            case LocalDecl(_, name, value):
+                if name in self.names and value is not None:
+                    self._record(name, value)
+            case AssignStatement(lhs, rhs):
+                if isinstance(lhs, Identifier) and lhs.name in self.names:
+                    self._record(lhs.name, rhs)
+        super().visit_stmt(stmt)
+
+def _collect_local_carrier_candidates(body: list[Statement]) -> dict[str, LocalCarrierSpec]:
+    candidates: dict[str, LocalCarrierSpec] = {}
+    pyobject_names: set[str] = set()
+    for stmt in body:
+        if not isinstance(stmt, LocalDecl):
+            continue
+        if stmt.type in LOCAL_CARRIER_SPECS:
+            candidates[stmt.name] = LOCAL_CARRIER_SPECS[stmt.type]
+            continue
+        if stmt.type == 'PyObject':
+            pyobject_names.add(stmt.name)
+    if pyobject_names:
+        collector = LocalCarrierAssignmentTypeCollector(pyobject_names)
+        for stmt in body:
+            collector.visit_stmt(stmt)
+        for name in pyobject_names:
+            assigned_types = collector.assigned_types[name]
+            if len(assigned_types) == 1:
+                boxed_type = next(iter(assigned_types))
+                if boxed_type in LOCAL_CARRIER_SPECS:
+                    candidates[name] = LOCAL_CARRIER_SPECS[boxed_type]
+    return candidates
+
+def lower_local_carrier_locals_in_stmt(stmt: Statement) -> Statement:
+    match stmt:
+        case IfStatement(_, body, orelse):
+            stmt.body = lower_local_carrier_locals_in_block(body)
+            stmt.orelse = lower_local_carrier_locals_in_block(orelse)
+            return stmt
+        case WhileStatement(_, body):
+            stmt.body = lower_local_carrier_locals_in_block(body)
+            return stmt
+        case ForStatement(_, _, _, _, _, _, body):
+            stmt.body = lower_local_carrier_locals_in_block(body)
+            return stmt
+        case ForEachStatement(_, _, _, body):
+            stmt.body = lower_local_carrier_locals_in_block(body)
+            return stmt
+        case TryStatement(try_body, _, _, catch_body, finally_body):
+            stmt.try_body = lower_local_carrier_locals_in_block(try_body)
+            stmt.catch_body = lower_local_carrier_locals_in_block(catch_body)
+            stmt.finally_body = lower_local_carrier_locals_in_block(finally_body)
+            return stmt
+        case LabeledBlock(_, body):
+            stmt.body = lower_local_carrier_locals_in_block(body)
+            return stmt
+        case _:
+            return stmt
+
+def lower_local_carrier_locals_in_method(method: MethodDecl) -> MethodDecl:
+    method.body = lower_local_carrier_locals_in_block(method.body)
     return method
 
-def lower_pyint_locals_in_block(body: list[Statement]) -> list[Statement]:
-    candidates = {
-        stmt.name
-        for stmt in body
-        if isinstance(stmt, LocalDecl) and stmt.type == 'PyInt'
-    }
+def lower_local_carrier_locals_in_block(body: list[Statement]) -> list[Statement]:
+    body = [lower_local_carrier_locals_in_stmt(stmt) for stmt in body]
+    candidates = _collect_local_carrier_candidates(body)
     if not candidates:
         return body
-    valid = {
-        name
-        for name in candidates
-        if _pyint_local_is_valid_in_block(body, name)
-    }
+    valid = _valid_local_carrier_locals_in_block(body, candidates)
     if not valid:
         return body
-    rewriter = PyIntLocalRewriter(valid)
+    rewriter = LocalCarrierRewriter(valid)
     return [rewriter.transform_stmt(stmt) for stmt in body]
 
-def lower_pyint_locals_in_decl(decl: Decl) -> Decl:
+def lower_local_carrier_locals_in_decl(decl: Decl) -> Decl:
     match decl:
         case MethodDecl():
-            return lower_pyint_locals_in_method(decl)
+            return lower_local_carrier_locals_in_method(decl)
         case ConstructorDecl(_, _, _, body):
-            decl.body = lower_pyint_locals_in_block(body)
+            decl.body = lower_local_carrier_locals_in_block(body)
             return decl
         case StaticBlock(body):
-            decl.body = lower_pyint_locals_in_block(body)
+            decl.body = lower_local_carrier_locals_in_block(body)
             return decl
         case ClassDecl(_, _, _, decls):
-            decl.decls = [lower_pyint_locals_in_decl(d) for d in decls]
+            decl.decls = [lower_local_carrier_locals_in_decl(d) for d in decls]
             return decl
         case _:
             return decl
@@ -1212,47 +1370,45 @@ def bool_value(expr: Expr) -> Expr:
         return Field(expr, 'value', 'boolean')
     return MethodCall(expr, 'boolValue', [], 'boolean')
 
-def unbox_int(expr: Expr) -> Expr:
-    if isinstance(expr, PyConstant) and isinstance(expr.value, int) and not isinstance(expr.value, bool):
-        return IntLiteral(expr.value, 'L')
+def _unbox_create_object(expr: CreateObject, spec: LocalCarrierSpec) -> Expr:
+    if spec.raw_factory_class is not None:
+        return static_method_call(spec.raw_factory_class, spec.raw_factory_method, expr.args)
+    if not expr.args:
+        return CreateObject(spec.raw_type, [])
+    arg = expr.args[0]
+    return arg if arg.java_type() == spec.raw_type else CastExpr(spec.raw_type, arg)
+
+def unbox_local_carrier(expr: Expr, spec: LocalCarrierSpec) -> Expr:
+    if isinstance(expr, PyConstant) and spec.matches_constant(expr.value):
+        return spec.raw_constant_expr(expr.value)
     if isinstance(expr, CondOp):
-        return CondOp(expr.cond, unbox_int(expr.true), unbox_int(expr.false))
-    if isinstance(expr, Field) and expr.field == 'value' and expr.field_type == 'long':
-        if isinstance(expr.obj, PyConstant) and isinstance(expr.obj.value, int) and not isinstance(expr.obj.value, bool):
-            return IntLiteral(expr.obj.value, 'L')
-        if isinstance(expr.obj, CreateObject) and expr.obj.type == 'PyInt':
-            arg = expr.obj.args[0]
-            return arg if arg.java_type() == 'long' else CastExpr('long', arg)
-        if expr.obj.java_type() == 'PyInt':
+        return CondOp(expr.cond, unbox_local_carrier(expr.true, spec), unbox_local_carrier(expr.false, spec))
+    if isinstance(expr, Field) and expr.field == spec.field and expr.field_type == spec.raw_type:
+        if isinstance(expr.obj, PyConstant) and spec.matches_constant(expr.obj.value):
+            return spec.raw_constant_expr(expr.obj.value)
+        if isinstance(expr.obj, CreateObject) and expr.obj.type == spec.boxed_type:
+            return _unbox_create_object(expr.obj, spec)
+        if expr.obj.java_type() == spec.boxed_type:
             return expr
-    if isinstance(expr, CastExpr) and expr.type == 'PyInt':
-        if expr.expr.java_type() == 'long':
+    if isinstance(expr, CastExpr) and expr.type == spec.boxed_type:
+        if expr.expr.java_type() == spec.raw_type:
             return expr.expr
-        return unbox_int(expr.expr)
-    if isinstance(expr, CreateObject) and expr.type == 'PyInt':
-        arg = expr.args[0]
-        return arg if arg.java_type() == 'long' else CastExpr('long', arg)
-    if expr.java_type() == 'PyInt':
-        return Field(expr, 'value', 'long')
-    return Field(CastExpr('PyInt', expr), 'value', 'long')
+        return unbox_local_carrier(expr.expr, spec)
+    if isinstance(expr, CreateObject) and expr.type == spec.boxed_type:
+        return _unbox_create_object(expr, spec)
+    if expr.java_type() == spec.boxed_type:
+        return Field(expr, spec.field, spec.raw_type)
+    assert expr.java_type() != spec.raw_type, expr
+    return Field(CastExpr(spec.boxed_type, expr), spec.field, spec.raw_type)
+
+def unbox_int(expr: Expr) -> Expr:
+    return unbox_local_carrier(expr, ALL_LOCAL_CARRIER_SPECS['PyInt'])
 
 def unbox_float(expr: Expr) -> Expr:
-    if isinstance(expr, PyConstant) and isinstance(expr.value, float):
-        return FloatLiteral(expr.value)
-    if isinstance(expr, CreateObject) and expr.type == 'PyFloat':
-        return expr.args[0]
-    if expr.java_type() == 'PyFloat':
-        return Field(expr, 'value', 'double')
-    return Field(CastExpr('PyFloat', expr), 'value', 'double')
+    return unbox_local_carrier(expr, ALL_LOCAL_CARRIER_SPECS['PyFloat'])
 
 def unbox_str(expr: Expr) -> Expr:
-    if isinstance(expr, PyConstant) and isinstance(expr.value, str):
-        return StrLiteral(expr.value)
-    if isinstance(expr, CreateObject) and expr.type == 'PyString':
-        return expr.args[0]
-    if expr.java_type() == 'PyString':
-        return Field(expr, 'value', 'String')
-    return Field(CastExpr('PyString', expr), 'value', 'String')
+    return unbox_local_carrier(expr, ALL_LOCAL_CARRIER_SPECS['PyString'])
 
 def py_format(obj: Expr, spec: Expr) -> Expr:
     if isinstance(spec, PyConstant) and isinstance(spec.value, str) and not spec.value:
@@ -1273,15 +1429,15 @@ def py_iter(obj: Expr) -> Expr:
         case 'PyBytes':
             return CreateObject('PyBytesIter', [obj])
         case 'PyDict':
-            return CreateObject('PyDictIter', [MethodCall(MethodCall(Field(obj, 'items'), 'keySet', []), 'iterator', [])])
+            return CreateObject('PyDictIter', [MethodCall(MethodCall(Field(obj, 'items', 'LinkedHashMap<PyObject, PyObject>'), 'keySet', []), 'iterator', [])])
         case 'PyEnumerate':
             return obj
         case 'PyList':
-            return CreateObject('PyListIter', [MethodCall(Field(obj, 'items'), 'iterator', [])])
+            return CreateObject('PyListIter', [MethodCall(Field(obj, 'items', 'ArrayList<PyObject>'), 'iterator', [])])
         case 'PyRange':
             return CreateObject('PyRangeIter', [obj])
         case 'PySet':
-            return CreateObject('PySetIter', [MethodCall(Field(obj, 'items'), 'iterator', [])])
+            return CreateObject('PySetIter', [MethodCall(Field(obj, 'items', 'HashSet<PyObject>'), 'iterator', [])])
         case 'PyString':
             return CreateObject('PyStringIter', [obj])
         case 'PyTuple':
@@ -1315,33 +1471,33 @@ def static_method_call(class_name: str, method: str, args: list[Expr], return_ty
                 return CreateObject('PyBytesBuilder', [unbox_int(args[0])])
         case ('Runtime', 'pythonjBytesBuilderAppendByteArray'):
             return MethodCall(
-                Field(CastExpr('PyBytesBuilder', args[0]), 'value'),
+                Field(CastExpr('PyBytesBuilder', args[0]), 'value', 'java.io.ByteArrayOutputStream'),
                 'writeBytes',
                 [Field(CastExpr('PyByteArray', args[1]), 'value', 'byte[]')],
                 'void',
             )
         case ('Runtime', 'pythonjBytesBuilderAppendBytes'):
             return MethodCall(
-                Field(CastExpr('PyBytesBuilder', args[0]), 'value'),
+                Field(CastExpr('PyBytesBuilder', args[0]), 'value', 'java.io.ByteArrayOutputStream'),
                 'writeBytes',
                 [Field(CastExpr('PyBytes', args[1]), 'value', 'byte[]')],
                 'void',
             )
         case ('Runtime', 'pythonjBytesBuilderAppendInt'):
             return MethodCall(
-                Field(CastExpr('PyBytesBuilder', args[0]), 'value'),
+                Field(CastExpr('PyBytesBuilder', args[0]), 'value', 'java.io.ByteArrayOutputStream'),
                 'write',
                 [CastExpr('int', unbox_int(args[1]))],
                 'void',
             )
         case ('Runtime', 'pythonjBytesBuilderFinish'):
-            return CreateObject('PyBytes', [MethodCall(Field(CastExpr('PyBytesBuilder', args[0]), 'value'), 'toByteArray', [], 'byte[]')])
+            return CreateObject('PyBytes', [MethodCall(Field(CastExpr('PyBytesBuilder', args[0]), 'value', 'java.io.ByteArrayOutputStream'), 'toByteArray', [], 'byte[]')])
         case ('Runtime', 'pythonjDelete'):
             return MethodCall(args[0], 'delete', [args[1], MethodCall(args[1], 'type', [], 'PyType')], 'void')
         case ('Runtime', 'pythonjDictGet'):
-            return MethodCall(Field(CastExpr('PyDict', args[0]), 'items'), 'get', [args[1]], 'PyObject')
+            return MethodCall(Field(CastExpr('PyDict', args[0]), 'items', 'LinkedHashMap<PyObject, PyObject>'), 'get', [args[1]], 'PyObject')
         case ('Runtime', 'pythonjDictRemove'):
-            return MethodCall(Field(CastExpr('PyDict', args[0]), 'items'), 'remove', [args[1]], 'PyObject')
+            return MethodCall(Field(CastExpr('PyDict', args[0]), 'items', 'LinkedHashMap<PyObject, PyObject>'), 'remove', [args[1]], 'PyObject')
         case ('Runtime', 'pythonjFloatJavaBits'):
             return CreateObject('PyInt', [StaticMethodCall('Double', 'doubleToLongBits', [unbox_float(args[0])], 'long')])
         case ('Runtime', 'pythonjFloatJavaFormat'):
@@ -1402,11 +1558,11 @@ def static_method_call(class_name: str, method: str, args: list[Expr], return_ty
             else:
                 return CreateObject('PyStringBuilder', [unbox_int(args[0])])
         case ('Runtime', 'pythonjStrBuilderAppend'):
-            return MethodCall(Field(CastExpr('PyStringBuilder', args[0]), 'value'), 'append', [unbox_str(args[1])], 'void')
+            return MethodCall(Field(CastExpr('PyStringBuilder', args[0]), 'value', 'StringBuilder'), 'append', [unbox_str(args[1])], 'void')
         case ('Runtime', 'pythonjStrBuilderFinish'):
-            return CreateObject('PyString', [MethodCall(Field(CastExpr('PyStringBuilder', args[0]), 'value'), 'toString', [], 'String')])
+            return CreateObject('PyString', [MethodCall(Field(CastExpr('PyStringBuilder', args[0]), 'value', 'StringBuilder'), 'toString', [], 'String')])
         case ('Runtime', 'pythonjZipNew'):
-            return static_method_call('PyZip', 'newObjPositional', [Field(args[0], 'items'), args[1]])
+            return static_method_call('PyZip', 'newObjPositional', [Field(args[0], 'items', 'PyObject[]'), args[1]])
     return StaticMethodCall(class_name, method, args, STATIC_METHOD_RETURN_TYPES.get((class_name, method), return_type))
 
 def chained_binary_op(op: str, exprs: list[Expr]) -> Expr:
@@ -1445,7 +1601,7 @@ def while_statement(cond: Expr, body: list[Statement]) -> Iterator[Statement]:
         yield WhileStatement(cond, body)
 
 def write_decls(f: TextIO, decls: list[Decl], pool: ConstantPool) -> None:
-    decls = [lower_pyint_locals_in_decl(decl) for decl in decls]
+    decls = [lower_local_carrier_locals_in_decl(decl) for decl in decls]
     for decl in decls:
         for _ in decl.emit_java(pool):
             pass
