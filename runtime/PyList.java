@@ -197,7 +197,32 @@ public final class PyList extends PyObject {
         }
     }
     @Override public void delItem(PyObject key) {
-        throw unimplementedMethod("delItem");
+        if (key instanceof PySlice slice) {
+            PySlice.Indices indices = slice.computeIndices(items.size());
+            int index = indices.start();
+            int step = indices.step();
+            int n = indices.length();
+            if (step == 1) {
+                items.subList(index, index + n).clear();
+            } else {
+                for (int i = 0; i < n; i++) {
+                    items.remove(index);
+                    index += step - 1;
+                }
+            }
+        } else if (key.hasIndex()) {
+            int index = Math.toIntExact(key.indexValue());
+            if (index < 0) {
+                index += items.size();
+            }
+            try {
+                items.remove(index);
+            } catch (IndexOutOfBoundsException e) {
+                throw PyIndexError.raise("list deletion index out of range");
+            }
+        } else {
+            throw PyTypeError.raise("list indices must be integers or slices, not " + key.type().name());
+        }
     }
 
     @Override public final boolean hasIter() { return true; }
