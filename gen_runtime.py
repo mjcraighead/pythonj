@@ -627,47 +627,37 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
                     wrapper_return_expr: ir.Expr = ir.StaticMethodCall(
                         'PyRuntime',
                         f'pyfunc_{helper_name}',
-                        [ir.Identifier('self')] if arity == 0 else
-                        [ir.Identifier('self'), ir.Identifier('arg0')] if arity == 1 else
-                        [ir.Identifier('self'), ir.Identifier('arg0'), ir.Identifier('arg1')],
+                        [ir.Identifier('self'), *(ir.Identifier(f'arg{i}') for i in range(arity))],
                         metadata.builtin_method_return_java_types.get((name.rsplit('.', 1)[-1], method_name), 'PyObject'),
                     )
+                elif method_name == '__abs__':
+                    wrapper_return_expr = ir.MethodCall(ir.Identifier('self'), 'abs', [], 'PyObject')
+                elif method_name == '__bool__':
+                    wrapper_return_expr = ir.static_method_call('PyBool', 'create', [ir.MethodCall(ir.Identifier('self'), 'boolValue', [], 'boolean')])
+                elif method_name == '__contains__':
+                    wrapper_return_expr = ir.static_method_call('PyBool', 'create', [ir.MethodCall(ir.Identifier('self'), 'contains', [ir.Identifier('arg0')], 'boolean')])
+                elif method_name == '__hash__':
+                    wrapper_return_expr = ir.CreateObject('PyInt', [ir.CastExpr('long', ir.MethodCall(ir.Identifier('self'), 'hashCode', [], 'int'))])
+                elif method_name == '__iter__':
+                    wrapper_return_expr = ir.MethodCall(ir.Identifier('self'), 'iter', [], 'PyIter')
+                elif method_name == '__len__':
+                    wrapper_return_expr = ir.CreateObject('PyInt', [ir.MethodCall(ir.Identifier('self'), 'len', [], 'long')])
+                elif method_name == '__repr__':
+                    wrapper_return_expr = ir.CreateObject('PyString', [ir.MethodCall(ir.Identifier('self'), 'repr', [], 'String')])
+                elif method_name == '__str__':
+                    wrapper_return_expr = ir.CreateObject('PyString', [ir.MethodCall(ir.Identifier('self'), 'str', [], 'String')])
                 else:
-                    if method_name == '__bool__':
-                        wrapper_return_expr = ir.StaticMethodCall('PyBool', 'create', [ir.MethodCall(ir.Identifier('self'), 'boolValue', [], 'boolean')], 'PyBool')
-                    elif method_name == '__hash__':
-                        wrapper_return_expr = ir.CreateObject('PyInt', [ir.CastExpr('long', ir.MethodCall(ir.Identifier('self'), 'hashCode', [], 'int'))])
-                    elif method_name == '__repr__':
-                        wrapper_return_expr = ir.CreateObject('PyString', [ir.MethodCall(ir.Identifier('self'), 'repr', [], 'String')])
-                    elif method_name == '__contains__':
-                        wrapper_return_expr = ir.StaticMethodCall('PyBool', 'create', [ir.MethodCall(ir.Identifier('self'), 'contains', [ir.Identifier('arg0')], 'boolean')], 'PyBool')
-                    else:
-                        wrapper_return_expr = None
-                wrapper_call_body: list[ir.Statement] = []
-                if arity == 0:
-                    wrapper_call_body.append(ir.method_call_statement(ir.This(), 'requireNoArgs', [ir.Identifier('args'), ir.Identifier('kwargs')]))
-                elif arity == 1:
-                    wrapper_call_body.extend([
-                        ir.method_call_statement(ir.This(), 'requireExactArgs', [ir.Identifier('args'), ir.Identifier('kwargs'), ir.IntLiteral(1)]),
-                        ir.LocalDecl('PyObject', 'arg0', ir.ArrayAccess(ir.Identifier('args'), ir.IntLiteral(0))),
-                    ])
-                else:
-                    wrapper_call_body.extend([
-                        ir.method_call_statement(ir.Identifier('Runtime'), 'requireNoKwArgs', [ir.Identifier('kwargs'), ir.StrLiteral(method_name)]),
-                        ir.IfStatement(
-                            ir.BinaryOp('!=', ir.Field(ir.Identifier('args'), 'length', 'int'), ir.IntLiteral(arity)),
-                            [ir.ThrowStatement(ir.StaticMethodCall('PyTypeError', 'raise', [
-                                ir.BinaryOp(
-                                    '+',
-                                    ir.StrLiteral(f'{method_name} expected {arity} arguments, got '),
-                                    ir.StaticMethodCall('String', 'valueOf', [ir.Field(ir.Identifier('args'), 'length', 'int')], 'String'),
-                                )
-                            ]))],
-                            [],
-                        ),
-                    ])
-                    for i in range(arity):
-                        wrapper_call_body.append(ir.LocalDecl('PyObject', f'arg{i}', ir.ArrayAccess(ir.Identifier('args'), ir.IntLiteral(i))))
+                    wrapper_return_expr = None
+                wrapper_call_body: list[ir.Statement] = [
+                    ir.static_method_call_statement('Runtime', 'requireNoKwArgsWrapper', [ir.Identifier('kwargs'), ir.StrLiteral(method_name)]),
+                    ir.LocalDecl('int', 'argsLength', ir.Field(ir.Identifier('args'), 'length')),
+                    ir.IfStatement(
+                        ir.BinaryOp('!=', ir.Identifier('argsLength'), ir.IntLiteral(arity)),
+                        [ir.static_method_call_statement('Runtime', 'requireExactArgsWrapper', [ir.StrLiteral(method_name), ir.Identifier('argsLength'), ir.IntLiteral(arity)])],
+                        [],
+                    ),
+                    *(ir.LocalDecl('PyObject', f'arg{i}', ir.ArrayAccess(ir.Identifier('args'), ir.IntLiteral(i))) for i in range(arity)),
+                ]
                 if wrapper_return_expr is not None:
                     wrapper_call_body.append(ir.ReturnStatement(wrapper_return_expr))
                 else:

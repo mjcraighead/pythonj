@@ -546,19 +546,6 @@ abstract class PyMethodWrapper<T extends PyObject> extends PyTruthyObject {
         throw PyTypeError.raise("cannot create " + PyString.reprOf(type.name()) + " instances");
     }
 
-    protected final void requireNoArgs(PyObject[] args, PyDict kwargs) {
-        Runtime.requireNoKwArgs(kwargs, name);
-        if (args.length != 0) {
-            throw PyTypeError.raise("expected 0 arguments, got " + args.length);
-        }
-    }
-    protected final void requireExactArgs(PyObject[] args, PyDict kwargs, int expected) {
-        Runtime.requireNoKwArgs(kwargs, name);
-        if (args.length != expected) {
-            throw PyTypeError.raise("expected " + expected + " argument" + (expected == 1 ? "" : "s") + ", got " + args.length);
-        }
-    }
-
     @Override public final int hashCode() { return defaultHashCode(); }
     @Override public final String repr() {
         return "<method-wrapper " + PyString.reprOf(name) + " of " + PyString.reprOf(self.type().name()) + " object>";
@@ -796,6 +783,18 @@ public final class Runtime {
     }
     public static PyRaise raiseUnexpectedKwArg(String name, String kwName) {
         return PyTypeError.raise(name + "() got an unexpected keyword argument " + PyString.reprOf(kwName));
+    }
+    public static void requireNoKwArgsWrapper(PyDict kwargs, String name) {
+        if ((kwargs != null) && kwargs.boolValue()) {
+            throw PyTypeError.raise("wrapper " + name + "() takes no keyword arguments");
+        }
+    }
+    public static void requireExactArgsWrapper(String name, int argsLength, int expected) {
+        if (expected > 1) {
+            throw PyTypeError.raise(name + " expected " + expected + " arguments, got " + argsLength);
+        } else {
+            throw PyTypeError.raise("expected " + expected + " argument" + (expected == 1 ? "" : "s") + ", got " + argsLength);
+        }
     }
     public static PyObject getLocal(PyObject value, String name) {
         if (value == null) {
