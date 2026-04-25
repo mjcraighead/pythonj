@@ -1179,35 +1179,33 @@ class str:
             raise TypeError(f'replace() argument 1 must be str, not {type(old).__name__}')
         if not isinstance(new, str):
             raise TypeError(f'replace() argument 2 must be str, not {type(new).__name__}')
-        max_count: int = _operator.index(count)
-        if max_count == 0:
+        count_left: int = _operator.index(count)
+        if count_left < 0:
+            return __pythonj_str_replace__(self, old, new)
+        if count_left == 0:
             return self
-        replace_all: bool = max_count < 0
-        replacements_left: int = -1 if replace_all else max_count
         self_len: int = len(self)
         old_len: int = len(old)
         i: int = 0
         if old_len == 0:
-            max_inserts: int = self_len + 1 if replace_all or max_count > self_len + 1 else max_count
+            max_inserts: int = self_len + 1 if count_left > self_len + 1 else count_left
             ret = __pythonj_str_builder__(self_len + max_inserts * len(new))
             while i < self_len:
-                if replacements_left != 0:
+                if count_left > 0:
                     __pythonj_str_builder_append__(ret, new)
-                    if replacements_left > 0:
-                        replacements_left -= 1
+                    count_left -= 1
                 __pythonj_str_builder_append__(ret, self[i])
                 i += 1
-            if replacements_left != 0:
+            if count_left > 0:
                 __pythonj_str_builder_append__(ret, new)
             return __pythonj_str_builder_finish__(ret)
         ret = __pythonj_str_builder__(self_len + len(new))
         limit: int = self_len - old_len
         while i <= limit:
-            if replacements_left != 0 and self[i:i + old_len] == old:
+            if count_left > 0 and self[i:i + old_len] == old:
                 __pythonj_str_builder_append__(ret, new)
                 i += old_len
-                if replacements_left > 0:
-                    replacements_left -= 1
+                count_left -= 1
             else:
                 __pythonj_str_builder_append__(ret, self[i])
                 i += 1
