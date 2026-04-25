@@ -26,7 +26,7 @@ def bin(arg) -> str:
     return f'{value:#b}'
 
 def delattr(obj, name) -> None:
-    if not __pythonj_isinstance__(name, str):
+    if not isinstance(name, str):
         raise TypeError(f'attribute name must be string, not {type(name).__name__!r}')
     __pythonj_lookup_attr__(type(obj), '__delattr__')(obj, name)
     return None
@@ -43,7 +43,7 @@ def format(value, format_spec) -> str:
     return ret
 
 def getattr(obj, name, default):
-    if not __pythonj_isinstance__(name, str):
+    if not isinstance(name, str):
         raise TypeError(f'attribute name must be string, not {type(name).__name__!r}')
     try:
         return __pythonj_lookup_attr__(type(obj), '__getattribute__')(obj, name)
@@ -64,7 +64,7 @@ def hash(arg) -> int:
     if hash_func is __pythonj_null__ or hash_func is None:
         raise TypeError(f'unhashable type: {type(arg).__name__!r}')
     ret = hash_func(arg)
-    if not __pythonj_isinstance__(ret, int):
+    if not isinstance(ret, int):
         raise TypeError('__hash__ method should return an integer')
     return ret
 
@@ -81,7 +81,7 @@ def isinstance(obj, class_or_tuple) -> bool:
     return __pythonj_isinstance__(obj, class_or_tuple)
 
 def issubclass(obj, class_or_tuple) -> bool:
-    if __pythonj_isinstance__(class_or_tuple, tuple):
+    if isinstance(class_or_tuple, tuple):
         for x in class_or_tuple:
             if issubclass(obj, x):
                 return True
@@ -110,17 +110,17 @@ def repr(arg) -> str:
     return ret
 
 def setattr(obj, name, value) -> None:
-    if not __pythonj_isinstance__(name, str):
+    if not isinstance(name, str):
         raise TypeError(f'attribute name must be string, not {type(name).__name__!r}')
     __pythonj_lookup_attr__(type(obj), '__setattr__')(obj, name, value)
     return None
 
 def sum(iterable, start):
-    if __pythonj_isinstance__(start, str):
+    if isinstance(start, str):
         raise TypeError("sum() can't sum strings [use ''.join(seq) instead]")
-    if __pythonj_isinstance__(start, bytes):
+    if isinstance(start, bytes):
         raise TypeError("sum() can't sum bytes [use b''.join(seq) instead]")
-    if __pythonj_isinstance__(start, bytearray):
+    if isinstance(start, bytearray):
         raise TypeError("sum() can't sum bytearray [use b''.join(seq) instead]")
     for item in iterable:
         start = start + item
@@ -167,7 +167,7 @@ def zip__newobj(type, args: tuple, kwargs: dict):
 # Builtin classes
 class object:
     def __getattribute__(self, name):
-        if not __pythonj_isinstance__(name, str):
+        if not isinstance(name, str):
             raise TypeError(f'attribute name must be string, not {type(name).__name__!r}')
         desc = __pythonj_lookup_attr__(type(self), name)
         if desc is not __pythonj_null__ and __pythonj_is_data_descriptor__(desc):
@@ -182,7 +182,7 @@ class object:
         raise AttributeError(f'{type(self).__name__!r} object has no attribute {name!r}')
 
     def __setattr__(self, name, value) -> None:
-        if not __pythonj_isinstance__(name, str):
+        if not isinstance(name, str):
             raise TypeError(f'attribute name must be string, not {type(name).__name__!r}')
         desc = __pythonj_lookup_attr__(type(self), name)
         if desc is not __pythonj_null__ and __pythonj_is_data_descriptor__(desc):
@@ -197,7 +197,7 @@ class object:
         raise AttributeError(f'{type(self).__name__!r} object has no attribute {name!r} and no __dict__ for setting new attributes')
 
     def __delattr__(self, name) -> None:
-        if not __pythonj_isinstance__(name, str):
+        if not isinstance(name, str):
             raise TypeError(f'attribute name must be string, not {type(name).__name__!r}')
         desc = __pythonj_lookup_attr__(type(self), name)
         if desc is not __pythonj_null__ and __pythonj_is_data_descriptor__(desc):
@@ -214,7 +214,7 @@ class object:
         raise AttributeError(f'{type(self).__name__!r} object has no attribute {name!r} and no __dict__ for setting new attributes')
 
     def __format__(self, format_spec) -> str:
-        if not __pythonj_isinstance__(format_spec, str):
+        if not isinstance(format_spec, str):
             raise TypeError(f'__format__() argument must be str, not {type(format_spec).__name__}')
         if format_spec != '':
             raise TypeError(f'unsupported format string passed to {type(self).__name__}.__format__')
@@ -225,7 +225,7 @@ class object:
 
 class type:
     def __getattribute__(self: type, name):
-        if not __pythonj_isinstance__(name, str):
+        if not isinstance(name, str):
             raise TypeError(f'attribute name must be string, not {type(name).__name__!r}')
         meta_desc = __pythonj_lookup_attr__(type(self), name)
         if meta_desc is not __pythonj_null__ and __pythonj_is_data_descriptor__(meta_desc):
@@ -248,7 +248,7 @@ class bool:
         return self
 
     def __format__(self: bool, format_spec) -> str:
-        if not __pythonj_isinstance__(format_spec, str):
+        if not isinstance(format_spec, str):
             raise TypeError(f'__format__() argument must be str, not {type(format_spec).__name__}')
         return pyj_bool_format(self, format_spec)
 
@@ -361,7 +361,7 @@ class bytes:
         end = indices[1]
         ret: int
         i: int
-        if __pythonj_isinstance__(sub, int):
+        if isinstance(sub, int):
             if sub < 0 or sub > 255:
                 raise ValueError('byte must be in range(0, 256)')
             ret = 0
@@ -408,7 +408,7 @@ class bytes:
         indices = slice(start, end).indices(len(self))
         start = indices[0]
         end = indices[1]
-        if __pythonj_isinstance__(sub, int):
+        if isinstance(sub, int):
             if sub < 0 or sub > 255:
                 raise ValueError('byte must be in range(0, 256)')
             for i in range(start, end):
@@ -427,7 +427,7 @@ class bytes:
         return -1
 
     def fromhex(self, string) -> bytes:
-        is_str = __pythonj_isinstance__(string, str)
+        is_str = isinstance(string, str)
         is_bytes_like = __pythonj_isinstance__(string, (bytes, bytearray))
         if not (is_str or is_bytes_like):
             raise TypeError(f'fromhex() argument must be str or bytes-like, not {type(string).__name__}')
@@ -476,11 +476,11 @@ class bytes:
     def hex(self: bytes, sep, bytes_per_sep) -> str:
         if sep is __pythonj_null__:
             sep = ''
-        elif __pythonj_isinstance__(sep, bytes):
+        elif isinstance(sep, bytes):
             if len(sep) != 1:
                 raise ValueError('sep must be length 1.')
             sep = chr(sep[0])
-        elif __pythonj_isinstance__(sep, str):
+        elif isinstance(sep, str):
             if len(sep) != 1:
                 raise ValueError('sep must be length 1.')
         else:
@@ -530,9 +530,9 @@ class bytes:
         for item in iterable:
             if i != 0:
                 __pythonj_bytes_builder_append_bytes__(ret, self)
-            if __pythonj_isinstance__(item, bytes):
+            if isinstance(item, bytes):
                 __pythonj_bytes_builder_append_bytes__(ret, item)
-            elif __pythonj_isinstance__(item, bytearray):
+            elif isinstance(item, bytearray):
                 __pythonj_bytes_builder_append_bytearray__(ret, item)
             else:
                 raise TypeError(f'sequence item {i}: expected a bytes-like object, {type(item).__name__} found')
@@ -667,7 +667,7 @@ class bytes:
         indices = slice(start, end).indices(len(self))
         start = indices[0]
         end = indices[1]
-        if __pythonj_isinstance__(sub, int):
+        if isinstance(sub, int):
             if sub < 0 or sub > 255:
                 raise ValueError('byte must be in range(0, 256)')
             for i in range(end - 1, start - 1, -1):
@@ -843,7 +843,7 @@ class float:
         return self != 0.0
 
     def __format__(self: float, format_spec) -> str:
-        if not __pythonj_isinstance__(format_spec, str):
+        if not isinstance(format_spec, str):
             raise TypeError(f'__format__() argument must be str, not {type(format_spec).__name__}')
         return pyj_float_format(self, format_spec)
 
@@ -912,7 +912,7 @@ class int:
         return self != 0
 
     def __format__(self: int, format_spec) -> str:
-        if not __pythonj_isinstance__(format_spec, str):
+        if not isinstance(format_spec, str):
             raise TypeError(f'__format__() argument must be str, not {type(format_spec).__name__}')
         return pyj_int_format(self, format_spec)
 
@@ -938,7 +938,7 @@ class int:
     def from_bytes(self, bytes_arg, byteorder, signed) -> int:
         little_endian = False
         if byteorder is not None:
-            if not __pythonj_isinstance__(byteorder, str):
+            if not isinstance(byteorder, str):
                 raise TypeError(f"from_bytes() argument 'byteorder' must be str, not {type(byteorder).__name__}")
             if byteorder == 'big':
                 little_endian = False
@@ -950,7 +950,7 @@ class int:
         if __pythonj_isinstance__(bytes_arg, (bytes, bytearray)):
             data = bytes_arg
         else:
-            if __pythonj_isinstance__(bytes_arg, int):
+            if isinstance(bytes_arg, int):
                 raise TypeError(f"cannot convert '{type(bytes_arg).__name__}' object to bytes")
             data = bytes(bytes_arg)
 
@@ -1003,7 +1003,7 @@ class int:
         length = _operator.index(length)
         little_endian = False
         if byteorder is not None:
-            if not __pythonj_isinstance__(byteorder, str):
+            if not isinstance(byteorder, str):
                 raise TypeError(f"to_bytes() argument 'byteorder' must be str, not {type(byteorder).__name__}")
             if byteorder == 'big':
                 little_endian = False
@@ -1068,7 +1068,7 @@ class range:
 
     def __contains__(self: range, rhs) -> bool:
         value: int
-        if __pythonj_isinstance__(rhs, float):
+        if isinstance(rhs, float):
             if not math.isfinite(rhs) or rhs != __pythonj_float_java_rint__(rhs):
                 return False
             value = int(rhs)
@@ -1093,7 +1093,7 @@ class range:
         return 1 if value in self else 0
 
     def index(self: range, value) -> int:
-        if __pythonj_isinstance__(value, float):
+        if isinstance(value, float):
             if not math.isfinite(value) or value != __pythonj_float_java_rint__(value):
                 raise ValueError('sequence.index(x): x not in sequence')
             value = int(value)
@@ -1142,7 +1142,7 @@ class slice:
 
 class str:
     def __format__(self: str, format_spec) -> str:
-        if not __pythonj_isinstance__(format_spec, str):
+        if not isinstance(format_spec, str):
             raise TypeError(f'__format__() argument must be str, not {type(format_spec).__name__}')
         return pyj_str_format(self, format_spec)
 
@@ -1154,30 +1154,30 @@ class str:
         for item in iterable:
             if i != 0:
                 __pythonj_str_builder_append__(ret, self)
-            if not __pythonj_isinstance__(item, str):
+            if not isinstance(item, str):
                 raise TypeError(f'sequence item {i}: expected str instance, {type(item).__name__} found')
             __pythonj_str_builder_append__(ret, item)
             i += 1
         return __pythonj_str_builder_finish__(ret)
 
     def removeprefix(self: str, prefix) -> str:
-        if not __pythonj_isinstance__(prefix, str):
+        if not isinstance(prefix, str):
             raise TypeError(f'removeprefix() argument must be str, not {type(prefix).__name__}')
         if self.startswith(prefix):
             return self[len(prefix):]
         return self
 
     def removesuffix(self: str, suffix) -> str:
-        if not __pythonj_isinstance__(suffix, str):
+        if not isinstance(suffix, str):
             raise TypeError(f'removesuffix() argument must be str, not {type(suffix).__name__}')
         if suffix and self.endswith(suffix):
             return self[:-len(suffix)]
         return self
 
     def replace(self: str, old, new, count) -> str:
-        if not __pythonj_isinstance__(old, str):
+        if not isinstance(old, str):
             raise TypeError(f'replace() argument 1 must be str, not {type(old).__name__}')
-        if not __pythonj_isinstance__(new, str):
+        if not isinstance(new, str):
             raise TypeError(f'replace() argument 2 must be str, not {type(new).__name__}')
         max_count: int = _operator.index(count)
         if max_count == 0:
@@ -1219,7 +1219,7 @@ class str:
     def rstrip(self: str, chars) -> str:
         if chars is None:
             strip_chars: str = ' \t\n\v\f\r\x1c\x1d\x1e\x1f\x85\xa0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u2028\u2029\u202f\u205f\u3000'
-        elif __pythonj_isinstance__(chars, str):
+        elif isinstance(chars, str):
             strip_chars = chars
         else:
             raise TypeError('rstrip arg must be None or str')
