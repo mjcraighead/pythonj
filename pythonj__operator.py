@@ -52,6 +52,37 @@ def index(a) -> int:
         raise TypeError(f'__index__ returned non-int (type {type(ret).__name__})')
     return ret
 
+def ipow(a, b):
+    lhs_type = type(a)
+    ipow_func = __pythonj_lookup_attr__(lhs_type, '__ipow__')
+    if ipow_func is not __pythonj_null__:
+        ret = ipow_func(a, b)
+        if ret is not NotImplemented:
+            return ret
+
+    rhs_type = type(b)
+    pow_func = __pythonj_lookup_attr__(lhs_type, '__pow__')
+    rpow_func = __pythonj_lookup_attr__(rhs_type, '__rpow__')
+    lhs_rpow_func = __pythonj_lookup_attr__(lhs_type, '__rpow__')
+
+    reflected_first = rhs_type is not lhs_type and issubclass(rhs_type, lhs_type) and rpow_func is not __pythonj_null__ and rpow_func is not lhs_rpow_func
+    if reflected_first:
+        ret = rpow_func(b, a)
+        if ret is not NotImplemented:
+            return ret
+
+    if pow_func is not __pythonj_null__:
+        ret = pow_func(a, b)
+        if ret is not NotImplemented:
+            return ret
+
+    if not reflected_first and rhs_type is not lhs_type and rpow_func is not __pythonj_null__:
+        ret = rpow_func(b, a)
+        if ret is not NotImplemented:
+            return ret
+
+    raise TypeError(f"unsupported operand type(s) for ** or pow(): {lhs_type.__name__!r} and {rhs_type.__name__!r}")
+
 def matmul(a, b):
     lhs_type = type(a)
     rhs_type = type(b)
@@ -76,6 +107,31 @@ def matmul(a, b):
             return ret
 
     raise TypeError(f'unsupported operand type(s) for @: {lhs_type.__name__!r} and {rhs_type.__name__!r}')
+
+def pow(a, b):
+    lhs_type = type(a)
+    rhs_type = type(b)
+    pow_func = __pythonj_lookup_attr__(lhs_type, '__pow__')
+    rpow_func = __pythonj_lookup_attr__(rhs_type, '__rpow__')
+    lhs_rpow_func = __pythonj_lookup_attr__(lhs_type, '__rpow__')
+
+    reflected_first = rhs_type is not lhs_type and issubclass(rhs_type, lhs_type) and rpow_func is not __pythonj_null__ and rpow_func is not lhs_rpow_func
+    if reflected_first:
+        ret = rpow_func(b, a)
+        if ret is not NotImplemented:
+            return ret
+
+    if pow_func is not __pythonj_null__:
+        ret = pow_func(a, b)
+        if ret is not NotImplemented:
+            return ret
+
+    if not reflected_first and rhs_type is not lhs_type and rpow_func is not __pythonj_null__:
+        ret = rpow_func(b, a)
+        if ret is not NotImplemented:
+            return ret
+
+    raise TypeError(f"unsupported operand type(s) for ** or pow(): {lhs_type.__name__!r} and {rhs_type.__name__!r}")
 
 def setitem(a, b, c) -> None:
     a[b] = c

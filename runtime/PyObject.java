@@ -22,7 +22,7 @@ public abstract class PyObject implements Comparable<PyObject> {
     public PyObject mod(PyObject rhs) { return rhs.rmod(this); }
     public PyObject mul(PyObject rhs) { return rhs.rmul(this); }
     public PyObject or(PyObject rhs) { return rhs.ror(this); }
-    public PyObject pow(PyObject rhs) { return rhs.rpow(this); }
+    public final PyObject pow(PyObject rhs) { return PyRuntime.pyfunc_module_operator__pow(this, rhs); }
     public PyObject rshift(PyObject rhs) { return rhs.rrshift(this); }
     public PyObject sub(PyObject rhs) { return rhs.rsub(this); }
     public PyObject trueDiv(PyObject rhs) { return rhs.rtrueDiv(this); }
@@ -36,11 +36,12 @@ public abstract class PyObject implements Comparable<PyObject> {
     public PyObject rmod(PyObject rhs) { throw rhs.raiseBinOp("%", this); }
     public PyObject rmul(PyObject rhs) { throw rhs.raiseBinOp("*", this); }
     public PyObject ror(PyObject rhs) { throw rhs.raiseBinOp("|", this); }
-    public PyObject rpow(PyObject rhs) { throw rhs.raiseBinOp("** or pow()", this); }
     public PyObject rrshift(PyObject rhs) { throw rhs.raiseBinOp(">>", this); }
     public PyObject rsub(PyObject rhs) { throw rhs.raiseBinOp("-", this); }
     public PyObject rtrueDiv(PyObject rhs) { throw rhs.raiseBinOp("/", this); }
     public PyObject rxor(PyObject rhs) { throw rhs.raiseBinOp("^", this); }
+    public PyObject rawPow(PyObject rhs, PyObject mod) { return PyNotImplemented.singleton; }
+    public PyObject rawRPow(PyObject lhs, PyObject mod) { return PyNotImplemented.singleton; }
 
     // By default, in-place ops map to regular ops
     public PyObject addInPlace(PyObject rhs) { return add(rhs); }
@@ -51,7 +52,7 @@ public abstract class PyObject implements Comparable<PyObject> {
     public PyObject modInPlace(PyObject rhs) { return mod(rhs); }
     public PyObject mulInPlace(PyObject rhs) { return mul(rhs); }
     public PyObject orInPlace(PyObject rhs) { return or(rhs); }
-    public PyObject powInPlace(PyObject rhs) { return pow(rhs); }
+    public final PyObject powInPlace(PyObject rhs) { return PyRuntime.pyfunc_module_operator__ipow(this, rhs); }
     public PyObject rshiftInPlace(PyObject rhs) { return rshift(rhs); }
     public PyObject subInPlace(PyObject rhs) { return sub(rhs); }
     public PyObject trueDivInPlace(PyObject rhs) { return trueDiv(rhs); }

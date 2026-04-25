@@ -93,13 +93,28 @@ public final class PyBool extends PyObject {
             return super.or(rhs);
         }
     }
-    @Override public PyObject pow(PyObject rhs) {
+    @Override public PyObject rawPow(PyObject rhs, PyObject mod) {
+        if (mod != PyNone.singleton) {
+            throw new UnsupportedOperationException("bool.__pow__() with mod is unimplemented");
+        }
         if (rhs instanceof PyInt rhsInt) {
             return PyInt.pow(asInt(), rhsInt.value);
         } else if (rhs instanceof PyBool rhsBool) {
             return PyInt.pow(asInt(), rhsBool.asInt());
         } else {
-            return super.pow(rhs);
+            return PyNotImplemented.singleton;
+        }
+    }
+    @Override public PyObject rawRPow(PyObject lhs, PyObject mod) {
+        if (mod != PyNone.singleton) {
+            throw new UnsupportedOperationException("bool.__rpow__() with mod is unimplemented");
+        }
+        if (lhs instanceof PyInt lhsInt) {
+            return PyInt.pow(lhsInt.value, asInt());
+        } else if (lhs instanceof PyBool lhsBool) {
+            return PyInt.pow(lhsBool.asInt(), asInt());
+        } else {
+            return PyNotImplemented.singleton;
         }
     }
     @Override public PyObject rshift(PyObject rhs) {

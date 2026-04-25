@@ -291,7 +291,9 @@ final class PyOperatorModule extends PyModule {
             case "getitem": return PyOperatorFunction_getitem.singleton;
             case "imatmul": return PyOperatorFunction_imatmul.singleton;
             case "index": return PyOperatorFunction_index.singleton;
+            case "ipow": return PyOperatorFunction_ipow.singleton;
             case "matmul": return PyOperatorFunction_matmul.singleton;
+            case "pow": return PyOperatorFunction_pow.singleton;
             case "setitem": return PyOperatorFunction_setitem.singleton;
             default: return super.getAttr(key);
         }

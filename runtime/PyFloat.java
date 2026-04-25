@@ -125,11 +125,14 @@ public final class PyFloat extends PyObject {
             return super.mul(rhs);
         }
     }
-    @Override public PyObject pow(PyObject rhs) {
+    @Override public PyObject rawPow(PyObject rhs, PyObject mod) {
+        if (mod != PyNone.singleton) {
+            throw new UnsupportedOperationException("float.__pow__() with mod is unimplemented");
+        }
         if ((rhs instanceof PyFloat) || (rhs instanceof PyInt) || (rhs instanceof PyBool)) {
             return pow(value, floatLikeValue(rhs));
         } else {
-            return super.pow(rhs);
+            return PyNotImplemented.singleton;
         }
     }
     @Override public PyObject radd(PyObject rhs) {
@@ -160,11 +163,14 @@ public final class PyFloat extends PyObject {
             return super.rmul(rhs);
         }
     }
-    @Override public PyObject rpow(PyObject rhs) {
-        if ((rhs instanceof PyInt) || (rhs instanceof PyBool)) {
-            return pow(floatLikeValue(rhs), value);
+    @Override public PyObject rawRPow(PyObject lhs, PyObject mod) {
+        if (mod != PyNone.singleton) {
+            throw new UnsupportedOperationException("float.__rpow__() with mod is unimplemented");
+        }
+        if ((lhs instanceof PyInt) || (lhs instanceof PyBool)) {
+            return pow(floatLikeValue(lhs), value);
         } else {
-            return super.rpow(rhs);
+            return PyNotImplemented.singleton;
         }
     }
     @Override public PyObject rsub(PyObject rhs) {

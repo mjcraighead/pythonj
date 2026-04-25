@@ -644,7 +644,10 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
             for (method_name, attr_spec) in attrs.items():
                 if attr_spec['kind'] != 'wrapper_descriptor':
                     continue
-                arity = get_slot_wrapper_arity(attr_spec)
+                params = extract_spec.decode_signature(attr_spec.get('signature'))
+                assert params is not None, attr_spec
+                min_arity = len([param for param in params if param.default is inspect.Parameter.empty])
+                max_arity = len(params)
                 wrapper_pre_return_stmts: list[ir.Statement] = []
                 if method_name in pythonj_builtins_classes.get(name, {}):
                     helper_key = (name, method_name)
@@ -664,7 +667,7 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
                     wrapper_return_expr: ir.Expr = ir.StaticMethodCall(
                         'PyRuntime',
                         f'pyfunc_{helper_name}',
-                        [ir.Identifier('self'), *(ir.Identifier(f'arg{i}') for i in range(arity))],
+                        [ir.Identifier('self'), *(ir.Identifier(f'arg{i}') for i in range(max_arity))],
                         metadata.builtin_method_return_java_types.get((name.rsplit('.', 1)[-1], method_name), 'PyObject'),
                     )
                 elif method_name == '__bool__':
@@ -684,6 +687,10 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
                     wrapper_return_expr = ir.MethodCall(ir.Identifier('self'), 'iter', [], 'PyIter')
                 elif method_name == '__len__':
                     wrapper_return_expr = ir.CreateObject('PyInt', [ir.MethodCall(ir.Identifier('self'), 'len', [], 'long')])
+                elif method_name == '__pow__':
+                    wrapper_return_expr = ir.MethodCall(ir.Identifier('self'), 'rawPow', [ir.Identifier('arg0'), ir.Identifier('arg1')])
+                elif method_name == '__rpow__':
+                    wrapper_return_expr = ir.MethodCall(ir.Identifier('self'), 'rawRPow', [ir.Identifier('arg0'), ir.Identifier('arg1')])
                 elif method_name == '__repr__':
                     wrapper_return_expr = ir.CreateObject('PyString', [ir.MethodCall(ir.Identifier('self'), 'repr', [], 'String')])
                 elif method_name == '__setitem__':
@@ -696,13 +703,34 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
                 wrapper_call_body: list[ir.Statement] = [
                     ir.static_method_call_statement('Runtime', 'requireNoKwArgsWrapper', [ir.Identifier('kwargs'), ir.StrLiteral(method_name)]),
                     ir.LocalDecl('int', 'argsLength', ir.Field(ir.Identifier('args'), 'length')),
-                    ir.IfStatement(
-                        ir.BinaryOp('!=', ir.Identifier('argsLength'), ir.IntLiteral(arity)),
-                        [ir.static_method_call_statement('Runtime', 'requireExactArgsWrapper', [ir.StrLiteral(method_name), ir.Identifier('argsLength'), ir.IntLiteral(arity)])],
-                        [],
-                    ),
-                    *(ir.LocalDecl('PyObject', f'arg{i}', ir.ArrayAccess(ir.Identifier('args'), ir.IntLiteral(i))) for i in range(arity)),
                     *wrapper_pre_return_stmts,
+                ]
+                if min_arity == max_arity:
+                    wrapper_call_body.insert(2, ir.IfStatement(
+                        ir.BinaryOp('!=', ir.Identifier('argsLength'), ir.IntLiteral(max_arity)),
+                        [ir.static_method_call_statement('Runtime', 'requireExactArgsWrapper', [ir.StrLiteral(method_name), ir.Identifier('argsLength'), ir.IntLiteral(max_arity)])],
+                        [],
+                    ))
+                else:
+                    wrapper_call_body.insert(2, ir.IfStatement(
+                        ir.BinaryOp('||',
+                            ir.BinaryOp('<', ir.Identifier('argsLength'), ir.IntLiteral(min_arity)),
+                            ir.BinaryOp('>', ir.Identifier('argsLength'), ir.IntLiteral(max_arity)),
+                        ),
+                        [ir.ThrowStatement(ir.static_method_call('PyTypeError', 'raise', [
+                            ir.BinaryOp('+', ir.StrLiteral(f'{method_name} expected {min_arity} or {max_arity} arguments, got '), ir.Identifier('argsLength')),
+                        ]))],
+                        [],
+                    ))
+                wrapper_call_body[3:3] = [
+                    ir.LocalDecl('PyObject', f'arg{i}',
+                        ir.CondOp(
+                            ir.BinaryOp('>', ir.Identifier('argsLength'), ir.IntLiteral(i)),
+                            ir.ArrayAccess(ir.Identifier('args'), ir.IntLiteral(i)),
+                            ir.PyConstant(None),
+                        ),
+                    )
+                    for i in range(max_arity)
                 ]
                 if wrapper_return_expr is not None:
                     wrapper_call_body.append(ir.ReturnStatement(wrapper_return_expr))

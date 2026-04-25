@@ -219,13 +219,28 @@ public final class PyInt extends PyObject {
             return super.or(rhs);
         }
     }
-    @Override public PyObject pow(PyObject rhs) {
+    @Override public PyObject rawPow(PyObject rhs, PyObject mod) {
+        if (mod != PyNone.singleton) {
+            throw new UnsupportedOperationException("int.__pow__() with mod is unimplemented");
+        }
         if (rhs instanceof PyInt rhsInt) {
             return pow(value, rhsInt.value);
         } else if (rhs instanceof PyBool rhsBool) {
             return pow(value, rhsBool.asInt());
         } else {
-            return super.pow(rhs);
+            return PyNotImplemented.singleton;
+        }
+    }
+    @Override public PyObject rawRPow(PyObject lhs, PyObject mod) {
+        if (mod != PyNone.singleton) {
+            throw new UnsupportedOperationException("int.__rpow__() with mod is unimplemented");
+        }
+        if (lhs instanceof PyInt lhsInt) {
+            return pow(lhsInt.value, value);
+        } else if (lhs instanceof PyBool lhsBool) {
+            return pow(lhsBool.asInt(), value);
+        } else {
+            return PyNotImplemented.singleton;
         }
     }
     @Override public PyObject rshift(PyObject rhs) {

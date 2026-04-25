@@ -29,7 +29,7 @@ BUILTIN_MODULES = {
 BUILTIN_MODULE_ATTRS = {
     '_io': {'BufferedReader', 'TextIOWrapper'},
     '_json': {'encode_basestring_ascii', 'scanstring'},
-    '_operator': {'contains', 'delitem', 'getitem', 'imatmul', 'index', 'matmul', 'setitem'},
+    '_operator': {'contains', 'delitem', 'getitem', 'imatmul', 'index', 'ipow', 'matmul', 'pow', 'setitem'},
     '_types': {'BuiltinFunctionType', 'ClassMethodDescriptorType', 'EllipsisType', 'FunctionType', 'GeneratorType', 'GetSetDescriptorType', 'MappingProxyType', 'MemberDescriptorType', 'MethodDescriptorType', 'MethodWrapperType', 'ModuleType', 'NoneType', 'NotImplementedType', 'WrapperDescriptorType'},
     'math': {'copysign', 'isfinite', 'isinf', 'isnan'},
     'sys': {'exit', 'implementation'},
@@ -467,7 +467,7 @@ def _build_type_entry(name: str) -> dict[str, Any]:
         else:
             assert False, (name, k, v, v_type)
     if name == 'bool': # patch up bool to reflect it not being inherited from int
-        for method_name in ['__abs__', '__bool__', '__index__']:
+        for method_name in ['__abs__', '__bool__', '__index__', '__pow__', '__rpow__']:
             assert method_name not in attrs, method_name
             attrs[method_name] = _encode_attr('wrapper_descriptor', doc=int.__dict__[method_name].__doc__, signature=_get_method_signature('int', method_name))
         assert '__format__' not in attrs
