@@ -247,35 +247,18 @@ final class PyBuiltinFunctionsImpl {
                 }
             }
         }
+        PyObject iterable;
         if (argsLength == 1) {
-            return isMax
-                ? PyRuntime.pyfunc_max_iterable(args[0], defaultObj, keyFunc)
-                : PyRuntime.pyfunc_min_iterable(args[0], defaultObj, keyFunc);
+            iterable = args[0];
         } else {
             if (defaultObj != null) {
                 throw PyTypeError.raise("Cannot specify a default for " + name + "() with multiple positional arguments");
             }
-            PyObject ret = args[0];
-            if (keyFunc == PyNone.singleton) {
-                for (int i = 1; i < argsLength; i++) {
-                    PyObject item = args[i];
-                    if (isMax ? item.gt(ret) : item.lt(ret)) {
-                        ret = item;
-                    }
-                }
-            } else {
-                PyObject retKey = keyFunc.call(new PyObject[] {ret}, null);
-                for (int i = 1; i < argsLength; i++) {
-                    PyObject item = args[i];
-                    PyObject itemKey = keyFunc.call(new PyObject[] {item}, null);
-                    if (isMax ? itemKey.gt(retKey) : itemKey.lt(retKey)) {
-                        ret = item;
-                        retKey = itemKey;
-                    }
-                }
-            }
-            return ret;
+            iterable = new PyTuple(args);
         }
+        return isMax
+            ? PyRuntime.pyfunc_max_iterable(iterable, defaultObj, keyFunc)
+            : PyRuntime.pyfunc_min_iterable(iterable, defaultObj, keyFunc);
     }
     static PyObject pyfunc_max(PyObject[] args, PyDict kwargs) {
         return minMaxImpl(args, kwargs, "max", true);
