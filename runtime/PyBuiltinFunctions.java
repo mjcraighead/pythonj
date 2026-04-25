@@ -147,7 +147,15 @@ final class PyBuiltinFunctionsImpl {
         return a.getItem(b);
     }
     static PyInt pyfunc_operator_index(PyObject a) {
-        return new PyInt(a.indexValue());
+        PyObject indexFunc = a.type().lookupAttr("__index__");
+        if (indexFunc == null) {
+            throw PyTypeError.raise(PyString.reprOf(a.type().name()) + " object cannot be interpreted as an integer");
+        }
+        PyObject ret = indexFunc.call(new PyObject[]{a}, null);
+        if (!(ret instanceof PyInt retInt)) {
+            throw PyTypeError.raise("__index__ returned non-int (type " + ret.type().name() + ")");
+        }
+        return retInt;
     }
     static PyNone pyfunc_operator_setitem(PyObject a, PyObject b, PyObject c) {
         a.setItem(b, c);
