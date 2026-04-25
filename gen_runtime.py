@@ -33,6 +33,7 @@ PYTHON_AUTHORED_IMPLS = {
     },
 }
 PYTHON_AUTHORED_CONSTRUCTOR_IMPLS = {'enumerate', 'zip'}
+PYTHON_AUTHORED_MODULE_IMPLS = {'_operator'}
 SUPPORTED_HELPER_RETURN_TYPES = {'bool', 'bytes', 'dict', 'float', 'int', 'list', 'str', 'tuple'}
 
 def is_pythonj_getter(func: ast.FunctionDef) -> bool:
@@ -131,6 +132,15 @@ def collect_builtin_method_return_java_types(node: ast.Module) -> dict[tuple[str
             except ValueError:
                 continue
             ret[(class_node.name, func.name)] = ret_type
+    return ret
+
+def collect_top_level_return_java_types(node: ast.Module) -> dict[str, str]:
+    ret: dict[str, str] = {}
+    for func in [x for x in node.body if isinstance(x, ast.FunctionDef)]:
+        try:
+            ret[func.name] = decode_helper_return_annotation(func.returns)
+        except ValueError:
+            continue
     return ret
 
 def is_special_method_wrapper(type_name: str, method_name: str) -> bool:
@@ -378,7 +388,8 @@ def write_semantics_json(path: str, data: dict[str, object]) -> None:
         json.dump(data, f, indent=2, sort_keys=True)
         f.write('\n')
 
-def build_semantics_data(pythonj_builtins_node: ast.Module, pythonj_runtime_node: ast.Module) -> dict[str, object]:
+def build_semantics_data(pythonj_builtins_node: ast.Module, pythonj_runtime_node: ast.Module,
+                         pythonj_module_nodes: dict[str, ast.Module]) -> dict[str, object]:
     builtin_function_return_types = pythonj.collect_top_level_exact_return_types(pythonj_builtins_node)
     builtin_method_return_types = pythonj.collect_builtin_method_exact_return_types(pythonj_builtins_node)
     return {
@@ -395,24 +406,46 @@ def build_semantics_data(pythonj_builtins_node: ast.Module, pythonj_runtime_node
             func_name: decode_helper_return_annotation(func.returns)
             for (func_name, func) in pythonj.get_top_level_functions(pythonj_runtime_node).items()
         },
+        'module_function_annotations': {
+            module_name: collect_top_level_function_annotation_metadata(node)
+            for (module_name, node) in pythonj_module_nodes.items()
+        },
+        'module_function_return_java_types': {
+            module_name: collect_top_level_return_java_types(node)
+            for (module_name, node) in pythonj_module_nodes.items()
+        },
     }
 
 def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -> None:
     pythonj_builtins_node = pythonj.parse_python_module('pythonj_builtins.py')
     pythonj_runtime_node = pythonj.parse_python_module('pythonj_runtime.py')
-    semantics_data = build_semantics_data(pythonj_builtins_node, pythonj_runtime_node)
+    pythonj_module_nodes = {
+        module_name: pythonj.parse_python_module(f'pythonj_{module_name}.py')
+        for module_name in PYTHON_AUTHORED_MODULE_IMPLS
+    }
+    semantics_data = build_semantics_data(pythonj_builtins_node, pythonj_runtime_node, pythonj_module_nodes)
     metadata = pythonj.resolve_translator_metadata(pythonj.load_spec_json(spec_path), semantics_data)
     spec = metadata.spec
     (pythonj_builtins_node, builtins_scope_infos) = pythonj.analyze_and_simplify(
         pythonj_builtins_node, metadata=metadata)
     (pythonj_runtime_node, runtime_scope_infos) = pythonj.analyze_and_simplify(
         pythonj_runtime_node, metadata=metadata)
+    analyzed_module_nodes = {}
+    module_scope_infos = {}
+    for (module_name, node) in pythonj_module_nodes.items():
+        (analyzed_node, scope_infos) = pythonj.analyze_and_simplify(node, metadata=metadata)
+        analyzed_module_nodes[module_name] = analyzed_node
+        module_scope_infos[module_name] = scope_infos
     pythonj_builtins_funcs = pythonj.get_top_level_functions(pythonj_builtins_node)
     pythonj_builtins_classes = {
         class_name: {x.name: x for x in class_node.body if isinstance(x, ast.FunctionDef)}
         for (class_name, class_node) in {x.name: x for x in pythonj_builtins_node.body if isinstance(x, ast.ClassDef)}.items()
     }
     pythonj_runtime_funcs = pythonj.get_top_level_functions(pythonj_runtime_node)
+    pythonj_module_funcs = {
+        module_name: pythonj.get_top_level_functions(node)
+        for (module_name, node) in analyzed_module_nodes.items()
+    }
     write_semantics_json(semantics_path, semantics_data)
     pool = ir.ConstantPool('PyRuntime')
     with open(java_path, 'w') as f:
@@ -421,6 +454,7 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
         python_helper_methods: list[ir.Decl] = []
         emitted_python_getter_helpers: set[tuple[str, str]] = set()
         emitted_python_method_helpers: set[tuple[str, str]] = set()
+        emitted_python_module_helpers: set[tuple[str, str]] = set()
         for (name, obj_spec) in spec.items():
             if obj_spec['kind'] != 'type':
                 continue
@@ -877,20 +911,38 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
                     kw_overflow_args_length='argsLength',
                     noarg_name=full_name,
                 )
-                call_expr = ir.StaticMethodCall(f'{module_func_prefix}Function_{func_name}', 'callPositional', bind_args) if call_positional_shape is not None else ir.StaticMethodCall('PyBuiltinFunctionsImpl', f'pyfunc_{module_name.removeprefix("_")}_{func_name}', bind_args)
+                call_target = 'PyBuiltinFunctionsImpl'
+                call_impl_name = f'pyfunc_{module_name.removeprefix("_")}_{func_name}'
+                call_positional_return_java_type = 'PyObject'
+                if func_name in pythonj_module_funcs.get(module_name, {}):
+                    helper_key = (module_name, func_name)
+                    emitted_name = f'module_{module_name.removeprefix("_")}__{func_name}'
+                    if helper_key not in emitted_python_module_helpers:
+                        (helper_classes, helper_method) = translate_python_impl_node(
+                            analyzed_module_nodes[module_name], pythonj_module_funcs[module_name][func_name],
+                            emitted_name, f'<module {module_name}.{func_name}>', 'builtin module function', pool,
+                            scope_infos=module_scope_infos[module_name], metadata=metadata,
+                        )
+                        python_helper_classes.extend(helper_classes)
+                        python_helper_methods.append(helper_method)
+                        emitted_python_module_helpers.add(helper_key)
+                    call_target = 'PyRuntime'
+                    call_impl_name = f'pyfunc_{emitted_name}'
+                    call_positional_return_java_type = semantics_data['module_function_return_java_types'][module_name].get(func_name, 'PyObject')
+                call_expr = ir.StaticMethodCall(f'{module_func_prefix}Function_{func_name}', 'callPositional', bind_args, call_positional_return_java_type) if call_positional_shape is not None else ir.StaticMethodCall(call_target, call_impl_name, bind_args, call_positional_return_java_type)
                 call_body.append(ir.ReturnStatement(call_expr))
                 decls.append(ir.MethodDecl('@Override public', 'PyObject', 'call', ['PyObject[] args', 'PyDict kwargs'], call_body))
                 if call_positional_shape is not None:
                     (call_positional_method_args, call_positional_statements, call_positional_args) = build_call_positional_ir(call_positional_shape)
                     decls.append(ir.MethodDecl(
                         'public static',
-                        'PyObject',
+                        call_positional_return_java_type,
                         'callPositional',
                         call_positional_method_args,
                         [
                             *call_positional_statements,
                             ir.ReturnStatement(
-                                ir.StaticMethodCall('PyBuiltinFunctionsImpl', f'pyfunc_{module_name.removeprefix("_")}_{func_name}', call_positional_args)
+                                ir.StaticMethodCall(call_target, call_impl_name, call_positional_args, call_positional_return_java_type)
                             ),
                         ],
                     ))

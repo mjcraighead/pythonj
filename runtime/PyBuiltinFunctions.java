@@ -136,45 +136,6 @@ final class PyBuiltinFunctionsImpl {
     static PyBool pyfunc_math_isnan(PyObject arg) {
         return PyBool.create(Double.isNaN(requireMathReal(arg)));
     }
-    static PyBool pyfunc_operator_contains(PyObject a, PyObject b) {
-        return PyBool.create(a.contains(b));
-    }
-    static PyNone pyfunc_operator_delitem(PyObject a, PyObject b) {
-        PyObject delItemFunc = a.type().lookupAttr("__delitem__");
-        if (delItemFunc != null) {
-            delItemFunc.call(new PyObject[]{a, b}, null);
-        } else {
-            a.delItem(b);
-        }
-        return PyNone.singleton;
-    }
-    static PyObject pyfunc_operator_getitem(PyObject a, PyObject b) {
-        PyObject getItemFunc = a.type().lookupAttr("__getitem__");
-        if (getItemFunc != null) {
-            return getItemFunc.call(new PyObject[]{a, b}, null);
-        }
-        return a.getItem(b);
-    }
-    static PyInt pyfunc_operator_index(PyObject a) {
-        PyObject indexFunc = a.type().lookupAttr("__index__");
-        if (indexFunc == null) {
-            throw PyTypeError.raise(PyString.reprOf(a.type().name()) + " object cannot be interpreted as an integer");
-        }
-        PyObject ret = indexFunc.call(new PyObject[]{a}, null);
-        if (!(ret instanceof PyInt retInt)) {
-            throw PyTypeError.raise("__index__ returned non-int (type " + ret.type().name() + ")");
-        }
-        return retInt;
-    }
-    static PyNone pyfunc_operator_setitem(PyObject a, PyObject b, PyObject c) {
-        PyObject setItemFunc = a.type().lookupAttr("__setitem__");
-        if (setItemFunc != null) {
-            setItemFunc.call(new PyObject[]{a, b, c}, null);
-        } else {
-            a.setItem(b, c);
-        }
-        return PyNone.singleton;
-    }
     static PyObject pyfunc_sys_exit(PyObject status) {
         throw new PyRaise(new PySystemExit((status == PyNone.singleton) ? new PyObject[0] : new PyObject[] {status}));
     }
