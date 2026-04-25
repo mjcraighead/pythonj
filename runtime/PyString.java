@@ -73,8 +73,11 @@ public final class PyString extends PyObject {
         if (!rhs.hasIndex()) {
             throw PyTypeError.raise("can't multiply sequence by non-int of type " + PyString.reprOf(rhs.type().name()));
         }
-        var s = new StringBuilder();
         long count = rhs.indexValue();
+        if (count <= 0) {
+            return PyString.empty_singleton;
+        }
+        var s = new StringBuilder(Math.toIntExact(Math.multiplyExact(count, value.length())));
         for (long i = 0; i < count; i++) {
             s.append(value);
         }

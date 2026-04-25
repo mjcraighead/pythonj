@@ -23,7 +23,7 @@ final class PyBuiltinFunctionsImpl {
             throw PyTypeError.raise("first argument must be a string, not " + arg.type().name());
         }
         String s = argStr.value;
-        var out = new StringBuilder();
+        var out = new StringBuilder(s.length() + 2);
         out.append('"');
         for (int i = 0; i < s.length(); i++) {
             char c = s.charAt(i);
@@ -207,7 +207,7 @@ final class PyBuiltinFunctionsImpl {
     }
     static PyString pyfunc_ascii(PyObject arg) {
         String r = arg.repr();
-        var s = new StringBuilder();
+        var s = new StringBuilder(r.length());
         for (int i = 0; i < r.length(); i++) {
             char c = r.charAt(i);
             if (c < 0x80) {
