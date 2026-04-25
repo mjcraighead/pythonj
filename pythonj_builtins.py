@@ -61,12 +61,12 @@ def hasattr(obj, name) -> bool:
 
 def hash(arg) -> int:
     hash_func = __pythonj_lookup_attr__(type(arg), '__hash__')
-    if hash_func is __pythonj_null__ or hash_func is None:
+    if hash_func is None:
         raise TypeError(f'unhashable type: {type(arg).__name__!r}')
     ret = hash_func(arg)
     if not isinstance(ret, int):
         raise TypeError('__hash__ method should return an integer')
-    return ret
+    return ret # XXX may want to validate that this is in the valid range of Java int
 
 def hex(arg) -> str:
     value: int = _operator.index(arg)

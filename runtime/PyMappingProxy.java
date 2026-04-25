@@ -44,7 +44,7 @@ public final class PyMappingProxy extends PyObject {
     @Override public boolean hasIter() { return true; }
     @Override public PyIter iter() { return new PyDictIter(items.keySet().iterator()); }
     @Override public long len() { return items.size(); }
-    @Override public int hashCode() { throw raiseUnhashable(); }
+    @Override public int hashCode() { return slotBasedHashCode(); }
     @Override public boolean equals(Object rhs) { return this == rhs; }
     @Override public String repr() {
         var s = new StringBuilder("mappingproxy({");

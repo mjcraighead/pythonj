@@ -191,14 +191,22 @@ public abstract class PyObject implements Comparable<PyObject> {
     protected final PyRaise raiseCompareOp(String op, PyObject rhs) {
         return PyTypeError.raise("'" + op + "' not supported between instances of " + PyString.reprOf(type().name()) + " and " + PyString.reprOf(rhs.type().name()));
     }
-    protected final PyRaise raiseUnhashable() {
-        return PyTypeError.raise("unhashable type: " + PyString.reprOf(type().name()));
-    }
     protected final PyRaise raiseMissingAttr(String key) {
         return PyAttributeError.raise(PyString.reprOf(type().name()) + " object has no attribute " + PyString.reprOf(key));
     }
     protected final int defaultHashCode() {
         return System.identityHashCode(this);
+    }
+    protected final int slotBasedHashCode() {
+        PyObject hashFunc = type().lookupAttr("__hash__");
+        if (hashFunc == PyNone.singleton) {
+            throw PyTypeError.raise("unhashable type: " + PyString.reprOf(type().name()));
+        }
+        PyObject hash = hashFunc.call(new PyObject[]{this}, null);
+        if (!(hash instanceof PyInt hashInt)) {
+            throw PyTypeError.raise("__hash__ method should return an integer");
+        }
+        return Math.toIntExact(hashInt.value);
     }
     protected final String defaultRepr() { return "<" + type().name() + " object>"; }
     protected final String slotBasedRepr() {

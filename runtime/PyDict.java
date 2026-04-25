@@ -391,7 +391,7 @@ public final class PyDict extends PyObject {
         }
         return false;
     }
-    @Override public int hashCode() { throw raiseUnhashable(); }
+    @Override public int hashCode() { return slotBasedHashCode(); }
     @Override public long len() { return items.size(); }
     @Override public String repr() { return slotBasedRepr(); }
 
