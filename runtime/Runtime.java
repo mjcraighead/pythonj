@@ -18,6 +18,51 @@ abstract class PyTruthyObject extends PyObject {
     @Override public final boolean boolValue() { return true; }
 }
 
+final class PyEllipsis extends PyTruthyObject {
+    public static final PyEllipsis singleton = new PyEllipsis();
+
+    private PyEllipsis() {}
+
+    public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
+        if ((kwargs != null) && kwargs.boolValue()) {
+            throw PyTypeError.raise("EllipsisType takes no arguments");
+        }
+        if (args.length != 0) {
+            throw PyTypeError.raise("EllipsisType takes no arguments");
+        }
+        return PyEllipsis.singleton;
+    }
+
+    @Override public PyConcreteType type() { return PyEllipsisType.singleton; }
+    @Override public boolean equals(Object rhs) { return this == rhs; }
+    @Override public int hashCode() { return 0; }
+    @Override public String repr() { return "Ellipsis"; }
+}
+
+final class PyNotImplemented extends PyObject {
+    public static final PyNotImplemented singleton = new PyNotImplemented();
+
+    private PyNotImplemented() {}
+
+    public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
+        if ((kwargs != null) && kwargs.boolValue()) {
+            throw PyTypeError.raise("NotImplementedType takes no arguments");
+        }
+        if (args.length != 0) {
+            throw PyTypeError.raise("NotImplementedType takes no arguments");
+        }
+        return PyNotImplemented.singleton;
+    }
+
+    @Override public PyConcreteType type() { return PyNotImplementedType.singleton; }
+    @Override public boolean boolValue() {
+        throw PyTypeError.raise("NotImplemented should not be used in a boolean context");
+    }
+    @Override public boolean equals(Object rhs) { return this == rhs; }
+    @Override public int hashCode() { return 0; }
+    @Override public String repr() { return "NotImplemented"; }
+}
+
 abstract class PyIter extends PyTruthyObject {
     @Override public final boolean hasIter() { return true; }
     @Override public int hashCode() { return defaultHashCode(); }
@@ -260,6 +305,7 @@ final class PyTypesModule extends PyModule {
         switch (key) {
             case "BuiltinFunctionType": return PyBuiltinFunctionOrMethodType.singleton;
             case "ClassMethodDescriptorType": return PyClassMethodDescriptorType.singleton;
+            case "EllipsisType": return PyEllipsisType.singleton;
             case "FunctionType": return PyFunctionType.singleton;
             case "GeneratorType": return PyGeneratorType.singleton;
             case "GetSetDescriptorType": return PyGetSetDescriptorType.singleton;
@@ -268,6 +314,7 @@ final class PyTypesModule extends PyModule {
             case "MethodDescriptorType": return PyMethodDescriptorType.singleton;
             case "MethodWrapperType": return PyMethodWrapperType.singleton;
             case "NoneType": return PyNoneType.singleton;
+            case "NotImplementedType": return PyNotImplementedType.singleton;
             case "WrapperDescriptorType": return PyWrapperDescriptorType.singleton;
             default: return super.getAttr(key);
         }

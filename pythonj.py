@@ -1423,6 +1423,10 @@ class LoweringVisitor(ast.NodeVisitor):
         return ir.Identifier(f'pyglobal_{name}')
 
     def builtin_expr(self, name: str) -> Optional[ir.Expr]:
+        if name == 'Ellipsis':
+            return ir.Field(ir.Identifier('PyEllipsis'), 'singleton', 'PyEllipsis')
+        if name == 'NotImplemented':
+            return ir.Field(ir.Identifier('PyNotImplemented'), 'singleton', 'PyNotImplemented')
         if name in extract_spec.BUILTIN_TYPES:
             return ir.PyBuiltinType(name, extract_spec.BUILTIN_TYPES[name])
         if name in extract_spec.EXCEPTION_TYPES:
@@ -1875,7 +1879,7 @@ class LoweringVisitor(ast.NodeVisitor):
         return ir.static_method_call('Runtime', method_name, [self.visit(arg) for arg in args])
 
     def visit_Constant(self, node) -> ir.Expr:
-        if isinstance(node.value, (types.NoneType, bool, int, float, str, bytes)):
+        if node.value is Ellipsis or isinstance(node.value, (types.NoneType, bool, int, float, str, bytes)):
             return ir.PyConstant(node.value)
         else:
             self.error(node.lineno, f'literal {node.value!r} of type {type(node.value).__name__!r} is unsupported')

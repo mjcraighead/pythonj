@@ -104,6 +104,8 @@ class ConstantPool:
     def emit_constant(self, value: object) -> str:
         if value is None:
             return 'PyNone.singleton'
+        elif value is Ellipsis:
+            return 'PyEllipsis.singleton'
         elif value is False or value is True:
             return f'PyBool.{str(value).lower()}_singleton'
         elif isinstance(value, int):
@@ -471,6 +473,8 @@ class PyConstant(Expr):
     def java_type(self) -> str:
         if self.value is None:
             return 'PyNone'
+        elif self.value is Ellipsis:
+            return 'PyEllipsis'
         elif self.value is False or self.value is True:
             return 'PyBool'
         elif isinstance(self.value, int):

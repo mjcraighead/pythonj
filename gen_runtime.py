@@ -463,6 +463,7 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
             match name:
                 case '_types.BuiltinFunctionType': py_name = 'builtin_function_or_method'
                 case '_types.ClassMethodDescriptorType': py_name = 'classmethod_descriptor'
+                case '_types.EllipsisType': py_name = 'ellipsis'
                 case '_types.FunctionType': py_name = 'function'
                 case '_types.GeneratorType': py_name = 'generator'
                 case '_types.GetSetDescriptorType': py_name = 'getset_descriptor'
@@ -472,6 +473,7 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
                 case '_types.MethodDescriptorType': py_name = 'method_descriptor'
                 case '_types.ModuleType': py_name = 'module'
                 case '_types.NoneType': py_name = 'NoneType'
+                case '_types.NotImplementedType': py_name = 'NotImplementedType'
                 case '_types.WrapperDescriptorType': py_name = 'wrapper_descriptor'
                 case _: py_name = name
 
