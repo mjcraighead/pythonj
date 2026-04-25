@@ -57,8 +57,8 @@ BUILTIN_TYPES = {
 }
 EXCEPTION_TYPES = {
     'ArithmeticError', 'AssertionError', 'AttributeError', 'BaseException', 'Exception', 'IndexError',
-    'KeyError', 'LookupError', 'NameError', 'OverflowError', 'RuntimeError', 'StopIteration', 'SystemExit',
-    'TypeError', 'UnboundLocalError', 'ValueError', 'ZeroDivisionError',
+    'KeyError', 'LookupError', 'NameError', 'NotImplementedError', 'OverflowError', 'RuntimeError',
+    'StopIteration', 'SystemExit', 'TypeError', 'UnboundLocalError', 'ValueError', 'ZeroDivisionError',
 }
 BASE_TYPE_OVERRIDES = {'bool': 'object'}
 EXCLUDED_DUNDER_ATTRS = {

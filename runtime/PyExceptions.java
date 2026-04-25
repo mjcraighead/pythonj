@@ -221,7 +221,7 @@ final class PyStopIteration extends PyException {
     static PyObject pyget_value(PyObject obj) { throw new UnsupportedOperationException(); }
 }
 
-final class PyRuntimeError extends PyException {
+class PyRuntimeError extends PyException {
     PyRuntimeError(PyObject... _args) { super(_args); }
     @Override public PyConcreteType type() { return PyRuntimeErrorType.singleton; }
 
@@ -232,6 +232,16 @@ final class PyRuntimeError extends PyException {
     public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, type.name());
         return new PyRuntimeError(args);
+    }
+}
+
+final class PyNotImplementedError extends PyRuntimeError {
+    PyNotImplementedError(PyObject... _args) { super(_args); }
+    @Override public PyConcreteType type() { return PyNotImplementedErrorType.singleton; }
+
+    public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
+        Runtime.requireNoKwArgs(kwargs, type.name());
+        return new PyNotImplementedError(args);
     }
 }
 
