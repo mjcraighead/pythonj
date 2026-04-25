@@ -397,16 +397,6 @@ def _pyj_format_zero_fill_grouped(sign: str, prefix: str, digits: str, grouping,
         digits = ('0' * (digits_len - len(digits))) + digits
     return sign + prefix + _pyj_format_group_digits(digits, grouping, group_size) + suffix
 
-def _pyj_int_base_digits(value: int, base: int, alphabet: str) -> str:
-    if value == 0:
-        return '0'
-    ret = []
-    while value:
-        ret.append(alphabet[value % base])
-        value //= base
-    ret.reverse()
-    return ''.join(ret)
-
 def _pyj_float_parse_spec(spec: str) -> tuple:
     fill: str
     sign: str
@@ -731,24 +721,24 @@ def pyj_int_format(value: int, spec: str) -> str:
     prefix = ''
     group_size = 3
     if type_char == 'd':
-        digits = __pythonj_int_java_str__(abs_value)
+        digits = __pythonj_int_str__(abs_value)
     elif type_char == 'x':
-        digits = _pyj_int_base_digits(abs_value, 16, '0123456789abcdef')
+        digits = __pythonj_int_str_base__(abs_value, 16)
         if alt:
             prefix = '0x'
         group_size = 4
     elif type_char == 'X':
-        digits = _pyj_int_base_digits(abs_value, 16, '0123456789ABCDEF')
+        digits = __pythonj_int_str_base__(abs_value, 16).upper()
         if alt:
             prefix = '0X'
         group_size = 4
     elif type_char == 'b':
-        digits = _pyj_int_base_digits(abs_value, 2, '01')
+        digits = __pythonj_int_str_base__(abs_value, 2)
         if alt:
             prefix = '0b'
         group_size = 4
     elif type_char == 'o':
-        digits = _pyj_int_base_digits(abs_value, 8, '01234567')
+        digits = __pythonj_int_str_base__(abs_value, 8)
         if alt:
             prefix = '0o'
         group_size = 4
@@ -895,17 +885,17 @@ def _pyj_percent_int_text(value, flags, width, precision, conv) -> str:
 
     prefix = ''
     if conv in 'diu':
-        digits = str(abs_value)
+        digits = __pythonj_int_str__(abs_value)
     elif conv == 'o':
-        digits = _pyj_int_base_digits(abs_value, 8, '01234567')
+        digits = __pythonj_int_str_base__(abs_value, 8)
         if '#' in flags:
             prefix = '0o'
     elif conv == 'x':
-        digits = _pyj_int_base_digits(abs_value, 16, '0123456789abcdef')
+        digits = __pythonj_int_str_base__(abs_value, 16)
         if '#' in flags:
             prefix = '0x'
     elif conv == 'X':
-        digits = _pyj_int_base_digits(abs_value, 16, '0123456789ABCDEF')
+        digits = __pythonj_int_str_base__(abs_value, 16).upper()
         if '#' in flags:
             prefix = '0X'
     else:

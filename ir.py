@@ -1522,8 +1522,10 @@ def static_method_call(class_name: str, method: str, args: list[Expr], return_ty
             return CreateObject('PyInt', [CastExpr('long', StaticMethodCall('Long', 'bitCount', [unbox_int(args[0])], 'int'))])
         case ('Runtime', 'pythonjIntJavaLeadingZeros'):
             return CreateObject('PyInt', [CastExpr('long', StaticMethodCall('Long', 'numberOfLeadingZeros', [unbox_int(args[0])], 'int'))])
-        case ('Runtime', 'pythonjIntJavaStr'):
+        case ('Runtime', 'pythonjIntStr'):
             return CreateObject('PyString', [static_method_call('Long', 'toString', [unbox_int(args[0])])])
+        case ('Runtime', 'pythonjIntStrBase'):
+            return CreateObject('PyString', [static_method_call('Long', 'toString', [unbox_int(args[0]), CastExpr('int', unbox_int(args[1]))])])
         case ('Runtime', 'pythonjIsDataDescriptor'):
             return static_method_call('PyBool', 'create', [MethodCall(args[0], 'isDataDescriptor', [], 'boolean')])
         case ('Runtime', 'pythonjIter'):

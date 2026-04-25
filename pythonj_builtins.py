@@ -23,7 +23,9 @@ def any(iterable) -> bool:
 
 def bin(arg) -> str:
     value: int = _operator.index(arg)
-    return f'{value:#b}'
+    if value < 0:
+        return f'-0b{__pythonj_int_str_base__(-value, 2)}'
+    return f'0b{__pythonj_int_str_base__(value, 2)}'
 
 def delattr(obj, name) -> None:
     if not isinstance(name, str):
@@ -70,7 +72,9 @@ def hash(arg) -> int:
 
 def hex(arg) -> str:
     value: int = _operator.index(arg)
-    return f'{value:#x}'
+    if value < 0:
+        return f'-0x{__pythonj_int_str_base__(-value, 16)}'
+    return f'0x{__pythonj_int_str_base__(value, 16)}'
 
 def isinstance(obj, class_or_tuple) -> bool:
     if __pythonj_isinstance__(class_or_tuple, tuple):
@@ -101,7 +105,9 @@ def next(iterator, default):
 
 def oct(arg) -> str:
     value: int = _operator.index(arg)
-    return f'{value:#o}'
+    if value < 0:
+        return f'-0o{__pythonj_int_str_base__(-value, 8)}'
+    return f'0o{__pythonj_int_str_base__(value, 8)}'
 
 def repr(arg) -> str:
     ret = __pythonj_lookup_attr__(type(arg), '__repr__')(arg)
@@ -917,7 +923,7 @@ class int:
         return pyj_int_format(self, format_spec)
 
     def __repr__(self: int) -> str:
-        return __pythonj_int_java_str__(self)
+        return __pythonj_int_str__(self)
 
     def as_integer_ratio(self) -> tuple:
         return (self, 1)
