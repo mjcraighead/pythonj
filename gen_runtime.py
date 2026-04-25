@@ -609,6 +609,7 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
                 if attr_spec['kind'] != 'wrapper_descriptor':
                     continue
                 arity = get_slot_wrapper_arity(attr_spec)
+                wrapper_pre_return_stmts: list[ir.Statement] = []
                 if method_name in pythonj_builtins_classes.get(name, {}):
                     helper_key = (name, method_name)
                     helper_name = f'{name.replace(".", "_")}__{method_name}'
@@ -634,8 +635,13 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
                     wrapper_return_expr = ir.static_method_call('PyBool', 'create', [ir.MethodCall(ir.Identifier('self'), 'boolValue', [], 'boolean')])
                 elif method_name == '__contains__':
                     wrapper_return_expr = ir.static_method_call('PyBool', 'create', [ir.MethodCall(ir.Identifier('self'), 'contains', [ir.Identifier('arg0')], 'boolean')])
+                elif method_name == '__delitem__':
+                    wrapper_return_expr = ir.PyConstant(None)
+                    wrapper_pre_return_stmts.append(ir.method_call_statement(ir.Identifier('self'), 'delItem', [ir.Identifier('arg0')]))
                 elif method_name == '__hash__':
                     wrapper_return_expr = ir.CreateObject('PyInt', [ir.CastExpr('long', ir.MethodCall(ir.Identifier('self'), 'hashCode', [], 'int'))])
+                elif method_name == '__getitem__':
+                    wrapper_return_expr = ir.MethodCall(ir.Identifier('self'), 'getItem', [ir.Identifier('arg0')])
                 elif method_name == '__index__':
                     wrapper_return_expr = ir.CreateObject('PyInt', [ir.MethodCall(ir.Identifier('self'), 'indexValue', [], 'long')])
                 elif method_name == '__iter__':
@@ -644,6 +650,9 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
                     wrapper_return_expr = ir.CreateObject('PyInt', [ir.MethodCall(ir.Identifier('self'), 'len', [], 'long')])
                 elif method_name == '__repr__':
                     wrapper_return_expr = ir.CreateObject('PyString', [ir.MethodCall(ir.Identifier('self'), 'repr', [], 'String')])
+                elif method_name == '__setitem__':
+                    wrapper_return_expr = ir.PyConstant(None)
+                    wrapper_pre_return_stmts.append(ir.method_call_statement(ir.Identifier('self'), 'setItem', [ir.Identifier('arg0'), ir.Identifier('arg1')]))
                 elif method_name == '__str__':
                     wrapper_return_expr = ir.CreateObject('PyString', [ir.MethodCall(ir.Identifier('self'), 'str', [], 'String')])
                 else:
@@ -657,6 +666,7 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
                         [],
                     ),
                     *(ir.LocalDecl('PyObject', f'arg{i}', ir.ArrayAccess(ir.Identifier('args'), ir.IntLiteral(i))) for i in range(arity)),
+                    *wrapper_pre_return_stmts,
                 ]
                 if wrapper_return_expr is not None:
                     wrapper_call_body.append(ir.ReturnStatement(wrapper_return_expr))

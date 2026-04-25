@@ -342,6 +342,6 @@ public final class PyList extends PyObject {
         }
         return PyNone.singleton;
     }
-    public PyObject pymethod___getitem__(PyObject key) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod___getitem__(PyObject key) { return getItem(key); }
     public PyObject pymethod___reversed__() { return new PyListReverseIter(items.listIterator(items.size())); }
 }

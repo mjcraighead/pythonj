@@ -470,7 +470,7 @@ public final class PyDict extends PyObject {
         return PyNone.singleton;
     }
     public PyDictValues pymethod_values() { return new PyDictValues(items); }
-    public PyObject pymethod___getitem__(PyObject key) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod___getitem__(PyObject key) { return getItem(key); }
     // XXX Use SequencedMap to implement this in Java 21+
     public PyObject pymethod___reversed__() { throw new UnsupportedOperationException(); }
 }
