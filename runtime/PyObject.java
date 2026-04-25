@@ -13,7 +13,6 @@ public abstract class PyObject implements Comparable<PyObject> {
     public PyObject invert() { throw raiseUnaryOp("unary ~"); }
     public PyObject pos() { throw raiseUnaryOp("unary +"); }
     public PyObject neg() { throw raiseUnaryOp("unary -"); }
-    public PyObject abs() { throw raiseUnaryOp("abs()"); }
 
     public PyObject add(PyObject rhs) { return rhs.radd(this); }
     public PyObject and(PyObject rhs) { return rhs.rand(this); }

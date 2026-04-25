@@ -630,8 +630,6 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
                         [ir.Identifier('self'), *(ir.Identifier(f'arg{i}') for i in range(arity))],
                         metadata.builtin_method_return_java_types.get((name.rsplit('.', 1)[-1], method_name), 'PyObject'),
                     )
-                elif method_name == '__abs__':
-                    wrapper_return_expr = ir.MethodCall(ir.Identifier('self'), 'abs', [], 'PyObject')
                 elif method_name == '__bool__':
                     wrapper_return_expr = ir.static_method_call('PyBool', 'create', [ir.MethodCall(ir.Identifier('self'), 'boolValue', [], 'boolean')])
                 elif method_name == '__contains__':

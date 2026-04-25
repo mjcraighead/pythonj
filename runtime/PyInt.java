@@ -155,7 +155,6 @@ public final class PyInt extends PyObject {
     @Override public PyInt invert() { return new PyInt(~value); }
     @Override public PyInt pos() { return this; }
     @Override public PyInt neg() { return new PyInt(Math.negateExact(value)); }
-    @Override public PyInt abs() { return (value >= 0) ? this : new PyInt(Math.negateExact(value)); }
 
     @Override public PyObject add(PyObject rhs) {
         if (rhs instanceof PyInt rhsInt) {

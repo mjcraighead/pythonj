@@ -28,7 +28,6 @@ ISINSTANCE_SINGLE_FASTPATH_BUILTIN_TYPES = {'bool', 'bytearray', 'bytes', 'dict'
 EXACT_INT_BINOPS = {'add', 'and', 'floorDiv', 'lshift', 'mod', 'mul', 'or', 'pow', 'rshift', 'sub', 'xor'}
 
 INTRINSIC_SIGNATURES = {
-    '__pythonj_abs__': ('pythonjAbs', 1, 'object'),
     '__pythonj_bytes_builder__': ('pythonjBytesBuilder', 1, 'object'),
     '__pythonj_bytes_builder_append_bytearray__': ('pythonjBytesBuilderAppendByteArray', 2, 'void'),
     '__pythonj_bytes_builder_append_bytes__': ('pythonjBytesBuilderAppendBytes', 2, 'void'),
@@ -1587,7 +1586,7 @@ class LoweringVisitor(ast.NodeVisitor):
 
     def emit_call_positional(self, func: ir.Expr, node: ast.Call, max_args: int, *, return_node: Optional[ast.expr] = None) -> ir.Expr:
         if isinstance(func, ir.PyBuiltinFunction):
-            if func.name in {'abs', 'len', 'repr'}:
+            if func.name in {'len', 'repr'}:
                 method_name = INTRINSIC_SIGNATURES[f'__pythonj_{func.name}__'][0]
                 return ir.static_method_call('Runtime', method_name, [self.visit(node.args[0])])
             if func.name == 'isinstance':

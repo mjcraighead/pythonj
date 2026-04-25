@@ -97,7 +97,6 @@ public final class PyFloat extends PyObject {
 
     @Override public PyFloat pos() { return this; }
     @Override public PyFloat neg() { return new PyFloat(-value); }
-    @Override public PyFloat abs() { return new PyFloat(Math.abs(value)); }
     @Override public PyObject add(PyObject rhs) {
         if ((rhs instanceof PyFloat) || (rhs instanceof PyInt) || (rhs instanceof PyBool)) {
             return add(value, floatLikeValue(rhs));

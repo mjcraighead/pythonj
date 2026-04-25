@@ -1462,8 +1462,6 @@ def static_method_call(class_name: str, method: str, args: list[Expr], return_ty
             return CreateObject('PyRange', [py_index(args[i]) for i in range(3)])
         case ('PyType', 'newObjPositional') if isinstance(args[1], Null) and isinstance(args[2], Null):
             return MethodCall(args[0], 'type', [], 'PyType')
-        case ('Runtime', 'pythonjAbs'):
-            return MethodCall(args[0], 'abs', [], 'PyObject')
         case ('Runtime', 'pythonjBytesBuilder'):
             if isinstance(args[0], PyConstant) and args[0].value is None:
                 return CreateObject('PyBytesBuilder', [])

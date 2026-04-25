@@ -29,7 +29,6 @@ public final class PyBool extends PyObject {
     @Override public PyInt invert() { throw unimplementedMethod("invert"); }
     @Override public PyInt pos() { return new PyInt(asInt()); }
     @Override public PyInt neg() { return new PyInt(value ? -1 : 0); }
-    @Override public PyInt abs() { return new PyInt(asInt()); }
 
     @Override public PyObject add(PyObject rhs) {
         if (rhs instanceof PyInt rhsInt) {

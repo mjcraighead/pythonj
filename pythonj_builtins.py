@@ -7,7 +7,10 @@ import _operator
 
 # Builtin functions
 def abs(arg):
-    return __pythonj_abs__(arg)
+    abs_func = __pythonj_lookup_attr__(type(arg), '__abs__')
+    if abs_func is __pythonj_null__:
+        raise TypeError(f'bad operand type for abs(): {type(arg).__name__!r}')
+    return abs_func(arg)
 
 def all(iterable) -> bool:
     for item in iterable:
@@ -250,6 +253,9 @@ class type:
         raise TypeError(f'cannot set {name!r} attribute of immutable type {self.__name__!r}')
 
 class bool:
+    def __abs__(self: bool) -> int:
+        return 1 if self else 0
+
     def __bool__(self: bool) -> bool:
         return self
 
@@ -845,6 +851,9 @@ class float:
     def real(self: float) -> float:
         return self
 
+    def __abs__(self: float) -> float:
+        return (0.0 + self) if self >= 0.0 else (-self)
+
     def __bool__(self: float) -> bool:
         return self != 0.0
 
@@ -913,6 +922,9 @@ class int:
     @__pythonj_getter__
     def real(self: int) -> int:
         return self
+
+    def __abs__(self: int) -> int:
+        return self if self >= 0 else -self
 
     def __bool__(self: int) -> bool:
         return self != 0
