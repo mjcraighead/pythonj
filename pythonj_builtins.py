@@ -336,7 +336,7 @@ class bytes:
                 __pythonj_str_builder_append__(ret, chr(c))
             else:
                 __pythonj_str_builder_append__(ret, '\\x')
-                __pythonj_str_builder_append__(ret, format(c, '02x'))
+                __pythonj_str_builder_append__(ret, pyj_hex_byte(c))
         __pythonj_str_builder_append__(ret, "'")
         return __pythonj_str_builder_finish__(ret)
 
@@ -505,7 +505,7 @@ class bytes:
                 while i < n:
                     if i != 0 and ((n - i) % group_size == 0):
                         __pythonj_str_builder_append__(ret, sep_str)
-                    __pythonj_str_builder_append__(ret, format(self[i], '02x'))
+                    __pythonj_str_builder_append__(ret, pyj_hex_byte(self[i]))
                     i += 1
             else:
                 i = 0
@@ -514,12 +514,12 @@ class bytes:
                         __pythonj_str_builder_append__(ret, sep_str)
                     group_end = i + group_size
                     while i < group_end and i < n:
-                        __pythonj_str_builder_append__(ret, format(self[i], '02x'))
+                        __pythonj_str_builder_append__(ret, pyj_hex_byte(self[i]))
                         i += 1
         else:
             c: int
             for c in self:
-                __pythonj_str_builder_append__(ret, format(c, '02x'))
+                __pythonj_str_builder_append__(ret, pyj_hex_byte(c))
         return __pythonj_str_builder_finish__(ret)
 
     def index(self: bytes, sub, start, end) -> int:

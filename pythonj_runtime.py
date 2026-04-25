@@ -278,6 +278,10 @@ def min_iterable(iterable, default_obj, key_func):
                 ret_key = item_key
     return ret
 
+def pyj_hex_byte(b: int) -> str:
+    digits = '0123456789abcdef'
+    return digits[b >> 4] + digits[b & 15]
+
 def _pyj_format_parse_common(spec: str) -> tuple:
     i: int = 0
     n = len(spec)
