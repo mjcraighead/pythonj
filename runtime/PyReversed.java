@@ -30,4 +30,6 @@ public final class PyReversed extends PyIter {
     }
     @Override public String repr() { return defaultRepr(); }
     @Override public PyConcreteType type() { return PyReversedType.singleton; }
+
+    public PyObject pymethod___length_hint__() { throw new UnsupportedOperationException(); }
 }

@@ -74,4 +74,5 @@ public final class PyMappingProxy extends PyObject {
     public PyDictItems pymethod_items() { return new PyDictItems(items); }
     public PyDictKeys pymethod_keys() { return new PyDictKeys(items); }
     public PyDictValues pymethod_values() { return new PyDictValues(items); }
+    public PyObject pymethod___reversed__() { throw new UnsupportedOperationException(); }
 }
