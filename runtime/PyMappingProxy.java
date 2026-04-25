@@ -37,15 +37,13 @@ public final class PyMappingProxy extends PyObject {
         throw PyTypeError.raise("'mappingproxy' object doesn't support item deletion");
     }
 
-    @Override public boolean contains(PyObject rhs) {
-        return items.containsKey(rhs);
-    }
     @Override public boolean boolValue() { return !items.isEmpty(); }
+    @Override public boolean contains(PyObject rhs) { return items.containsKey(rhs); }
+    @Override public boolean equals(Object rhs) { return this == rhs; }
+    @Override public int hashCode() { return slotBasedHashCode(); }
     @Override public boolean hasIter() { return true; }
     @Override public PyIter iter() { return new PyDictIter(items.keySet().iterator()); }
     @Override public long len() { return items.size(); }
-    @Override public int hashCode() { return slotBasedHashCode(); }
-    @Override public boolean equals(Object rhs) { return this == rhs; }
     @Override public String repr() {
         var s = new StringBuilder("mappingproxy({");
         boolean first = true;
@@ -59,6 +57,20 @@ public final class PyMappingProxy extends PyObject {
             s.append(x.getValue().repr());
         }
         return s.append("})").toString();
+    }
+    @Override public String str() {
+        var s = new StringBuilder("{");
+        boolean first = true;
+        for (var x: items.entrySet()) {
+            if (!first) {
+                s.append(", ");
+            }
+            first = false;
+            s.append(x.getKey().repr());
+            s.append(": ");
+            s.append(x.getValue().repr());
+        }
+        return s.append("}").toString();
     }
     @Override public PyConcreteType type() { return PyMappingProxyType.singleton; }
 
