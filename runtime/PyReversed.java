@@ -5,11 +5,10 @@
 public final class PyReversed extends PyIter {
     private final PyObject obj;
     private long i = 0;
-    private final long len;
 
     PyReversed(PyObject _obj) {
         obj = _obj;
-        len = _obj.len();
+        i = _obj.len() - 1;
     }
 
     public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
@@ -18,15 +17,23 @@ public final class PyReversed extends PyIter {
         return newObjPositional(args[0]);
     }
     public static PyObject newObjPositional(PyObject arg) {
-        return arg.reversed();
+        PyType argType = arg.type();
+        PyObject reversedFunc = argType.lookupAttr("__reversed__");
+        if ((reversedFunc != null) && (reversedFunc != PyNone.singleton)) {
+            return reversedFunc.call(new PyObject[]{arg}, null);
+        }
+        if (argType.lookupAttr("__getitem__") == null) {
+            throw PyTypeError.raise(PyString.reprOf(argType.name()) + " object is not reversible");
+        }
+        return new PyReversed(arg);
     }
 
     @Override public PyObject next() {
-        if (i >= len) {
+        if (i < 0) {
             return null;
         }
-        long cur = i++;
-        return obj.getItem(new PyInt(len - 1 - cur));
+        long cur = i--;
+        return obj.getItem(new PyInt(cur));
     }
     @Override public String repr() { return defaultRepr(); }
     @Override public PyConcreteType type() { return PyReversedType.singleton; }

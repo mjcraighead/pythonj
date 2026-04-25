@@ -409,6 +409,7 @@ public final class PyDict extends PyObject {
     }
     public PyDictItems pymethod_items() { return new PyDictItems(items); }
     public PyDictKeys pymethod_keys() { return new PyDictKeys(items); }
+    // XXX Use SequencedMap to implement this in Java 21+
     public PyObject pymethod_popitem() {
         Map.Entry<PyObject, PyObject> last = null;
         for (var e: items.entrySet()) {
@@ -470,5 +471,6 @@ public final class PyDict extends PyObject {
     }
     public PyDictValues pymethod_values() { return new PyDictValues(items); }
     public PyObject pymethod___getitem__(PyObject key) { throw new UnsupportedOperationException(); }
+    // XXX Use SequencedMap to implement this in Java 21+
     public PyObject pymethod___reversed__() { throw new UnsupportedOperationException(); }
 }

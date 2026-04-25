@@ -6,6 +6,7 @@ import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.ListIterator;
 
 final class PyListIter extends PyIter {
     private static final PyConcreteType type_singleton = new PyConcreteType("list_iterator", "list_iterator", "builtins", PyListIter.class, PyObjectType.singleton, null);
@@ -15,6 +16,18 @@ final class PyListIter extends PyIter {
     PyListIter(Iterator<PyObject> _it) { it = _it; }
 
     @Override public PyObject next() { return it.hasNext() ? it.next() : null; }
+    @Override public String repr() { return defaultRepr(); }
+    @Override public PyConcreteType type() { return type_singleton; }
+};
+
+final class PyListReverseIter extends PyIter {
+    private static final PyConcreteType type_singleton = new PyConcreteType("list_reverseiterator", "list_reverseiterator", "builtins", PyListReverseIter.class, PyObjectType.singleton, null);
+
+    private final ListIterator<PyObject> it;
+
+    PyListReverseIter(ListIterator<PyObject> _it) { it = _it; }
+
+    @Override public PyObject next() { return it.hasPrevious() ? it.previous() : null; }
     @Override public String repr() { return defaultRepr(); }
     @Override public PyConcreteType type() { return type_singleton; }
 };
@@ -187,11 +200,8 @@ public final class PyList extends PyObject {
         throw unimplementedMethod("delItem");
     }
 
-    // NOTE: CPython returns a specialized list_reverseiterator.
-    // pythonj intentionally uses the generic reversed iterator, at least for now.
     @Override public final boolean hasIter() { return true; }
     @Override public PyListIter iter() { return new PyListIter(items.iterator()); }
-    @Override public PyReversed reversed() { return new PyReversed(this); }
     @Override public PyConcreteType type() { return PyListType.singleton; }
 
     @Override public boolean boolValue() { return !items.isEmpty(); }
@@ -308,5 +318,5 @@ public final class PyList extends PyObject {
         return PyNone.singleton;
     }
     public PyObject pymethod___getitem__(PyObject key) { throw new UnsupportedOperationException(); }
-    public PyObject pymethod___reversed__() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod___reversed__() { return new PyListReverseIter(items.listIterator(items.size())); }
 }

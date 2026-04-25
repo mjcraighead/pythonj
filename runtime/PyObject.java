@@ -98,7 +98,6 @@ public abstract class PyObject implements Comparable<PyObject> {
     public PyIter iter() {
         throw PyTypeError.raise(PyString.reprOf(type().name()) + " object is not iterable");
     }
-    public PyIter reversed() { throw unimplementedMethod("reversed"); }
     public PyObject next() {
         throw PyTypeError.raise(PyString.reprOf(type().name()) + " object is not an iterator");
     }
