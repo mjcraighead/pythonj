@@ -1907,7 +1907,7 @@ class LoweringVisitor(ast.NodeVisitor):
                 elif val.conversion == ord('r'):
                     expr = ir.static_method_call('Runtime', 'pythonjRepr', [expr])
                 elif val.conversion == ord('a'):
-                    expr = ir.static_method_call('PyBuiltinFunctionsImpl', 'pyfunc_ascii', [expr])
+                    expr = ir.static_method_call('PyRuntime', 'pyfunc_ascii', [expr])
                 elif val.conversion != -1:
                     self.error(val.lineno, f'unsupported f string conversion type {val.conversion}')
                 vals.append(ir.unbox_str(ir.py_format(expr, format_spec)))

@@ -188,27 +188,6 @@ final class PyBuiltinFunctionsImpl {
         }
         return new PyBytes(out.toByteArray());
     }
-    static PyString pyfunc_ascii(PyObject arg) {
-        String r = arg.repr();
-        var s = new StringBuilder(r.length());
-        for (int i = 0; i < r.length(); i++) {
-            char c = r.charAt(i);
-            if (c < 0x80) {
-                s.append(c);
-            } else if (c <= 0xFF) {
-                s.append("\\x");
-                s.append("0123456789abcdef".charAt(c >> 4));
-                s.append("0123456789abcdef".charAt(c & 15));
-            } else if (Character.isHighSurrogate(c) && (i + 1 < r.length()) && Character.isLowSurrogate(r.charAt(i + 1))) {
-                int cp = Character.toCodePoint(c, r.charAt(i + 1));
-                s.append(String.format("\\U%08x", cp));
-                i++;
-            } else {
-                s.append(String.format("\\u%04x", (int)c));
-            }
-        }
-        return new PyString(s.toString());
-    }
     static PyString pyfunc_chr(PyObject arg) {
         long index = arg.indexValue();
         if ((index < 0) || (index > 0x10FFFF)) {

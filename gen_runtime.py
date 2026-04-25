@@ -19,7 +19,7 @@ RAW_ARGS_KWARGS_BUILTINS = {'max', 'min'}
 ALL_PYTHON_AUTHORED_IMPLS = {'bool', 'bytearray', 'bytes', 'float', 'int', 'object', 'range', 'tuple'}
 PYTHON_AUTHORED_IMPLS = {
     'builtins': {
-        'abs', 'all', 'any', 'bin', 'delattr', 'divmod', 'format', 'getattr', 'hasattr', 'hash', 'hex',
+        'abs', 'all', 'any', 'ascii', 'bin', 'delattr', 'divmod', 'format', 'getattr', 'hasattr', 'hash', 'hex',
         'isinstance', 'issubclass', 'len', 'next', 'oct', 'repr', 'setattr', 'sum',
     },
     'dict': {'__contains__', 'fromkeys', 'pop', 'setdefault'},

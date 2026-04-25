@@ -24,6 +24,44 @@ def any(iterable) -> bool:
             return True
     return False
 
+def ascii(arg) -> str:
+    r: str = repr(arg)
+    digits: str = '0123456789abcdef'
+    ret = __pythonj_str_builder__(len(r))
+    i: int = 0
+    while i < len(r):
+        c: str = r[i]
+        cp: int = ord(c)
+        if 0xD800 <= cp <= 0xDBFF and i + 1 < len(r):
+            lo: int = ord(r[i + 1])
+            if 0xDC00 <= lo <= 0xDFFF:
+                cp = 0x10000 + ((cp - 0xD800) << 10) + (lo - 0xDC00)
+                i += 1
+        if cp < 0x80:
+            __pythonj_str_builder_append__(ret, c)
+        elif cp <= 0xFF:
+            __pythonj_str_builder_append__(ret, '\\x')
+            __pythonj_str_builder_append__(ret, digits[cp >> 4])
+            __pythonj_str_builder_append__(ret, digits[cp & 15])
+        elif cp <= 0xFFFF:
+            __pythonj_str_builder_append__(ret, '\\u')
+            __pythonj_str_builder_append__(ret, digits[cp >> 12])
+            __pythonj_str_builder_append__(ret, digits[(cp >> 8) & 15])
+            __pythonj_str_builder_append__(ret, digits[(cp >> 4) & 15])
+            __pythonj_str_builder_append__(ret, digits[cp & 15])
+        else:
+            __pythonj_str_builder_append__(ret, '\\U')
+            __pythonj_str_builder_append__(ret, digits[cp >> 28])
+            __pythonj_str_builder_append__(ret, digits[(cp >> 24) & 15])
+            __pythonj_str_builder_append__(ret, digits[(cp >> 20) & 15])
+            __pythonj_str_builder_append__(ret, digits[(cp >> 16) & 15])
+            __pythonj_str_builder_append__(ret, digits[(cp >> 12) & 15])
+            __pythonj_str_builder_append__(ret, digits[(cp >> 8) & 15])
+            __pythonj_str_builder_append__(ret, digits[(cp >> 4) & 15])
+            __pythonj_str_builder_append__(ret, digits[cp & 15])
+        i += 1
+    return __pythonj_str_builder_finish__(ret)
+
 def bin(arg) -> str:
     value: int = _operator.index(arg)
     if value < 0:

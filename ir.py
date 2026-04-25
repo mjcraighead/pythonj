@@ -20,7 +20,6 @@ JAVA_TYPE_UNKNOWN = 'unknown'
 STATIC_METHOD_RETURN_TYPES = {
     ('Long', 'toString'): 'String',
     ('PyBool', 'create'): 'PyBool',
-    ('PyBuiltinFunctionsImpl', 'pyfunc_ascii'): 'PyString',
     ('PyBytesBuilder', 'newUnboxed'): 'java.io.ByteArrayOutputStream',
     ('PyFloat', 'addUnboxed'): 'double',
     ('PyFloat', 'mulUnboxed'): 'double',
