@@ -548,7 +548,7 @@ abstract class PyMethodWrapper<T extends PyObject> extends PyTruthyObject {
 
     @Override public final int hashCode() { return defaultHashCode(); }
     @Override public final String repr() {
-        return "<method-wrapper " + PyString.reprOf(name) + " of " + PyString.reprOf(self.type().name()) + " object>";
+        return "<method-wrapper " + PyString.reprOf(name) + " of " + self.type().name() + " object>";
     }
     @Override public final PyConcreteType type() { return PyMethodWrapperType.singleton; }
 
