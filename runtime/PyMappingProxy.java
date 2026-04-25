@@ -6,10 +6,26 @@ import java.util.Map;
 
 public final class PyMappingProxy extends PyObject {
     private static final PyTuple constructor_positional_names = new PyTuple(new PyObject[] {new PyString("mapping")});
-    private final Map<PyObject, PyObject> items;
+    private final PyObject mapping;
 
-    PyMappingProxy(Map<PyObject, PyObject> _items) {
-        items = _items;
+    PyMappingProxy(PyObject _mapping) {
+        mapping = _mapping;
+    }
+
+    private Map<PyObject, PyObject> items() {
+        if (mapping instanceof PyDict dict) {
+            return dict.items;
+        } else if (mapping instanceof PyMappingProxy proxy) {
+            return proxy.items();
+        } else if (mapping instanceof PyType type) {
+            var attrs = type.getAttributes();
+            if (attrs == null) {
+                throw new UnsupportedOperationException(type.name() + ".__dict__ is not implemented");
+            }
+            return attrs;
+        } else {
+            throw new UnsupportedOperationException("mappingproxy backing object is not a concrete mapping");
+        }
     }
 
     public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
@@ -18,16 +34,16 @@ public final class PyMappingProxy extends PyObject {
     }
     public static PyMappingProxy newObjPositional(PyObject arg) {
         if (arg instanceof PyDict dict) {
-            return new PyMappingProxy(dict.items);
+            return new PyMappingProxy(dict);
         } else if (arg instanceof PyMappingProxy proxy) {
-            return new PyMappingProxy(proxy.items);
+            return new PyMappingProxy(proxy);
         } else {
             throw PyTypeError.raise("mappingproxy() argument must be a mapping, not " + arg.type().name());
         }
     }
 
     @Override public PyObject getItem(PyObject key) {
-        PyObject ret = items.get(key);
+        PyObject ret = items().get(key);
         if (ret == null) {
             throw new PyRaise(new PyKeyError(key));
         }
@@ -37,28 +53,16 @@ public final class PyMappingProxy extends PyObject {
         throw PyTypeError.raise("'mappingproxy' object doesn't support item deletion");
     }
 
-    @Override public boolean boolValue() { return !items.isEmpty(); }
-    @Override public boolean contains(PyObject rhs) { return items.containsKey(rhs); }
+    @Override public boolean boolValue() { return mapping.boolValue(); }
+    @Override public boolean contains(PyObject rhs) { return items().containsKey(rhs); }
     @Override public boolean equals(Object rhs) { return this == rhs; }
     @Override public int hashCode() { return slotBasedHashCode(); }
     @Override public boolean hasIter() { return true; }
-    @Override public PyIter iter() { return new PyDictIter(items.keySet().iterator()); }
-    @Override public long len() { return items.size(); }
-    @Override public String repr() {
-        var s = new StringBuilder("mappingproxy({");
-        boolean first = true;
-        for (var x: items.entrySet()) {
-            if (!first) {
-                s.append(", ");
-            }
-            first = false;
-            s.append(x.getKey().repr());
-            s.append(": ");
-            s.append(x.getValue().repr());
-        }
-        return s.append("})").toString();
-    }
+    @Override public PyIter iter() { return new PyDictIter(items().keySet().iterator()); }
+    @Override public long len() { return items().size(); }
+    @Override public String repr() { return "mappingproxy(" + mapping.repr() + ")"; }
     @Override public String str() {
+        var items = items();
         var s = new StringBuilder("{");
         boolean first = true;
         for (var x: items.entrySet()) {
@@ -75,16 +79,17 @@ public final class PyMappingProxy extends PyObject {
     @Override public PyConcreteType type() { return PyMappingProxyType.singleton; }
 
     public PyDict pymethod_copy() {
+        var items = items();
         PyDict ret = new PyDict();
         ret.items.putAll(items);
         return ret;
     }
     public PyObject pymethod_get(PyObject key, PyObject defaultValue) {
-        PyObject ret = items.get(key);
+        PyObject ret = items().get(key);
         return (ret != null) ? ret : defaultValue;
     }
-    public PyDictItems pymethod_items() { return new PyDictItems(items); }
-    public PyDictKeys pymethod_keys() { return new PyDictKeys(items); }
-    public PyDictValues pymethod_values() { return new PyDictValues(items); }
+    public PyDictItems pymethod_items() { return new PyDictItems(items()); }
+    public PyDictKeys pymethod_keys() { return new PyDictKeys(items()); }
+    public PyDictValues pymethod_values() { return new PyDictValues(items()); }
     public PyObject pymethod___reversed__() { throw new UnsupportedOperationException(); }
 }

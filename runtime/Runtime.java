@@ -379,7 +379,7 @@ abstract class PyType extends PyTruthyObject {
         if (attrs == null) {
             throw new UnsupportedOperationException(((PyType)obj).name() + ".__dict__ is not implemented");
         }
-        return new PyMappingProxy(attrs);
+        return new PyMappingProxy(obj);
     }
     static PyObject pyget___doc__(PyObject obj) {
         String doc = ((PyType)obj).doc();
