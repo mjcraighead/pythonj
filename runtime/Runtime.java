@@ -162,37 +162,29 @@ final class PySysImplementation extends PyTruthyObject {
     @Override public PyType type() { return PyObjectType.singleton; }
 }
 
-abstract class PyBagObject extends PyTruthyObject {
-    private final PyType bagType;
-    private final PyDict attrs = new PyDict();
+abstract class PyUserObject extends PyTruthyObject {
+    private final PyType userType;
+    private final PyDict attrs;
 
-    protected PyBagObject(PyType _bagType) {
-        bagType = _bagType;
+    protected PyUserObject(PyType _userType, boolean hasDict) {
+        userType = _userType;
+        attrs = hasDict ? new PyDict() : null;
     }
 
     @Override public PyDict getInstanceDict() { return attrs; }
 
     static PyObject pyget___dict__(PyObject obj) {
-        return ((PyBagObject)obj).attrs;
+        PyDict attrs = ((PyUserObject)obj).attrs;
+        if (attrs == null) {
+            throw ((PyUserObject)obj).raiseMissingAttr("__dict__");
+        }
+        return attrs;
     }
 
     @Override public boolean equals(Object rhs) { return this == rhs; }
     @Override public int hashCode() { return defaultHashCode(); }
     @Override public String repr() { return defaultRepr(); }
-    @Override public PyType type() { return bagType; }
-}
-
-abstract class PySlottedObject extends PyTruthyObject {
-    private final PyType slotType;
-
-    protected PySlottedObject(PyType _slotType) {
-        slotType = _slotType;
-    }
-
-    @Override public boolean equals(Object rhs) { return this == rhs; }
-    @Override public int hashCode() { return defaultHashCode(); }
-    @Override public String repr() { return defaultRepr(); }
-    @Override public PyType type() { return slotType; }
+    @Override public PyType type() { return userType; }
 }
 
 abstract class PyModule extends PyTruthyObject {

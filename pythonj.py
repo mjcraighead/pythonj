@@ -2675,11 +2675,17 @@ class LoweringVisitor(ast.NodeVisitor):
         elif node.body:
             self.error(node.lineno, "only 'class X: pass' and 'class X: __slots__ = (...)' are supported")
 
+        has_instance_dict = (slots is None) or ('__dict__' in slots)
+        real_slots = [] if slots is None else [name for name in slots if name != '__dict__']
+
         java_name = f'pyclass_{node.name}'
         type_class_name = f'pyclasstype_{node.name}'
         constructor_decls = [
             ir.ConstructorDecl('', java_name, [], [
-                ir.SuperConstructorCall([ir.Identifier(f'{type_class_name}.singleton')]),
+                ir.SuperConstructorCall([
+                    ir.Identifier(f'{type_class_name}.singleton'),
+                    ir.Bool(has_instance_dict),
+                ]),
             ]),
             ir.MethodDecl('public static', 'PyObject', 'newObj', ['PyConcreteType type', 'PyObject[] args', 'PyDict kwargs'], [
                 ir.method_call_statement(ir.Identifier('Runtime'), 'requireNoKwArgs', [
@@ -2698,98 +2704,81 @@ class LoweringVisitor(ast.NodeVisitor):
         ]
 
         class_decls: list[ir.ClassDecl] = []
-        if slots is None:
-            class_decls.append(ir.ClassDecl('private static final', java_name, 'PyBagObject', constructor_decls))
-        else:
-            class_decls.append(ir.ClassDecl('private static final', java_name, 'PySlottedObject', [
-                *(ir.FieldDecl('private', 'PyObject', f'pyslot_{name}', ir.Null()) for name in slots),
-                *constructor_decls,
-                *(
-                    ir.MethodDecl('static', 'PyObject', f'pyget_{name}', ['PyObject obj'], [
-                        ir.IfStatement(
-                            ir.BinaryOp('==', ir.Field(ir.CastExpr(java_name, ir.Identifier('obj')), f'pyslot_{name}'), ir.Null()),
-                            [ir.ThrowStatement(ir.MethodCall(ir.CastExpr(java_name, ir.Identifier('obj')), 'raiseMissingAttr', [ir.StrLiteral(name)]))],
-                            [],
-                        ),
-                        ir.ReturnStatement(ir.Field(ir.CastExpr(java_name, ir.Identifier('obj')), f'pyslot_{name}')),
-                    ])
-                    for name in slots
-                ),
-                *(
-                    ir.MethodDecl('static', 'void', f'pyset_{name}', ['PyObject obj', 'PyObject value'], [
-                        ir.AssignStatement(ir.Field(ir.CastExpr(java_name, ir.Identifier('obj')), f'pyslot_{name}'), ir.Identifier('value')),
-                        ir.ReturnStatement(),
-                    ])
-                    for name in slots
-                ),
-                *(
-                    ir.MethodDecl('static', 'void', f'pydel_{name}', ['PyObject obj'], [
-                        ir.IfStatement(
-                            ir.BinaryOp('==', ir.Field(ir.CastExpr(java_name, ir.Identifier('obj')), f'pyslot_{name}'), ir.Null()),
-                            [ir.ThrowStatement(ir.MethodCall(ir.CastExpr(java_name, ir.Identifier('obj')), 'raiseMissingAttr', [ir.StrLiteral(name)]))],
-                            [],
-                        ),
-                        ir.AssignStatement(ir.Field(ir.CastExpr(java_name, ir.Identifier('obj')), f'pyslot_{name}'), ir.Null()),
-                        ir.ReturnStatement(),
-                    ])
-                    for name in slots
-                ),
-                ir.MethodDecl('static', 'PyObject', 'pyget___dict__', ['PyObject obj'], [
-                    ir.ThrowStatement(ir.MethodCall(ir.CastExpr(java_name, ir.Identifier('obj')), 'raiseMissingAttr', [ir.StrLiteral('__dict__')])),
-                ]),
-            ]))
+        class_decls.append(ir.ClassDecl('private static final', java_name, 'PyUserObject', [
+            *(ir.FieldDecl('private', 'PyObject', f'pyslot_{name}', ir.Null()) for name in real_slots),
+            *constructor_decls,
+            *(
+                ir.MethodDecl('static', 'PyObject', f'pyget_{name}', ['PyObject obj'], [
+                    ir.IfStatement(
+                        ir.BinaryOp('==', ir.Field(ir.CastExpr(java_name, ir.Identifier('obj')), f'pyslot_{name}'), ir.Null()),
+                        [ir.ThrowStatement(ir.MethodCall(ir.CastExpr(java_name, ir.Identifier('obj')), 'raiseMissingAttr', [ir.StrLiteral(name)]))],
+                        [],
+                    ),
+                    ir.ReturnStatement(ir.Field(ir.CastExpr(java_name, ir.Identifier('obj')), f'pyslot_{name}')),
+                ])
+                for name in real_slots
+            ),
+            *(
+                ir.MethodDecl('static', 'void', f'pyset_{name}', ['PyObject obj', 'PyObject value'], [
+                    ir.AssignStatement(ir.Field(ir.CastExpr(java_name, ir.Identifier('obj')), f'pyslot_{name}'), ir.Identifier('value')),
+                    ir.ReturnStatement(),
+                ])
+                for name in real_slots
+            ),
+            *(
+                ir.MethodDecl('static', 'void', f'pydel_{name}', ['PyObject obj'], [
+                    ir.IfStatement(
+                        ir.BinaryOp('==', ir.Field(ir.CastExpr(java_name, ir.Identifier('obj')), f'pyslot_{name}'), ir.Null()),
+                        [ir.ThrowStatement(ir.MethodCall(ir.CastExpr(java_name, ir.Identifier('obj')), 'raiseMissingAttr', [ir.StrLiteral(name)]))],
+                        [],
+                    ),
+                    ir.AssignStatement(ir.Field(ir.CastExpr(java_name, ir.Identifier('obj')), f'pyslot_{name}'), ir.Null()),
+                    ir.ReturnStatement(),
+                ])
+                for name in real_slots
+            ),
+        ]))
         type_decls: list[ir.Decl] = [
             ir.FieldDecl('private static final', type_class_name, 'singleton', ir.CreateObject(type_class_name, [])),
         ]
-        if slots is None:
-            type_decls.append(ir.ClassDecl('static final', 'AttrsHolder', None, [
-                ir.FieldDecl('static final', 'PyGetSetDescriptor', 'pyattr___dict__',
-                    ir.CreateObject('PyGetSetDescriptor', [
-                        ir.Identifier('singleton'), ir.StrLiteral('__dict__'),
-                        ir.MethodRef('PyBagObject', 'pyget___dict__'), ir.Null(),
-                    ])),
-                ir.FieldDecl('static final', 'java.util.LinkedHashMap<PyObject, PyObject>', 'attrs',
-                    ir.CreateObject('java.util.LinkedHashMap<PyObject, PyObject>', [ir.IntLiteral(1)])),
-                ir.StaticBlock([
-                    ir.method_call_statement(ir.Identifier('attrs'), 'put', [
+        type_decls.append(ir.ClassDecl('static final', 'AttrsHolder', None, [
+            ir.FieldDecl('static final', 'PyGetSetDescriptor', 'pyattr___dict__',
+                ir.CreateObject('PyGetSetDescriptor', [
+                    ir.Identifier('singleton'),
+                    ir.StrLiteral('__dict__'),
+                    ir.MethodRef('PyUserObject', 'pyget___dict__'),
+                    ir.Null(),
+                ])),
+            *(
+                ir.FieldDecl('static final', 'PyMemberDescriptor', f'pyattr_{name}',
+                    ir.CreateObject('PyMemberDescriptor', [
+                        ir.Identifier('singleton'),
+                        ir.StrLiteral(name),
+                        ir.MethodRef(java_name, f'pyget_{name}'),
+                        ir.MethodRef(java_name, f'pyset_{name}'),
+                        ir.MethodRef(java_name, f'pydel_{name}'),
+                        ir.Null(),
+                    ]))
+                for name in real_slots
+            ),
+            ir.FieldDecl('static final', 'java.util.LinkedHashMap<PyObject, PyObject>', 'attrs',
+                ir.CreateObject('java.util.LinkedHashMap<PyObject, PyObject>', [ir.IntLiteral(len(real_slots) + (1 if has_instance_dict else 0))])),
+            ir.StaticBlock([
+                *(
+                    [ir.method_call_statement(ir.Identifier('attrs'), 'put', [
                         ir.CreateObject('PyString', [ir.StrLiteral('__dict__')]),
                         ir.Identifier('pyattr___dict__'),
-                    ]),
-                ]),
-            ]))
-        else:
-            type_decls.append(ir.ClassDecl('static final', 'AttrsHolder', None, [
-                ir.FieldDecl('static final', 'PyGetSetDescriptor', 'pyattr___dict__',
-                    ir.CreateObject('PyGetSetDescriptor', [
-                        ir.Identifier('singleton'),
-                        ir.StrLiteral('__dict__'),
-                        ir.MethodRef(java_name, 'pyget___dict__'),
-                        ir.Null(),
-                    ])),
-                *(
-                    ir.FieldDecl('static final', 'PyMemberDescriptor', f'pyattr_{name}',
-                        ir.CreateObject('PyMemberDescriptor', [
-                            ir.Identifier('singleton'),
-                            ir.StrLiteral(name),
-                            ir.MethodRef(java_name, f'pyget_{name}'),
-                            ir.MethodRef(java_name, f'pyset_{name}'),
-                            ir.MethodRef(java_name, f'pydel_{name}'),
-                            ir.Null(),
-                        ]))
-                    for name in slots
+                    ])] if has_instance_dict else []
                 ),
-                ir.FieldDecl('static final', 'java.util.LinkedHashMap<PyObject, PyObject>', 'attrs',
-                    ir.CreateObject('java.util.LinkedHashMap<PyObject, PyObject>', [ir.IntLiteral(len(slots))])),
-                ir.StaticBlock([
-                    *(
-                        ir.method_call_statement(ir.Identifier('attrs'), 'put', [
-                            ir.CreateObject('PyString', [ir.StrLiteral(name)]),
-                            ir.Identifier(f'pyattr_{name}'),
-                        ])
-                        for name in slots
-                    ),
-                ]),
-            ]))
+                *(
+                    ir.method_call_statement(ir.Identifier('attrs'), 'put', [
+                        ir.CreateObject('PyString', [ir.StrLiteral(name)]),
+                        ir.Identifier(f'pyattr_{name}'),
+                    ])
+                    for name in real_slots
+                ),
+            ]),
+        ]))
         qualname = self.qualname(node.name)
         type_decls.extend([
             ir.ConstructorDecl('private', type_class_name, [], [
@@ -2805,19 +2794,12 @@ class LoweringVisitor(ast.NodeVisitor):
                 ir.ReturnStatement(ir.Field(ir.Identifier('AttrsHolder'), 'attrs')),
             ]),
         ])
-        if slots is None:
-            type_decls.append(ir.MethodDecl('@Override public', 'PyObject', 'lookupAttr', ['String name'], [
-                ir.SwitchStatement(ir.Identifier('name'), [
-                    ir.SwitchCase(ir.StrLiteral('__dict__'), ir.Field(ir.Identifier('AttrsHolder'), 'pyattr___dict__')),
-                ], ir.MethodCall(ir.This(), 'lookupBaseAttr', [ir.Identifier('name')])),
-            ]))
-        else:
-            type_decls.append(ir.MethodDecl('@Override public', 'PyObject', 'lookupAttr', ['String name'], [
-                ir.SwitchStatement(ir.Identifier('name'), [
-                    ir.SwitchCase(ir.StrLiteral('__dict__'), ir.Field(ir.Identifier('AttrsHolder'), 'pyattr___dict__')),
-                    *(ir.SwitchCase(ir.StrLiteral(name), ir.Field(ir.Identifier('AttrsHolder'), f'pyattr_{name}')) for name in slots),
-                ], ir.MethodCall(ir.This(), 'lookupBaseAttr', [ir.Identifier('name')])),
-            ]))
+        type_decls.append(ir.MethodDecl('@Override public', 'PyObject', 'lookupAttr', ['String name'], [
+            ir.SwitchStatement(ir.Identifier('name'), [
+                ir.SwitchCase(ir.StrLiteral('__dict__'), ir.Field(ir.Identifier('AttrsHolder'), 'pyattr___dict__')),
+                *(ir.SwitchCase(ir.StrLiteral(name), ir.Field(ir.Identifier('AttrsHolder'), f'pyattr_{name}')) for name in real_slots),
+            ], ir.MethodCall(ir.This(), 'lookupBaseAttr', [ir.Identifier('name')])),
+        ]))
         class_decls.append(ir.ClassDecl('private static final', type_class_name, 'PyConcreteType', type_decls))
         for class_decl in class_decls:
             assert class_decl.name not in self.classes
