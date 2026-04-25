@@ -12,6 +12,37 @@ def delitem(a, b) -> None:
 def getitem(a, b):
     return a[b]
 
+def imatmul(a, b):
+    lhs_type = type(a)
+    imatmul_func = __pythonj_lookup_attr__(lhs_type, '__imatmul__')
+    if imatmul_func is not __pythonj_null__:
+        ret = imatmul_func(a, b)
+        if ret is not NotImplemented:
+            return ret
+
+    rhs_type = type(b)
+    matmul_func = __pythonj_lookup_attr__(lhs_type, '__matmul__')
+    rmatmul_func = __pythonj_lookup_attr__(rhs_type, '__rmatmul__')
+    lhs_rmatmul_func = __pythonj_lookup_attr__(lhs_type, '__rmatmul__')
+
+    reflected_first = rhs_type is not lhs_type and issubclass(rhs_type, lhs_type) and rmatmul_func is not __pythonj_null__ and rmatmul_func is not lhs_rmatmul_func
+    if reflected_first:
+        ret = rmatmul_func(b, a)
+        if ret is not NotImplemented:
+            return ret
+
+    if matmul_func is not __pythonj_null__:
+        ret = matmul_func(a, b)
+        if ret is not NotImplemented:
+            return ret
+
+    if not reflected_first and rhs_type is not lhs_type and rmatmul_func is not __pythonj_null__:
+        ret = rmatmul_func(b, a)
+        if ret is not NotImplemented:
+            return ret
+
+    raise TypeError(f'unsupported operand type(s) for @=: {lhs_type.__name__!r} and {rhs_type.__name__!r}')
+
 def index(a) -> int:
     index_func = __pythonj_lookup_attr__(type(a), '__index__')
     if index_func is __pythonj_null__:
@@ -20,6 +51,31 @@ def index(a) -> int:
     if not isinstance(ret, int):
         raise TypeError(f'__index__ returned non-int (type {type(ret).__name__})')
     return ret
+
+def matmul(a, b):
+    lhs_type = type(a)
+    rhs_type = type(b)
+    matmul_func = __pythonj_lookup_attr__(lhs_type, '__matmul__')
+    rmatmul_func = __pythonj_lookup_attr__(rhs_type, '__rmatmul__')
+    lhs_rmatmul_func = __pythonj_lookup_attr__(lhs_type, '__rmatmul__')
+
+    reflected_first = rhs_type is not lhs_type and issubclass(rhs_type, lhs_type) and rmatmul_func is not __pythonj_null__ and rmatmul_func is not lhs_rmatmul_func
+    if reflected_first:
+        ret = rmatmul_func(b, a)
+        if ret is not NotImplemented:
+            return ret
+
+    if matmul_func is not __pythonj_null__:
+        ret = matmul_func(a, b)
+        if ret is not NotImplemented:
+            return ret
+
+    if not reflected_first and rhs_type is not lhs_type and rmatmul_func is not __pythonj_null__:
+        ret = rmatmul_func(b, a)
+        if ret is not NotImplemented:
+            return ret
+
+    raise TypeError(f'unsupported operand type(s) for @: {lhs_type.__name__!r} and {rhs_type.__name__!r}')
 
 def setitem(a, b, c) -> None:
     a[b] = c

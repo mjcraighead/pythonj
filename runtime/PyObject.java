@@ -18,7 +18,7 @@ public abstract class PyObject implements Comparable<PyObject> {
     public PyObject and(PyObject rhs) { return rhs.rand(this); }
     public PyObject floorDiv(PyObject rhs) { return rhs.rfloorDiv(this); }
     public PyObject lshift(PyObject rhs) { return rhs.rlshift(this); }
-    public PyObject matmul(PyObject rhs) { return rhs.rmatmul(this); }
+    public final PyObject matmul(PyObject rhs) { return PyRuntime.pyfunc_module_operator__matmul(this, rhs); }
     public PyObject mod(PyObject rhs) { return rhs.rmod(this); }
     public PyObject mul(PyObject rhs) { return rhs.rmul(this); }
     public PyObject or(PyObject rhs) { return rhs.ror(this); }
@@ -33,7 +33,6 @@ public abstract class PyObject implements Comparable<PyObject> {
     public PyObject rand(PyObject rhs) { throw rhs.raiseBinOp("&", this); }
     public PyObject rfloorDiv(PyObject rhs) { throw rhs.raiseBinOp("//", this); }
     public PyObject rlshift(PyObject rhs) { throw rhs.raiseBinOp("<<", this); }
-    public PyObject rmatmul(PyObject rhs) { throw rhs.raiseBinOp("@", this); }
     public PyObject rmod(PyObject rhs) { throw rhs.raiseBinOp("%", this); }
     public PyObject rmul(PyObject rhs) { throw rhs.raiseBinOp("*", this); }
     public PyObject ror(PyObject rhs) { throw rhs.raiseBinOp("|", this); }
@@ -48,7 +47,7 @@ public abstract class PyObject implements Comparable<PyObject> {
     public PyObject andInPlace(PyObject rhs) { return and(rhs); }
     public PyObject floorDivInPlace(PyObject rhs) { return floorDiv(rhs); }
     public PyObject lshiftInPlace(PyObject rhs) { return lshift(rhs); }
-    public PyObject matmulInPlace(PyObject rhs) { return matmul(rhs); }
+    public final PyObject matmulInPlace(PyObject rhs) { return PyRuntime.pyfunc_module_operator__imatmul(this, rhs); }
     public PyObject modInPlace(PyObject rhs) { return mod(rhs); }
     public PyObject mulInPlace(PyObject rhs) { return mul(rhs); }
     public PyObject orInPlace(PyObject rhs) { return or(rhs); }

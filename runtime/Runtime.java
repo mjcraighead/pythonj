@@ -289,7 +289,9 @@ final class PyOperatorModule extends PyModule {
             case "contains": return PyOperatorFunction_contains.singleton;
             case "delitem": return PyOperatorFunction_delitem.singleton;
             case "getitem": return PyOperatorFunction_getitem.singleton;
+            case "imatmul": return PyOperatorFunction_imatmul.singleton;
             case "index": return PyOperatorFunction_index.singleton;
+            case "matmul": return PyOperatorFunction_matmul.singleton;
             case "setitem": return PyOperatorFunction_setitem.singleton;
             default: return super.getAttr(key);
         }

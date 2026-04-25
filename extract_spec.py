@@ -29,7 +29,7 @@ BUILTIN_MODULES = {
 BUILTIN_MODULE_ATTRS = {
     '_io': {'BufferedReader', 'TextIOWrapper'},
     '_json': {'encode_basestring_ascii', 'scanstring'},
-    '_operator': {'contains', 'delitem', 'getitem', 'index', 'setitem'},
+    '_operator': {'contains', 'delitem', 'getitem', 'imatmul', 'index', 'matmul', 'setitem'},
     '_types': {'BuiltinFunctionType', 'ClassMethodDescriptorType', 'EllipsisType', 'FunctionType', 'GeneratorType', 'GetSetDescriptorType', 'MappingProxyType', 'MemberDescriptorType', 'MethodDescriptorType', 'MethodWrapperType', 'ModuleType', 'NoneType', 'NotImplementedType', 'WrapperDescriptorType'},
     'math': {'copysign', 'isfinite', 'isinf', 'isnan'},
     'sys': {'exit', 'implementation'},
