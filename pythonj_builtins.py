@@ -1520,6 +1520,20 @@ class set:
     def __contains__(self: set, key) -> bool:
         return key in self
 
+    def __repr__(self: set) -> str:
+        if not self:
+            return 'set()'
+        ret = __pythonj_str_builder__(4*len(self) + 2)
+        __pythonj_str_builder_append__(ret, '{')
+        first = True
+        for item in self:
+            if not first:
+                __pythonj_str_builder_append__(ret, ', ')
+            first = False
+            __pythonj_str_builder_append__(ret, repr(item))
+        __pythonj_str_builder_append__(ret, '}')
+        return __pythonj_str_builder_finish__(ret)
+
     def isdisjoint(self: set, other) -> bool:
         for x in other:
             if x in self:
@@ -1541,20 +1555,6 @@ class set:
             if x not in self:
                 return False
         return True
-
-    def __repr__(self: set) -> str:
-        if not self:
-            return 'set()'
-        ret = __pythonj_str_builder__(4*len(self) + 2)
-        __pythonj_str_builder_append__(ret, '{')
-        first = True
-        for item in self:
-            if not first:
-                __pythonj_str_builder_append__(ret, ', ')
-            first = False
-            __pythonj_str_builder_append__(ret, repr(item))
-        __pythonj_str_builder_append__(ret, '}')
-        return __pythonj_str_builder_finish__(ret)
 
 class slice:
     @__pythonj_getter__
@@ -1591,6 +1591,19 @@ class str:
             __pythonj_str_builder_append__(ret, item)
             i += 1
         return __pythonj_str_builder_finish__(ret)
+
+    def lstrip(self: str, chars) -> str:
+        if chars is None:
+            strip_chars: str = ' \t\n\v\f\r\x1c\x1d\x1e\x1f\x85\xa0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u2028\u2029\u202f\u205f\u3000'
+        elif isinstance(chars, str):
+            strip_chars = chars
+        else:
+            raise TypeError('lstrip arg must be None or str')
+        start: int = 0
+        n: int = len(self)
+        while start < n and self[start] in strip_chars:
+            start += 1
+        return self[start:]
 
     def removeprefix(self: str, prefix) -> str:
         if not isinstance(prefix, str):
@@ -1658,6 +1671,11 @@ class str:
             end -= 1
         return self[:end]
 
+    def strip(self: str, chars) -> str:
+        if chars is not None and not isinstance(chars, str):
+            raise TypeError('strip arg must be None or str')
+        return self.lstrip(chars).rstrip(chars)
+
     def capitalize(self): __pythonj_unsupported__()
     def casefold(self): __pythonj_unsupported__()
     def center(self, width, fillchar): __pythonj_unsupported__()
@@ -1675,7 +1693,6 @@ class str:
     def istitle(self): __pythonj_unsupported__()
     def isupper(self): __pythonj_unsupported__()
     def ljust(self, width, fillchar): __pythonj_unsupported__()
-    def lstrip(self, chars): __pythonj_unsupported__()
     def partition(self, sep): __pythonj_unsupported__()
     def rfind(self, sub, start, end): __pythonj_unsupported__()
     def rindex(self, sub, start, end): __pythonj_unsupported__()
@@ -1683,7 +1700,6 @@ class str:
     def rpartition(self, sep): __pythonj_unsupported__()
     def rsplit(self, sep, maxsplit): __pythonj_unsupported__()
     def splitlines(self, keepends): __pythonj_unsupported__()
-    def strip(self, chars): __pythonj_unsupported__()
     def swapcase(self): __pythonj_unsupported__()
     def title(self): __pythonj_unsupported__()
     def translate(self, table): __pythonj_unsupported__()
