@@ -292,6 +292,19 @@ final class PyOperatorModule extends PyModule {
     }
 }
 
+final class PyPythonjModule extends PyModule {
+    public static final PyPythonjModule singleton = new PyPythonjModule();
+
+    private PyPythonjModule() { super("_pythonj"); }
+
+    @Override public PyObject getAttr(String key) {
+        switch (key) {
+            case "parse_args": return PyPythonjFunction_parse_args.singleton;
+            default: return super.getAttr(key);
+        }
+    }
+}
+
 final class PyTypesModule extends PyModule {
     public static final PyTypesModule singleton = new PyTypesModule();
 

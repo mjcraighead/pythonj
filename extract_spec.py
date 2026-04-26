@@ -21,6 +21,7 @@ BUILTIN_MODULES = {
     '_io': 'PyIoModule',
     '_json': 'PyJsonModule',
     '_operator': 'PyOperatorModule',
+    '_pythonj': 'PyPythonjModule',
     '_types': 'PyTypesModule',
     'math': 'PyMathModule',
     'sys': 'PySysModule',
@@ -30,6 +31,7 @@ BUILTIN_MODULE_ATTRS = {
     '_io': {'BufferedReader', 'TextIOWrapper'},
     '_json': {'encode_basestring_ascii', 'scanstring'},
     '_operator': {'contains', 'delitem', 'getitem', 'imatmul', 'index', 'ipow', 'matmul', 'pow', 'setitem'},
+    '_pythonj': {'parse_args'},
     '_types': {'BuiltinFunctionType', 'ClassMethodDescriptorType', 'EllipsisType', 'FunctionType', 'GeneratorType', 'GetSetDescriptorType', 'MappingProxyType', 'MemberDescriptorType', 'MethodDescriptorType', 'MethodWrapperType', 'ModuleType', 'NoneType', 'NotImplementedType', 'WrapperDescriptorType'},
     'math': {'copysign', 'isfinite', 'isinf', 'isnan'},
     'sys': {'exit', 'implementation'},
@@ -88,6 +90,9 @@ SYNTHETIC_PARAMS = {
     },
     '_json': {
         'scanstring': [_make_param('string'), _make_param('end')],
+    },
+    '_pythonj': {
+        'parse_args': [_make_param('specs'), _make_param('argv', NULL)],
     },
     'bytearray': {
         '__newobj__': [_make_param('source', NULL), _make_param('encoding', NULL), _make_param('errors', NULL)],
@@ -493,7 +498,7 @@ def _build_module_entry(name: str) -> dict[str, Any]:
             continue
         if k.startswith('__') and k not in {'__doc__'}:
             continue
-        if type(v) is types.BuiltinFunctionType:
+        if type(v) is types.BuiltinFunctionType or type(v) is types.FunctionType:
             attrs[k] = _encode_attr('builtin_function', doc=v.__doc__, signature=_get_module_function_signature(name, k))
         elif isinstance(v, type):
             attrs[k] = _encode_attr('type', target=v.__name__)

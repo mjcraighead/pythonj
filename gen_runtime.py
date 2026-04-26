@@ -33,7 +33,7 @@ PYTHON_AUTHORED_IMPLS = {
     },
 }
 PYTHON_AUTHORED_CONSTRUCTOR_IMPLS = {'enumerate', 'zip'}
-PYTHON_AUTHORED_MODULE_IMPLS = {'_operator'}
+PYTHON_AUTHORED_MODULE_IMPLS = {'_operator', '_pythonj'}
 SUPPORTED_HELPER_RETURN_TYPES = {'bool', 'bytes', 'dict', 'float', 'int', 'list', 'str', 'tuple'}
 
 def is_pythonj_getter(func: ast.FunctionDef) -> bool:
