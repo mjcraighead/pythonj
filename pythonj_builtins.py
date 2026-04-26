@@ -1520,6 +1520,28 @@ class set:
     def __contains__(self: set, key) -> bool:
         return key in self
 
+    def isdisjoint(self: set, other) -> bool:
+        for x in other:
+            if x in self:
+                return False
+        return True
+
+    def issubset(self: set, other) -> bool:
+        missing = self.copy()
+        for x in other:
+            hash(x)
+            if x in missing:
+                missing.remove(x)
+                if not missing:
+                    return True
+        return not missing
+
+    def issuperset(self: set, other) -> bool:
+        for x in other:
+            if x not in self:
+                return False
+        return True
+
     def __repr__(self: set) -> str:
         if not self:
             return 'set()'

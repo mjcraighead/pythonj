@@ -233,7 +233,17 @@ public final class PySet extends PyObject {
 
     @Override public Set<PyObject> asSetOrNull() { return items; }
     @Override public boolean boolValue() { return !items.isEmpty(); }
-    @Override public boolean contains(PyObject rhs) { return items.contains(rhs); }
+    @Override public boolean contains(PyObject rhs) {
+        try {
+            rhs.hashCode();
+        } catch (PyRaise r) {
+            if (r.exc instanceof PyTypeError) {
+                throw PyTypeError.raise("cannot use " + PyString.reprOf(rhs.type().name()) + " as a set element (" + r.exc.str() + ")");
+            }
+            throw r;
+        }
+        return items.contains(rhs);
+    }
     @Override public boolean equals(Object rhs) {
         if (rhs instanceof PySet rhsSet) {
             return items.equals(rhsSet.items);

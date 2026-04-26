@@ -23,7 +23,7 @@ PYTHON_AUTHORED_IMPLS = {
         'isinstance', 'issubclass', 'iter', 'len', 'next', 'oct', 'repr', 'setattr', 'sorted', 'sum',
     },
     'dict': {'__contains__', 'fromkeys', 'pop', 'setdefault'},
-    'set': {'__contains__'},
+    'set': {'__contains__', 'isdisjoint', 'issubset', 'issuperset'},
     'str': {
         '__format__', 'capitalize', 'casefold', 'center', 'encode', 'expandtabs', 'format_map', 'isalnum',
         'isalpha', 'isascii', 'isidentifier', 'islower', 'isnumeric', 'isprintable', 'isspace', 'istitle',
