@@ -1464,6 +1464,8 @@ class LoweringVisitor(ast.NodeVisitor):
         if self.allow_intrinsics and builtin is not None:
             return builtin
         if name not in self.module_scope().info.locals:
+            if self.predefined_global_value(name) is not None:
+                return self.ident_expr_by_resolution(name, resolution)
             if builtin is not None:
                 return builtin
             return ir.StaticMethodCall('Runtime', 'getGlobal', [ir.Null(), ir.StrLiteral(name), ir.Null()], 'PyObject')
@@ -1550,7 +1552,16 @@ class LoweringVisitor(ast.NodeVisitor):
         return self.scope.info.exact_local_types.get(name) or self.scope.info.exact_arg_types.get(name)
 
     def global_exact_builtin_type(self, name: str) -> Optional[str]:
+        if self.predefined_global_value(name) is not None:
+            return None
         return self.module_scope().info.exact_global_types.get(name)
+
+    def predefined_global_value(self, name: str) -> Optional[str]:
+        if name == '__name__':
+            return '__main__'
+        if name == '__file__' and self.path != '<string>':
+            return self.path
+        return None
 
     def java_local_type(self, name: str) -> str:
         if (type_name := self.local_exact_builtin_type(name)) is None:
@@ -2969,14 +2980,16 @@ class LoweringVisitor(ast.NodeVisitor):
             if name in self.scope.info.locals
         }
         predefined_global_fields: list[ir.Decl] = []
-        if '__name__' not in self.scope.info.locals:
-            predefined_global_fields.append(
-                ir.FieldDecl('private static final', 'PyString', 'pyglobal___name__', ir.PyConstant('__main__'))
-            )
-        if '__file__' not in self.scope.info.locals:
-            predefined_global_fields.append(
-                ir.FieldDecl('private static final', 'PyString', 'pyglobal___file__', ir.PyConstant(self.path))
-            )
+        for name in ['__file__', '__name__']:
+            value = self.predefined_global_value(name)
+            if value is not None and name not in self.scope.info.locals:
+                predefined_global_fields.append(
+                    ir.FieldDecl('private static final', 'PyString', f'pyglobal_{name}', ir.PyConstant(value))
+                )
+        def global_field_decl(name: str) -> ir.FieldDecl:
+            value = self.predefined_global_value(name)
+            init = ir.PyConstant(value) if value is not None else ir.Null()
+            return ir.FieldDecl('private static', self.java_global_type(name), f'pyglobal_{name}', init)
         if argv0 is None:
             argv0 = self.path
         body_decls: list[ir.Decl] = [
@@ -2988,7 +3001,7 @@ class LoweringVisitor(ast.NodeVisitor):
               for (name, java_name) in sorted(final_function_fields.items())),
             *(ir.FieldDecl('private static final', extract_spec.BUILTIN_TYPES[self.scope.info.initial_final_constant_types[name]], f'pyglobal_{name}', ir.PyConstant(value))
               for (name, value) in sorted(final_constant_fields.items())),
-            *(ir.FieldDecl('private static', self.java_global_type(name), f'pyglobal_{name}', ir.Null())
+            *(global_field_decl(name)
               for name in sorted(self.scope.info.locals - set(final_import_fields) - set(final_function_fields) - set(final_constant_fields))),
             ir.MethodDecl(
                 'public static',
