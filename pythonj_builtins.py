@@ -1184,11 +1184,119 @@ class float:
             raise TypeError(f'must be real number, not {type(number).__name__}')
         return float(number)
 
+    def fromhex(self, s) -> float:
+        if not isinstance(s, str):
+            raise TypeError('bad argument type for built-in operation')
+        ws: str = ' \t\n\r\x0b\x0c'
+        start: int = 0
+        end: int = len(s)
+        while start < end and s[start] in ws:
+            start += 1
+        while end > start and s[end - 1] in ws:
+            end -= 1
+        if start == end:
+            raise ValueError('invalid hexadecimal floating-point string')
+
+        i: int = start
+        negative: bool = False
+        if s[i] == '-':
+            negative = True
+            i += 1
+        elif s[i] == '+':
+            i += 1
+        if i == end:
+            raise ValueError('invalid hexadecimal floating-point string')
+
+        rest_lower: str = s[i:end].lower()
+        if rest_lower == 'inf' or rest_lower == 'infinity':
+            return -float('inf') if negative else float('inf')
+        if rest_lower == 'nan':
+            return float('nan')
+
+        if i + 1 < end and s[i] == '0' and (s[i + 1] == 'x' or s[i + 1] == 'X'):
+            i += 2
+
+        normalized: str = '-0x' if negative else '0x'
+        has_digits: bool = False
+        nonzero: bool = False
+        while i < end:
+            c: str = s[i]
+            if ('0' <= c <= '9') or ('a' <= c <= 'f') or ('A' <= c <= 'F'):
+                normalized += c
+                has_digits = True
+                if c != '0':
+                    nonzero = True
+                i += 1
+            else:
+                break
+        if i < end and s[i] == '.':
+            normalized += '.'
+            i += 1
+            while i < end:
+                c = s[i]
+                if ('0' <= c <= '9') or ('a' <= c <= 'f') or ('A' <= c <= 'F'):
+                    normalized += c
+                    has_digits = True
+                    if c != '0':
+                        nonzero = True
+                    i += 1
+                else:
+                    break
+        if not has_digits:
+            raise ValueError('invalid hexadecimal floating-point string')
+
+        if i < end and (s[i] == 'p' or s[i] == 'P'):
+            normalized += 'p'
+            i += 1
+            if i < end and (s[i] == '-' or s[i] == '+'):
+                normalized += s[i]
+                i += 1
+            exp_start: int = i
+            while i < end and '0' <= s[i] <= '9':
+                normalized += s[i]
+                i += 1
+            if i == exp_start:
+                raise ValueError('invalid hexadecimal floating-point string')
+        else:
+            normalized += 'p0'
+        if i != end:
+            raise ValueError('invalid hexadecimal floating-point string')
+
+        ret: float = __pythonj_float_java_parse__(normalized)
+        if math.isinf(ret) and nonzero:
+            raise OverflowError('hexadecimal value too large to represent as a float')
+        return ret
+
+    def hex(self: float) -> str:
+        if math.isnan(self):
+            return 'nan'
+        if math.isinf(self):
+            return '-inf' if self < 0.0 else 'inf'
+        bits: int = __pythonj_float_java_bits__(self)
+        negative: bool = bits < 0
+        exp_bits: int = (bits >> 52) & 0x7FF
+        frac_bits: int = bits & ((1 << 52) - 1)
+        if exp_bits == 0 and frac_bits == 0:
+            ret = '0x0.0p+0'
+        else:
+            lead: str = '0'
+            exp: int = -1022
+            if exp_bits != 0:
+                lead = '1'
+                exp = exp_bits - 1023
+            digits: str = '0123456789abcdef'
+            frac: str = ''
+            i: int
+            for i in range(13):
+                shift: int = 48 - 4 * i
+                frac += digits[(frac_bits >> shift) & 0xF]
+            exp_sign: str = '+' if exp >= 0 else '-'
+            exp_abs: int = exp if exp >= 0 else -exp
+            ret = '0x' + lead + '.' + frac + 'p' + exp_sign + __pythonj_int_str__(exp_abs)
+        return '-' + ret if negative else ret
+
     def is_integer(self) -> bool:
         return math.isfinite(self) and self == __pythonj_float_java_rint__(self)
-
-    def fromhex(self, s): __pythonj_unsupported__()
-    def hex(self):__pythonj_unsupported__()
 
 class int:
     @__pythonj_getter__

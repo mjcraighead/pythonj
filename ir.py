@@ -1505,6 +1505,8 @@ def static_method_call(class_name: str, method: str, args: list[Expr], return_ty
             return CreateObject('PyString', [
                 StaticMethodCall('String', 'format', [Identifier('java.util.Locale.ROOT'), unbox_str(args[0]), unbox_float(args[1])], 'String')
             ])
+        case ('Runtime', 'pythonjFloatJavaParse'):
+            return CreateObject('PyFloat', [StaticMethodCall('Double', 'parseDouble', [unbox_str(args[0])], 'double')])
         case ('Runtime', 'pythonjFloatJavaRint'):
             return CreateObject('PyFloat', [StaticMethodCall('Math', 'rint', [unbox_float(args[0])], 'double')])
         case ('Runtime', 'pythonjFloatJavaStr'):
