@@ -543,9 +543,18 @@ final class PyGetSetDescriptor extends PyGettableDescriptor {
 
     @Override public final boolean isDataDescriptor() { return true; }
     @Override public final void set(PyObject obj, PyType owner, PyObject value) {
+        if ((this.owner == PyObjectType.singleton) && name.equals("__class__")) {
+            if (!(value instanceof PyType)) {
+                throw PyTypeError.raise("__class__ must be set to a class, not " + PyString.reprOf(value.type().name()) + " object");
+            }
+            throw PyTypeError.raise("__class__ assignment only supported for mutable types or ModuleType subclasses");
+        }
         throw PyAttributeError.raise("attribute " + PyString.reprOf(name) + " of " + PyString.reprOf(this.owner.name()) + " objects is not writable");
     }
     @Override public final void delete(PyObject obj, PyType owner) {
+        if ((this.owner == PyObjectType.singleton) && name.equals("__class__")) {
+            throw PyTypeError.raise("can't delete __class__ attribute");
+        }
         throw PyAttributeError.raise("attribute " + PyString.reprOf(name) + " of " + PyString.reprOf(this.owner.name()) + " objects is not writable");
     }
 
