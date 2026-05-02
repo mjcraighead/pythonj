@@ -29,10 +29,7 @@ abstract class PyIOBase extends PyIter {
     public PyObject pymethod_fileno() { throw new UnsupportedOperationException(); }
     public PyObject pymethod_isatty() { throw new UnsupportedOperationException(); }
     public PyObject pymethod___enter__() { return enter(); }
-    public PyObject pymethod___exit__(PyObject exc_type, PyObject exc, PyObject tb) {
-        exit();
-        return PyNone.singleton;
-    }
+    public PyObject pymethod___exit__(PyObject exc_type, PyObject exc, PyObject tb) { return exit(); }
     public PyObject pymethod___exit__(PyObject[] args, PyDict kwargs) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_readline(PyObject size) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_readlines(PyObject hint) { throw new UnsupportedOperationException(); }
@@ -134,7 +131,7 @@ final class PyTextIOWrapper extends PyTextIOBase {
     @Override public PyType type() { return PyTextIOWrapperType.singleton; }
 
     @Override public PyTextIOWrapper enter() { return this; }
-    @Override public void exit() { pymethod_close(); }
+    @Override public PyObject exit() { return pymethod_close(); }
 
     @Override public String repr() {
         String encoding = Runtime.getDefaultTextEncoding();
@@ -213,7 +210,7 @@ final class PyBufferedReader extends PyBufferedIOBase {
     @Override public PyType type() { return PyBufferedReaderType.singleton; }
 
     @Override public PyBufferedReader enter() { return this; }
-    @Override public void exit() { pymethod_close(); }
+    @Override public PyObject exit() { return pymethod_close(); }
 
     @Override public String repr() { return String.format("<%s name=%s>", type().displayName(), name.repr()); }
 

@@ -103,7 +103,7 @@ public abstract class PyObject implements Comparable<PyObject> {
     public abstract PyType type();
 
     public PyObject enter() { throw unimplementedMethod("enter"); }
-    public void exit() { throw unimplementedMethod("exit"); }
+    public PyObject exit() { throw unimplementedMethod("exit"); }
 
     // These take and/or return unboxed values
     // Note: any subclass that overrides equals() must also override hashCode(), unless it is intentionally 
