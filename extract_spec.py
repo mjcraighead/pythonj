@@ -9,7 +9,7 @@ import inspect
 import json
 import os
 import types
-from typing import Any, cast
+from typing import Any, TextIO, cast
 import _io
 
 BUILTIN_FUNCTIONS = {
@@ -515,17 +515,17 @@ def _is_leaf_json_value(value: object) -> bool:
     if isinstance(value, (list, tuple)):
         return all(_is_scalar_json_value(x) for x in value)
     if isinstance(value, dict):
-        return all(isinstance(k, str) and _is_scalar_json_value(v) for (k, v) in value.items())
+        return all(_is_scalar_json_value(v) for v in value.values())
     return False
 
-def _write_pretty_json(f, value: object, indent: int = 0) -> None:
+def _write_pretty_json(value: object, f: TextIO, indent: int = 0) -> None:
     if _is_leaf_json_value(value):
         json.dump(value, f, ensure_ascii=True)
     elif isinstance(value, (list, tuple)):
         f.write('[\n')
         for (i, item) in enumerate(value):
             f.write('  ' * (indent + 1))
-            _write_pretty_json(f, item, indent + 1)
+            _write_pretty_json(item, f, indent + 1)
             if i + 1 != len(value):
                 f.write(',')
             f.write('\n')
@@ -538,7 +538,7 @@ def _write_pretty_json(f, value: object, indent: int = 0) -> None:
             f.write('  ' * (indent + 1))
             json.dump(k, f, ensure_ascii=True)
             f.write(': ')
-            _write_pretty_json(f, v, indent + 1)
+            _write_pretty_json(v, f, indent + 1)
             if i + 1 != len(items):
                 f.write(',')
             f.write('\n')
@@ -560,7 +560,7 @@ def gen_spec(spec_path: str) -> None:
         spec[name] = _build_module_entry(name)
 
     with open(spec_path, 'w', encoding='utf-8') as f:
-        _write_pretty_json(f, spec)
+        _write_pretty_json(spec, f)
         f.write('\n')
 
 def main() -> None:

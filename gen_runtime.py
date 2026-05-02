@@ -383,6 +383,7 @@ def build_call_positional_ir(shape: SignatureShape) -> tuple[list[str], list[ir.
         else:
             bind_args.append(ir.Identifier(f'arg{i}'))
     return (call_args, statements, bind_args)
+
 def write_semantics_json(path: str, data: dict[str, object]) -> None:
     with open(path, 'w', encoding='utf-8') as f:
         json.dump(data, f, indent=2, sort_keys=True)
