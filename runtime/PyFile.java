@@ -3,21 +3,26 @@
 // SPDX-License-Identifier: MIT
 
 import java.io.BufferedInputStream;
-import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.Reader;
 import java.io.UncheckedIOException;
 
 final class PyTextIOWrapper extends PyIter {
+    private static final int BUFFER_SIZE = 65536;
+
     private final PyObject name;
-    public final BufferedReader reader;
+    public final Reader reader;
+    private final char[] buffer = new char[BUFFER_SIZE];
+    private int pos = 0;
+    private int limit = 0;
 
     PyTextIOWrapper(PyString path) {
         name = path;
         try {
-            reader = new BufferedReader(new FileReader(path.value));
+            reader = new FileReader(path.value);
         } catch (FileNotFoundException e) {
             throw new UncheckedIOException(e);
         }
@@ -27,11 +32,29 @@ final class PyTextIOWrapper extends PyIter {
         throw new UnsupportedOperationException(type.name() + ".__new__() unimplemented");
     }
 
+    private boolean fillBuffer() throws IOException {
+        limit = reader.read(buffer, 0, buffer.length);
+        pos = 0;
+        return limit >= 0;
+    }
+    private int readChar() throws IOException {
+        if ((pos >= limit) && !fillBuffer()) {
+            return -1;
+        }
+        return buffer[pos++];
+    }
+    private int peekChar() throws IOException {
+        if ((pos >= limit) && !fillBuffer()) {
+            return -1;
+        }
+        return buffer[pos];
+    }
+
     @Override public PyString next() {
         try {
             StringBuilder s = new StringBuilder();
             for (;;) {
-                int c = reader.read();
+                int c = readChar();
                 if (c == -1) { // EOF
                     if (s.length() == 0) {
                         return null;
@@ -39,11 +62,14 @@ final class PyTextIOWrapper extends PyIter {
                     break; // last line, no newline
                 }
                 if (c == '\n') {
-                    int len = s.length();
-                    if ((len != 0) && (s.charAt(len - 1) == '\r')) {
-                        s.deleteCharAt(len - 1);
+                    s.append('\n');
+                    break; // full line
+                }
+                if (c == '\r') {
+                    if (peekChar() == '\n') {
+                        pos++;
                     }
-                    s.append((char)c);
+                    s.append('\n');
                     break; // full line
                 }
                 s.append((char)c);
@@ -82,22 +108,11 @@ final class PyTextIOWrapper extends PyIter {
         if (!size.equals(PyInt.singleton_neg1)) {
             throw new UnsupportedOperationException("'size' argument to TextIOWrapper.read() is not supported");
         }
-        try {
-            StringBuilder s = new StringBuilder();
-            for (;;) {
-                int c = reader.read();
-                if (c == -1) {
-                    break;
-                }
-                s.append((char)c);
-            }
-            if (s.isEmpty()) {
-                return PyString.empty_singleton;
-            }
-            return new PyString(s.toString());
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
+        StringBuilder s = new StringBuilder();
+        for (PyString line = next(); line != null; line = next()) {
+            s.append(line.value);
         }
+        return new PyString(s.toString());
     }
     public PyObject pymethod_detach() { throw new UnsupportedOperationException(); }
     public PyObject pymethod_fileno() { throw new UnsupportedOperationException(); }
