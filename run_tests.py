@@ -11,6 +11,7 @@ import sys
 import time
 
 python = 'py' if os.name == 'nt' else 'python3'
+PYTHONJ_ONLY_TESTS = {'pythonj'}
 
 def get_default_test_names() -> list[str]:
     return sorted(x[:-3] for x in os.listdir('tests') if x.endswith('.py') and x != 'rules.py')
@@ -45,6 +46,10 @@ def main() -> None:
         sep = ';' if os.name == 'nt' else ':'
         j_output = subprocess.check_output(['java', '-cp', f'../_out/pythonj.jar{sep}_out/{py_name}.jar', py_name], cwd='tests')
         jexec_time = time.perf_counter() - start
+
+        if py_name in PYTHONJ_ONLY_TESTS:
+            print(f'{py_name:>15}: jexec_time={jexec_time:5.3f} pyexec_time=  n/a (pythonj-only)')
+            continue
 
         start = time.perf_counter()
         c_output = subprocess.check_output([sys.executable, f'{py_name}.py'], cwd='tests')

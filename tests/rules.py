@@ -6,6 +6,7 @@ TEST_NAMES = [
     'builtins_smoke',
     'fib',
     'mandelbrot',
+    'pythonj',
 ]
 
 def rules(ctx):
