@@ -233,6 +233,9 @@ final class PyIoModule extends PyModule {
 
     @Override public PyObject getAttr(String key) {
         switch (key) {
+            case "_BufferedIOBase": return PyBufferedIOBaseType.singleton;
+            case "_IOBase": return PyIOBaseType.singleton;
+            case "_TextIOBase": return PyTextIOBaseType.singleton;
             case "BufferedReader": return PyBufferedReaderType.singleton;
             case "TextIOWrapper": return PyTextIOWrapperType.singleton;
             default: return super.getAttr(key);
@@ -380,6 +383,7 @@ abstract class PyType extends PyTruthyObject {
     @Override public int hashCode() { return defaultHashCode(); }
 
     public abstract PyType base();
+    public abstract String displayName();
     public abstract String doc();
     public abstract String name();
 
@@ -446,6 +450,9 @@ class PyConcreteType extends PyType {
     }
     @Override public final PyTypeType type() { return PyTypeType.singleton; }
     @Override public final PyType base() { return baseType; }
+    @Override public final String displayName() {
+        return moduleName.equals("builtins") ? typeName : moduleName + "." + qualName;
+    }
     @Override public final String doc() { return docString; }
     @Override public final String name() { return typeName; }
 }
@@ -532,7 +539,7 @@ final class PyMemberDescriptor extends PyGettableDescriptor {
         deleter.accept(obj);
     }
 
-    @Override public final String repr() { return "<member " + PyString.reprOf(name) + " of " + PyString.reprOf(owner.name()) + " objects>"; }
+    @Override public final String repr() { return "<member " + PyString.reprOf(name) + " of " + PyString.reprOf(owner.displayName()) + " objects>"; }
     @Override public final PyConcreteType type() { return PyMemberDescriptorType.singleton; }
 }
 
@@ -558,7 +565,7 @@ final class PyGetSetDescriptor extends PyGettableDescriptor {
         throw PyAttributeError.raise("attribute " + PyString.reprOf(name) + " of " + PyString.reprOf(this.owner.name()) + " objects is not writable");
     }
 
-    @Override public final String repr() { return "<attribute " + PyString.reprOf(name) + " of " + PyString.reprOf(owner.name()) + " objects>"; }
+    @Override public final String repr() { return "<attribute " + PyString.reprOf(name) + " of " + PyString.reprOf(owner.displayName()) + " objects>"; }
     @Override public final PyConcreteType type() { return PyGetSetDescriptorType.singleton; }
 }
 
@@ -582,7 +589,7 @@ final class PyMethodDescriptor extends PyGettableDescriptor {
         return getter.apply(self).call(rest, kwargs);
     }
 
-    @Override public final String repr() { return "<method " + PyString.reprOf(name) + " of " + PyString.reprOf(owner.name()) + " objects>"; }
+    @Override public final String repr() { return "<method " + PyString.reprOf(name) + " of " + PyString.reprOf(owner.displayName()) + " objects>"; }
     @Override public final PyConcreteType type() { return PyMethodDescriptorType.singleton; }
 }
 
@@ -608,7 +615,7 @@ final class PyWrapperDescriptor extends PyGettableDescriptor {
         return getter.apply(self).call(rest, kwargs);
     }
 
-    @Override public final String repr() { return "<slot wrapper " + PyString.reprOf(name) + " of " + PyString.reprOf(owner.name()) + " objects>"; }
+    @Override public final String repr() { return "<slot wrapper " + PyString.reprOf(name) + " of " + PyString.reprOf(owner.displayName()) + " objects>"; }
     @Override public final PyConcreteType type() { return PyWrapperDescriptorType.singleton; }
 }
 
@@ -627,7 +634,7 @@ abstract class PyMethodWrapper<T extends PyObject> extends PyTruthyObject {
 
     @Override public final int hashCode() { return defaultHashCode(); }
     @Override public final String repr() {
-        return "<method-wrapper " + PyString.reprOf(name) + " of " + self.type().name() + " object>";
+        return "<method-wrapper " + PyString.reprOf(name) + " of " + self.type().displayName() + " object>";
     }
     @Override public final PyConcreteType type() { return PyMethodWrapperType.singleton; }
 
@@ -673,7 +680,7 @@ final class PyClassMethodDescriptor extends PyTruthyObject {
         return getter.apply(this.owner);
     }
 
-    @Override public final String repr() { return "<method " + PyString.reprOf(name) + " of " + PyString.reprOf(owner.name()) + " objects>"; }
+    @Override public final String repr() { return "<method " + PyString.reprOf(name) + " of " + PyString.reprOf(owner.displayName()) + " objects>"; }
     @Override public final PyConcreteType type() { return PyClassMethodDescriptorType.singleton; }
 
     static PyObject pyget___doc__(PyObject obj) {
@@ -751,7 +758,7 @@ abstract class PyBuiltinMethod<T extends PyObject> extends PyBuiltinFunctionOrMe
     protected final T self;
     PyBuiltinMethod(T _self) { self = _self; }
     @Override public String repr() {
-        return "<built-in method " + methodName() + " of " + self.type().name() + " object>";
+        return "<built-in method " + methodName() + " of " + self.type().displayName() + " object>";
     }
     public abstract String methodName();
 }

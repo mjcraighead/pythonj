@@ -3137,7 +3137,7 @@ def emit_default_java_expr(default: object) -> ir.Expr:
 
 def get_java_name(name: str) -> str:
     if name.startswith('_io.'):
-        return f"Py{name.split('.', 1)[1]}" # _io.Foo -> PyFoo + PyFooType
+        return f"Py{name.split('.', 1)[1].lstrip('_')}" # _io.Foo -> PyFoo + PyFooType
     elif name == '_types.BuiltinFunctionType':
         return 'PyBuiltinFunctionOrMethod' # weird shared type
     elif name.startswith('_types.') and name.endswith('Type'):

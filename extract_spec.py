@@ -28,7 +28,7 @@ BUILTIN_MODULES = {
     'zlib': 'PyZlibModule',
 }
 BUILTIN_MODULE_ATTRS = {
-    '_io': {'BufferedReader', 'TextIOWrapper'},
+    '_io': {'_BufferedIOBase', '_IOBase', '_TextIOBase', 'BufferedReader', 'TextIOWrapper'},
     '_json': {'encode_basestring_ascii', 'scanstring'},
     '_operator': {'contains', 'delitem', 'getitem', 'imatmul', 'index', 'ipow', 'matmul', 'pow', 'setitem'},
     '_pythonj': {'parse_args'},
@@ -354,6 +354,9 @@ def get_type_base_name(name: str) -> str | None:
     if (base_type := obj.__base__) is None:
         return None
     base_name = base_type.__name__
+    base_module = base_type.__module__
+    if base_module in BUILTIN_MODULE_ATTRS and base_name in BUILTIN_MODULE_ATTRS[base_module]:
+        return f'{base_module}.{base_name}'
     if base_name not in BUILTIN_TYPES and base_name not in EXCEPTION_TYPES:
         return 'object' # if the base class isn't in pythonj's type system, fall back to object
     return base_name
@@ -554,7 +557,7 @@ def gen_spec(spec_path: str) -> None:
                  '_types.GeneratorType', '_types.GetSetDescriptorType', '_types.MappingProxyType',
                  '_types.MemberDescriptorType', '_types.MethodDescriptorType', '_types.MethodWrapperType',
                  '_types.ModuleType', '_types.NoneType', '_types.NotImplementedType', '_types.WrapperDescriptorType',
-                 '_io.BufferedReader', '_io.TextIOWrapper']:
+                 '_io._BufferedIOBase', '_io._IOBase', '_io._TextIOBase', '_io.BufferedReader', '_io.TextIOWrapper']:
         spec[name] = _build_type_entry(name)
     for name in sorted(BUILTIN_MODULES):
         spec[name] = _build_module_entry(name)

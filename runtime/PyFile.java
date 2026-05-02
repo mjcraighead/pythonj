@@ -10,7 +10,59 @@ import java.io.IOException;
 import java.io.Reader;
 import java.io.UncheckedIOException;
 
-final class PyTextIOWrapper extends PyIter {
+abstract class PyIOBase extends PyIter {
+    public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
+        throw PyTypeError.raise("cannot create '" + type.name() + "' instances");
+    }
+    public PyObject pymethod_seek(PyObject pos, PyObject whence) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_tell() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_truncate(PyObject size) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_flush() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_close() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_seekable() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_readable() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_writable() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod__checkClosed() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod__checkSeekable() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod__checkReadable() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod__checkWritable() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_fileno() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_isatty() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod___enter__() { return enter(); }
+    public PyObject pymethod___exit__(PyObject exc_type, PyObject exc, PyObject tb) {
+        exit();
+        return PyNone.singleton;
+    }
+    public PyObject pymethod___exit__(PyObject[] args, PyDict kwargs) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_readline(PyObject size) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_readlines(PyObject hint) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_writelines(PyObject lines) { throw new UnsupportedOperationException(); }
+
+    static PyObject pyget___dict__(PyObject obj) { throw new UnsupportedOperationException(); }
+    static PyObject pyget_closed(PyObject obj) { throw new UnsupportedOperationException(); }
+}
+
+abstract class PyBufferedIOBase extends PyIOBase {
+    public PyObject pymethod_detach() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_read(PyObject size) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_read1(PyObject size) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_readinto(PyObject buffer) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_readinto1(PyObject buffer) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_write(PyObject buffer) { throw new UnsupportedOperationException(); }
+}
+
+abstract class PyTextIOBase extends PyIOBase {
+    public PyObject pymethod_detach() { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_read(PyObject size) { throw new UnsupportedOperationException(); }
+    @Override public PyObject pymethod_readline(PyObject size) { throw new UnsupportedOperationException(); }
+    public PyObject pymethod_write(PyObject s) { throw new UnsupportedOperationException(); }
+
+    static PyObject pyget_encoding(PyObject obj) { throw new UnsupportedOperationException(); }
+    static PyObject pyget_newlines(PyObject obj) { throw new UnsupportedOperationException(); }
+    static PyObject pyget_errors(PyObject obj) { throw new UnsupportedOperationException(); }
+}
+
+final class PyTextIOWrapper extends PyTextIOBase {
     private static final int BUFFER_SIZE = 65536;
 
     private final PyObject name;
@@ -86,7 +138,7 @@ final class PyTextIOWrapper extends PyIter {
 
     @Override public String repr() {
         String encoding = Runtime.getDefaultTextEncoding();
-        return String.format("<%s name=%s mode='r' encoding=%s>", type().name(), name.repr(), PyString.reprOf(encoding));
+        return String.format("<%s name=%s mode='r' encoding=%s>", type().displayName(), name.repr(), PyString.reprOf(encoding));
     }
 
     public PyNone pymethod_close() {
@@ -140,7 +192,7 @@ final class PyTextIOWrapper extends PyIter {
     static PyObject pyget__CHUNK_SIZE(PyObject obj) { throw new UnsupportedOperationException(); }
 }
 
-final class PyBufferedReader extends PyIter {
+final class PyBufferedReader extends PyBufferedIOBase {
     private final PyObject name;
     public final BufferedInputStream reader;
 
@@ -163,7 +215,7 @@ final class PyBufferedReader extends PyIter {
     @Override public PyBufferedReader enter() { return this; }
     @Override public void exit() { pymethod_close(); }
 
-    @Override public String repr() { return String.format("<%s name=%s>", type().name(), name.repr()); }
+    @Override public String repr() { return String.format("<%s name=%s>", type().displayName(), name.repr()); }
 
     public PyNone pymethod_close() {
         try {

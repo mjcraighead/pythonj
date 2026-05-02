@@ -477,6 +477,10 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
                 case '_types.NotImplementedType': py_name = 'NotImplementedType'
                 case '_types.WrapperDescriptorType': py_name = 'wrapper_descriptor'
                 case _: py_name = name
+            if name.startswith('_io.'):
+                (module_name, py_name) = name.split('.', 1)
+            else:
+                module_name = 'builtins'
 
             type_decls: list[ir.Decl] = [
                 ir.FieldDecl('public static final', f'{java_name}Type', 'singleton', ir.CreateObject(f'{java_name}Type', [])),
@@ -591,7 +595,7 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
             super_args: list[ir.Expr] = [
                 ir.StrLiteral(py_name),
                 ir.StrLiteral(py_name),
-                ir.StrLiteral('builtins'),
+                ir.StrLiteral(module_name),
                 ir.Field(ir.Identifier(java_name), 'class'),
             ]
             if (base_type_name := extract_spec.get_type_base_name(name)) is not None:
