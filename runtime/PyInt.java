@@ -9,15 +9,22 @@ public final class PyInt extends PyObject {
     public static final PyInt singleton_neg1 = new PyInt(-1);
     public static final PyInt singleton_0 = new PyInt(0);
     public static final PyInt singleton_1 = new PyInt(1);
+    private static final PyTuple constructor_positional_names = new PyTuple(new PyObject[] {new PyString("number"), new PyString("base")});
 
     public final long value;
 
     PyInt(long _value) { value = _value; }
 
     public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
-        Runtime.requireMinMaxPositional(args, kwargs, type.name(), 0, 2);
-        PyObject arg0 = (args.length >= 1) ? args[0] : null;
-        PyObject arg1 = (args.length >= 2) ? args[1] : null;
+        if (args.length > 2) {
+            throw Runtime.raiseMaxArgs(args, 2, type.name());
+        }
+        var boundArgs = Runtime.bindMinMaxPositionalOrKeyword(args, kwargs, type.name(), constructor_positional_names, 1, PyTuple.empty_singleton, 0, 2, 2, false, false);
+        PyObject arg0 = boundArgs.get(0);
+        PyObject arg1 = boundArgs.get(1);
+        if ((arg0 == null) && (arg1 != null)) {
+            throw PyTypeError.raise("int() missing string argument");
+        }
         return newObjPositional(arg0, arg1);
     }
     public static PyInt newObjPositional(PyObject arg0, PyObject arg1) {
