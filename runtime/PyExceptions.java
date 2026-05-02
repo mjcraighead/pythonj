@@ -74,17 +74,29 @@ final class PyAssertionError extends PyException {
 }
 
 final class PyAttributeError extends PyException {
-    PyAttributeError(PyObject... _args) { super(_args); }
+    private final PyObject name;
+    private final PyObject obj;
+
+    PyAttributeError(PyObject... _args) {
+        this(_args, PyNone.singleton, PyNone.singleton);
+    }
+    private PyAttributeError(PyObject[] _args, PyObject _name, PyObject _obj) {
+        super(_args);
+        name = _name;
+        obj = _obj;
+    }
     @Override public PyConcreteType type() { return PyAttributeErrorType.singleton; }
 
     static PyRaise raise(String msg) {
         return new PyRaise(new PyAttributeError(new PyString(msg)));
     }
 
-    static PyObject pyget_name(PyObject obj) { throw new UnsupportedOperationException(); }
-    static PyObject pyget_obj(PyObject obj) { throw new UnsupportedOperationException(); }
+    static PyObject pyget_name(PyObject obj) { return ((PyAttributeError)obj).name; }
+    static PyObject pyget_obj(PyObject obj) { return ((PyAttributeError)obj).obj; }
 
     public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
+        PyObject name = PyNone.singleton;
+        PyObject obj = PyNone.singleton;
         if ((kwargs != null) && kwargs.boolValue()) {
             long kwargsLen = kwargs.items.size();
             if (kwargsLen > 2) {
@@ -92,12 +104,14 @@ final class PyAttributeError extends PyException {
             }
             for (var x: kwargs.items.entrySet()) {
                 PyString kw = (PyString)x.getKey();
-                if (!kw.value.equals("name") && !kw.value.equals("obj")) {
-                    throw Runtime.raiseUnexpectedKwArg(type.name(), kw.value);
+                switch (kw.value) {
+                    case "name" -> name = x.getValue();
+                    case "obj" -> obj = x.getValue();
+                    default -> throw Runtime.raiseUnexpectedKwArg(type.name(), kw.value);
                 }
             }
         }
-        return new PyAttributeError(args);
+        return new PyAttributeError(args, name, obj);
     }
 }
 
@@ -181,22 +195,47 @@ final class PyKeyError extends PyLookupError {
 }
 
 class PyNameError extends PyException {
-    PyNameError(PyObject... _args) { super(_args); }
+    protected final PyObject name;
+
+    PyNameError(PyObject... _args) {
+        this(_args, PyNone.singleton);
+    }
+    protected PyNameError(PyObject[] _args, PyObject _name) {
+        super(_args);
+        name = _name;
+    }
     @Override public PyConcreteType type() { return PyNameErrorType.singleton; }
 
     static PyRaise raise(String msg) {
         return new PyRaise(new PyNameError(new PyString(msg)));
     }
 
-    static PyObject pyget_name(PyObject obj) { throw new UnsupportedOperationException(); }
+    static PyObject pyget_name(PyObject obj) { return ((PyNameError)obj).name; }
 
     public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
-        Runtime.requireNoKwArgs(kwargs, type.name());
-        return new PyNameError(args);
+        return newObj(type, args, kwargs, false);
+    }
+    protected static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs, boolean isUnboundLocalError) {
+        String bindName = isUnboundLocalError ? "NameError" : type.name();
+        PyObject name = PyNone.singleton;
+        if ((kwargs != null) && kwargs.boolValue()) {
+            if (kwargs.items.size() > 1) {
+                throw Runtime.raiseAtMostKwArgs(bindName, 1, args.length, kwargs.items.size());
+            }
+            for (var x: kwargs.items.entrySet()) {
+                PyString kw = (PyString)x.getKey();
+                if (!kw.value.equals("name")) {
+                    throw Runtime.raiseUnexpectedKwArg(bindName, kw.value);
+                }
+                name = x.getValue();
+            }
+        }
+        return isUnboundLocalError ? new PyUnboundLocalError(args, name) : new PyNameError(args, name);
     }
 }
 final class PyUnboundLocalError extends PyNameError {
     PyUnboundLocalError(PyObject... _args) { super(_args); }
+    PyUnboundLocalError(PyObject[] _args, PyObject _name) { super(_args, _name); }
     @Override public PyConcreteType type() { return PyUnboundLocalErrorType.singleton; }
 
     static PyRaise raise(String msg) {
@@ -204,8 +243,7 @@ final class PyUnboundLocalError extends PyNameError {
     }
 
     public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
-        Runtime.requireNoKwArgs(kwargs, type.name());
-        return new PyUnboundLocalError(args);
+        return PyNameError.newObj(type, args, kwargs, true);
     }
 }
 
@@ -218,7 +256,10 @@ final class PyStopIteration extends PyException {
         return new PyStopIteration(args);
     }
 
-    static PyObject pyget_value(PyObject obj) { throw new UnsupportedOperationException(); }
+    static PyObject pyget_value(PyObject obj) {
+        PyTuple args = ((PyStopIteration)obj).args;
+        return (args.items.length == 0) ? PyNone.singleton : args.items[0];
+    }
 }
 
 class PyRuntimeError extends PyException {
