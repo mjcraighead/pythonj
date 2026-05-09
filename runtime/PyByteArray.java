@@ -213,6 +213,4 @@ public final class PyByteArray extends PyObject {
     @Override public int hashCode() { return slotBasedHashCode(); }
     @Override public long len() { return value.length; }
     @Override public String repr() { return slotBasedRepr(); }
-
-    public static PyObject pymethod_maketrans(PyObject frm, PyObject to) { throw new UnsupportedOperationException(); }
 }

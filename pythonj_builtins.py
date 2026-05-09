@@ -341,6 +341,7 @@ class bytearray:
     def ljust(self, width, fillchar): __pythonj_unsupported__()
     def lower(self): __pythonj_unsupported__()
     def lstrip(self, bytes): __pythonj_unsupported__()
+    def maketrans(frm, to): __pythonj_unsupported__()
     def partition(self, sep): __pythonj_unsupported__()
     def pop(self, index): __pythonj_unsupported__()
     def remove(self, value): __pythonj_unsupported__()
@@ -1079,6 +1080,7 @@ class bytes:
         return __pythonj_bytes_builder_finish__(ret)
 
     def decode(self, encoding, errors): __pythonj_unsupported__()
+    def maketrans(frm, to): __pythonj_unsupported__()
     def translate(self, table, delete): __pythonj_unsupported__()
 
 class dict:
@@ -1869,6 +1871,7 @@ class str:
     def istitle(self): __pythonj_unsupported__()
     def isupper(self): __pythonj_unsupported__()
     def ljust(self, width, fillchar): __pythonj_unsupported__()
+    def maketrans(x, y, z): __pythonj_unsupported__()
     def partition(self, sep): __pythonj_unsupported__()
     def rfind(self, sub, start, end): __pythonj_unsupported__()
     def rindex(self, sub, start, end): __pythonj_unsupported__()

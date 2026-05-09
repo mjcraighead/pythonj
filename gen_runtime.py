@@ -790,7 +790,7 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
                         assert False, (name, method_name, kind)
                     method_impl_target = None
                     has_python_builtin_body = method_name in pythonj_builtins_classes.get(name, {})
-                    if kind in {'method', 'classmethod'} and has_python_builtin_body:
+                    if kind in {'method', 'classmethod', 'staticmethod'} and has_python_builtin_body:
                         helper_name = f'{name.replace(".", "_")}__{method_name}'
                         method_impl_target = f'PyRuntime.pyfunc_{helper_name}'
                         (helper_classes, helper_method) = translate_python_method_impl(
@@ -825,6 +825,15 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
                     )
                     if kind == 'classmethod':
                         bind_args = [ir.Identifier('self')] + bind_args
+                    if method_impl_target is not None:
+                        if kind == 'method':
+                            method_impl_call_args = [ir.Identifier('self'), *bind_args]
+                        elif kind == 'classmethod':
+                            method_impl_call_args = bind_args
+                        elif kind == 'staticmethod':
+                            method_impl_call_args = bind_args
+                        else:
+                            assert False, (name, method_name, kind)
                     call_positional_return_java_type = 'PyObject'
                     if method_impl_target is not None:
                         call_positional_return_java_type = metadata.builtin_method_return_java_types.get((name.rsplit('.', 1)[-1], method_name), 'PyObject')
@@ -836,11 +845,10 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
                             call_positional_return_java_type,
                         )
                     elif method_impl_target is not None:
-                        call_args = bind_args if kind == 'classmethod' else [ir.Identifier('self'), *bind_args]
                         call_expr = ir.StaticMethodCall(
                             method_impl_target.rsplit('.', 1)[0],
                             method_impl_target.rsplit('.', 1)[1],
-                            call_args,
+                            method_impl_call_args,
                             metadata.builtin_method_return_java_types.get((name.rsplit('.', 1)[-1], method_name), ir.JAVA_TYPE_UNKNOWN),
                         )
                     else:
@@ -851,7 +859,12 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
                         (call_positional_method_args, call_positional_statements, call_positional_args) = build_call_positional_ir(call_positional_shape)
                         call_positional_method_args = [f'{self_type} self', *call_positional_method_args]
                         if method_impl_target is not None:
-                            call_args = [ir.Identifier('self'), *call_positional_args]
+                            if kind in {'method', 'classmethod'}:
+                                call_args = [ir.Identifier('self'), *call_positional_args]
+                            elif kind == 'staticmethod':
+                                call_args = call_positional_args
+                            else:
+                                assert False, (name, method_name, kind)
                             call_positional_expr = ir.StaticMethodCall(
                                 method_impl_target.rsplit('.', 1)[0],
                                 method_impl_target.rsplit('.', 1)[1],

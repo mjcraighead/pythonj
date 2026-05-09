@@ -201,5 +201,4 @@ public final class PyString extends PyObject {
     @Override public String repr() { return reprOf(value); }
 
     public PyObject pymethod_format(PyObject[] args, PyDict kwargs) { throw new UnsupportedOperationException(); }
-    public static PyObject pymethod_maketrans(PyObject x, PyObject y, PyObject z) { throw new UnsupportedOperationException(); }
 }
