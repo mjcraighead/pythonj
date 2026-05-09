@@ -1493,6 +1493,32 @@ def static_method_call(class_name: str, method: str, args: list[Expr], return_ty
             )
         case ('Runtime', 'pythonjBytesBuilderFinish'):
             return CreateObject('PyBytes', [MethodCall(Field(CastExpr('PyBytesBuilder', args[0]), 'value', 'java.io.ByteArrayOutputStream'), 'toByteArray', [], 'byte[]')])
+        case ('Runtime', 'pythonjCharCount'):
+            return CreateObject('PyInt', [
+                CastExpr('long', StaticMethodCall('Character', 'charCount', [CastExpr('int', unbox_int(args[0]))], 'int'))
+            ])
+        case ('Runtime', 'pythonjCharIsDecimalDigit'):
+            return static_method_call('PyBool', 'create', [
+                BinaryOp('==',
+                    StaticMethodCall('Character', 'getType', [CastExpr('int', unbox_int(args[0]))], 'int'),
+                    Field(Identifier('Character'), 'DECIMAL_DIGIT_NUMBER', 'int'),
+                )
+            ])
+        case ('Runtime', 'pythonjCharIsDigit'):
+            return static_method_call('PyBool', 'create', [
+                StaticMethodCall('Character', 'isDigit', [CastExpr('int', unbox_int(args[0]))], 'boolean')
+            ])
+        case ('Runtime', 'pythonjCharIsOtherNumber'):
+            return static_method_call('PyBool', 'create', [
+                BinaryOp('==',
+                    StaticMethodCall('Character', 'getType', [CastExpr('int', unbox_int(args[0]))], 'int'),
+                    Field(Identifier('Character'), 'OTHER_NUMBER', 'int'),
+                )
+            ])
+        case ('Runtime', 'pythonjCharNumericValue'):
+            return CreateObject('PyInt', [
+                CastExpr('long', StaticMethodCall('Character', 'getNumericValue', [CastExpr('int', unbox_int(args[0]))], 'int'))
+            ])
         case ('Runtime', 'pythonjDelete'):
             return MethodCall(args[0], 'delete', [args[1], MethodCall(args[1], 'type', [], 'PyType')], 'void')
         case ('Runtime', 'pythonjDictGet'):
@@ -1566,15 +1592,27 @@ def static_method_call(class_name: str, method: str, args: list[Expr], return_ty
             return MethodCall(Field(CastExpr('PyStringBuilder', args[0]), 'value', 'StringBuilder'), 'append', [unbox_str(args[1])], 'void')
         case ('Runtime', 'pythonjStrBuilderFinish'):
             return CreateObject('PyString', [MethodCall(Field(CastExpr('PyStringBuilder', args[0]), 'value', 'StringBuilder'), 'toString', [], 'String')])
+        case ('Runtime', 'pythonjStrCodePointAt'):
+            return CreateObject('PyInt', [
+                CastExpr('long', MethodCall(unbox_str(args[0]), 'codePointAt', [CastExpr('int', unbox_int(args[1]))], 'int'))
+            ])
         case ('Runtime', 'pythonjStrFind'):
             return CreateObject('PyInt', [
                 CastExpr('long', MethodCall(unbox_str(args[0]), 'indexOf', [unbox_str(args[1]), CastExpr('int', unbox_int(args[2]))], 'int'))
+            ])
+        case ('Runtime', 'pythonjStrLower'):
+            return CreateObject('PyString', [
+                MethodCall(unbox_str(args[0]), 'toLowerCase', [Identifier('java.util.Locale.ROOT')], 'String')
             ])
         case ('Runtime', 'pythonjStrReplace'):
             return CreateObject('PyString', [MethodCall(unbox_str(args[0]), 'replace', [unbox_str(args[1]), unbox_str(args[2])], 'String')])
         case ('Runtime', 'pythonjStrStartsWith'):
             return static_method_call('PyBool', 'create', [
                 MethodCall(unbox_str(args[0]), 'startsWith', [unbox_str(args[1]), CastExpr('int', unbox_int(args[2]))], 'boolean')
+            ])
+        case ('Runtime', 'pythonjStrUpper'):
+            return CreateObject('PyString', [
+                MethodCall(unbox_str(args[0]), 'toUpperCase', [Identifier('java.util.Locale.ROOT')], 'String')
             ])
         case ('Runtime', 'pythonjZipNew'):
             return static_method_call('PyZip', 'newObjPositional', [Field(args[0], 'items', 'PyObject[]'), args[1]])

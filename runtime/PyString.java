@@ -3,7 +3,6 @@
 // SPDX-License-Identifier: MIT
 
 import java.nio.charset.Charset;
-import java.util.Locale;
 
 final class PyStringIter extends PyIter {
     private static final PyConcreteType type_singleton = new PyConcreteType("str_iterator", "str_iterator", "builtins", PyStringIter.class, PyObjectType.singleton, null);
@@ -200,40 +199,6 @@ public final class PyString extends PyObject {
         return s.toString();
     }
     @Override public String repr() { return reprOf(value); }
-
-    public PyString pymethod_lower() { return new PyString(value.toLowerCase(Locale.ROOT)); }
-    public PyString pymethod_upper() { return new PyString(value.toUpperCase(Locale.ROOT)); }
-    public PyBool pymethod_isdecimal() {
-        if (value.isEmpty()) {
-            return PyBool.false_singleton;
-        }
-        for (int i = 0; i < value.length(); ) {
-            int cp = value.codePointAt(i);
-            if (Character.getType(cp) != Character.DECIMAL_DIGIT_NUMBER) {
-                return PyBool.false_singleton;
-            }
-            i += Character.charCount(cp);
-        }
-        return PyBool.true_singleton;
-    }
-    public PyBool pymethod_isdigit() {
-        if (value.isEmpty()) {
-            return PyBool.false_singleton;
-        }
-        for (int i = 0; i < value.length(); ) {
-            int cp = value.codePointAt(i);
-            boolean isDigit = Character.isDigit(cp);
-            if (!isDigit && (Character.getType(cp) == Character.OTHER_NUMBER)) {
-                int numericValue = Character.getNumericValue(cp);
-                isDigit = (numericValue >= 0) && (numericValue <= 9);
-            }
-            if (!isDigit) {
-                return PyBool.false_singleton;
-            }
-            i += Character.charCount(cp);
-        }
-        return PyBool.true_singleton;
-    }
 
     public PyObject pymethod_format(PyObject[] args, PyDict kwargs) { throw new UnsupportedOperationException(); }
     public static PyObject pymethod_maketrans(PyObject x, PyObject y, PyObject z) { throw new UnsupportedOperationException(); }

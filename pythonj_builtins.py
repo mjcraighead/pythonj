@@ -30,15 +30,9 @@ def ascii(arg) -> str:
     ret = __pythonj_str_builder__(len(r))
     i: int = 0
     while i < len(r):
-        c: str = r[i]
-        cp: int = ord(c)
-        if 0xD800 <= cp <= 0xDBFF and i + 1 < len(r):
-            lo: int = ord(r[i + 1])
-            if 0xDC00 <= lo <= 0xDFFF:
-                cp = 0x10000 + ((cp - 0xD800) << 10) + (lo - 0xDC00)
-                i += 1
+        cp: int = __pythonj_str_code_point_at__(r, i)
         if cp < 0x80:
-            __pythonj_str_builder_append__(ret, c)
+            __pythonj_str_builder_append__(ret, r[i])
         elif cp <= 0xFF:
             __pythonj_str_builder_append__(ret, '\\x')
             __pythonj_str_builder_append__(ret, digits[cp >> 4])
@@ -59,7 +53,7 @@ def ascii(arg) -> str:
             __pythonj_str_builder_append__(ret, digits[(cp >> 8) & 15])
             __pythonj_str_builder_append__(ret, digits[(cp >> 4) & 15])
             __pythonj_str_builder_append__(ret, digits[cp & 15])
-        i += 1
+        i += __pythonj_char_count__(cp)
     return __pythonj_str_builder_finish__(ret)
 
 def bin(arg) -> str:
@@ -1655,6 +1649,34 @@ class str:
             raise ValueError('substring not found')
         return ret
 
+    def isdecimal(self: str) -> bool:
+        if not self:
+            return False
+        i: int = 0
+        n: int = len(self)
+        while i < n:
+            cp: int = __pythonj_str_code_point_at__(self, i)
+            if not __pythonj_char_is_decimal_digit__(cp):
+                return False
+            i += __pythonj_char_count__(cp)
+        return True
+
+    def isdigit(self: str) -> bool:
+        if not self:
+            return False
+        i: int = 0
+        n: int = len(self)
+        while i < n:
+            cp: int = __pythonj_str_code_point_at__(self, i)
+            is_digit: bool = __pythonj_char_is_digit__(cp)
+            if not is_digit and __pythonj_char_is_other_number__(cp):
+                numeric_value: int = __pythonj_char_numeric_value__(cp)
+                is_digit = 0 <= numeric_value <= 9
+            if not is_digit:
+                return False
+            i += __pythonj_char_count__(cp)
+        return True
+
     def join(self: str, iterable) -> str:
         ret = __pythonj_str_builder__(4*len(self) + 2)
         if not __pythonj_hasiter__(iterable):
@@ -1748,6 +1770,9 @@ class str:
             end -= 1
         return self[:end]
 
+    def lower(self: str) -> str:
+        return __pythonj_str_lower__(self)
+
     def split(self: str, sep, maxsplit) -> list:
         maxsplit_index: int = _operator.index(maxsplit)
         ret = []
@@ -1823,6 +1848,9 @@ class str:
         if chars is not None and not isinstance(chars, str):
             raise TypeError('strip arg must be None or str')
         return self.lstrip(chars).rstrip(chars)
+
+    def upper(self: str) -> str:
+        return __pythonj_str_upper__(self)
 
     def capitalize(self): __pythonj_unsupported__()
     def casefold(self): __pythonj_unsupported__()
