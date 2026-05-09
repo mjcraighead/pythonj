@@ -16,24 +16,9 @@ import ir
 import pythonj
 
 RAW_ARGS_KWARGS_BUILTINS = {'max', 'min'}
-ALL_PYTHON_AUTHORED_IMPLS = {'bool', 'bytearray', 'bytes', 'float', 'int', 'object', 'range', 'tuple'}
-PYTHON_AUTHORED_IMPLS = {
-    'builtins': {
-        'abs', 'all', 'any', 'ascii', 'bin', 'delattr', 'divmod', 'format', 'getattr', 'hasattr', 'hash', 'hex',
-        'isinstance', 'issubclass', 'iter', 'len', 'next', 'oct', 'repr', 'setattr', 'sorted', 'sum',
-    },
-    'dict': {'__contains__', 'fromkeys', 'pop', 'setdefault'},
-    'set': {'__contains__', 'isdisjoint', 'issubset', 'issuperset'},
-    'str': {
-        '__format__', 'capitalize', 'casefold', 'center', 'count', 'encode', 'endswith', 'expandtabs', 'find',
-        'format_map', 'index', 'isalnum', 'isalpha', 'isascii', 'isidentifier', 'islower', 'isnumeric', 'isprintable',
-        'isspace', 'istitle', 'isupper', 'join', 'ljust', 'lstrip', 'partition', 'removeprefix', 'removesuffix',
-        'replace', 'rfind', 'rindex', 'rjust', 'rpartition', 'rsplit', 'rstrip', 'splitlines', 'startswith', 'strip',
-        'swapcase', 'title', 'translate', 'zfill',
-    },
-}
+JAVA_AUTHORED_BUILTIN_IMPLS = {'chr', 'dir', 'max', 'min', 'open', 'ord', 'print'}
 PYTHON_AUTHORED_CONSTRUCTOR_IMPLS = {'enumerate', 'zip'}
-PYTHON_AUTHORED_MODULE_IMPLS = {'_operator', '_pythonj'}
+JAVA_AUTHORED_MODULE_IMPLS = {'_io', '_json', '_types', 'math', 'sys', 'zlib'}
 SUPPORTED_HELPER_RETURN_TYPES = {'bool', 'bytes', 'dict', 'float', 'int', 'list', 'str', 'tuple'}
 
 def is_pythonj_getter(func: ast.FunctionDef) -> bool:
@@ -88,6 +73,23 @@ def collect_builtin_method_annotation_metadata(node: ast.Module) -> dict[str, di
         if class_ret:
             ret[class_node.name] = class_ret
     return ret
+
+def validate_python_builtin_class_methods(
+    spec: dict[str, object],
+    pythonj_builtins_classes: dict[str, dict[str, ast.FunctionDef]],
+) -> None:
+    getter_attr_kinds = {'getset', 'member'}
+    callable_attr_kinds = {'classmethod', 'method', 'staticmethod', 'wrapper_descriptor'}
+    for (class_name, funcs) in pythonj_builtins_classes.items():
+        assert class_name in spec and spec[class_name]['kind'] == 'type', class_name
+        attrs = spec[class_name]['attrs']
+        for (func_name, func) in funcs.items():
+            assert func_name in attrs, (class_name, func_name)
+            attr_kind = attrs[func_name]['kind']
+            if is_pythonj_getter(func):
+                assert attr_kind in getter_attr_kinds, (class_name, func_name, attr_kind)
+            else:
+                assert attr_kind in callable_attr_kinds, (class_name, func_name, attr_kind)
 
 @dataclass(frozen=True)
 class WrapperBindingPlan:
@@ -422,11 +424,13 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
     pythonj_runtime_node = pythonj.parse_python_module('pythonj_runtime.py')
     pythonj_module_nodes = {
         module_name: pythonj.parse_python_module(f'pythonj_{module_name}.py')
-        for module_name in PYTHON_AUTHORED_MODULE_IMPLS
+        for module_name in set(extract_spec.BUILTIN_MODULES) - JAVA_AUTHORED_MODULE_IMPLS
     }
     semantics_data = build_semantics_data(pythonj_builtins_node, pythonj_runtime_node, pythonj_module_nodes)
     metadata = pythonj.resolve_translator_metadata(pythonj.load_spec_json(spec_path), semantics_data)
     spec = metadata.spec
+    type_names = {name for (name, obj_spec) in spec.items() if obj_spec['kind'] == 'type'}
+    java_authored_constructor_impls = type_names - PYTHON_AUTHORED_CONSTRUCTOR_IMPLS
     (pythonj_builtins_node, builtins_scope_infos) = pythonj.analyze_and_simplify(
         pythonj_builtins_node, metadata=metadata)
     (pythonj_runtime_node, runtime_scope_infos) = pythonj.analyze_and_simplify(
@@ -442,6 +446,7 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
         class_name: {x.name: x for x in class_node.body if isinstance(x, ast.FunctionDef)}
         for (class_name, class_node) in {x.name: x for x in pythonj_builtins_node.body if isinstance(x, ast.ClassDef)}.items()
     }
+    validate_python_builtin_class_methods(spec, pythonj_builtins_classes)
     pythonj_runtime_funcs = pythonj.get_top_level_functions(pythonj_runtime_node)
     pythonj_module_funcs = {
         module_name: pythonj.get_top_level_functions(node)
@@ -610,8 +615,8 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
             type_decls.append(ir.MethodDecl('@Override public', 'PyObject', 'call', ['PyObject[] args', 'PyDict kwargs'], [
                 ir.ReturnStatement(
                     ir.MethodCall(
-                        ir.Identifier('PyRuntime' if name in PYTHON_AUTHORED_CONSTRUCTOR_IMPLS else java_name),
-                        f'pyfunc_{name}__newobj' if name in PYTHON_AUTHORED_CONSTRUCTOR_IMPLS else 'newObj',
+                        ir.Identifier(java_name if name in java_authored_constructor_impls else 'PyRuntime'),
+                        'newObj' if name in java_authored_constructor_impls else f'pyfunc_{name}__newobj',
                         [ir.This(), ir.Identifier('args'), ir.Identifier('kwargs')],
                     )
                 ),
@@ -785,10 +790,7 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
                         assert False, (name, method_name, kind)
                     method_impl_target = None
                     has_python_builtin_body = method_name in pythonj_builtins_classes.get(name, {})
-                    if kind in {'method', 'classmethod'} and (
-                        (name in ALL_PYTHON_AUTHORED_IMPLS and has_python_builtin_body) or
-                        method_name in PYTHON_AUTHORED_IMPLS.get(name, set())
-                    ):
+                    if kind in {'method', 'classmethod'} and has_python_builtin_body:
                         helper_name = f'{name.replace(".", "_")}__{method_name}'
                         method_impl_target = f'PyRuntime.pyfunc_{helper_name}'
                         (helper_classes, helper_method) = translate_python_method_impl(
@@ -881,7 +883,7 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
             python_helper_classes.extend(helper_classes)
             python_helper_methods.append(helper_method)
 
-        for type_name in sorted(PYTHON_AUTHORED_CONSTRUCTOR_IMPLS):
+        for type_name in sorted(type_names - java_authored_constructor_impls):
             (helper_classes, helper_method) = translate_python_constructor_impl(
                 pythonj_builtins_node, type_name, pool, funcs=pythonj_builtins_funcs, scope_infos=builtins_scope_infos,
                 metadata=metadata,
@@ -911,7 +913,7 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
             ))
             python_helper_methods.append(helper_method)
 
-        for func_name in sorted(PYTHON_AUTHORED_IMPLS['builtins']):
+        for func_name in sorted(extract_spec.BUILTIN_FUNCTIONS - JAVA_AUTHORED_BUILTIN_IMPLS):
             (helper_classes, helper_method) = translate_python_builtin_impl(
                 pythonj_builtins_node, func_name, pool, funcs=pythonj_builtins_funcs, scope_infos=builtins_scope_infos,
                 metadata=metadata,
@@ -1007,14 +1009,14 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
                 kw_overflow_args_length=kw_overflow_args_length,
                 noarg_name=func_name,
             )
-            if func_name in PYTHON_AUTHORED_IMPLS['builtins']:
+            if func_name in JAVA_AUTHORED_BUILTIN_IMPLS:
+                call_target = 'PyBuiltinFunctionsImpl'
+                call_positional_return_java_type = 'PyObject'
+            else:
                 call_target = 'PyRuntime'
                 call_positional_return_java_type = pythonj.exact_builtin_type_to_java_type(type_name) if (
                     (type_name := metadata.builtin_function_return_types.get(func_name)) is not None
                 ) else 'PyObject'
-            else:
-                call_target = 'PyBuiltinFunctionsImpl'
-                call_positional_return_java_type = 'PyObject'
             call_expr = ir.StaticMethodCall(f'PyBuiltinFunction_{func_name}', 'callPositional', bind_args, call_positional_return_java_type) if call_positional_shape is not None else ir.StaticMethodCall(call_target, f'pyfunc_{func_name}', bind_args)
             call_body.append(ir.ReturnStatement(call_expr))
             decls.append(ir.MethodDecl('@Override public', 'PyObject', 'call', ['PyObject[] args', 'PyDict kwargs'], call_body))
