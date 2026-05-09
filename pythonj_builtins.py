@@ -1748,6 +1748,52 @@ class str:
             end -= 1
         return self[:end]
 
+    def split(self: str, sep, maxsplit) -> list:
+        maxsplit_index: int = _operator.index(maxsplit)
+        ret = []
+        if sep is None:
+            split_chars: str = ' \t\n\v\f\r\x1c\x1d\x1e\x1f\x85\xa0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u2028\u2029\u202f\u205f\u3000'
+            i: int = 0
+            n: int = len(self)
+            while i < n and self[i] in split_chars:
+                i += 1
+            if i == n:
+                return ret
+            if maxsplit_index == 0:
+                ret.append(self[i:])
+                return ret
+            remaining: int = maxsplit_index
+            while i < n:
+                if remaining == 0:
+                    ret.append(self[i:])
+                    return ret
+                start: int = i
+                while i < n and self[i] not in split_chars:
+                    i += 1
+                ret.append(self[start:i])
+                if remaining > 0:
+                    remaining -= 1
+                while i < n and self[i] in split_chars:
+                    i += 1
+            return ret
+        if not isinstance(sep, str):
+            raise TypeError(f'must be str or None, not {type(sep).__name__}')
+        sep_len: int = len(sep)
+        if sep_len == 0:
+            raise ValueError('empty separator')
+        if maxsplit_index < 0:
+            maxsplit_index = len(self)
+        i = 0
+        while maxsplit_index > 0:
+            j: int = __pythonj_str_find__(self, sep, i)
+            if j == -1:
+                break
+            ret.append(self[i:j])
+            maxsplit_index -= 1
+            i = j + sep_len
+        ret.append(self[i:])
+        return ret
+
     def startswith(self: str, prefix, start, end) -> bool:
         n: int = len(self)
         indices = slice(start, end).indices(n)
