@@ -25,11 +25,11 @@ PYTHON_AUTHORED_IMPLS = {
     'dict': {'__contains__', 'fromkeys', 'pop', 'setdefault'},
     'set': {'__contains__', 'isdisjoint', 'issubset', 'issuperset'},
     'str': {
-        '__format__', 'capitalize', 'casefold', 'center', 'encode', 'endswith', 'expandtabs', 'format_map',
-        'isalnum', 'isalpha', 'isascii', 'isidentifier', 'islower', 'isnumeric', 'isprintable', 'isspace', 'istitle',
-        'isupper', 'join', 'ljust', 'lstrip', 'partition', 'removeprefix', 'removesuffix', 'replace', 'rfind',
-        'rindex', 'rjust', 'rpartition', 'rsplit', 'rstrip', 'splitlines', 'startswith', 'strip', 'swapcase', 'title',
-        'translate', 'zfill',
+        '__format__', 'capitalize', 'casefold', 'center', 'count', 'encode', 'endswith', 'expandtabs', 'find',
+        'format_map', 'index', 'isalnum', 'isalpha', 'isascii', 'isidentifier', 'islower', 'isnumeric', 'isprintable',
+        'isspace', 'istitle', 'isupper', 'join', 'ljust', 'lstrip', 'partition', 'removeprefix', 'removesuffix',
+        'replace', 'rfind', 'rindex', 'rjust', 'rpartition', 'rsplit', 'rstrip', 'splitlines', 'startswith', 'strip',
+        'swapcase', 'title', 'translate', 'zfill',
     },
 }
 PYTHON_AUTHORED_CONSTRUCTOR_IMPLS = {'enumerate', 'zip'}

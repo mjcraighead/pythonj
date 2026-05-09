@@ -1566,6 +1566,10 @@ def static_method_call(class_name: str, method: str, args: list[Expr], return_ty
             return MethodCall(Field(CastExpr('PyStringBuilder', args[0]), 'value', 'StringBuilder'), 'append', [unbox_str(args[1])], 'void')
         case ('Runtime', 'pythonjStrBuilderFinish'):
             return CreateObject('PyString', [MethodCall(Field(CastExpr('PyStringBuilder', args[0]), 'value', 'StringBuilder'), 'toString', [], 'String')])
+        case ('Runtime', 'pythonjStrFind'):
+            return CreateObject('PyInt', [
+                CastExpr('long', MethodCall(unbox_str(args[0]), 'indexOf', [unbox_str(args[1]), CastExpr('int', unbox_int(args[2]))], 'int'))
+            ])
         case ('Runtime', 'pythonjStrReplace'):
             return CreateObject('PyString', [MethodCall(unbox_str(args[0]), 'replace', [unbox_str(args[1]), unbox_str(args[2])], 'String')])
         case ('Runtime', 'pythonjStrStartsWith'):

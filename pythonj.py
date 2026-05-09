@@ -67,6 +67,7 @@ INTRINSIC_SIGNATURES = {
     '__pythonj_str_builder__': ('pythonjStrBuilder', 1, 'object'),
     '__pythonj_str_builder_append__': ('pythonjStrBuilderAppend', 2, 'void'),
     '__pythonj_str_builder_finish__': ('pythonjStrBuilderFinish', 1, 'str'),
+    '__pythonj_str_find__': ('pythonjStrFind', 3, 'int'),
     '__pythonj_str_replace__': ('pythonjStrReplace', 3, 'str'),
     '__pythonj_str_startswith__': ('pythonjStrStartsWith', 3, 'bool'),
     '__pythonj_unsupported__': ('pythonjUnsupported', 0, 'void'),

@@ -1578,6 +1578,31 @@ class str:
             raise TypeError(f'__format__() argument must be str, not {type(format_spec).__name__}')
         return pyj_str_format(self, format_spec)
 
+    def count(self: str, sub, start, end) -> int:
+        if not isinstance(sub, str):
+            raise TypeError(f'count() argument 1 must be str, not {type(sub).__name__}')
+        n: int = len(self)
+        indices = slice(start, end).indices(n)
+        start_index: int = indices[0]
+        end_index: int = indices[1]
+        if start is not None and _operator.index(start) > n:
+            return 0
+        if start_index > end_index:
+            return 0
+        sub_len: int = len(sub)
+        if sub_len == 0:
+            return end_index - start_index + 1
+        ret: int = 0
+        i: int = start_index
+        limit: int = end_index - sub_len
+        while i <= limit:
+            i = __pythonj_str_find__(self, sub, i)
+            if i < 0 or i + sub_len > end_index:
+                return ret
+            ret += 1
+            i += sub_len
+        return ret
+
     def endswith(self: str, suffix, start, end) -> bool:
         n: int = len(self)
         indices = slice(start, end).indices(n)
@@ -1602,6 +1627,33 @@ class str:
         if suffix_len > end_index - start_index:
             return False
         return __pythonj_str_startswith__(self, suffix, end_index - suffix_len)
+
+    def find(self: str, sub, start, end) -> int:
+        if not isinstance(sub, str):
+            raise TypeError(f'find() argument 1 must be str, not {type(sub).__name__}')
+        n: int = len(self)
+        indices = slice(start, end).indices(n)
+        start_index: int = indices[0]
+        end_index: int = indices[1]
+        if start is not None and _operator.index(start) > n:
+            return -1
+        sub_len: int = len(sub)
+        if sub_len == 0:
+            if start_index > end_index:
+                return -1
+            return start_index
+        i: int = __pythonj_str_find__(self, sub, start_index)
+        if i < 0 or i + sub_len > end_index:
+            return -1
+        return i
+
+    def index(self: str, sub, start, end) -> int:
+        if not isinstance(sub, str):
+            raise TypeError(f'index() argument 1 must be str, not {type(sub).__name__}')
+        ret: int = self.find(sub, start, end)
+        if ret < 0:
+            raise ValueError('substring not found')
+        return ret
 
     def join(self: str, iterable) -> str:
         ret = __pythonj_str_builder__(4*len(self) + 2)

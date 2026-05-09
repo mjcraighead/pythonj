@@ -201,60 +201,6 @@ public final class PyString extends PyObject {
     }
     @Override public String repr() { return reprOf(value); }
 
-    public PyInt pymethod_count(PyObject sub, PyObject start, PyObject end) {
-        if (!(sub instanceof PyString subStr)) {
-            throw PyTypeError.raise("must be str, not " + sub.type().name());
-        }
-        int n = value.length();
-        int startIndex = Runtime.asSearchIndexAllowNone(start, 0, n);
-        int endIndex = Math.min(Runtime.asSearchIndexAllowNone(end, n, n), n);
-        if ((startIndex > endIndex) || (startIndex > n)) {
-            return PyInt.singleton_0;
-        }
-        String needle = subStr.value;
-        if (needle.isEmpty()) {
-            return new PyInt(endIndex - startIndex + 1);
-        }
-        int count = 0;
-        int i = startIndex;
-        while (true) {
-            i = value.indexOf(needle, i);
-            if ((i < 0) || (i + needle.length() > endIndex)) {
-                return new PyInt(count);
-            }
-            count++;
-            i += needle.length();
-        }
-    }
-    public PyInt pymethod_find(PyObject sub, PyObject start, PyObject end) {
-        if (!(sub instanceof PyString subStr)) {
-            throw PyTypeError.raise("find() argument 1 must be str, not " + sub.type().name());
-        }
-        int n = value.length();
-        int startIndex = Runtime.asSearchIndexAllowNone(start, 0, n);
-        int endIndex = Math.min(Runtime.asSearchIndexAllowNone(end, n, n), n);
-        if (subStr.value.isEmpty()) {
-            if ((startIndex > endIndex) || (startIndex > n)) {
-                return PyInt.singleton_neg1;
-            }
-            return new PyInt(startIndex);
-        }
-        if (startIndex > n) {
-            return PyInt.singleton_neg1;
-        }
-        int index = value.indexOf(subStr.value, startIndex);
-        if ((index < 0) || (index + subStr.value.length() > endIndex)) {
-            return PyInt.singleton_neg1;
-        }
-        return new PyInt(index);
-    }
-    public PyInt pymethod_index(PyObject sub, PyObject start, PyObject end) {
-        PyInt ret = pymethod_find(sub, start, end);
-        if (ret.value < 0) {
-            throw PyValueError.raise("substring not found");
-        }
-        return ret;
-    }
     public PyString pymethod_lower() { return new PyString(value.toLowerCase(Locale.ROOT)); }
     public PyList pymethod_split(PyObject sep, PyObject maxsplit) {
         long m = maxsplit.indexValue();
