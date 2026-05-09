@@ -327,50 +327,6 @@ public final class PyString extends PyObject {
             }
         }
     }
-    public PyBool pymethod_startswith(PyObject prefix, PyObject start, PyObject end) {
-        int startIndex = Runtime.asSearchIndexAllowNone(start, 0, value.length());
-        Runtime.unsupportedSearchIndexAllowNone(end, "str.startswith() does not yet support 'end' argument");
-        if (prefix instanceof PyString prefixStr) {
-            return PyBool.create(value.startsWith(prefixStr.value, startIndex));
-        } else if (prefix instanceof PyTuple prefixTuple) {
-            for (int i = 0; i < prefixTuple.items.length; i++) {
-                var item = prefixTuple.items[i];
-                if (item instanceof PyString itemStr) {
-                    if (value.startsWith(itemStr.value, startIndex)) {
-                        return PyBool.true_singleton;
-                    }
-                } else {
-                    throw PyTypeError.raise("tuple for startswith must only contain str, not " + item.type().name());
-                }
-            }
-            return PyBool.false_singleton;
-        } else {
-            throw PyTypeError.raise("startswith first arg must be str or a tuple of str, not " + prefix.type().name());
-        }
-    }
-    public PyBool pymethod_endswith(PyObject suffix, PyObject start, PyObject end) {
-        int startIndex = Runtime.asSearchIndexAllowNone(start, 0, value.length());
-        Runtime.unsupportedSearchIndexAllowNone(end, "str.endswith() does not yet support 'end' argument");
-        if (suffix instanceof PyString suffixStr) {
-            int offset = value.length() - suffixStr.value.length();
-            return PyBool.create((offset >= startIndex) && value.startsWith(suffixStr.value, offset));
-        } else if (suffix instanceof PyTuple suffixTuple) {
-            for (int i = 0; i < suffixTuple.items.length; i++) {
-                var item = suffixTuple.items[i];
-                if (item instanceof PyString itemStr) {
-                    int offset = value.length() - itemStr.value.length();
-                    if ((offset >= startIndex) && value.startsWith(itemStr.value, offset)) {
-                        return PyBool.true_singleton;
-                    }
-                } else {
-                    throw PyTypeError.raise("tuple for endswith must only contain str, not " + item.type().name());
-                }
-            }
-            return PyBool.false_singleton;
-        } else {
-            throw PyTypeError.raise("endswith first arg must be str or a tuple of str, not " + suffix.type().name());
-        }
-    }
     public PyString pymethod_upper() { return new PyString(value.toUpperCase(Locale.ROOT)); }
     public PyBool pymethod_isdecimal() {
         if (value.isEmpty()) {

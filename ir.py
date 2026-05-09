@@ -1568,6 +1568,10 @@ def static_method_call(class_name: str, method: str, args: list[Expr], return_ty
             return CreateObject('PyString', [MethodCall(Field(CastExpr('PyStringBuilder', args[0]), 'value', 'StringBuilder'), 'toString', [], 'String')])
         case ('Runtime', 'pythonjStrReplace'):
             return CreateObject('PyString', [MethodCall(unbox_str(args[0]), 'replace', [unbox_str(args[1]), unbox_str(args[2])], 'String')])
+        case ('Runtime', 'pythonjStrStartsWith'):
+            return static_method_call('PyBool', 'create', [
+                MethodCall(unbox_str(args[0]), 'startsWith', [unbox_str(args[1]), CastExpr('int', unbox_int(args[2]))], 'boolean')
+            ])
         case ('Runtime', 'pythonjZipNew'):
             return static_method_call('PyZip', 'newObjPositional', [Field(args[0], 'items', 'PyObject[]'), args[1]])
     return StaticMethodCall(class_name, method, args, STATIC_METHOD_RETURN_TYPES.get((class_name, method), return_type))

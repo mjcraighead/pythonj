@@ -25,10 +25,10 @@ PYTHON_AUTHORED_IMPLS = {
     'dict': {'__contains__', 'fromkeys', 'pop', 'setdefault'},
     'set': {'__contains__', 'isdisjoint', 'issubset', 'issuperset'},
     'str': {
-        '__format__', 'capitalize', 'casefold', 'center', 'encode', 'expandtabs', 'format_map', 'isalnum',
-        'isalpha', 'isascii', 'isidentifier', 'islower', 'isnumeric', 'isprintable', 'isspace', 'istitle',
-        'isupper', 'join', 'ljust', 'lstrip', 'partition', 'replace', 'rfind', 'rindex', 'rjust', 'rpartition',
-        'rsplit', 'removeprefix', 'removesuffix', 'rstrip', 'splitlines', 'strip', 'swapcase', 'title',
+        '__format__', 'capitalize', 'casefold', 'center', 'encode', 'endswith', 'expandtabs', 'format_map',
+        'isalnum', 'isalpha', 'isascii', 'isidentifier', 'islower', 'isnumeric', 'isprintable', 'isspace', 'istitle',
+        'isupper', 'join', 'ljust', 'lstrip', 'partition', 'removeprefix', 'removesuffix', 'replace', 'rfind',
+        'rindex', 'rjust', 'rpartition', 'rsplit', 'rstrip', 'splitlines', 'startswith', 'strip', 'swapcase', 'title',
         'translate', 'zfill',
     },
 }

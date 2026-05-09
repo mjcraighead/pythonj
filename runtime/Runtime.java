@@ -1046,15 +1046,6 @@ public final class Runtime {
         }
         return i;
     }
-    public static void unsupportedSearchIndexAllowNone(PyObject obj, String msg) {
-        if (obj == PyNone.singleton) {
-            return;
-        }
-        if (!obj.hasIndex()) {
-            throw PyTypeError.raise("slice indices must be integers or None or have an __index__ method");
-        }
-        throw new UnsupportedOperationException(msg);
-    }
     public static void pythonjUnsupported() {
         throw new UnsupportedOperationException();
     }

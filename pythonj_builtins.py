@@ -1578,6 +1578,31 @@ class str:
             raise TypeError(f'__format__() argument must be str, not {type(format_spec).__name__}')
         return pyj_str_format(self, format_spec)
 
+    def endswith(self: str, suffix, start, end) -> bool:
+        n: int = len(self)
+        indices = slice(start, end).indices(n)
+        start_index: int = indices[0]
+        end_index: int = indices[1]
+        raw_start_too_large: bool = False
+        if start is not None:
+            raw_start_too_large = _operator.index(start) > n
+        if isinstance(suffix, tuple):
+            suffix_tuple: tuple = suffix
+            for item in suffix_tuple:
+                if not isinstance(item, str):
+                    raise TypeError(f'tuple for endswith must only contain str, not {type(item).__name__}')
+                if self.endswith(item, start, end):
+                    return True
+            return False
+        if not isinstance(suffix, str):
+            raise TypeError(f'endswith first arg must be str or a tuple of str, not {type(suffix).__name__}')
+        suffix_len: int = len(suffix)
+        if suffix_len == 0 and raw_start_too_large:
+            return False
+        if suffix_len > end_index - start_index:
+            return False
+        return __pythonj_str_startswith__(self, suffix, end_index - suffix_len)
+
     def join(self: str, iterable) -> str:
         ret = __pythonj_str_builder__(4*len(self) + 2)
         if not __pythonj_hasiter__(iterable):
@@ -1670,6 +1695,31 @@ class str:
         while end > 0 and self[end - 1] in strip_chars:
             end -= 1
         return self[:end]
+
+    def startswith(self: str, prefix, start, end) -> bool:
+        n: int = len(self)
+        indices = slice(start, end).indices(n)
+        start_index: int = indices[0]
+        end_index: int = indices[1]
+        raw_start_too_large: bool = False
+        if start is not None:
+            raw_start_too_large = _operator.index(start) > n
+        if isinstance(prefix, tuple):
+            prefix_tuple: tuple = prefix
+            for item in prefix_tuple:
+                if not isinstance(item, str):
+                    raise TypeError(f'tuple for startswith must only contain str, not {type(item).__name__}')
+                if self.startswith(item, start, end):
+                    return True
+            return False
+        if not isinstance(prefix, str):
+            raise TypeError(f'startswith first arg must be str or a tuple of str, not {type(prefix).__name__}')
+        prefix_len: int = len(prefix)
+        if prefix_len == 0 and raw_start_too_large:
+            return False
+        if prefix_len > end_index - start_index:
+            return False
+        return __pythonj_str_startswith__(self, prefix, start_index)
 
     def strip(self: str, chars) -> str:
         if chars is not None and not isinstance(chars, str):
