@@ -400,23 +400,16 @@ class bytes:
 
     def capitalize(self: bytes) -> bytes:
         ret = __pythonj_bytes_builder__(__pythonj_len__(self))
-        seen_alpha = False
-        c: int
-        for c in self:
-            if 97 <= c <= 122:
-                if not seen_alpha:
-                    __pythonj_bytes_builder_append_int__(ret, c - 32)
-                    seen_alpha = True
-                else:
-                    __pythonj_bytes_builder_append_int__(ret, c)
-            elif 65 <= c <= 90:
-                if not seen_alpha:
-                    __pythonj_bytes_builder_append_int__(ret, c)
-                    seen_alpha = True
-                else:
-                    __pythonj_bytes_builder_append_int__(ret, c + 32)
+        i: int = 0
+        while i < len(self):
+            c: int = self[i]
+            if i == 0 and 97 <= c <= 122:
+                __pythonj_bytes_builder_append_int__(ret, c - 32)
+            elif i != 0 and 65 <= c <= 90:
+                __pythonj_bytes_builder_append_int__(ret, c + 32)
             else:
                 __pythonj_bytes_builder_append_int__(ret, c)
+            i += 1
         return __pythonj_bytes_builder_finish__(ret)
 
     def center(self: bytes, width, fillchar) -> bytes:
