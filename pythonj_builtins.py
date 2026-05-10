@@ -765,6 +765,24 @@ class bytes:
             i += 1
         return self[i:]
 
+    def maketrans(frm, to) -> bytes:
+        if not __pythonj_isinstance__(frm, (bytes, bytearray)):
+            raise TypeError(f'a bytes-like object is required, not {type(frm).__name__!r}')
+        if not __pythonj_isinstance__(to, (bytes, bytearray)):
+            raise TypeError(f'a bytes-like object is required, not {type(to).__name__!r}')
+        if len(frm) != len(to):
+            raise ValueError('maketrans arguments must have same length')
+        values = []
+        i: int
+        for i in range(256):
+            values.append(i)
+        for i in range(len(frm)):
+            values[frm[i]] = to[i]
+        ret = __pythonj_bytes_builder__(256)
+        for i in values:
+            __pythonj_bytes_builder_append_int__(ret, i)
+        return __pythonj_bytes_builder_finish__(ret)
+
     def partition(self: bytes, sep) -> tuple:
         if not __pythonj_isinstance__(sep, (bytes, bytearray)):
             raise TypeError(f'a bytes-like object is required, not {type(sep).__name__!r}')
@@ -1050,6 +1068,21 @@ class bytes:
                 in_word = False
         return __pythonj_bytes_builder_finish__(ret)
 
+    def translate(self: bytes, table, delete) -> bytes:
+        if table is not None:
+            if not __pythonj_isinstance__(table, (bytes, bytearray)):
+                raise TypeError(f'a bytes-like object is required, not {type(table).__name__!r}')
+            if len(table) != 256:
+                raise ValueError('translation table must be 256 characters long')
+        if not __pythonj_isinstance__(delete, (bytes, bytearray)):
+            raise TypeError(f'a bytes-like object is required, not {type(delete).__name__!r}')
+        ret = __pythonj_bytes_builder__(len(self))
+        c: int
+        for c in self:
+            if c not in delete:
+                __pythonj_bytes_builder_append_int__(ret, c if table is None else table[c])
+        return __pythonj_bytes_builder_finish__(ret)
+
     def upper(self: bytes) -> bytes:
         ret = __pythonj_bytes_builder__(__pythonj_len__(self))
         c: int
@@ -1080,8 +1113,6 @@ class bytes:
         return __pythonj_bytes_builder_finish__(ret)
 
     def decode(self, encoding, errors): __pythonj_unsupported__()
-    def maketrans(frm, to): __pythonj_unsupported__()
-    def translate(self, table, delete): __pythonj_unsupported__()
 
 class dict:
     def __contains__(self: dict, key) -> bool:
