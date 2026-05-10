@@ -54,10 +54,17 @@ public final class PyBytes extends PyObject {
             return new PyBytes(argStr.value.getBytes(charset));
         }
         if (arg.hasIndex()) {
-            return new PyBytes(new byte[Math.toIntExact(arg.indexValue())]);
+            long count = arg.indexValue();
+            if (count < 0) {
+                throw PyValueError.raise("negative count");
+            }
+            return new PyBytes(new byte[Math.toIntExact(count)]);
         }
         if (arg instanceof PyString) {
             throw PyTypeError.raise("string argument without an encoding");
+        }
+        if (!arg.hasIter()) {
+            throw PyTypeError.raise("cannot convert " + PyString.reprOf(arg.type().name()) + " object to bytes");
         }
         var b = new ByteArrayOutputStream();
         var iter = arg.iter();

@@ -1079,6 +1079,9 @@ public final class Runtime {
         }
     }
     public static Charset lookupCharset(String encoding) {
+        if (encoding.equalsIgnoreCase("utf8") || encoding.equalsIgnoreCase("utf_8")) {
+            encoding = "UTF-8";
+        }
         try {
             return Charset.forName(encoding);
         } catch (IllegalCharsetNameException | UnsupportedCharsetException e) {
