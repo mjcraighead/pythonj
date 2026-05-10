@@ -280,6 +280,27 @@ def pyj_hex_byte(b: int) -> str:
     digits = '0123456789abcdef'
     return digits[b >> 4] + digits[b & 15]
 
+def pyj_bytes_fillchar(fillchar, method_name: str) -> int:
+    if not __pythonj_isinstance__(fillchar, (bytes, bytearray)) or len(fillchar) != 1:
+        if __pythonj_isinstance__(fillchar, (bytes, bytearray)):
+            raise TypeError(f'{method_name}(): argument 2 must be a byte string of length 1, not a {type(fillchar).__name__} object of length {len(fillchar)}')
+        raise TypeError(f'{method_name}() argument 2 must be a byte string of length 1, not {type(fillchar).__name__}')
+    return fillchar[0]
+
+def pyj_bytes_separator(sep):
+    if not __pythonj_isinstance__(sep, (bytes, bytearray)):
+        raise TypeError(f'a bytes-like object is required, not {type(sep).__name__!r}')
+    if len(sep) == 0:
+        raise ValueError('empty separator')
+    return sep
+
+def pyj_bytes_strip_set(bytes_arg):
+    if bytes_arg is None:
+        return b' \t\n\r\x0b\x0c'
+    if __pythonj_isinstance__(bytes_arg, (bytes, bytearray)):
+        return bytes_arg
+    raise TypeError(f'a bytes-like object is required, not {type(bytes_arg).__name__!r}')
+
 def _pyj_format_parse_common(spec: str) -> tuple:
     i: int = 0
     n = len(spec)

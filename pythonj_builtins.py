@@ -421,16 +421,12 @@ class bytes:
 
     def center(self: bytes, width, fillchar) -> bytes:
         width = _operator.index(width)
-        if not __pythonj_isinstance__(fillchar, (bytes, bytearray)) or len(fillchar) != 1:
-            if __pythonj_isinstance__(fillchar, (bytes, bytearray)):
-                raise TypeError(f'center(): argument 2 must be a byte string of length 1, not a {type(fillchar).__name__} object of length {len(fillchar)}')
-            raise TypeError(f'center() argument 2 must be a byte string of length 1, not {type(fillchar).__name__}')
+        fill: int = pyj_bytes_fillchar(fillchar, 'center')
         if width <= len(self):
             return self
         margin: int = width - len(self)
         left: int = margin // 2
         right: int = margin - left
-        fill: int = fillchar[0]
         ret = __pythonj_bytes_builder__(width)
         i: int
         for i in range(left):
@@ -795,15 +791,11 @@ class bytes:
 
     def ljust(self: bytes, width, fillchar) -> bytes:
         width = _operator.index(width)
-        if not __pythonj_isinstance__(fillchar, (bytes, bytearray)) or len(fillchar) != 1:
-            if __pythonj_isinstance__(fillchar, (bytes, bytearray)):
-                raise TypeError(f'ljust(): argument 2 must be a byte string of length 1, not a {type(fillchar).__name__} object of length {len(fillchar)}')
-            raise TypeError(f'ljust() argument 2 must be a byte string of length 1, not {type(fillchar).__name__}')
+        fill: int = pyj_bytes_fillchar(fillchar, 'ljust')
         if width <= len(self):
             return self
         ret = __pythonj_bytes_builder__(width)
         __pythonj_bytes_builder_append_bytes__(ret, self)
-        fill: int = fillchar[0]
         i: int
         for i in range(width - len(self)):
             __pythonj_bytes_builder_append_int__(ret, fill)
@@ -820,12 +812,7 @@ class bytes:
         return __pythonj_bytes_builder_finish__(ret)
 
     def lstrip(self: bytes, bytes_arg) -> bytes:
-        if bytes_arg is None:
-            strip_set = b' \t\n\r\x0b\x0c'
-        elif __pythonj_isinstance__(bytes_arg, (bytes, bytearray)):
-            strip_set = bytes_arg
-        else:
-            raise TypeError(f'a bytes-like object is required, not {type(bytes_arg).__name__!r}')
+        strip_set = pyj_bytes_strip_set(bytes_arg)
         i: int = 0
         n = len(self)
         while i < n and self[i] in strip_set:
@@ -851,10 +838,7 @@ class bytes:
         return __pythonj_bytes_builder_finish__(ret)
 
     def partition(self: bytes, sep) -> tuple:
-        if not __pythonj_isinstance__(sep, (bytes, bytearray)):
-            raise TypeError(f'a bytes-like object is required, not {type(sep).__name__!r}')
-        if len(sep) == 0:
-            raise ValueError('empty separator')
+        sep = pyj_bytes_separator(sep)
         i = self.find(sep)
         if i == -1:
             return (self, b'', b'')
@@ -947,14 +931,10 @@ class bytes:
 
     def rjust(self: bytes, width, fillchar) -> bytes:
         width = _operator.index(width)
-        if not __pythonj_isinstance__(fillchar, (bytes, bytearray)) or len(fillchar) != 1:
-            if __pythonj_isinstance__(fillchar, (bytes, bytearray)):
-                raise TypeError(f'rjust(): argument 2 must be a byte string of length 1, not a {type(fillchar).__name__} object of length {len(fillchar)}')
-            raise TypeError(f'rjust() argument 2 must be a byte string of length 1, not {type(fillchar).__name__}')
+        fill: int = pyj_bytes_fillchar(fillchar, 'rjust')
         if width <= len(self):
             return self
         ret = __pythonj_bytes_builder__(width)
-        fill: int = fillchar[0]
         i: int
         for i in range(width - len(self)):
             __pythonj_bytes_builder_append_int__(ret, fill)
@@ -962,10 +942,7 @@ class bytes:
         return __pythonj_bytes_builder_finish__(ret)
 
     def rpartition(self: bytes, sep) -> tuple:
-        if not __pythonj_isinstance__(sep, (bytes, bytearray)):
-            raise TypeError(f'a bytes-like object is required, not {type(sep).__name__!r}')
-        if len(sep) == 0:
-            raise ValueError('empty separator')
+        sep = pyj_bytes_separator(sep)
         i = self.rfind(sep, None, None)
         if i == -1:
             return (b'', b'', self)
@@ -995,10 +972,7 @@ class bytes:
                 ret.append(self[:end])
             ret.reverse()
             return ret
-        if not __pythonj_isinstance__(sep, (bytes, bytearray)):
-            raise TypeError(f'a bytes-like object is required, not {type(sep).__name__!r}')
-        if len(sep) == 0:
-            raise ValueError('empty separator')
+        sep = pyj_bytes_separator(sep)
         end = len(self)
         while maxsplit > 0:
             i = self.rfind(sep, 0, end)
@@ -1012,12 +986,7 @@ class bytes:
         return ret
 
     def rstrip(self: bytes, bytes_arg) -> bytes:
-        if bytes_arg is None:
-            strip_set = b' \t\n\r\x0b\x0c'
-        elif __pythonj_isinstance__(bytes_arg, (bytes, bytearray)):
-            strip_set = bytes_arg
-        else:
-            raise TypeError(f'a bytes-like object is required, not {type(bytes_arg).__name__!r}')
+        strip_set = pyj_bytes_strip_set(bytes_arg)
         i: int = len(self)
         while i > 0 and self[i - 1] in strip_set:
             i -= 1
@@ -1045,10 +1014,7 @@ class bytes:
             if i < n:
                 ret.append(self[i:])
             return ret
-        if not __pythonj_isinstance__(sep, (bytes, bytearray)):
-            raise TypeError(f'a bytes-like object is required, not {type(sep).__name__!r}')
-        if len(sep) == 0:
-            raise ValueError('empty separator')
+        sep = pyj_bytes_separator(sep)
         i = 0
         while maxsplit > 0:
             j = self.find(sep, i, None)
