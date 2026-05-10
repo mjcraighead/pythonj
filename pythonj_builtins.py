@@ -437,6 +437,7 @@ class bytes:
         return __pythonj_bytes_builder_finish__(ret)
 
     def count(self: bytes, sub, start, end) -> int:
+        original_start = start
         indices = slice(start, end).indices(len(self))
         start = indices[0]
         end = indices[1]
@@ -454,6 +455,8 @@ class bytes:
             raise TypeError(f'argument should be integer or bytes-like object, not {type(sub).__name__!r}')
         sub_len = len(sub)
         if sub_len == 0:
+            if (original_start is not None and original_start > len(self)) or start > end:
+                return 0
             return end - start + 1
         ret = 0
         i = start
@@ -477,7 +480,7 @@ class bytes:
             __pythonj_unsupported__()
 
         encoding = encoding.lower()
-        if encoding == 'utf8':
+        if encoding == 'utf8' or encoding == 'utf_8':
             encoding = 'utf-8'
         if encoding != 'ascii' and encoding != 'utf-8':
             __pythonj_unsupported__()
@@ -535,6 +538,8 @@ class bytes:
         if isinstance(suffix, tuple):
             suffix_tuple: tuple = suffix
             for item in suffix_tuple:
+                if not __pythonj_isinstance__(item, (bytes, bytearray)):
+                    raise TypeError(f'a bytes-like object is required, not {type(item).__name__!r}')
                 if self.endswith(item, start, end):
                     return True
             return False
@@ -559,12 +564,11 @@ class bytes:
         i: int
         for c in self:
             if c == 9:
-                spaces = tabsize - (col % tabsize)
-                if spaces <= 0:
-                    spaces = tabsize
-                for i in range(spaces):
-                    __pythonj_bytes_builder_append_int__(ret, 32)
-                col += spaces
+                if tabsize > 0:
+                    spaces = tabsize - (col % tabsize)
+                    for i in range(spaces):
+                        __pythonj_bytes_builder_append_int__(ret, 32)
+                    col += spaces
             else:
                 __pythonj_bytes_builder_append_int__(ret, c)
                 if c == 10 or c == 13:
@@ -574,6 +578,7 @@ class bytes:
         return __pythonj_bytes_builder_finish__(ret)
 
     def find(self: bytes, sub, start, end) -> int:
+        original_start = start
         indices = slice(start, end).indices(len(self))
         start = indices[0]
         end = indices[1]
@@ -588,6 +593,8 @@ class bytes:
             raise TypeError(f'argument should be integer or bytes-like object, not {type(sub).__name__!r}')
         sub_len = len(sub)
         if sub_len == 0:
+            if (original_start is not None and original_start > len(self)) or start > end:
+                return -1
             return start
         limit = end - sub_len
         for i in range(start, limit + 1):
@@ -610,16 +617,12 @@ class bytes:
             if c in b' \t\n\r\x0b\x0c':
                 i += 1
                 continue
-            if i + 1 >= n:
-                raise ValueError('fromhex() arg must contain an even number of hexadecimal digits')
             hi: int
             lo: int
             if is_str:
                 hi = ord(string[i])
-                lo = ord(string[i + 1])
             else:
                 hi = string[i]
-                lo = string[i + 1]
             value: int
             if 48 <= hi <= 57:
                 value = hi - 48
@@ -629,6 +632,12 @@ class bytes:
                 value = hi - 65 + 10
             else:
                 raise ValueError(f'non-hexadecimal number found in fromhex() arg at position {i}')
+            if i + 1 >= n:
+                raise ValueError('fromhex() arg must contain an even number of hexadecimal digits')
+            if is_str:
+                lo = ord(string[i + 1])
+            else:
+                lo = string[i + 1]
             value *= 16
             if 48 <= lo <= 57:
                 value += lo - 48
@@ -845,11 +854,15 @@ class bytes:
         return (self[:i], sep, self[i + len(sep):])
 
     def removeprefix(self: bytes, prefix) -> bytes:
+        if not __pythonj_isinstance__(prefix, (bytes, bytearray)):
+            raise TypeError(f'a bytes-like object is required, not {type(prefix).__name__!r}')
         if self.startswith(prefix):
             return self[len(prefix):]
         return self
 
     def removesuffix(self: bytes, suffix) -> bytes:
+        if not __pythonj_isinstance__(suffix, (bytes, bytearray)):
+            raise TypeError(f'a bytes-like object is required, not {type(suffix).__name__!r}')
         if suffix and self.endswith(suffix):
             return self[:-len(suffix)]
         return self
@@ -902,6 +915,7 @@ class bytes:
         return __pythonj_bytes_builder_finish__(ret)
 
     def rfind(self: bytes, sub, start, end) -> int:
+        original_start = start
         indices = slice(start, end).indices(len(self))
         start = indices[0]
         end = indices[1]
@@ -916,6 +930,8 @@ class bytes:
             raise TypeError(f'argument should be integer or bytes-like object, not {type(sub).__name__!r}')
         sub_len = len(sub)
         if sub_len == 0:
+            if (original_start is not None and original_start > len(self)) or start > end:
+                return -1
             return end
         limit = end - sub_len
         for i in range(limit, start - 1, -1):
@@ -1033,7 +1049,7 @@ class bytes:
         keepends = bool(keepends)
         while i < n:
             start: int = i
-            while i < n and self[i] not in b'\n\r\x0b\x0c\x1c\x1d\x1e\x85':
+            while i < n and self[i] not in b'\n\r':
                 i += 1
             line_end: int = i
             if i < n:
@@ -1049,6 +1065,8 @@ class bytes:
         if isinstance(prefix, tuple):
             prefix_tuple: tuple = prefix
             for item in prefix_tuple:
+                if not __pythonj_isinstance__(item, (bytes, bytearray)):
+                    raise TypeError(f'a bytes-like object is required, not {type(item).__name__!r}')
                 if self.startswith(item, start, end):
                     return True
             return False
