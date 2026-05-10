@@ -300,7 +300,7 @@ final class PyTypeError extends PyException {
     }
 }
 
-final class PyValueError extends PyException {
+class PyValueError extends PyException {
     PyValueError(PyObject... _args) { super(_args); }
     @Override public PyConcreteType type() { return PyValueErrorType.singleton; }
 
@@ -311,6 +311,72 @@ final class PyValueError extends PyException {
     public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
         Runtime.requireNoKwArgs(kwargs, type.name());
         return new PyValueError(args);
+    }
+}
+
+class PyUnicodeError extends PyValueError {
+    PyUnicodeError(PyObject... _args) { super(_args); }
+    @Override public PyConcreteType type() { return PyUnicodeErrorType.singleton; }
+
+    public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
+        Runtime.requireNoKwArgs(kwargs, type.name());
+        return new PyUnicodeError(args);
+    }
+}
+
+final class PyUnicodeDecodeError extends PyUnicodeError {
+    PyUnicodeDecodeError(PyObject... _args) { super(_args); }
+    @Override public PyConcreteType type() { return PyUnicodeDecodeErrorType.singleton; }
+
+    @Override public String str() {
+        if (args.items.length != 5) {
+            return super.str();
+        }
+        String encoding = ((PyString)args.items[0]).value;
+        PyObject object = args.items[1];
+        long start = ((PyInt)args.items[2]).value;
+        long end = ((PyInt)args.items[3]).value;
+        String reason = ((PyString)args.items[4]).value;
+        int len = (object instanceof PyBytes bytesObj) ? bytesObj.value.length : ((PyByteArray)object).value.length;
+        if ((end == start + 1) && (0 <= start) && (start < len)) {
+            int b;
+            if (object instanceof PyBytes bytes) {
+                b = bytes.value[Math.toIntExact(start)] & 0xFF;
+            } else {
+                b = ((PyByteArray)object).value[Math.toIntExact(start)] & 0xFF;
+            }
+            return "'" + encoding + "' codec can't decode byte 0x" + String.format("%02x", b) + " in position " + start + ": " + reason;
+        }
+        return "'" + encoding + "' codec can't decode bytes in position " + start + "-" + (end - 1) + ": " + reason;
+    }
+
+    static PyObject pyget_encoding(PyObject obj) { return ((PyUnicodeDecodeError)obj).args.items[0]; }
+    static PyObject pyget_object(PyObject obj) { return ((PyUnicodeDecodeError)obj).args.items[1]; }
+    static PyObject pyget_start(PyObject obj) { return ((PyUnicodeDecodeError)obj).args.items[2]; }
+    static PyObject pyget_end(PyObject obj) { return ((PyUnicodeDecodeError)obj).args.items[3]; }
+    static PyObject pyget_reason(PyObject obj) { return ((PyUnicodeDecodeError)obj).args.items[4]; }
+
+    public static PyObject newObj(PyConcreteType type, PyObject[] args, PyDict kwargs) {
+        Runtime.requireNoKwArgs(kwargs, type.name());
+        if (args.length != 5) {
+            throw PyTypeError.raise("function takes exactly 5 arguments (" + args.length + " given)");
+        }
+        if (!(args[0] instanceof PyString)) {
+            throw PyTypeError.raise("argument 1 must be str, not " + PyString.reprOf(args[0].type().name()));
+        }
+        if (!(args[1] instanceof PyBytes) && !(args[1] instanceof PyByteArray)) {
+            throw PyTypeError.raise("a bytes-like object is required, not " + PyString.reprOf(args[1].type().name()));
+        }
+        if (!(args[2] instanceof PyInt)) {
+            throw PyTypeError.raise("argument 3 must be int, not " + PyString.reprOf(args[2].type().name()));
+        }
+        if (!(args[3] instanceof PyInt)) {
+            throw PyTypeError.raise("argument 4 must be int, not " + PyString.reprOf(args[3].type().name()));
+        }
+        if (!(args[4] instanceof PyString)) {
+            throw PyTypeError.raise("argument 5 must be str, not " + PyString.reprOf(args[4].type().name()));
+        }
+        return new PyUnicodeDecodeError(args);
     }
 }
 

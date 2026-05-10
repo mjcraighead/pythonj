@@ -314,18 +314,20 @@ class bytearray:
     def __repr__(self: bytearray) -> str:
         return 'bytearray(' + repr(bytes(self)) + ')'
 
-    def fromhex(self, string): __pythonj_unsupported__()
+    def decode(self, encoding, errors) -> str:
+        return bytes(self).decode(encoding, errors)
+
     def append(self, item): __pythonj_unsupported__()
     def capitalize(self): __pythonj_unsupported__()
     def center(self, width, fillchar): __pythonj_unsupported__()
     def clear(self): __pythonj_unsupported__()
     def copy(self): __pythonj_unsupported__()
     def count(self, sub, start, end): __pythonj_unsupported__()
-    def decode(self, encoding, errors): __pythonj_unsupported__()
     def endswith(self, suffix, start, end): __pythonj_unsupported__()
     def expandtabs(self, tabsize): __pythonj_unsupported__()
     def extend(self, iterable_of_ints): __pythonj_unsupported__()
     def find(self, sub, start, end): __pythonj_unsupported__()
+    def fromhex(self, string): __pythonj_unsupported__()
     def hex(self, sep, bytes_per_sep): __pythonj_unsupported__()
     def index(self, sub, start, end): __pythonj_unsupported__()
     def insert(self, index, item): __pythonj_unsupported__()
@@ -467,6 +469,71 @@ class bytes:
             else:
                 i += 1
         return ret
+
+    def decode(self, encoding, errors) -> str:
+        if not __pythonj_isinstance__(encoding, str):
+            name = 'None' if encoding is None else type(encoding).__name__
+            raise TypeError(f"decode() argument 'encoding' must be str, not {name}")
+        if not __pythonj_isinstance__(errors, str):
+            name = 'None' if errors is None else type(errors).__name__
+            raise TypeError(f"decode() argument 'errors' must be str, not {name}")
+        if errors != 'strict':
+            __pythonj_unsupported__()
+
+        encoding = encoding.lower()
+        if encoding == 'utf8':
+            encoding = 'utf-8'
+        if encoding != 'ascii' and encoding != 'utf-8':
+            __pythonj_unsupported__()
+
+        i: int = 0
+        n: int = len(self)
+        ret = __pythonj_str_builder__(n)
+        while i < n:
+            b0: int = self[i]
+            if b0 < 128:
+                __pythonj_str_builder_append__(ret, chr(b0))
+                i += 1
+            elif encoding == 'ascii':
+                raise UnicodeDecodeError('ascii', self, i, i + 1, 'ordinal not in range(128)')
+            elif b0 < 0xC2:
+                raise UnicodeDecodeError('utf-8', self, i, i + 1, 'invalid start byte')
+            elif b0 < 0xE0:
+                if i + 1 >= n:
+                    raise UnicodeDecodeError('utf-8', self, i, n, 'unexpected end of data')
+                b1: int = self[i + 1]
+                if b1 < 0x80 or b1 >= 0xC0:
+                    raise UnicodeDecodeError('utf-8', self, i, i + 1, 'invalid continuation byte')
+                __pythonj_str_builder_append__(ret, chr(((b0 & 0x1F) << 6) | (b1 & 0x3F)))
+                i += 2
+            elif b0 < 0xF0:
+                if i + 2 >= n:
+                    raise UnicodeDecodeError('utf-8', self, i, n, 'unexpected end of data')
+                b1 = self[i + 1]
+                b2: int = self[i + 2]
+                if b1 < 0x80 or b1 >= 0xC0 or b2 < 0x80 or b2 >= 0xC0:
+                    raise UnicodeDecodeError('utf-8', self, i, i + 1, 'invalid continuation byte')
+                cp: int = ((b0 & 0x0F) << 12) | ((b1 & 0x3F) << 6) | (b2 & 0x3F)
+                if cp < 0x800 or (0xD800 <= cp <= 0xDFFF):
+                    raise UnicodeDecodeError('utf-8', self, i, i + 1, 'invalid continuation byte')
+                __pythonj_str_builder_append__(ret, chr(cp))
+                i += 3
+            elif b0 < 0xF5:
+                if i + 3 >= n:
+                    raise UnicodeDecodeError('utf-8', self, i, n, 'unexpected end of data')
+                b1 = self[i + 1]
+                b2 = self[i + 2]
+                b3: int = self[i + 3]
+                if b1 < 0x80 or b1 >= 0xC0 or b2 < 0x80 or b2 >= 0xC0 or b3 < 0x80 or b3 >= 0xC0:
+                    raise UnicodeDecodeError('utf-8', self, i, i + 1, 'invalid continuation byte')
+                cp = ((b0 & 0x07) << 18) | ((b1 & 0x3F) << 12) | ((b2 & 0x3F) << 6) | (b3 & 0x3F)
+                if cp < 0x10000 or cp > 0x10FFFF:
+                    raise UnicodeDecodeError('utf-8', self, i, i + 1, 'invalid continuation byte')
+                __pythonj_str_builder_append__(ret, chr(cp))
+                i += 4
+            else:
+                raise UnicodeDecodeError('utf-8', self, i, i + 1, 'invalid start byte')
+        return __pythonj_str_builder_finish__(ret)
 
     def endswith(self: bytes, suffix, start, end) -> bool:
         if isinstance(suffix, tuple):
@@ -1111,8 +1178,6 @@ class bytes:
             __pythonj_bytes_builder_append_int__(ret, self[i])
             i += 1
         return __pythonj_bytes_builder_finish__(ret)
-
-    def decode(self, encoding, errors): __pythonj_unsupported__()
 
 class dict:
     def __contains__(self: dict, key) -> bool:
