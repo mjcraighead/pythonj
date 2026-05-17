@@ -1568,6 +1568,13 @@ class range:
             return f'range({self.start}, {self.stop})'
         return f'range({self.start}, {self.stop}, {self.step})'
 
+    def __reversed__(self: range):
+        n = len(self)
+        if n == 0:
+            return iter(range(0))
+        last = self.start + (n - 1) * self.step
+        return iter(range(last, self.start - self.step, -self.step))
+
     def count(self: range, value) -> int:
         return 1 if value in self else 0
 

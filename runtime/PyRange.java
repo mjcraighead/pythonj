@@ -103,6 +103,4 @@ public final class PyRange extends PyObject {
         }
     }
     @Override public String repr() { return slotBasedRepr(); }
-
-    public PyObject pymethod___reversed__() { throw new UnsupportedOperationException(); }
 }
