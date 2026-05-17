@@ -1215,6 +1215,8 @@ class float:
             raise TypeError(f'__format__() argument must be str, not {type(format_spec).__name__}')
         return pyj_float_format(self, format_spec)
 
+    def __getformat__(cls, typestr): __pythonj_unsupported__()
+
     def __repr__(self: float) -> str:
         return pyj_float_str(self)
 
