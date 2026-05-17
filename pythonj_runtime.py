@@ -122,8 +122,8 @@ def bind_min_max_positional_or_keyword(args: tuple, kwargs: dict, kw_name: str, 
 
     return bound_args
 
-def bind_varargs_and_kwonly(kwargs: dict, kw_name: str, kwonly_names: tuple) -> list:
-    bound_args = [__pythonj_null__] * len(kwonly_names)
+def bind_varargs_and_kwonly(kwargs: dict, kw_name: str, kwonly_names: tuple, kwonly_defaults: tuple) -> list:
+    bound_args = list(kwonly_defaults)
 
     if kwargs is not __pythonj_null__ and kwargs:
         for (kw, value) in kwargs.items():

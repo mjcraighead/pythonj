@@ -824,8 +824,15 @@ abstract class PyGenerator extends PyIter {
 
 // Helper functions used by the builtins and code generator
 public final class Runtime {
+    private static final String LINE_SEPARATOR = System.lineSeparator();
     public static PyList sysArgv = new PyList(new PyObject[] {new PyString("")});
 
+    public static void writeStdout(String s) {
+        if (!LINE_SEPARATOR.equals("\n") && (s.indexOf('\n') >= 0)) {
+            s = s.replace("\n", LINE_SEPARATOR);
+        }
+        System.out.print(s);
+    }
     public static void setArgv(String argv0, String[] args) {
         PyObject[] argv = new PyObject[args.length + 1];
         argv[0] = new PyString(argv0);

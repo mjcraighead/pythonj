@@ -16,7 +16,7 @@ import ir
 import pythonj
 
 RAW_ARGS_KWARGS_BUILTINS = {'max', 'min'}
-JAVA_AUTHORED_BUILTIN_IMPLS = {'chr', 'dir', 'max', 'min', 'open', 'ord', 'print'}
+JAVA_AUTHORED_BUILTIN_IMPLS = {'chr', 'dir', 'max', 'min', 'open', 'ord'}
 PYTHON_AUTHORED_CONSTRUCTOR_IMPLS = {'enumerate', 'zip'}
 JAVA_AUTHORED_MODULE_IMPLS = {'_io', '_json', '_types', 'math', 'sys', 'zlib'}
 SUPPORTED_HELPER_RETURN_TYPES = {'bool', 'bytes', 'dict', 'float', 'int', 'list', 'str', 'tuple'}
@@ -292,6 +292,7 @@ def get_wrapper_binding_plan(shape: Optional[SignatureShape]) -> WrapperBindingP
 
 def build_wrapper_binding_ir(
         kwarg_params: Optional[SignatureShape], *,
+        python_helper_varargs_as_tuple: bool = False,
         exact_kw_name: str,
         exact_positional_name_many: str,
         posonly_kw_name: str,
@@ -349,8 +350,12 @@ def build_wrapper_binding_ir(
         assert kwarg_params is not None
         statements.append(ir.LocalDecl('var', 'boundArgs', ir.Field(ir.StaticMethodCall('PyRuntime', 'pyfunc_bind_varargs_and_kwonly', [
             ir.Identifier('kwargs'), ir.PyConstant(general_kw_name), ir.PyConstant(tuple(param.name for param in kwarg_params.kwonly_params)),
+            ir.PyConstant(tuple(param.default for param in kwarg_params.kwonly_params)),
         ]), 'items')))
-        bind_args = [ir.Identifier('args'), *(ir.MethodCall(ir.Identifier('boundArgs'), 'get', [ir.IntLiteral(i)]) for i in range(len(kwarg_params.kwonly_params)))]
+        varargs: ir.Expr = ir.Identifier('args')
+        if python_helper_varargs_as_tuple:
+            varargs = ir.CreateObject('PyTuple', [varargs])
+        bind_args = [varargs, *(ir.MethodCall(ir.Identifier('boundArgs'), 'get', [ir.IntLiteral(i)]) for i in range(len(kwarg_params.kwonly_params)))]
     elif plan.mode == 'fallback_raw':
         bind_args = [ir.Identifier('args'), ir.Identifier('kwargs')]
     else:
@@ -359,10 +364,16 @@ def build_wrapper_binding_ir(
             bind_args = [ir.Identifier('args'), ir.Identifier('kwargs')]
         elif not kwarg_params.posonly_params and not kwarg_params.poskw_params and not kwarg_params.kwonly_params and kwarg_params.vararg_param is not None:
             statements.append(ir.method_call_statement(ir.Identifier('Runtime'), 'requireNoKwArgs', [ir.Identifier('kwargs'), ir.StrLiteral(noarg_name)]))
-            bind_args = [ir.Identifier('args')]
+            varargs: ir.Expr = ir.Identifier('args')
+            if python_helper_varargs_as_tuple:
+                varargs = ir.CreateObject('PyTuple', [varargs])
+            bind_args = [varargs]
         else:
             assert False, (kwarg_params, noarg_name)
-    return (statements, bind_args, plan.call_positional_shape)
+    call_positional_shape = plan.call_positional_shape
+    if python_helper_varargs_as_tuple and kwarg_params is not None and kwarg_params.vararg_param is not None:
+        call_positional_shape = None
+    return (statements, bind_args, call_positional_shape)
 
 def build_call_positional_ir(shape: SignatureShape) -> tuple[list[str], list[ir.Statement], list[ir.Expr]]:
     assert shape.varkw_param is None, shape
@@ -1011,6 +1022,7 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
             kw_overflow_args_length = '0' if func_name == 'sorted' else 'argsLength'
             (call_body, bind_args, call_positional_shape) = build_wrapper_binding_ir(
                 kwarg_params,
+                python_helper_varargs_as_tuple=func_name not in JAVA_AUTHORED_BUILTIN_IMPLS,
                 exact_kw_name=func_name,
                 exact_positional_name_many=func_name,
                 posonly_kw_name=func_name,

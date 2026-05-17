@@ -43,6 +43,7 @@ STATIC_METHOD_RETURN_TYPES = {
     ('Runtime', 'pythonjIsInstance'): 'PyBool',
     ('Runtime', 'pythonjIsSubclass'): 'PyBool',
     ('Runtime', 'pythonjUnsupported'): 'void',
+    ('Runtime', 'pythonjWriteStdout'): 'void',
 }
 
 def _int_name(i: int) -> str:
@@ -1614,6 +1615,8 @@ def static_method_call(class_name: str, method: str, args: list[Expr], return_ty
             return CreateObject('PyString', [
                 MethodCall(unbox_str(args[0]), 'toUpperCase', [Identifier('java.util.Locale.ROOT')], 'String')
             ])
+        case ('Runtime', 'pythonjWriteStdout'):
+            return static_method_call('Runtime', 'writeStdout', [unbox_str(args[0])])
         case ('Runtime', 'pythonjZipNew'):
             return static_method_call('PyZip', 'newObjPositional', [Field(args[0], 'items', 'PyObject[]'), args[1]])
     return StaticMethodCall(class_name, method, args, STATIC_METHOD_RETURN_TYPES.get((class_name, method), return_type))

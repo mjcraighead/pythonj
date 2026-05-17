@@ -149,6 +149,28 @@ def oct(arg) -> str:
         return f'-0o{__pythonj_int_str_base__(-value, 8)}'
     return f'0o{__pythonj_int_str_base__(value, 8)}'
 
+def print(args: tuple, sep, end, file, flush) -> None:
+    if file is not None:
+        __pythonj_unsupported__()
+    if flush:
+        __pythonj_unsupported__()
+    if sep is None:
+        sep = ' '
+    elif not isinstance(sep, str):
+        raise TypeError(f'sep must be None or a string, not {type(sep).__name__}')
+    if end is None:
+        end = '\n'
+    elif not isinstance(end, str):
+        raise TypeError(f'end must be None or a string, not {type(end).__name__}')
+    first: bool = True
+    for arg in args:
+        if not first:
+            __pythonj_write_stdout__(sep)
+        first = False
+        __pythonj_write_stdout__(str(arg))
+    __pythonj_write_stdout__(end)
+    return None
+
 def repr(arg) -> str:
     ret = __pythonj_lookup_attr__(type(arg), '__repr__')(arg)
     if not isinstance(ret, str):

@@ -79,6 +79,7 @@ INTRINSIC_SIGNATURES = {
     '__pythonj_str_startswith__': ('pythonjStrStartsWith', 3, 'bool'),
     '__pythonj_str_upper__': ('pythonjStrUpper', 1, 'str'),
     '__pythonj_unsupported__': ('pythonjUnsupported', 0, 'void'),
+    '__pythonj_write_stdout__': ('pythonjWriteStdout', 1, 'void'),
     '__pythonj_zip_new__': ('pythonjZipNew', 2, 'object'),
 }
 
