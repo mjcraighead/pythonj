@@ -1656,6 +1656,11 @@ class set:
                 return False
         return True
 
+    def update(self: set, others: tuple) -> None:
+        for other in others:
+            for x in other:
+                self.add(x)
+
 class slice:
     @__pythonj_getter__
     def start(self: slice):

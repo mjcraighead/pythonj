@@ -284,20 +284,11 @@ public final class PySet extends PyObject {
         }
         return PyNone.singleton;
     }
-    public PyNone pymethod_update(PyObject[] args) {
-        for (var arg: args) {
-            Runtime.addIterableToCollection(items, arg);
-        }
-        return PyNone.singleton;
-    }
 
     public PyObject pymethod_difference(PyObject[] others) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_difference_update(PyObject[] others) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_intersection(PyObject[] others) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_intersection_update(PyObject[] others) { throw new UnsupportedOperationException(); }
-    public PyObject pymethod_isdisjoint(PyObject other) { throw new UnsupportedOperationException(); }
-    public PyObject pymethod_issubset(PyObject other) { throw new UnsupportedOperationException(); }
-    public PyObject pymethod_issuperset(PyObject other) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_symmetric_difference(PyObject other) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_symmetric_difference_update(PyObject other) { throw new UnsupportedOperationException(); }
     public PyObject pymethod_union(PyObject[] others) { throw new UnsupportedOperationException(); }

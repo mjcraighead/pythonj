@@ -823,6 +823,7 @@ def gen_runtime_artifacts(spec_path: str, java_path: str, semantics_path: str) -
                     bind_name = f'{py_name}.{method_name}'
                     (call_body, bind_args, call_positional_shape) = build_wrapper_binding_ir(
                         kwarg_params,
+                        python_helper_varargs_as_tuple=method_impl_target is not None,
                         exact_kw_name=bind_name,
                         exact_positional_name_many=method_name,
                         posonly_kw_name=bind_name,
