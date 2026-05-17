@@ -1658,6 +1658,14 @@ class set:
             for x in other:
                 self.add(x)
 
+    def difference(self: set, others: tuple): __pythonj_unsupported__()
+    def difference_update(self: set, others: tuple): __pythonj_unsupported__()
+    def intersection(self: set, others: tuple): __pythonj_unsupported__()
+    def intersection_update(self: set, others: tuple): __pythonj_unsupported__()
+    def symmetric_difference(self: set, other): __pythonj_unsupported__()
+    def symmetric_difference_update(self: set, other): __pythonj_unsupported__()
+    def union(self: set, others: tuple): __pythonj_unsupported__()
+
 class slice:
     @__pythonj_getter__
     def start(self: slice):
