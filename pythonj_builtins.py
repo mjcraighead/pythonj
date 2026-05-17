@@ -66,7 +66,6 @@ def delattr(obj, name) -> None:
     if not isinstance(name, str):
         raise TypeError(f'attribute name must be string, not {type(name).__name__!r}')
     __pythonj_lookup_attr__(type(obj), '__delattr__')(obj, name)
-    return None
 
 def divmod(a, b) -> tuple:
     return (a // b, a % b)
@@ -169,7 +168,6 @@ def print(args: tuple, sep, end, file, flush) -> None:
         first = False
         __pythonj_write_stdout__(str(arg))
     __pythonj_write_stdout__(end)
-    return None
 
 def repr(arg) -> str:
     ret = __pythonj_lookup_attr__(type(arg), '__repr__')(arg)
@@ -181,7 +179,6 @@ def setattr(obj, name, value) -> None:
     if not isinstance(name, str):
         raise TypeError(f'attribute name must be string, not {type(name).__name__!r}')
     __pythonj_lookup_attr__(type(obj), '__setattr__')(obj, name, value)
-    return None
 
 def sorted(iterable, key, reverse) -> list:
     ret = []
@@ -261,11 +258,11 @@ class object:
         desc = __pythonj_lookup_attr__(type(self), name)
         if desc is not __pythonj_null__ and __pythonj_is_data_descriptor__(desc):
             __pythonj_set__(desc, self, value)
-            return None
+            return
         d = __pythonj_instance_dict__(self)
         if d is not __pythonj_null__:
             d[name] = value
-            return None
+            return
         if desc is not __pythonj_null__:
             raise AttributeError(f'{type(self).__name__!r} object attribute {name!r} is read-only')
         raise AttributeError(f'{type(self).__name__!r} object has no attribute {name!r} and no __dict__ for setting new attributes')
@@ -276,11 +273,11 @@ class object:
         desc = __pythonj_lookup_attr__(type(self), name)
         if desc is not __pythonj_null__ and __pythonj_is_data_descriptor__(desc):
             __pythonj_delete__(desc, self)
-            return None
+            return
         d = __pythonj_instance_dict__(self)
         if d is not __pythonj_null__:
             if __pythonj_dict_remove__(d, name) is not __pythonj_null__:
-                return None
+                return
         if desc is not __pythonj_null__:
             raise AttributeError(f'{type(self).__name__!r} object attribute {name!r} is read-only')
         if d is not __pythonj_null__:

@@ -7,7 +7,6 @@ def contains(a, b) -> bool:
 
 def delitem(a, b) -> None:
     del a[b]
-    return None
 
 def getitem(a, b):
     return a[b]
@@ -135,4 +134,3 @@ def pow(a, b):
 
 def setitem(a, b, c) -> None:
     a[b] = c
-    return None
