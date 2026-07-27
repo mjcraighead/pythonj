@@ -1723,7 +1723,15 @@ class LoweringVisitor(ast.NodeVisitor):
     def emit_exact_type_binop(self, op: str, lhs: ir.Expr, rhs: ir.Expr) -> Optional[ir.Expr]:
         lhs_type = self.exact_builtin_type_of_expr(lhs)
         rhs_type = self.exact_builtin_type_of_expr(rhs)
-        if lhs_type == 'int' and rhs_type == 'int' and op in EXACT_INT_BINOPS:
+        if lhs_type == 'int' and rhs_type == 'int' and op == 'trueDiv':
+            lhs_int = ir.unbox_int(lhs)
+            rhs_int = ir.unbox_int(rhs)
+            return ir.CreateObject('PyFloat', [ir.static_method_call('PyInt', 'trueDivUnboxed', [lhs_int, rhs_int])])
+        elif lhs_type in {'int', 'float'} and rhs_type in {'int', 'float'} and op == 'trueDiv':
+            lhs_float = ir.unbox_float(lhs) if lhs_type == 'float' else ir.CastExpr('double', ir.unbox_int(lhs))
+            rhs_float = ir.unbox_float(rhs) if rhs_type == 'float' else ir.CastExpr('double', ir.unbox_int(rhs))
+            return ir.CreateObject('PyFloat', [ir.static_method_call('PyFloat', 'trueDivUnboxed', [lhs_float, rhs_float])])
+        elif lhs_type == 'int' and rhs_type == 'int' and op in EXACT_INT_BINOPS:
             lhs_int = ir.unbox_int(lhs)
             rhs_int = ir.unbox_int(rhs)
             if op == 'pow':

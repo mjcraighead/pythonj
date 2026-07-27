@@ -24,6 +24,7 @@ STATIC_METHOD_RETURN_TYPES = {
     ('PyFloat', 'addUnboxed'): 'double',
     ('PyFloat', 'mulUnboxed'): 'double',
     ('PyFloat', 'subUnboxed'): 'double',
+    ('PyFloat', 'trueDivUnboxed'): 'double',
     ('PyInt', 'addUnboxed'): 'long',
     ('PyInt', 'andUnboxed'): 'long',
     ('PyInt', 'floorDivUnboxed'): 'long',

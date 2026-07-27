@@ -14,6 +14,12 @@ public final class PyFloat extends PyObject {
     public static double addUnboxed(double lhs, double rhs) { return lhs + rhs; }
     public static double mulUnboxed(double lhs, double rhs) { return lhs * rhs; }
     public static double subUnboxed(double lhs, double rhs) { return lhs - rhs; }
+    public static double trueDivUnboxed(double lhs, double rhs) {
+        if (rhs == 0.0) {
+            throw PyZeroDivisionError.raise("division by zero");
+        }
+        return lhs / rhs;
+    }
 
     private static PyFloat parseString(String s, String repr) {
         String sl = s.toLowerCase();
@@ -40,10 +46,7 @@ public final class PyFloat extends PyObject {
     private static PyFloat sub(double lhs, double rhs) { return new PyFloat(lhs - rhs); }
     private static PyFloat mul(double lhs, double rhs) { return new PyFloat(lhs * rhs); }
     private static PyFloat trueDiv(double lhs, double rhs) {
-        if (rhs == 0.0) {
-            throw PyZeroDivisionError.raise("division by zero");
-        }
-        return new PyFloat(lhs / rhs);
+        return new PyFloat(trueDivUnboxed(lhs, rhs));
     }
     private static PyFloat floorDiv(double lhs, double rhs) {
         if (rhs == 0.0) {
