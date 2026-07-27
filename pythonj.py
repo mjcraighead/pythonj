@@ -801,16 +801,16 @@ def _infer_subscript_exact_builtin_type(node: ast.Subscript) -> Optional[str]:
     value_type = get_expr_exact_builtin_type(node.value)
     if value_type is None:
         return None
+    if value_type == 'str':
+        return 'str'
     index_type = get_expr_exact_builtin_type(node.slice)
     if isinstance(node.slice, ast.Slice):
         index_type = 'slice'
     if index_type == 'int':
-        if value_type in {'str'}:
-            return 'str'
         if value_type in {'bytes', 'bytearray'}:
             return 'int'
     if index_type == 'slice':
-        if value_type in {'str', 'bytes', 'bytearray', 'list', 'tuple'}:
+        if value_type in {'bytes', 'bytearray', 'list', 'tuple'}:
             return value_type
     return None
 
@@ -2119,13 +2119,16 @@ class LoweringVisitor(ast.NodeVisitor):
         return self.ident_expr_by_resolution(node.id, resolution)
 
     def visit_Subscript(self, node) -> ir.Expr:
+        receiver = self.visit(node.value)
+        return_type = 'PyString' if receiver.java_type() == 'PyString' else ir.JAVA_TYPE_UNKNOWN
         expr = ir.MethodCall(
-            self.visit(node.value),
+            receiver,
             'getItem',
             [self.visit(node.slice)],
+            return_type,
         )
         java_type = self.expr_exact_java_type(node)
-        if java_type != ir.JAVA_TYPE_UNKNOWN:
+        if java_type != ir.JAVA_TYPE_UNKNOWN and java_type != expr.java_type():
             return ir.CastExpr(java_type, expr)
         return expr
 
