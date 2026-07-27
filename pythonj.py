@@ -761,6 +761,9 @@ def _infer_obvious_exact_builtin_type_expr(node: ast.expr,
             return 'int'
         if isinstance(node.op, (ast.Add, ast.Sub, ast.Mult, ast.Mod)) and lhs_type == 'float' and rhs_type == 'float':
             return 'float'
+        if (isinstance(node.op, (ast.Add, ast.Sub, ast.Mult)) and
+            {lhs_type, rhs_type} == {'int', 'float'}):
+            return 'float'
         if isinstance(node.op, ast.Div) and lhs_type in {'int', 'float'} and rhs_type in {'int', 'float'}:
             return 'float'
     if (isinstance(node, ast.Call) and
@@ -1717,6 +1720,10 @@ class LoweringVisitor(ast.NodeVisitor):
             lhs_float = ir.unbox_float(lhs)
             rhs_float = ir.unbox_float(rhs)
             return ir.CreateObject('PyFloat', [ir.static_method_call('PyFloat', f'{op}Unboxed', [lhs_float, rhs_float])])
+        elif {lhs_type, rhs_type} == {'int', 'float'} and op in {'add', 'mul', 'sub'}:
+            lhs_float = ir.unbox_float(lhs) if lhs_type == 'float' else ir.CastExpr('double', ir.unbox_int(lhs))
+            rhs_float = ir.unbox_float(rhs) if rhs_type == 'float' else ir.CastExpr('double', ir.unbox_int(rhs))
+            return ir.CreateObject('PyFloat', [ir.static_method_call('PyFloat', f'{op}Unboxed', [lhs_float, rhs_float])])
         elif lhs_type == 'str' and rhs_type == 'str' and op == 'add':
             lhs_str = ir.unbox_str(lhs)
             rhs_str = ir.unbox_str(rhs)
@@ -1773,9 +1780,9 @@ class LoweringVisitor(ast.NodeVisitor):
         op = self.visit(node.op)
         lhs = self.visit(node.left)
         rhs = self.visit(node.right)
-        exact_int_expr = self.emit_exact_type_binop(op, lhs, rhs)
-        if exact_int_expr is not None:
-            return exact_int_expr
+        exact_binop_expr = self.emit_exact_type_binop(op, lhs, rhs)
+        if exact_binop_expr is not None:
+            return exact_binop_expr
         return ir.MethodCall(lhs, op, [rhs])
 
     def visit_Lt(self, node): return 'lt'
