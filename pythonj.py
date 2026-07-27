@@ -2941,7 +2941,7 @@ class LoweringVisitor(ast.NodeVisitor):
         return ir.StaticMethodCall(java_name, 'invoke', [
             *(ir.Identifier(f'pycell_{name}') for name in sorted(free_vars)),
             self.visit(generators[0].iter),
-        ])
+        ], type_name)
 
     def visit_ListComp(self, node) -> ir.Expr:
         return self._lower_comp(node, '<listcomp>', 'PyList', 'pymethod_append', node.lineno, node.generators, [node.elt])
