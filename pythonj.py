@@ -1793,14 +1793,16 @@ class LoweringVisitor(ast.NodeVisitor):
             all(isinstance(op, (ast.Lt, ast.LtE, ast.Gt, ast.GtE, ast.Eq, ast.NotEq)) for op in node.ops) and
             all(self.exact_builtin_type_of_expr(expr) == exact_compare_type for expr in comparator_exprs)):
             exprs: list[ir.Expr] = []
+            unbox = ir.unbox_int if exact_compare_type == 'int' else ir.unbox_float
+            raw_java_type = 'long' if exact_compare_type == 'int' else 'double'
+            lhs_unboxed = unbox(lhs_expr)
             for (i, (op, rhs_expr)) in enumerate(zip(node.ops, comparator_exprs)):
+                rhs_unboxed = unbox(rhs_expr)
                 if i < n_compares - 1:
                     temp_name = self.scope.make_temp()
-                    java_type = 'PyInt' if exact_compare_type == 'int' else 'PyFloat'
-                    self.code.append(ir.LocalDecl(java_type, temp_name, ir.CastExpr(java_type, rhs_expr)))
-                    rhs_expr = ir.Identifier(temp_name, java_type)
-                lhs_unboxed = ir.unbox_int(lhs_expr) if exact_compare_type == 'int' else ir.unbox_float(lhs_expr)
-                rhs_unboxed = ir.unbox_int(rhs_expr) if exact_compare_type == 'int' else ir.unbox_float(rhs_expr)
+                    temp = ir.Identifier(temp_name, raw_java_type)
+                    self.code.append(ir.LocalDecl(raw_java_type, temp_name, None))
+                    rhs_unboxed = ir.AssignExpr(temp, rhs_unboxed)
                 exprs.append(ir.BinaryOp({
                     ast.Lt: '<',
                     ast.LtE: '<=',
@@ -1809,7 +1811,8 @@ class LoweringVisitor(ast.NodeVisitor):
                     ast.Eq: '==',
                     ast.NotEq: '!=',
                 }[type(op)], lhs_unboxed, rhs_unboxed))
-                lhs_expr = rhs_expr
+                if i < n_compares - 1:
+                    lhs_unboxed = ir.Identifier(temp_name, raw_java_type)
             return ir.static_method_call('PyBool', 'create', [ir.chained_binary_op('&&', exprs)])
         if (n_compares == 1 and exact_compare_type == 'str' and
             isinstance(node.ops[0], (ast.Eq, ast.NotEq)) and
