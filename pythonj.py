@@ -26,6 +26,21 @@ import ir
 # exercised and are comfortable lowering directly to JVM instanceof checks.
 ISINSTANCE_SINGLE_FASTPATH_BUILTIN_TYPES = {'bool', 'bytearray', 'bytes', 'dict', 'float', 'int', 'object', 'set', 'slice', 'str', 'tuple', 'type'}
 EXACT_INT_BINOPS = {'add', 'and', 'floorDiv', 'lshift', 'mod', 'mul', 'or', 'pow', 'rshift', 'sub', 'xor'}
+EXACT_RECEIVER_BINOP_RETURN_JAVA_TYPES = {
+    ('PyByteArray', 'add'): 'PyByteArray',
+    ('PyByteArray', 'mod'): 'PyString',
+    ('PyByteArray', 'mul'): 'PyByteArray',
+    ('PyBytes', 'add'): 'PyBytes',
+    ('PyBytes', 'mod'): 'PyString',
+    ('PyBytes', 'mul'): 'PyBytes',
+    ('PyList', 'add'): 'PyList',
+    ('PyList', 'mul'): 'PyList',
+    ('PyString', 'add'): 'PyString',
+    ('PyString', 'mod'): 'PyString',
+    ('PyString', 'mul'): 'PyString',
+    ('PyTuple', 'add'): 'PyTuple',
+    ('PyTuple', 'mul'): 'PyTuple',
+}
 
 INTRINSIC_SIGNATURES = {
     '__pythonj_bytes_builder__': ('pythonjBytesBuilder', 1, 'object'),
@@ -1783,7 +1798,16 @@ class LoweringVisitor(ast.NodeVisitor):
         exact_binop_expr = self.emit_exact_type_binop(op, lhs, rhs)
         if exact_binop_expr is not None:
             return exact_binop_expr
-        return ir.MethodCall(lhs, op, [rhs])
+        lhs_java_type = lhs.java_type()
+        method_return_java_type = EXACT_RECEIVER_BINOP_RETURN_JAVA_TYPES.get(
+            (lhs_java_type, op),
+            'PyObject',
+        )
+        call = ir.MethodCall(lhs, op, [rhs], method_return_java_type)
+        result_java_type = self.expr_exact_java_type(node)
+        if result_java_type in {ir.JAVA_TYPE_UNKNOWN, method_return_java_type}:
+            return call
+        return ir.CastExpr(result_java_type, call)
 
     def visit_Lt(self, node): return 'lt'
     def visit_LtE(self, node): return 'le'
