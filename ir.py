@@ -1003,6 +1003,18 @@ class IRTransformer:
     def transform_decl(self, decl: Decl) -> Decl:
         return decl.transform_children(self)
 
+class IdentityCastRemover(IRTransformer):
+    def transform_expr(self, expr: Expr) -> Expr:
+        expr = super().transform_expr(expr)
+        if isinstance(expr, CastExpr) and expr.type == expr.expr.java_type():
+            return expr.expr
+        return expr
+
+def lower_decls_for_emission(decls: list[Decl]) -> list[Decl]:
+    """Finalize IR before Java emission and constant-pool traversal."""
+    decls = [lower_local_carrier_locals_in_decl(decl) for decl in decls]
+    return [IdentityCastRemover().transform_decl(decl) for decl in decls]
+
 @dataclass(frozen=True, slots=True)
 class LocalCarrierSpec:
     boxed_type: str
@@ -1658,7 +1670,7 @@ def while_statement(cond: Expr, body: list[Statement]) -> Iterator[Statement]:
         yield WhileStatement(cond, body)
 
 def write_decls(f: TextIO, decls: list[Decl], pool: ConstantPool) -> None:
-    decls = [lower_local_carrier_locals_in_decl(decl) for decl in decls]
+    decls = lower_decls_for_emission(decls)
     for decl in decls:
         for _ in decl.emit_java(pool):
             pass
